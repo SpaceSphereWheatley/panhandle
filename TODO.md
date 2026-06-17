@@ -5,19 +5,8 @@ stable IDs for reference in commits/discussion — don't renumber when items
 are completed or reordered, just strike them from this list and let the
 rest keep their numbers (re-pack the list only if it gets sparse).
 
-7. Drag-to-reorder or swipe-to-delete on shopping list cards, once the
-   item modal (#1) exists (avoid gesture conflicts between
-   long-press-for-modal and swipe-to-delete).
-8. PWA install prompt / "add to home screen" hint, since `manifest.json`
-   exists but there's no onboarding nudge to actually install it.
 9. Meal plan: surface `meal_catalogue.ingredients` somewhere in the UI —
    it's stored but currently unused/unedited by the frontend.
-10. Build a small icon set for common grocery items (start with whatever
-    categories/names show up most in the catalogue).
-11. Icon lookup: match by item name (normalized), fall back to
-    first-letter badge if no icon exists.
-12. Add an admin/settings view listing catalogue items that don't have a
-    matching icon yet, to help decide what to design next.
 13. Multi-owner lists, admin-created accounts, per-list isolation —
     see docs/multi-tenant-plan.md for full design.
 
@@ -43,4 +32,14 @@ rest keep their numbers (re-pack the list only if it gets sparse).
 - [x] Grid view for the shopping list as an alternative to the list view
       (toggle between the two), 3-column, with a circular first-letter
       badge placeholder icon per item.
+- [x] Swipe-to-mark-bought on shopping list cards (swipe left past a
+      threshold), separate from the long-press-for-modal gesture.
+- [x] PWA install prompt banner (native `beforeinstallprompt` on
+      Chrome/Android, share-sheet instructions on iOS Safari), dismissible
+      and remembered in `localStorage`.
+- [x] Emoji icon set for common catalogue items (`public/itemIcons.js`).
+- [x] Icon lookup by normalized item name, falling back to the
+      first-letter badge in grid view when no icon is mapped.
+- [x] Settings view listing catalogue items that don't have a matching
+      icon yet, to help decide what to design next.
 </content>
