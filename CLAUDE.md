@@ -1,0 +1,43 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Panhandle: a shared shopping list + meal planner PWA for two people, deployed entirely on Cloudflare (Pages + Worker + D1). Live at https://shopping.mohibb.com.
+
+There is no build step and no Node toolchain in this repo — everything is deployed by pasting/uploading raw files into the Cloudflare dashboard, or via the GitHub Actions workflow for the Worker. Do not introduce bundlers, package.json, or frameworks unless explicitly asked.
+
+## Architecture
+
+- **`worker/index.js`** — single-file Cloudflare Worker. Handles all `/api/*` and `/seed` routes, and proxies any non-API request to the Pages project (hostname hardcoded near `pagesUrl.hostname`). This is the entire backend: routing, auth, and business logic all live in one `fetch` handler with sequential `if (path === ...)` checks.
+- **`public/`** — static frontend served by Cloudflare Pages (no framework, no build): `index.html` (the app, single file with inline `<style>`/`<script>`), `seed.html` (one-time account creation form, posts to `/seed`), `manifest.json`, icons.
+- **`migrations/`** — SQL run manually in the D1 console, in order: `0001_init.sql` (shopping list + meal tables), `0002_users.sql` (users table). There is no migration runner; new schema changes need a new numbered `.sql` file and manual execution against D1.
+- **`.github/workflows/deploy.yml`** — only auto-deploys the Worker (via `wrangler deploy`) on push to `main` when `worker/index.js` or the workflow file changes. Pages deploys are handled separately by Cloudflare's GitHub integration, not this workflow.
+
+### Auth model (worker/index.js)
+
+- Passwords: PBKDF2 (100k iterations, SHA-256) via Web Crypto, no external deps — see `hashPassword`/`verifyPassword`.
+- Tokens: hand-rolled HS256 JWT (`signJwt`/`verifyJwt`), signed with `env.JWT_SECRET`.
+- Every JWT carries `tv` (token_version). `requireAuth` checks the JWT against the DB's current `token_version` for that user — changing a password bumps `token_version`, which invalidates all other devices' tokens immediately even though those tokens haven't expired.
+- Sliding expiry: every authenticated response includes a fresh token in the `X-Refresh-Token` header (see `mintToken`, used for `/list` and the post-auth flow). The frontend (`public/index.html`) reads this header in its `api()` wrapper and re-stores the token, except on `/change-password` (whose response body — not header — carries the authoritative new-version token).
+- `/seed` is a one-time, secret-gated endpoint (`env.SEED_SECRET`) for creating the two user accounts; it's meant to be disabled (remove the secret from Cloudflare) after first use.
+
+### Data flow
+
+- Shopping items reference a shared `item_catalogue` (name + category) so a name typed once is remembered with its category afterward; `list_items` just tracks bought/added-by state against a catalogue entry.
+- Meals follow the same pattern: `meal_catalogue` holds known meal names, `meal_plan` assigns one meal + a responsible person to a given `plan_date` (one row per date, upserted via `ON CONFLICT(plan_date)`).
+- Frontend polls `/list` and `/plan` every 7 seconds while the relevant tab is active (no websockets/push).
+
+### Categories and people
+
+`CATEGORIES` is duplicated in both `worker/index.js` (server-side validation/default) and `public/index.html` (display grouping) — keep them in sync if changed. `PEOPLE` (`["Mohibb", "Saffa"]`) only exists client-side in `public/index.html`.
+
+## Deployment
+
+There is no local dev server or test suite. Changes are validated by deploying:
+- Worker changes: push to `main` (triggers `.github/workflows/deploy.yml`) or paste into the Cloudflare Worker editor manually.
+- Frontend changes: push to `main` (Cloudflare Pages GitHub integration auto-deploys `public/`) or upload assets manually.
+- Schema changes: run the new/changed SQL manually in the D1 console; there's no automated migration application.
+
+See `SETUP.md` for the full first-time Cloudflare setup and `GITHUB_SETUP.md` for wiring up GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `JWT_SECRET`, `SEED_SECRET`).

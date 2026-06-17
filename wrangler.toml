@@ -1,0 +1,19 @@
+# Laget av Mohibb Malik, 2026
+# Architecture: Pages hosts the frontend, Worker handles API + routing.
+# You will deploy via the Cloudflare dashboard, not the CLI.
+
+name = "panhandle"
+main = "worker/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "panhandle"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# Custom domain: shopping.mohibb.com (set under Worker -> Settings -> Domains & Routes).
+# The Worker proxies frontend requests to the Pages project URL.
+
+# Secrets (set under Worker -> Settings -> Variables and Secrets):
+#   JWT_SECRET   - long random string, signs login tokens
+#   SEED_SECRET  - one-time secret to create accounts; REMOVE after seeding

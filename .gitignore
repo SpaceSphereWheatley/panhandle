@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Local development
+.env
+.env.local
+.env.*.local
+
+# Secrets (never commit these)
+# Keep secrets in GitHub Actions secrets instead
+# or in Cloudflare dashboard
+
+# Build/dist
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/

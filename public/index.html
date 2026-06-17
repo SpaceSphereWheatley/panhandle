@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="author" content="Mohibb Malik">
+<meta name="theme-color" content="#2d8a4e">
+<link rel="manifest" href="/manifest.json">
+<title>Panhandle</title>
+<style>
+  :root {
+    --green: #2d8a4e;
+    --green-dark: #246e3f;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #8a8f98;
+    --border: #e4e6ea;
+    --danger: #d64545;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); padding-bottom: 72px;
+  }
+  .hidden { display: none !important; }
+
+  /* Login */
+  #login {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 24px; gap: 12px;
+  }
+  #login h1 { color: var(--green); margin-bottom: 8px; }
+  #login input, #login button { width: 100%; max-width: 320px; padding: 14px; font-size: 16px;
+    border-radius: 12px; border: 1px solid var(--border); }
+  #login button { background: var(--green); color: #fff; border: none; font-weight: 600; }
+  #loginErr { color: var(--danger); font-size: 14px; min-height: 18px; }
+
+  header {
+    background: var(--green); color: #fff; padding: 16px 20px;
+    font-size: 20px; font-weight: 700; position: sticky; top: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  header .sync { font-size: 12px; font-weight: 400; opacity: 0.85; }
+
+  /* Tabs */
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: flex; z-index: 10;
+  }
+  nav button {
+    flex: 1; border: none; background: none; font-size: 11px; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; cursor: pointer; padding: 0;
+  }
+  nav button.active { color: var(--green); }
+  nav button .ico { font-size: 22px; }
+
+  main { padding: 16px; }
+
+  /* Add bar */
+  .addbar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
+  .addbar input {
+    flex: 1; padding: 14px; font-size: 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--card);
+  }
+  .addbar button {
+    background: var(--green); color: #fff; border: none; border-radius: 12px;
+    padding: 0 20px; font-size: 24px; font-weight: 600; cursor: pointer;
+  }
+  .suggestions {
+    position: absolute; top: 52px; left: 0; right: 56px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; z-index: 20;
+    max-height: 220px; overflow-y: auto; box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  }
+  .suggestions div { padding: 12px 14px; cursor: pointer; }
+  .suggestions div:active { background: var(--bg); }
+
+  /* Category groups */
+  .cat-label {
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 4px 8px;
+  }
+
+  /* Item cards (Bring style) */
+  .card {
+    background: var(--card); border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: opacity .15s;
+  }
+  .card .name { font-size: 16px; font-weight: 500; }
+  .card .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card.bought { opacity: 0.5; }
+  .card.bought .name { text-decoration: line-through; }
+  .card .check {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    margin-left: 12px; font-size: 16px; color: #fff;
+  }
+  .card.bought .check { background: var(--green); border-color: var(--green); }
+  .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
+
+  .clearbtn {
+    width: 100%; padding: 12px; margin-top: 12px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    font-size: 14px; cursor: pointer;
+  }
+
+  /* Meal plan */
+  .day {
+    background: var(--card); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .day .date { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+  .day .meal { font-size: 17px; font-weight: 600; margin: 4px 0; }
+  .day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+  .day .resp { font-size: 13px; color: var(--green); font-weight: 600; }
+  .day .edit { float: right; background: none; border: none; color: var(--green); font-size: 14px; }
+
+  /* Settings */
+  .setrow {
+    background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .setrow .k { font-size: 12px; color: var(--muted); }
+  .setrow .v { font-size: 16px; font-weight: 600; margin-top: 4px; }
+  .logout { background: var(--danger); color: #fff; border: none; padding: 14px;
+    border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer; }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal {
+    background: var(--card); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+    padding: 24px 20px; animation: slideup .2s ease;
+  }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h3 { margin: 0 0 16px; }
+  .modal label { font-size: 13px; color: var(--muted); display: block; margin: 12px 0 4px; }
+  .modal input, .modal select {
+    width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border);
+  }
+  .modal .actions { display: flex; gap: 8px; margin-top: 20px; }
+  .modal .actions button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; }
+  .modal .save { background: var(--green); color: #fff; }
+  .modal .cancel { background: var(--bg); color: var(--text); }
+</style>
+</head>
+<body>
+<!-- Laget av Mohibb Malik, 2026 -->
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>Panhandle</h1>
+  <input id="luser" placeholder="Brukernavn" autocomplete="username">
+  <input id="lpass" type="password" placeholder="Passord" autocomplete="current-password">
+  <button onclick="doLogin()">Logg inn</button>
+  <div id="loginErr"></div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <span id="title">Handleliste</span>
+    <span class="sync" id="syncStatus"></span>
+  </header>
+  <main>
+    <!-- TAB: SHOPPING -->
+    <section id="tab-list">
+      <div class="addbar">
+        <input id="addInput" placeholder="Legg til vare..." autocomplete="off"
+               oninput="onAddInput()" onkeydown="if(event.key==='Enter')addItem()">
+        <button onclick="addItem()">+</button>
+        <div id="suggestions" class="suggestions hidden"></div>
+      </div>
+      <div id="listContainer"></div>
+      <button class="clearbtn" onclick="clearBought()">Fjern kjøpte varer</button>
+    </section>
+
+    <!-- TAB: MEALS -->
+    <section id="tab-meals" class="hidden">
+      <div id="planContainer"></div>
+    </section>
+
+    <!-- TAB: SETTINGS -->
+    <section id="tab-settings" class="hidden">
+      <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
+      <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
+      <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
+      <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
+
+      <div class="setrow">
+        <div class="k" style="margin-bottom:10px">Bytt passord</div>
+        <input id="pwCurrent" type="password" placeholder="Nåværende passord"
+               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
+        <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
+               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
+        <button onclick="changePassword()"
+                style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600">
+          Lagre nytt passord</button>
+        <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
+      </div>
+
+      <button class="logout" onclick="logout()">Logg ut</button>
+    </section>
+  </main>
+
+  <nav>
+    <button id="nav-list" class="active" onclick="switchTab('list')">
+      <span class="ico">🛒</span>Handleliste</button>
+    <button id="nav-meals" onclick="switchTab('meals')">
+      <span class="ico">🍽️</span>Måltider</button>
+    <button id="nav-settings" onclick="switchTab('settings')">
+      <span class="ico">⚙️</span>Profil</button>
+  </nav>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+// Laget av Mohibb Malik, 2026
+const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
+let token = localStorage.getItem("ph_token");
+let currentUser = localStorage.getItem("ph_user");
+let catalogue = [];
+let currentTab = "list";
+let pollTimer = null;
+
+const PEOPLE = ["Mohibb", "Saffa"]; // edit if names differ
+const CATEGORIES = ["Frukt og grønt","Meieri","Kjøtt og fisk","Brød og bakevarer",
+  "Tørrvarer","Frossen","Drikke","Husholdning","Snacks","Annet"];
+
+// ---------- API wrapper ----------
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token,
+      ...(opts.headers || {})
+    }
+  });
+  if (res.status === 401) { logout(); throw new Error("unauth"); }
+  // sliding expiry: if the Worker handed back a refreshed token, store it.
+  // Skip for change-password: that response's body carries the authoritative
+  // new-version token, and the header token is on the now-invalid old version.
+  const refreshed = res.headers.get("X-Refresh-Token");
+  if (refreshed && refreshed !== token && path !== "/change-password") {
+    token = refreshed;
+    localStorage.setItem("ph_token", token);
+  }
+  return res.json();
+}
+
+// ---------- auth ----------
+async function doLogin() {
+  const username = document.getElementById("luser").value.trim();
+  const password = document.getElementById("lpass").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.textContent = "";
+  try {
+    const res = await fetch(API + "/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || "Innlogging feilet"; return; }
+    token = data.token; currentUser = data.user;
+    localStorage.setItem("ph_token", token);
+    localStorage.setItem("ph_user", currentUser);
+    showApp();
+  } catch { errEl.textContent = "Nettverksfeil"; }
+}
+
+function logout() {
+  localStorage.removeItem("ph_token");
+  localStorage.removeItem("ph_user");
+  token = null; currentUser = null;
+  clearInterval(pollTimer);
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+
+function showApp() {
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("setUser").textContent = currentUser;
+  refreshAll();
+  pollTimer = setInterval(() => {
+    if (currentTab === "list") loadList();
+    if (currentTab === "meals") loadPlan();
+  }, 7000);
+}
+
+// ---------- tabs ----------
+function switchTab(tab) {
+  currentTab = tab;
+  for (const t of ["list","meals","settings"]) {
+    document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+    document.getElementById("nav-" + t).classList.toggle("active", t === tab);
+  }
+  document.getElementById("title").textContent =
+    tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Profil";
+  if (tab === "list") loadList();
+  if (tab === "meals") loadPlan();
+  if (tab === "settings") loadSettings();
+}
+
+// ---------- shopping list ----------
+async function refreshAll() {
+  catalogue = await api("/catalogue");
+  loadList();
+}
+
+async function loadList() {
+  let items;
+  try { items = await api("/list"); } catch { return; }
+  const c = document.getElementById("listContainer");
+  c.innerHTML = "";
+  // group by category, unbought first
+  const groups = {};
+  for (const it of items) {
+    (groups[it.category] = groups[it.category] || []).push(it);
+  }
+  for (const cat of CATEGORIES) {
+    if (!groups[cat]) continue;
+    const label = document.createElement("div");
+    label.className = "cat-label"; label.textContent = cat;
+    c.appendChild(label);
+    for (const it of groups[cat]) c.appendChild(card(it));
+  }
+  syncTick();
+}
+
+function card(it) {
+  const el = document.createElement("div");
+  el.className = "card" + (it.bought ? " bought" : "");
+  el.onclick = (e) => { if (!e.target.classList.contains("del")) toggleItem(it.id); };
+  el.innerHTML = `
+    <div>
+      <div class="name">${escapeHtml(it.name)}</div>
+      <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
+    </div>
+    <div style="display:flex;align-items:center">
+      <button class="del" onclick="delItem(${it.id})">🗑</button>
+      <div class="check">${it.bought ? "✓" : ""}</div>
+    </div>`;
+  return el;
+}
+
+async function addItem() {
+  const input = document.getElementById("addInput");
+  const name = input.value.trim();
+  if (!name) return;
+  // guess category from catalogue if known
+  const known = catalogue.find(c => c.name.toLowerCase() === name.toLowerCase());
+  await api("/list", { method: "POST",
+    body: JSON.stringify({ name, category: known ? known.category : "Annet" }) });
+  input.value = "";
+  hideSuggestions();
+  catalogue = await api("/catalogue");
+  loadList();
+}
+
+async function toggleItem(id) { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
+async function delItem(id) { await api(`/list/${id}`, { method: "DELETE" }); loadList(); }
+async function clearBought() { await api("/list/clear-bought", { method: "POST" }); loadList(); }
+
+// autocomplete
+function onAddInput() {
+  const q = document.getElementById("addInput").value.trim().toLowerCase();
+  const box = document.getElementById("suggestions");
+  if (!q) { hideSuggestions(); return; }
+  const matches = catalogue.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6);
+  if (!matches.length) { hideSuggestions(); return; }
+  box.innerHTML = "";
+  for (const m of matches) {
+    const d = document.createElement("div");
+    d.textContent = m.name;
+    d.onclick = () => { document.getElementById("addInput").value = m.name; addItem(); };
+    box.appendChild(d);
+  }
+  box.classList.remove("hidden");
+}
+function hideSuggestions() { document.getElementById("suggestions").classList.add("hidden"); }
+
+// ---------- meal plan ----------
+async function loadPlan() {
+  let plan;
+  try { plan = await api("/plan"); } catch { return; }
+  const byDate = {};
+  for (const p of plan) byDate[p.plan_date] = p;
+  const c = document.getElementById("planContainer");
+  c.innerHTML = "";
+  // show next 14 days
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const p = byDate[iso];
+    const el = document.createElement("div");
+    el.className = "day";
+    const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
+    el.innerHTML = `
+      <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
+      <div class="date">${i === 0 ? "I dag" : i === 1 ? "I morgen" : dayName}</div>
+      <div class="meal ${p ? "" : "empty"}">${p ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
+      ${p && p.responsible ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>` : ""}`;
+    c.appendChild(el);
+  }
+  syncTick();
+}
+
+async function openMealModal(iso) {
+  const meals = await api("/meals");
+  const plan = await api(`/plan?from=${iso}&to=${iso}`);
+  const current = plan[0] || {};
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Planlegg måltid</h3>
+        <label>Måltid (velg eller skriv nytt)</label>
+        <input id="mealName" list="mealList" value="${current.meal_name ? escapeHtml(current.meal_name) : ""}" placeholder="F.eks. Taco">
+        <datalist id="mealList">
+          ${meals.map(m => `<option value="${escapeHtml(m.name)}">`).join("")}
+        </datalist>
+        <label>Ansvarlig</label>
+        <select id="mealResp">
+          ${PEOPLE.map(p => `<option ${current.responsible===p?"selected":""}>${p}</option>`).join("")}
+        </select>
+        <div class="actions">
+          <button class="cancel" onclick="closeModal()">Avbryt</button>
+          ${current.meal_name ? `<button class="cancel" onclick="deletePlan('${iso}')">Slett</button>` : ""}
+          <button class="save" onclick="savePlan('${iso}')">Lagre</button>
+        </div>
+      </div>
+    </div>`;
+}
+function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
+
+async function savePlan(iso) {
+  const meal_name = document.getElementById("mealName").value.trim();
+  const responsible = document.getElementById("mealResp").value;
+  if (!meal_name) { closeModal(); return; }
+  await api("/plan", { method: "POST",
+    body: JSON.stringify({ plan_date: iso, meal_name, responsible }) });
+  closeModal(); loadPlan();
+}
+async function deletePlan(iso) {
+  await api(`/plan/${iso}`, { method: "DELETE" });
+  closeModal(); loadPlan();
+}
+
+// ---------- settings ----------
+async function loadSettings() {
+  const cat = await api("/catalogue");
+  const meals = await api("/meals");
+  document.getElementById("setCatCount").textContent = cat.length;
+  document.getElementById("setMealCount").textContent = meals.length;
+}
+
+async function changePassword() {
+  const current = document.getElementById("pwCurrent").value;
+  const next = document.getElementById("pwNew").value;
+  const msg = document.getElementById("pwMsg");
+  msg.style.color = "var(--danger)";
+  if (next.length < 6) { msg.textContent = "Nytt passord må være minst 6 tegn"; return; }
+  try {
+    const res = await api("/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: current, new_password: next })
+    });
+    if (res.error) { msg.textContent = res.error; return; }
+    // server returns a fresh token valid on the new version; keep this device logged in
+    if (res.token) { token = res.token; localStorage.setItem("ph_token", token); }
+    msg.style.color = "var(--green)";
+    msg.textContent = "Passord endret. Andre enheter er logget ut.";
+    document.getElementById("pwCurrent").value = "";
+    document.getElementById("pwNew").value = "";
+  } catch {
+    msg.textContent = "Noe gikk galt";
+  }
+}
+
+// ---------- misc ----------
+function syncTick() {
+  const t = new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+  document.getElementById("syncStatus").textContent = "Oppdatert " + t;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+// boot
+if (token) showApp();
+</script>
+</body>
+</html>
