@@ -557,8 +557,9 @@ function gridCard(it) {
   el.onpointerleave = cancelPress;
   el.onclick = () => { if (!longPressed) toggleItem(it.id); };
   const meta = [it.qty > 1 ? `x${it.qty}` : "", it.notes || ""].filter(Boolean).join(" · ");
+  const icon = iconForItem(it.name);
   el.innerHTML = `
-    <div class="badge">${escapeHtml(it.name.charAt(0).toUpperCase())}</div>
+    <div class="badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
     <div class="grid-name">${escapeHtml(it.name)}</div>
     ${meta ? `<div class="grid-meta">${escapeHtml(meta)}</div>` : ""}`;
   return el;
