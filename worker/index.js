@@ -6,8 +6,10 @@
 //       sliding expiry, in-app password change that logs out other devices.
 
 const CATEGORIES = [
-  "Frukt og grønt", "Meieri", "Kjøtt og fisk", "Brød og bakevarer",
-  "Tørrvarer", "Frossen", "Drikke", "Husholdning", "Snacks", "Annet"
+  "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
+  "Ingredienser og krydder", "Frysevarer og ferdigmåltid", "Kornprodukter",
+  "Snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og helse",
+  "Dyreprodukter", "Annet"
 ];
 
 // ---------- JWT helpers (HS256, no external deps) ----------

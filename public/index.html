@@ -293,8 +293,9 @@ let pollTimer = null;
 let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
 
 const PEOPLE = ["Mohibb", "Saffa"]; // edit if names differ
-const CATEGORIES = ["Frukt og grønt","Meieri","Kjøtt og fisk","Brød og bakevarer",
-  "Tørrvarer","Frossen","Drikke","Husholdning","Snacks","Annet"];
+const CATEGORIES = ["Frukt og grønt","Brød og bakevarer","Meieriprodukter","Kjøtt og fisk",
+  "Ingredienser og krydder","Frysevarer og ferdigmåltid","Kornprodukter","Snacks og godteri",
+  "Drikkevarer","Husholdning","Omsorg og helse","Dyreprodukter","Annet"];
 
 // ---------- API wrapper ----------
 async function api(path, opts = {}) {
