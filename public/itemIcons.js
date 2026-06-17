@@ -62,3 +62,13 @@ const ITEM_ICONS = {
   // Annet
   "ballonger": "🎈", "blomster": "💐", "potteplante": "🪴", "grillkull": "🔥"
 };
+
+function normalizeItemName(name) {
+  return String(name).trim().toLowerCase();
+}
+
+// Returns an emoji icon for the item, or null if none is mapped — callers
+// should fall back to a first-letter badge in that case.
+function iconForItem(name) {
+  return ITEM_ICONS[normalizeItemName(name)] || null;
+}
