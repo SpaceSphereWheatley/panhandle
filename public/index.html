@@ -115,7 +115,7 @@
 
   .card-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 8px; }
   .card-wrap .swipe-bg {
-    position: absolute; inset: 0; background: var(--danger); color: #fff;
+    position: absolute; inset: 0; background: var(--green); color: #fff;
     display: flex; align-items: center; justify-content: flex-end; padding-right: 24px;
     font-size: 20px;
   }
@@ -492,8 +492,8 @@ function card(it) {
     if (swiping) {
       el.style.transition = "transform .15s ease";
       if (dx <= -SWIPE_THRESHOLD) {
-        el.style.transform = `translateX(-100%)`;
-        delItem(it.id);
+        el.style.transform = "translateX(0)";
+        toggleItem(it.id);
       } else {
         el.style.transform = "translateX(0)";
       }
@@ -519,7 +519,7 @@ function card(it) {
     </div>`;
   const bg = document.createElement("div");
   bg.className = "swipe-bg";
-  bg.textContent = "🗑";
+  bg.textContent = "✓";
   wrap.appendChild(bg);
   wrap.appendChild(el);
   return wrap;
