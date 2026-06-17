@@ -9,7 +9,7 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "panhandle"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 
 # Custom domain: shopping.mohibb.com (set under Worker -> Settings -> Domains & Routes).
 # The Worker proxies frontend requests to the Pages project URL.
