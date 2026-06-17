@@ -548,15 +548,28 @@ function parseItemInput(raw) {
   return { name: text, qty: 1 };
 }
 
+// Token-based fuzzy match: every word in the query must appear somewhere in
+// the candidate name (any order), so "melk lett" matches "Lettmelk".
+function matchCatalogue(query) {
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return [];
+  return catalogue
+    .filter(c => {
+      const ln = c.name.toLowerCase();
+      return tokens.every(t => ln.includes(t));
+    })
+    .sort((a, b) => a.name.length - b.name.length);
+}
+
 async function addItem() {
   const input = document.getElementById("addInput");
   const { name: rawName, qty } = parseItemInput(input.value);
   if (!rawName) return;
-  const name = rawName.toUpperCase();
-  // guess category from catalogue if known
-  const known = catalogue.find(c => c.name.toLowerCase() === name.toLowerCase());
+  const match = matchCatalogue(rawName)[0];
+  const name = match ? match.name : rawName.toUpperCase();
+  const category = match ? match.category : "Annet";
   await api("/list", { method: "POST",
-    body: JSON.stringify({ name, qty, category: known ? known.category : "Annet" }) });
+    body: JSON.stringify({ name, qty, category }) });
   input.value = "";
   hideSuggestions();
   catalogue = await api("/catalogue");
@@ -568,10 +581,11 @@ async function delItem(id) { await api(`/list/${id}`, { method: "DELETE" }); loa
 
 // autocomplete
 function onAddInput() {
-  const q = document.getElementById("addInput").value.trim().toLowerCase();
+  const raw = document.getElementById("addInput").value;
+  const { name: query } = parseItemInput(raw);
   const box = document.getElementById("suggestions");
-  if (!q) { hideSuggestions(); return; }
-  const matches = catalogue.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6);
+  if (!query.trim()) { hideSuggestions(); return; }
+  const matches = matchCatalogue(query).slice(0, 6);
   if (!matches.length) { hideSuggestions(); return; }
   box.innerHTML = "";
   for (const m of matches) {
