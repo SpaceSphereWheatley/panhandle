@@ -120,6 +120,7 @@
     margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; transition: background-color .15s;
     color: #fff; position: relative; z-index: 1;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   }
   .card .name { font-size: 16px; font-weight: 500; }
   .card .qty-badge {
@@ -165,7 +166,8 @@
     background: var(--tile); padding: 12px 6px;
     cursor: pointer; transition: background-color .15s;
     display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
-    border: 1px solid var(--bg-sunken); color: #fff;
+    border: 1px solid var(--bg-sunken); color: #fff; touch-action: manipulation;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   }
   .grid-card.bought { background: var(--bought-bg); color: var(--muted); }
   .grid-card.bought .grid-name { text-decoration: line-through; }
@@ -596,6 +598,8 @@ function card(it) {
   el.onpointermove = movePress;
   el.onpointerup = endPress;
   el.onpointerleave = endPress;
+  el.onpointercancel = endPress;
+  el.oncontextmenu = (e) => e.preventDefault();
   el.onclick = (e) => {
     if (longPressed || swiping || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
     toggleItem(it.id);
@@ -632,6 +636,8 @@ function gridCard(it) {
   el.onpointerup = cancelPress;
   el.onpointermove = cancelPress;
   el.onpointerleave = cancelPress;
+  el.onpointercancel = cancelPress;
+  el.oncontextmenu = (e) => e.preventDefault();
   el.onclick = () => { if (!longPressed) toggleItem(it.id); };
   const meta = [it.qty > 1 ? `x${it.qty}` : "", it.notes || ""].filter(Boolean).join(" · ");
   const icon = iconForItem(it.name);
