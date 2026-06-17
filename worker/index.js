@@ -298,6 +298,29 @@ async function seed() {
       return json({ ok: true, qty: 1 });
     }
 
+    const patchMatch = path.match(/^\/list\/(\d+)$/);
+    if (patchMatch && method === "PATCH") {
+      const { qty, notes, category } = await request.json();
+      const row = await env.DB.prepare(
+        "SELECT catalogue_id FROM list_items WHERE id = ?1"
+      ).bind(patchMatch[1]).first();
+      if (!row) return json({ error: "Fant ikke vare" }, 404);
+      if (qty !== undefined) {
+        const cleanQty = Math.max(1, parseInt(qty, 10) || 1);
+        await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2")
+          .bind(cleanQty, patchMatch[1]).run();
+      }
+      if (notes !== undefined) {
+        await env.DB.prepare("UPDATE list_items SET notes = ?1 WHERE id = ?2")
+          .bind((notes || "").trim() || null, patchMatch[1]).run();
+      }
+      if (category !== undefined && CATEGORIES.includes(category)) {
+        await env.DB.prepare("UPDATE item_catalogue SET category = ?1 WHERE id = ?2")
+          .bind(category, row.catalogue_id).run();
+      }
+      return json({ ok: true });
+    }
+
     const toggleMatch = path.match(/^\/list\/(\d+)\/toggle$/);
     if (toggleMatch && method === "POST") {
       await env.DB.prepare(`

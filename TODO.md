@@ -5,20 +5,6 @@ stable IDs for reference in commits/discussion — don't renumber when items
 are completed or reordered, just strike them from this list and let the
 rest keep their numbers (re-pack the list only if it gets sparse).
 
-1. Item detail modal: open via long-press on the icon/badge or a "⋮"
-   button on the card. Shows/edits name, category, notes
-   (quantity/description), added-by, bought state. Unlocks #2 below.
-2. Allow editing an item's category from the item modal (updates
-   `item_catalogue.category` — category lives on the catalogue entry, not
-   the list row, so changing it affects all list entries sharing that
-   catalogue name; consistent with "remember category by name").
-3. Empty states: explicit "no items yet" / "no meals planned this week"
-   messaging instead of just an empty container.
-4. Basic offline/slow-network handling — `api()` calls fail silently
-   (`catch { return; }`) on `/list` and `/plan`, which could show a stale
-   list with no indication of failure.
-5. Meal plan UI: switch from "next 14 days" to a single Monday–Sunday
-   week, with prev/next-week navigation and a "this week" default/reset.
 6. Add a grid view for the shopping list as an alternative to the current
    list view (toggle between the two), with a per-item icon. Until real
    icons exist, render a circular badge with the item's first letter as a
@@ -39,6 +25,14 @@ rest keep their numbers (re-pack the list only if it gets sparse).
 
 ## Done
 
+- [x] Item detail modal: long-press the card or tap "⋮" to edit category,
+      quantity, and notes (`PATCH /api/list/:id`).
+- [x] Allow editing an item's category from the item modal.
+- [x] Empty states for the shopping list ("Ingen varer på listen").
+- [x] Basic offline/slow-network handling — `syncStatus` shows
+      "Offline"/"Kunne ikke oppdatere" on failed polls, browser
+      online/offline events trigger an immediate retry.
+- [x] Meal plan UI: Monday–Sunday week view with prev/next/this-week nav.
 - [x] Make layout mobile-first but consistent at desktop widths too — cap
       content width (e.g. `max-width: 480px`, centered) instead of a
       separate desktop layout.

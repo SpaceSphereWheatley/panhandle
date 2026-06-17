@@ -102,6 +102,13 @@
   }
   .card.bought .check { background: var(--green); border-color: var(--green); }
   .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
+  .card .more { color: var(--muted); background: none; border: none; font-size: 18px; padding: 4px 8px; }
+
+  .empty-state {
+    text-align: center; color: var(--muted); padding: 48px 16px; font-size: 15px;
+  }
+
+  .sync.offline { color: #ffe0b3; }
 
   .clearbtn {
     width: 100%; padding: 12px; margin-top: 12px; border-radius: 12px;
@@ -110,6 +117,15 @@
   }
 
   /* Meal plan */
+  .week-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; gap: 8px;
+  }
+  .week-nav button {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 12px; font-size: 14px; cursor: pointer;
+  }
+  .week-nav .label { font-size: 13px; font-weight: 600; color: var(--muted); text-align: center; flex: 1; }
   .day {
     background: var(--card); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -184,6 +200,12 @@
 
     <!-- TAB: MEALS -->
     <section id="tab-meals" class="hidden">
+      <div class="week-nav">
+        <button onclick="shiftWeek(-1)">‹ Forrige</button>
+        <span class="label" id="weekLabel"></span>
+        <button onclick="shiftWeek(0)">Denne uken</button>
+        <button onclick="shiftWeek(1)">Neste ›</button>
+      </div>
       <div id="planContainer"></div>
     </section>
 
@@ -230,6 +252,7 @@ let currentUser = localStorage.getItem("ph_user");
 let catalogue = [];
 let currentTab = "list";
 let pollTimer = null;
+let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
 
 const PEOPLE = ["Mohibb", "Saffa"]; // edit if names differ
 const CATEGORIES = ["Frukt og grønt","Meieri","Kjøtt og fisk","Brød og bakevarer",
@@ -237,14 +260,19 @@ const CATEGORIES = ["Frukt og grønt","Meieri","Kjøtt og fisk","Brød og bakeva
 
 // ---------- API wrapper ----------
 async function api(path, opts = {}) {
-  const res = await fetch(API + path, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + token,
-      ...(opts.headers || {})
-    }
-  });
+  let res;
+  try {
+    res = await fetch(API + path, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token,
+        ...(opts.headers || {})
+      }
+    });
+  } catch (e) {
+    throw new Error("network");
+  }
   if (res.status === 401) { logout(); throw new Error("unauth"); }
   // sliding expiry: if the Worker handed back a refreshed token, store it.
   // Skip for change-password: that response's body carries the authoritative
@@ -319,9 +347,15 @@ async function refreshAll() {
 
 async function loadList() {
   let items;
-  try { items = await api("/list"); } catch { return; }
+  try { items = await api("/list"); markOnline(); } catch { markOffline(); return; }
+  lastItems = items;
   const c = document.getElementById("listContainer");
   c.innerHTML = "";
+  if (!items.length) {
+    c.innerHTML = `<div class="empty-state">Ingen varer på listen.<br>Legg til en vare over for å komme i gang.</div>`;
+    syncTick();
+    return;
+  }
   // group by category, unbought first
   const groups = {};
   for (const it of items) {
@@ -337,10 +371,25 @@ async function loadList() {
   syncTick();
 }
 
+const LONGPRESS_MS = 500;
 function card(it) {
   const el = document.createElement("div");
   el.className = "card" + (it.bought ? " bought" : "");
-  el.onclick = (e) => { if (!e.target.classList.contains("del")) toggleItem(it.id); };
+  let pressTimer = null;
+  let longPressed = false;
+  const startPress = () => {
+    longPressed = false;
+    pressTimer = setTimeout(() => { longPressed = true; openItemModal(it.id); }, LONGPRESS_MS);
+  };
+  const cancelPress = () => { clearTimeout(pressTimer); };
+  el.onpointerdown = startPress;
+  el.onpointerup = cancelPress;
+  el.onpointermove = cancelPress;
+  el.onpointerleave = cancelPress;
+  el.onclick = (e) => {
+    if (longPressed || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
+    toggleItem(it.id);
+  };
   el.innerHTML = `
     <div>
       <div class="name">${escapeHtml(it.name)}</div>
@@ -348,10 +397,46 @@ function card(it) {
       ${it.notes ? `<div class="meta" style="font-style:italic">${escapeHtml(it.notes)}</div>` : ""}
     </div>
     <div style="display:flex;align-items:center">
+      <button class="more" onclick="openItemModal(${it.id})">⋮</button>
       <button class="del" onclick="delItem(${it.id})">🗑</button>
       <div class="check">${it.bought ? "✓" : ""}</div>
     </div>`;
   return el;
+}
+
+// ---------- item detail modal ----------
+function openItemModal(id) {
+  const it = lastItems.find(x => x.id === id);
+  if (!it) return;
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>${escapeHtml(it.name)}</h3>
+        <label>Kategori</label>
+        <select id="itemCategory">
+          ${CATEGORIES.map(c => `<option ${c===it.category?"selected":""}>${c}</option>`).join("")}
+        </select>
+        <label>Antall</label>
+        <input id="itemQty" type="number" min="1" value="${it.qty || 1}">
+        <label>Notat (mengde, beskrivelse o.l.)</label>
+        <input id="itemNotes" value="${it.notes ? escapeHtml(it.notes) : ""}" placeholder="F.eks. 2 liter">
+        <div class="actions">
+          <button class="cancel" onclick="closeModal()">Avbryt</button>
+          <button class="save" onclick="saveItemEdit(${it.id})">Lagre</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function saveItemEdit(id) {
+  const category = document.getElementById("itemCategory").value;
+  const qty = parseInt(document.getElementById("itemQty").value, 10) || 1;
+  const notes = document.getElementById("itemNotes").value.trim();
+  await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ category, qty, notes }) });
+  closeModal();
+  catalogue = await api("/catalogue");
+  loadList();
 }
 
 async function addItem() {
@@ -391,16 +476,43 @@ function onAddInput() {
 function hideSuggestions() { document.getElementById("suggestions").classList.add("hidden"); }
 
 // ---------- meal plan ----------
+let weekOffset = 0; // weeks relative to the current week (Mon-Sun), shifted by shiftWeek()
+
+function mondayOf(date) {
+  const d = new Date(date);
+  const dow = d.getDay(); // 0 = Sunday
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function shiftWeek(delta) {
+  weekOffset = delta === 0 ? 0 : weekOffset + delta;
+  loadPlan();
+}
+
 async function loadPlan() {
+  const monday = mondayOf(new Date());
+  monday.setDate(monday.getDate() + weekOffset * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const fromIso = monday.toISOString().slice(0, 10);
+  const toIso = sunday.toISOString().slice(0, 10);
+
+  document.getElementById("weekLabel").textContent =
+    `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ` +
+    `${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
+
   let plan;
-  try { plan = await api("/plan"); } catch { return; }
+  try { plan = await api(`/plan?from=${fromIso}&to=${toIso}`); markOnline(); }
+  catch { markOffline(); return; }
   const byDate = {};
   for (const p of plan) byDate[p.plan_date] = p;
   const c = document.getElementById("planContainer");
   c.innerHTML = "";
-  // show next 14 days
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(); d.setDate(d.getDate() + i);
+  const today = new Date().toISOString().slice(0, 10);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(d.getDate() + i);
     const iso = d.toISOString().slice(0, 10);
     const p = byDate[iso];
     const el = document.createElement("div");
@@ -408,7 +520,7 @@ async function loadPlan() {
     const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
     el.innerHTML = `
       <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
-      <div class="date">${i === 0 ? "I dag" : i === 1 ? "I morgen" : dayName}</div>
+      <div class="date">${iso === today ? "I dag" : dayName}</div>
       <div class="meal ${p ? "" : "empty"}">${p ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
       ${p && p.responsible ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>` : ""}`;
     c.appendChild(el);
@@ -491,8 +603,21 @@ async function changePassword() {
 // ---------- misc ----------
 function syncTick() {
   const t = new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
-  document.getElementById("syncStatus").textContent = "Oppdatert " + t;
+  const el = document.getElementById("syncStatus");
+  el.classList.remove("offline");
+  el.textContent = "Oppdatert " + t;
 }
+function markOnline() { document.getElementById("syncStatus").classList.remove("offline"); }
+function markOffline() {
+  const el = document.getElementById("syncStatus");
+  el.classList.add("offline");
+  el.textContent = navigator.onLine === false ? "Offline" : "Kunne ikke oppdatere";
+}
+window.addEventListener("offline", markOffline);
+window.addEventListener("online", () => {
+  if (currentTab === "list") loadList();
+  if (currentTab === "meals") loadPlan();
+});
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
