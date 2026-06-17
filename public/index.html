@@ -92,6 +92,11 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: opacity .15s;
   }
   .card .name { font-size: 16px; font-weight: 500; }
+  .card .qty-badge {
+    display: inline-block; background: var(--green); color: #fff;
+    font-size: 13px; font-weight: 700; border-radius: 8px; padding: 2px 8px;
+    margin-left: 8px;
+  }
   .card .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.bought { opacity: 0.5; }
   .card.bought .name { text-decoration: line-through; }
@@ -392,8 +397,7 @@ function card(it) {
   };
   el.innerHTML = `
     <div>
-      <div class="name">${escapeHtml(it.name)}</div>
-      <div class="meta">Lagt til av ${escapeHtml(it.added_by)}${it.qty > 1 ? ` · x${it.qty}` : ""}</div>
+      <div class="name">${escapeHtml(it.name)}${it.qty > 1 ? `<span class="qty-badge">x${it.qty}</span>` : ""}</div>
       ${it.notes ? `<div class="meta" style="font-style:italic">${escapeHtml(it.notes)}</div>` : ""}
     </div>
     <div style="display:flex;align-items:center">
@@ -413,6 +417,7 @@ function openItemModal(id) {
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
       <div class="modal">
         <h3>${escapeHtml(it.name)}</h3>
+        <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
         <label>Kategori</label>
         <select id="itemCategory">
           ${CATEGORIES.map(c => `<option ${c===it.category?"selected":""}>${c}</option>`).join("")}
@@ -450,8 +455,9 @@ function parseItemInput(raw) {
 
 async function addItem() {
   const input = document.getElementById("addInput");
-  const { name, qty } = parseItemInput(input.value);
-  if (!name) return;
+  const { name: rawName, qty } = parseItemInput(input.value);
+  if (!rawName) return;
+  const name = rawName.toUpperCase();
   // guess category from catalogue if known
   const known = catalogue.find(c => c.name.toLowerCase() === name.toLowerCase());
   await api("/list", { method: "POST",
