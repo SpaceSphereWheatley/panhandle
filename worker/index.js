@@ -259,7 +259,7 @@ async function seed() {
     // ===== SHOPPING LIST =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`
-        SELECT li.id, li.bought, li.added_by, li.added_at, c.name, c.category
+        SELECT li.id, li.bought, li.added_by, li.added_at, li.qty, li.notes, c.name, c.category
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
         ORDER BY li.bought ASC, c.category ASC, c.name ASC
@@ -270,7 +270,7 @@ async function seed() {
     }
 
     if (path === "/list" && method === "POST") {
-      const { name, category } = await request.json();
+      const { name, category, notes } = await request.json();
       const clean = (name || "").trim();
       if (!clean) return json({ error: "Tomt navn" }, 400);
       let cat = await env.DB.prepare(
@@ -286,11 +286,16 @@ async function seed() {
       const existing = await env.DB.prepare(
         "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0"
       ).bind(cat.id).first();
-      if (existing) return json({ ok: true, duplicate: true });
+      if (existing) {
+        const updated = await env.DB.prepare(
+          "UPDATE list_items SET qty = qty + 1 WHERE id = ?1 RETURNING qty"
+        ).bind(existing.id).first();
+        return json({ ok: true, duplicate: true, qty: updated.qty });
+      }
       await env.DB.prepare(
-        "INSERT INTO list_items (catalogue_id, added_by) VALUES (?1, ?2)"
-      ).bind(cat.id, user.username).run();
-      return json({ ok: true });
+        "INSERT INTO list_items (catalogue_id, added_by, notes) VALUES (?1, ?2, ?3)"
+      ).bind(cat.id, user.username, (notes || "").trim() || null).run();
+      return json({ ok: true, qty: 1 });
     }
 
     const toggleMatch = path.match(/^\/list\/(\d+)\/toggle$/);
