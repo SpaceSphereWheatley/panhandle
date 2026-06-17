@@ -109,6 +109,33 @@
   .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
   .card .more { color: var(--muted); background: none; border: none; font-size: 18px; padding: 4px 8px; }
 
+  /* View toggle */
+  .view-toggle { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
+  .view-toggle button {
+    border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    border-radius: 10px; font-size: 16px; padding: 6px 10px; cursor: pointer;
+  }
+  .view-toggle button.active { color: #fff; background: var(--green); border-color: var(--green); }
+
+  /* Grid view */
+  .grid-wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grid-card {
+    background: var(--card); border-radius: 14px; padding: 12px 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: opacity .15s;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  }
+  .grid-card.bought { opacity: 0.5; }
+  .grid-card.bought .grid-name { text-decoration: line-through; }
+  .grid-card .badge {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--green); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .grid-card.bought .badge { background: var(--muted); }
+  .grid-card .grid-name { font-size: 13px; font-weight: 500; word-break: break-word; }
+  .grid-card .grid-meta { font-size: 11px; color: var(--muted); }
+  .grid-card .qty-badge { margin-left: 0; }
+
   .empty-state {
     text-align: center; color: var(--muted); padding: 48px 16px; font-size: 15px;
   }
@@ -199,6 +226,10 @@
         <button onclick="addItem()">+</button>
         <div id="suggestions" class="suggestions hidden"></div>
       </div>
+      <div class="view-toggle">
+        <button id="viewListBtn" onclick="setView('list')">☰</button>
+        <button id="viewGridBtn" onclick="setView('grid')">⊞</button>
+      </div>
       <div id="listContainer"></div>
       <button class="clearbtn" onclick="clearBought()">Fjern kjøpte varer</button>
     </section>
@@ -256,6 +287,7 @@ let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let catalogue = [];
 let currentTab = "list";
+let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
 let pollTimer = null;
 let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
 
@@ -350,7 +382,17 @@ async function refreshAll() {
   loadList();
 }
 
+function setView(mode) {
+  viewMode = mode;
+  localStorage.setItem("ph_view", mode);
+  document.getElementById("viewListBtn").classList.toggle("active", mode === "list");
+  document.getElementById("viewGridBtn").classList.toggle("active", mode === "grid");
+  loadList();
+}
+
 async function loadList() {
+  document.getElementById("viewListBtn").classList.toggle("active", viewMode === "list");
+  document.getElementById("viewGridBtn").classList.toggle("active", viewMode === "grid");
   let items;
   try { items = await api("/list"); markOnline(); } catch { markOffline(); return; }
   lastItems = items;
@@ -371,7 +413,14 @@ async function loadList() {
     const label = document.createElement("div");
     label.className = "cat-label"; label.textContent = cat;
     c.appendChild(label);
-    for (const it of groups[cat]) c.appendChild(card(it));
+    if (viewMode === "grid") {
+      const grid = document.createElement("div");
+      grid.className = "grid-wrap";
+      for (const it of groups[cat]) grid.appendChild(gridCard(it));
+      c.appendChild(grid);
+    } else {
+      for (const it of groups[cat]) c.appendChild(card(it));
+    }
   }
   syncTick();
 }
@@ -405,6 +454,29 @@ function card(it) {
       <button class="del" onclick="delItem(${it.id})">🗑</button>
       <div class="check">${it.bought ? "✓" : ""}</div>
     </div>`;
+  return el;
+}
+
+function gridCard(it) {
+  const el = document.createElement("div");
+  el.className = "grid-card" + (it.bought ? " bought" : "");
+  let pressTimer = null;
+  let longPressed = false;
+  const startPress = () => {
+    longPressed = false;
+    pressTimer = setTimeout(() => { longPressed = true; openItemModal(it.id); }, LONGPRESS_MS);
+  };
+  const cancelPress = () => { clearTimeout(pressTimer); };
+  el.onpointerdown = startPress;
+  el.onpointerup = cancelPress;
+  el.onpointermove = cancelPress;
+  el.onpointerleave = cancelPress;
+  el.onclick = () => { if (!longPressed) toggleItem(it.id); };
+  const meta = [it.qty > 1 ? `x${it.qty}` : "", it.notes || ""].filter(Boolean).join(" · ");
+  el.innerHTML = `
+    <div class="badge">${it.bought ? "✓" : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
+    <div class="grid-name">${escapeHtml(it.name)}</div>
+    ${meta ? `<div class="grid-meta">${escapeHtml(meta)}</div>` : ""}`;
   return el;
 }
 
