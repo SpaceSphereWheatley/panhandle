@@ -153,6 +153,20 @@
 
   .sync.offline { color: #ffe0b3; }
 
+  /* Install prompt banner */
+  #installBanner {
+    max-width: 480px; margin: 12px auto 0; background: var(--card);
+    border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  #installBanner .ico { font-size: 22px; flex-shrink: 0; }
+  #installBanner .txt { flex: 1; font-size: 13px; line-height: 1.3; }
+  #installBanner .install { background: var(--green); color: #fff; border: none;
+    border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    flex-shrink: 0; }
+  #installBanner .dismiss { background: none; border: none; color: var(--muted);
+    font-size: 18px; padding: 4px 6px; cursor: pointer; flex-shrink: 0; }
+
   #recentContainer:not(:empty) {
     margin-top: 28px; padding-top: 16px; border-top: 2px solid var(--border);
   }
@@ -226,6 +240,7 @@
     <span id="title">Handleliste</span>
     <span class="sync" id="syncStatus"></span>
   </header>
+  <div id="installBanner" class="hidden"></div>
   <main>
     <!-- TAB: SHOPPING -->
     <section id="tab-list">
@@ -791,8 +806,60 @@ function escapeHtml(s) {
     ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 
+// ---------- install prompt ----------
+let deferredInstallEvent = null;
+
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+function isIos() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+}
+function installDismissed() {
+  return localStorage.getItem("ph_install_dismissed") === "1";
+}
+function dismissInstallBanner() {
+  localStorage.setItem("ph_install_dismissed", "1");
+  document.getElementById("installBanner").classList.add("hidden");
+}
+function showInstallBanner() {
+  if (isStandalone() || installDismissed()) return;
+  const banner = document.getElementById("installBanner");
+  if (deferredInstallEvent) {
+    banner.innerHTML = `
+      <span class="ico">📲</span>
+      <span class="txt">Installer Panhandle på hjemskjermen for raskere tilgang.</span>
+      <button class="install" onclick="doInstall()">Installer</button>
+      <button class="dismiss" onclick="dismissInstallBanner()">✕</button>`;
+    banner.classList.remove("hidden");
+  } else if (isIos()) {
+    banner.innerHTML = `
+      <span class="ico">📲</span>
+      <span class="txt">Legg til Panhandle på hjemskjermen: trykk del-ikonet
+        <span style="font-weight:600">⎋</span> og velg "Legg til på Hjemskjerm".</span>
+      <button class="dismiss" onclick="dismissInstallBanner()">✕</button>`;
+    banner.classList.remove("hidden");
+  }
+}
+async function doInstall() {
+  if (!deferredInstallEvent) return;
+  document.getElementById("installBanner").classList.add("hidden");
+  deferredInstallEvent.prompt();
+  await deferredInstallEvent.userChoice;
+  deferredInstallEvent = null;
+}
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallEvent = e;
+  if (token) showInstallBanner();
+});
+window.addEventListener("appinstalled", () => {
+  localStorage.setItem("ph_install_dismissed", "1");
+  document.getElementById("installBanner").classList.add("hidden");
+});
+
 // boot
-if (token) showApp();
+if (token) { showApp(); showInstallBanner(); }
 </script>
 </body>
 </html>
