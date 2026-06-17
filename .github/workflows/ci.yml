@@ -1,0 +1,135 @@
+name: CI
+
+# Runs on every push and PR. There is no GitHub Actions deploy stage here:
+# Cloudflare's native Git integration already deploys the Worker and Pages
+# project on push to main (see CLAUDE.md). Adding a second deploy path from
+# Actions would race with that and is unnecessary.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No package.json/lockfile exists (project intentionally has no Node
+      # toolchain), so actions/setup-node's built-in cache can't key off a
+      # lockfile. Cache npm's own download cache instead, keyed on the pinned
+      # tool versions below, so `npx` doesn't re-download eslint every run.
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-eslint8
+
+      # worker/index.js is the entire backend (single file, no deps) — a plain
+      # syntax check catches typos that would otherwise only surface after
+      # Cloudflare's Git integration has already deployed a broken Worker.
+      - name: Syntax check worker/index.js
+        run: node --check worker/index.js
+
+      # public/index.html embeds its JS inline (no build step). Extract the
+      # <script> contents and syntax-check them the same way, since there's
+      # no .js file for `node --check` to point at directly.
+      - name: Syntax check inline scripts in public/index.html
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('public/index.html', 'utf8');
+            const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (scripts.length === 0) { console.log('No inline <script> blocks found'); process.exit(0); }
+            scripts.forEach((m, i) => fs.writeFileSync(\`/tmp/inline-\${i}.js\`, m[1]));
+            console.log(\`Extracted \${scripts.length} inline script block(s)\`);
+          "
+          for f in /tmp/inline-*.js; do
+            [ -e "$f" ] || continue
+            node --check "$f"
+          done
+
+      # eslint@8 still supports --no-eslintrc, so we get sane defaults
+      # without committing an eslint config (CLAUDE.md says not to introduce
+      # extra tooling/config into the repo itself). Pinned to a major version
+      # so the cache key above stays valid and results are reproducible.
+      - name: Lint worker/index.js
+        run: |
+          npx --yes eslint@8 --no-eslintrc --env worker,es2021 \
+            --parser-options=ecmaVersion:2021,sourceType:module \
+            --rule '{"no-undef":"off","no-unused-vars":"warn"}' \
+            worker/index.js
+
+  secret-scan:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan full history, not just the latest commit
+
+      # Catches accidentally committed JWT_SECRET/SEED_SECRET values etc.
+      # Filesystem-only scan, no account/license needed (stays free).
+      - name: Scan for committed secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  sql-migrations:
+    name: Validate SQL migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # There's no migration runner (CLAUDE.md: "run manually in the D1
+      # console, in order"), so the only thing CI can realistically enforce
+      # is that migration numbers are sequential and non-duplicated — the one
+      # invariant a manual process is most likely to silently violate.
+      - name: Check migration numbering is sequential
+        run: |
+          cd migrations
+          expected=1
+          for f in $(ls *.sql | sort); do
+            num=$(echo "$f" | grep -oE '^[0-9]+')
+            num=$((10#$num))
+            if [ "$num" -ne "$expected" ]; then
+              echo "::error file=migrations/$f::expected migration number $expected, got $num"
+              exit 1
+            fi
+            expected=$((expected + 1))
+          done
+          echo "Migrations are sequential: $((expected - 1)) found"
+
+  notify-on-failure:
+    name: Notify on failure
+    needs: [lint, secret-scan, sql-migrations]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      # SLACK_WEBHOOK_URL is an optional repo secret (Settings > Secrets and
+      # variables > Actions). If it isn't configured, skip rather than fail
+      # the notify job itself — GitHub already emails the pusher/PR author on
+      # failed runs by default, so this is a best-effort extra channel.
+      - name: Check for Slack webhook secret
+        id: check
+        env:
+          WEBHOOK_SET: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        run: echo "configured=$WEBHOOK_SET" >> "$GITHUB_OUTPUT"
+
+      - name: Post failure to Slack
+        if: steps.check.outputs.configured == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\":x: CI failed on ${{ github.repository }}@${{ github.ref_name }} (${{ github.sha }}) — ${{ github.event.head_commit.message || github.event.pull_request.title }}\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
