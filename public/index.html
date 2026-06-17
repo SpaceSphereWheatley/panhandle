@@ -198,6 +198,14 @@
   }
   .setrow .k { font-size: 12px; color: var(--muted); }
   .setrow .v { font-size: 16px; font-weight: 600; margin-top: 4px; }
+  .icon-gap-list {
+    margin-top: 10px; max-height: 180px; overflow-y: auto;
+    font-size: 13px; color: var(--text); line-height: 1.8;
+  }
+  .icon-gap-list span {
+    display: inline-block; background: var(--bg); border-radius: 8px;
+    padding: 3px 8px; margin: 0 4px 4px 0;
+  }
   .logout { background: var(--danger); color: #fff; border: none; padding: 14px;
     border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer; }
 
@@ -275,6 +283,12 @@
       <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
       <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
       <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
+
+      <div class="setrow">
+        <div class="k">Varer uten ikon</div>
+        <div class="v" id="setIconGapCount">-</div>
+        <div id="iconGapList" class="icon-gap-list"></div>
+      </div>
 
       <div class="setrow">
         <div class="k" style="margin-bottom:10px">Bytt passord</div>
@@ -760,6 +774,12 @@ async function loadSettings() {
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
   document.getElementById("setMealCount").textContent = meals.length;
+
+  const missing = cat.filter(c => !iconForItem(c.name)).map(c => c.name).sort();
+  document.getElementById("setIconGapCount").textContent =
+    `${missing.length} av ${cat.length}`;
+  document.getElementById("iconGapList").innerHTML =
+    missing.map(n => `<span>${escapeHtml(n)}</span>`).join("");
 }
 
 async function changePassword() {
