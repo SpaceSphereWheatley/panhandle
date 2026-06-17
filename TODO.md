@@ -5,10 +5,6 @@ stable IDs for reference in commits/discussion — don't renumber when items
 are completed or reordered, just strike them from this list and let the
 rest keep their numbers (re-pack the list only if it gets sparse).
 
-6. Add a grid view for the shopping list as an alternative to the current
-   list view (toggle between the two), with a per-item icon. Until real
-   icons exist, render a circular badge with the item's first letter as a
-   placeholder icon.
 7. Drag-to-reorder or swipe-to-delete on shopping list cards, once the
    item modal (#1) exists (avoid gesture conflicts between
    long-press-for-modal and swipe-to-delete).
@@ -44,4 +40,7 @@ rest keep their numbers (re-pack the list only if it gets sparse).
 - [x] Quantity-aware "merge" when adding an item that's already on the
       list unbought (previously created duplicate rows against the same
       catalogue entry).
+- [x] Grid view for the shopping list as an alternative to the list view
+      (toggle between the two), 3-column, with a circular first-letter
+      badge placeholder icon per item.
 </content>
