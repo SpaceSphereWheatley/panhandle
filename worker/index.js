@@ -6,9 +6,9 @@
 //       sliding expiry, in-app password change that logs out other devices.
 
 const CATEGORIES = [
-  "frukt og grønt", "brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
-  "ingredienser og krydder", "frysevarer og ferdigmåltid", "Kornprodukter",
-  "snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og Helse",
+  "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
+  "Ingredienser og krydder", "Frysevarer og ferdigmåltid", "Kornprodukter",
+  "Snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og helse",
   "Dyreprodukter", "Annet"
 ];
 
