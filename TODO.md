@@ -22,6 +22,8 @@ rest keep their numbers (re-pack the list only if it gets sparse).
     first-letter badge if no icon exists.
 12. Add an admin/settings view listing catalogue items that don't have a
     matching icon yet, to help decide what to design next.
+13. Multi-owner lists, admin-created accounts, per-list isolation —
+    see docs/multi-tenant-plan.md for full design.
 
 ## Done
 
