@@ -113,6 +113,14 @@
   .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
   .card .more { color: var(--muted); background: none; border: none; font-size: 18px; padding: 4px 8px; }
 
+  .card-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 8px; }
+  .card-wrap .swipe-bg {
+    position: absolute; inset: 0; background: var(--green); color: #fff;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 24px;
+    font-size: 20px;
+  }
+  .card-wrap .card { margin-bottom: 0; touch-action: pan-y; }
+
   /* View toggle */
   .view-toggle { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
   .view-toggle button {
@@ -449,22 +457,54 @@ async function loadList() {
 }
 
 const LONGPRESS_MS = 500;
+const SWIPE_THRESHOLD = 70;
 function card(it) {
+  const wrap = document.createElement("div");
+  wrap.className = "card-wrap";
   const el = document.createElement("div");
   el.className = "card" + (it.bought ? " bought" : "");
   let pressTimer = null;
   let longPressed = false;
-  const startPress = () => {
+  let startX = 0, startY = 0, dx = 0, swiping = false;
+
+  const startPress = (e) => {
     longPressed = false;
+    swiping = false;
+    dx = 0;
+    startX = e.clientX; startY = e.clientY;
     pressTimer = setTimeout(() => { longPressed = true; openItemModal(it.id); }, LONGPRESS_MS);
   };
-  const cancelPress = () => { clearTimeout(pressTimer); };
+  const movePress = (e) => {
+    const mdx = e.clientX - startX;
+    const mdy = e.clientY - startY;
+    if (!swiping && Math.abs(mdx) > 10 && Math.abs(mdx) > Math.abs(mdy)) {
+      swiping = true;
+      clearTimeout(pressTimer);
+    }
+    if (swiping) {
+      dx = Math.min(0, mdx);
+      el.style.transition = "none";
+      el.style.transform = `translateX(${dx}px)`;
+    }
+  };
+  const endPress = () => {
+    clearTimeout(pressTimer);
+    if (swiping) {
+      el.style.transition = "transform .15s ease";
+      if (dx <= -SWIPE_THRESHOLD) {
+        el.style.transform = "translateX(0)";
+        toggleItem(it.id);
+      } else {
+        el.style.transform = "translateX(0)";
+      }
+    }
+  };
   el.onpointerdown = startPress;
-  el.onpointerup = cancelPress;
-  el.onpointermove = cancelPress;
-  el.onpointerleave = cancelPress;
+  el.onpointermove = movePress;
+  el.onpointerup = endPress;
+  el.onpointerleave = endPress;
   el.onclick = (e) => {
-    if (longPressed || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
+    if (longPressed || swiping || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
     toggleItem(it.id);
   };
   el.innerHTML = `
@@ -477,7 +517,12 @@ function card(it) {
       <button class="del" onclick="delItem(${it.id})">🗑</button>
       <div class="check"></div>
     </div>`;
-  return el;
+  const bg = document.createElement("div");
+  bg.className = "swipe-bg";
+  bg.textContent = "✓";
+  wrap.appendChild(bg);
+  wrap.appendChild(el);
+  return wrap;
 }
 
 function gridCard(it) {
