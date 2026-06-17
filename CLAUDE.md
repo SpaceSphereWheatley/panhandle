@@ -6,14 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Panhandle: a shared shopping list + meal planner PWA for two people, deployed entirely on Cloudflare (Pages + Worker + D1). Live at https://shopping.mohibb.com.
 
-There is no build step and no Node toolchain in this repo — everything is deployed by pasting/uploading raw files into the Cloudflare dashboard, or via the GitHub Actions workflow for the Worker. Do not introduce bundlers, package.json, or frameworks unless explicitly asked.
+There is no build step and no Node toolchain in this repo. Both the Pages project and the Worker are connected directly to this GitHub repo via Cloudflare's native Git integration (not GitHub Actions) — pushing to `main` auto-deploys both. Do not introduce bundlers, package.json, or frameworks unless explicitly asked.
 
 ## Architecture
 
-- **`worker/index.js`** — single-file Cloudflare Worker. Handles all `/api/*` and `/seed` routes, and proxies any non-API request to the Pages project (hostname hardcoded near `pagesUrl.hostname`). This is the entire backend: routing, auth, and business logic all live in one `fetch` handler with sequential `if (path === ...)` checks.
-- **`public/`** — static frontend served by Cloudflare Pages (no framework, no build): `index.html` (the app, single file with inline `<style>`/`<script>`), `seed.html` (one-time account creation form, posts to `/seed`), `manifest.json`, icons.
+- **`worker/index.js`** — single-file Cloudflare Worker. Handles all `/api/*` and `/seed` routes, and proxies any non-API request to the Pages project (hostname hardcoded near `pagesUrl.hostname`, currently `panhandle-ecj.pages.dev`). This is the entire backend: routing, auth, and business logic all live in one `fetch` handler with sequential `if (path === ...)` checks.
+- **`public/`** — static frontend served by Cloudflare Pages (no framework, no build): `index.html` (the app, single file with inline `<style>`/`<script>`), `seed.html` (one-time account creation form, posts to `/seed`), `manifest.json`, icons. Pages build output directory is `public/`, no build command.
 - **`migrations/`** — SQL run manually in the D1 console, in order: `0001_init.sql` (shopping list + meal tables), `0002_users.sql` (users table). There is no migration runner; new schema changes need a new numbered `.sql` file and manual execution against D1.
-- **`.github/workflows/deploy.yml`** — only auto-deploys the Worker (via `wrangler deploy`) on push to `main` when `worker/index.js` or the workflow file changes. Pages deploys are handled separately by Cloudflare's GitHub integration, not this workflow.
+
+### Deployment (Cloudflare Git integration)
+
+- Both the Pages project and the Worker are configured in the Cloudflare dashboard to track `main` directly — no `.github/workflows/` exist in this repo.
+- Worker deploy command (set in Cloudflare dashboard): `npx wrangler deploy`, reading `wrangler.toml` at repo root.
+- Worker runtime secrets (`JWT_SECRET`, `SEED_SECRET`) are set in the Worker's dashboard (Settings → Variables and Secrets) and are independent of the Git integration — they persist across deploys and are never defined in `wrangler.toml` or committed to the repo.
 
 ### Auth model (worker/index.js)
 
@@ -36,8 +41,6 @@ There is no build step and no Node toolchain in this repo — everything is depl
 ## Deployment
 
 There is no local dev server or test suite. Changes are validated by deploying:
-- Worker changes: push to `main` (triggers `.github/workflows/deploy.yml`) or paste into the Cloudflare Worker editor manually.
-- Frontend changes: push to `main` (Cloudflare Pages GitHub integration auto-deploys `public/`) or upload assets manually.
+- Worker changes: push to `main` — Cloudflare's Git integration runs `npx wrangler deploy` automatically.
+- Frontend changes: push to `main` — Cloudflare Pages rebuilds `public/` automatically.
 - Schema changes: run the new/changed SQL manually in the D1 console; there's no automated migration application.
-
-See `SETUP.md` for the full first-time Cloudflare setup and `GITHUB_SETUP.md` for wiring up GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `JWT_SECRET`, `SEED_SECRET`).

@@ -22,10 +22,12 @@ A shared shopping list and meal planner PWA for two people, built on Cloudflare 
 
 ## Setup
 
-See [SETUP.md](SETUP.md) for complete deployment instructions. You'll need:
-- A Cloudflare account
-- A custom domain (or subdomain)
-- ~15 minutes
+Both the Pages project and the Worker are connected directly to this GitHub repo via Cloudflare's native Git integration — push to `main` and both auto-deploy. No GitHub Actions, no manual file uploads.
+
+- **Pages:** Connect to Git → this repo → branch `main` → build output directory `public/`, no build command.
+- **Worker:** Connect to Git → this repo → branch `main` → deploy command `npx wrangler deploy` (reads `wrangler.toml` at repo root), no build command.
+- **D1 database:** schema is applied manually — run the SQL in `migrations/` (in order) against the `panhandle` D1 database via the Cloudflare dashboard's D1 console. There's no migration runner.
+- **Worker secrets:** `JWT_SECRET` and `SEED_SECRET` are set directly in the Worker's dashboard (Settings → Variables and Secrets) — independent of the Git integration.
 
 ## Development
 
@@ -34,20 +36,9 @@ Frontend code can be tested locally by opening `public/index.html` in a browser 
 
 ### Deploying changes
 
-**Frontend (Pages):**
-1. Edit files in `public/`
-2. Push to GitHub
-3. Pages auto-deploys (if linked via GitHub integration)
-
-**API (Worker):**
-1. Edit `worker/index.js`
-2. Push to GitHub
-3. GitHub Actions auto-deploys via `wrangler deploy` (requires secrets configured in GitHub)
-
-To deploy Worker manually without GitHub Actions:
-1. Go to Worker → **Edit code**
-2. Paste the updated `worker/index.js`
-3. Click **Deploy**
+Both halves deploy automatically on push to `main`:
+- **Frontend (Pages):** edit files in `public/`, push — Pages rebuilds and deploys.
+- **API (Worker):** edit `worker/index.js`, push — Cloudflare runs `npx wrangler deploy` and deploys.
 
 ## Files
 
@@ -60,8 +51,6 @@ To deploy Worker manually without GitHub Actions:
 - `migrations/` — D1 schema
   - `0001_init.sql` — shopping list and meal plan tables
   - `0002_users.sql` — user accounts with password hashing
-- `SETUP.md` — deployment guide
-- `.github/workflows/deploy.yml` — GitHub Actions for Worker auto-deploy
 
 ## Known Limitations
 
