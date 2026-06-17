@@ -3,7 +3,7 @@
 Working list of planned changes. Roughly ordered by dependency, not priority.
 
 ## Layout / UI
-- [ ] Make layout mobile-first but consistent at desktop widths too — cap content
+- [x] Make layout mobile-first but consistent at desktop widths too — cap content
       width (e.g. `max-width: 480px`, centered) instead of a separate desktop
       layout, so the app looks the same shape on phone and browser.
 - [ ] Add a grid view for the shopping list as an alternative to the current
@@ -15,9 +15,10 @@ Working list of planned changes. Roughly ordered by dependency, not priority.
       notes (quantity/description), added-by, bought state.
 
 ## Data model
-- [ ] Add a `notes` (free text — quantity, description, etc.) column to
+- [x] Add a `notes` (free text — quantity, description, etc.) column to
       `list_items`. Needs migration `0003_item_notes.sql` and worker
-      read/write support.
+      read/write support. (Done via `migrations/0003_list_items_qty_notes.sql`;
+      storage/display only — entry UI is still pending the item detail modal.)
 - [ ] Allow editing an item's category from the item modal (updates
       `item_catalogue.category`, since category lives on the catalogue entry,
       not the list row — changing it will affect all list entries sharing
@@ -38,7 +39,7 @@ Working list of planned changes. Roughly ordered by dependency, not priority.
 ## Other suggestions (not yet confirmed — flag for discussion)
 - [ ] Empty states: explicit "no items yet" / "no meals planned this week"
       messaging instead of just an empty container.
-- [ ] Quantity-aware "merge" when adding an item that's already on the list
+- [x] Quantity-aware "merge" when adding an item that's already on the list
       unbought (currently adding the same name twice creates two rows in
       `list_items` against the same catalogue entry).
 - [ ] Drag-to-reorder or swipe-to-delete on shopping list cards, now that
