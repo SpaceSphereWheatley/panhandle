@@ -85,11 +85,13 @@
   .cat-label {
     font-size: 12px; font-weight: 700; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 4px 8px;
+    padding-top: 14px; border-top: 1px solid var(--border);
   }
+  .cat-label:first-child { padding-top: 0; border-top: none; }
 
   /* Item cards (Bring style) */
   .card {
-    background: var(--green-muted); border-radius: 14px; padding: 14px 16px;
+    background: var(--red-muted); border-radius: 14px; padding: 14px 16px;
     margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: background-color .15s;
   }
@@ -100,14 +102,14 @@
     margin-left: 8px;
   }
   .card .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .card.bought { background: var(--red-muted); }
+  .card.bought { background: var(--green-muted); }
   .card.bought .name { text-decoration: line-through; }
   .card .check {
     width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     margin-left: 12px; font-size: 16px; color: #fff;
   }
-  .card.bought .check { background: var(--danger); border-color: var(--danger); }
+  .card.bought .check { background: var(--green); border-color: var(--green); }
   .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
   .card .more { color: var(--muted); background: none; border: none; font-size: 18px; padding: 4px 8px; }
 
@@ -122,18 +124,17 @@
   /* Grid view */
   .grid-wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .grid-card {
-    background: var(--green-muted); border-radius: 14px; padding: 12px 8px;
+    background: var(--red-muted); border-radius: 14px; padding: 12px 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: background-color .15s;
     display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
   }
-  .grid-card.bought { background: var(--red-muted); }
+  .grid-card.bought { background: var(--green-muted); }
   .grid-card.bought .grid-name { text-decoration: line-through; }
   .grid-card .badge {
     width: 44px; height: 44px; border-radius: 50%; background: var(--green); color: #fff;
     display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
     flex-shrink: 0;
   }
-  .grid-card.bought .badge { background: var(--danger); }
   .grid-card .grid-name { font-size: 13px; font-weight: 500; word-break: break-word; }
   .grid-card .grid-meta { font-size: 11px; color: var(--muted); }
   .grid-card .qty-badge { margin-left: 0; }
@@ -143,6 +144,10 @@
   }
 
   .sync.offline { color: #ffe0b3; }
+
+  #recentContainer:not(:empty) {
+    margin-top: 28px; padding-top: 16px; border-top: 2px solid var(--border);
+  }
 
 /* Meal plan */
   .week-nav {
@@ -469,7 +474,7 @@ function card(it) {
     <div style="display:flex;align-items:center">
       <button class="more" onclick="openItemModal(${it.id})">⋮</button>
       <button class="del" onclick="delItem(${it.id})">🗑</button>
-      <div class="check">${it.bought ? "✓" : ""}</div>
+      <div class="check"></div>
     </div>`;
   return el;
 }
@@ -491,7 +496,7 @@ function gridCard(it) {
   el.onclick = () => { if (!longPressed) toggleItem(it.id); };
   const meta = [it.qty > 1 ? `x${it.qty}` : "", it.notes || ""].filter(Boolean).join(" · ");
   el.innerHTML = `
-    <div class="badge">${it.bought ? "✓" : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
+    <div class="badge">${escapeHtml(it.name.charAt(0).toUpperCase())}</div>
     <div class="grid-name">${escapeHtml(it.name)}</div>
     ${meta ? `<div class="grid-meta">${escapeHtml(meta)}</div>` : ""}`;
   return el;
