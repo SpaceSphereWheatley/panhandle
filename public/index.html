@@ -40,12 +40,14 @@
     background: var(--green); color: #fff; padding: 16px 20px;
     font-size: 20px; font-weight: 700; position: sticky; top: 0; z-index: 10;
     display: flex; justify-content: space-between; align-items: center;
+    max-width: 480px; margin: 0 auto;
   }
   header .sync { font-size: 12px; font-weight: 400; opacity: 0.85; }
 
   /* Tabs */
   nav {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); height: 64px;
+    width: 100%; max-width: 480px;
     background: var(--card); border-top: 1px solid var(--border);
     display: flex; z-index: 10;
   }
@@ -57,7 +59,7 @@
   nav button.active { color: var(--green); }
   nav button .ico { font-size: 22px; }
 
-  main { padding: 16px; }
+  main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
   /* Add bar */
   .addbar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
@@ -342,7 +344,8 @@ function card(it) {
   el.innerHTML = `
     <div>
       <div class="name">${escapeHtml(it.name)}</div>
-      <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
+      <div class="meta">Lagt til av ${escapeHtml(it.added_by)}${it.qty > 1 ? ` · x${it.qty}` : ""}</div>
+      ${it.notes ? `<div class="meta" style="font-style:italic">${escapeHtml(it.notes)}</div>` : ""}
     </div>
     <div style="display:flex;align-items:center">
       <button class="del" onclick="delItem(${it.id})">🗑</button>
