@@ -17,6 +17,8 @@
     --muted: #8a8f98;
     --border: #e4e6ea;
     --danger: #d64545;
+    --green-muted: #dcebe1;
+    --red-muted: #f3dede;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -87,9 +89,9 @@
 
   /* Item cards (Bring style) */
   .card {
-    background: var(--card); border-radius: 14px; padding: 14px 16px;
+    background: var(--green-muted); border-radius: 14px; padding: 14px 16px;
     margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: opacity .15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: background-color .15s;
   }
   .card .name { font-size: 16px; font-weight: 500; }
   .card .qty-badge {
@@ -98,14 +100,14 @@
     margin-left: 8px;
   }
   .card .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .card.bought { opacity: 0.5; }
+  .card.bought { background: var(--red-muted); }
   .card.bought .name { text-decoration: line-through; }
   .card .check {
     width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     margin-left: 12px; font-size: 16px; color: #fff;
   }
-  .card.bought .check { background: var(--green); border-color: var(--green); }
+  .card.bought .check { background: var(--danger); border-color: var(--danger); }
   .card .del { color: var(--danger); background: none; border: none; font-size: 18px; padding: 4px 8px; }
   .card .more { color: var(--muted); background: none; border: none; font-size: 18px; padding: 4px 8px; }
 
@@ -120,18 +122,18 @@
   /* Grid view */
   .grid-wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .grid-card {
-    background: var(--card); border-radius: 14px; padding: 12px 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: opacity .15s;
+    background: var(--green-muted); border-radius: 14px; padding: 12px 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: background-color .15s;
     display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
   }
-  .grid-card.bought { opacity: 0.5; }
+  .grid-card.bought { background: var(--red-muted); }
   .grid-card.bought .grid-name { text-decoration: line-through; }
   .grid-card .badge {
     width: 44px; height: 44px; border-radius: 50%; background: var(--green); color: #fff;
     display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
     flex-shrink: 0;
   }
-  .grid-card.bought .badge { background: var(--muted); }
+  .grid-card.bought .badge { background: var(--danger); }
   .grid-card .grid-name { font-size: 13px; font-weight: 500; word-break: break-word; }
   .grid-card .grid-meta { font-size: 11px; color: var(--muted); }
   .grid-card .qty-badge { margin-left: 0; }
@@ -142,13 +144,7 @@
 
   .sync.offline { color: #ffe0b3; }
 
-  .clearbtn {
-    width: 100%; padding: 12px; margin-top: 12px; border-radius: 12px;
-    border: 1px solid var(--border); background: var(--card); color: var(--muted);
-    font-size: 14px; cursor: pointer;
-  }
-
-  /* Meal plan */
+/* Meal plan */
   .week-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px; gap: 8px;
@@ -231,7 +227,7 @@
         <button id="viewGridBtn" onclick="setView('grid')">⊞</button>
       </div>
       <div id="listContainer"></div>
-      <button class="clearbtn" onclick="clearBought()">Fjern kjøpte varer</button>
+      <div id="recentContainer"></div>
     </section>
 
     <!-- TAB: MEALS -->
@@ -397,15 +393,21 @@ async function loadList() {
   try { items = await api("/list"); markOnline(); } catch { markOffline(); return; }
   lastItems = items;
   const c = document.getElementById("listContainer");
+  const r = document.getElementById("recentContainer");
   c.innerHTML = "";
+  r.innerHTML = "";
   if (!items.length) {
     c.innerHTML = `<div class="empty-state">Ingen varer på listen.<br>Legg til en vare over for å komme i gang.</div>`;
     syncTick();
     return;
   }
-  // group by category, unbought first
+  const unbought = items.filter(it => !it.bought);
+  const bought = items.filter(it => it.bought)
+    .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
+
+  // unbought, grouped by category
   const groups = {};
-  for (const it of items) {
+  for (const it of unbought) {
     (groups[it.category] = groups[it.category] || []).push(it);
   }
   for (const cat of CATEGORIES) {
@@ -420,6 +422,21 @@ async function loadList() {
       c.appendChild(grid);
     } else {
       for (const it of groups[cat]) c.appendChild(card(it));
+    }
+  }
+
+  // bought, flat, most recently bought first
+  if (bought.length) {
+    const label = document.createElement("div");
+    label.className = "cat-label"; label.textContent = "Nylig kjøpt";
+    r.appendChild(label);
+    if (viewMode === "grid") {
+      const grid = document.createElement("div");
+      grid.className = "grid-wrap";
+      for (const it of bought) grid.appendChild(gridCard(it));
+      r.appendChild(grid);
+    } else {
+      for (const it of bought) r.appendChild(card(it));
     }
   }
   syncTick();
@@ -542,7 +559,6 @@ async function addItem() {
 
 async function toggleItem(id) { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
 async function delItem(id) { await api(`/list/${id}`, { method: "DELETE" }); loadList(); }
-async function clearBought() { await api("/list/clear-bought", { method: "POST" }); loadList(); }
 
 // autocomplete
 function onAddInput() {

@@ -259,7 +259,7 @@ async function seed() {
     // ===== SHOPPING LIST =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`
-        SELECT li.id, li.bought, li.added_by, li.added_at, li.qty, li.notes, c.name, c.category
+        SELECT li.id, li.bought, li.added_by, li.added_at, li.bought_at, li.qty, li.notes, c.name, c.category
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
         ORDER BY li.bought ASC, c.category ASC, c.name ASC
@@ -338,12 +338,7 @@ async function seed() {
       return json({ ok: true });
     }
 
-    if (path === "/list/clear-bought" && method === "POST") {
-      await env.DB.prepare("DELETE FROM list_items WHERE bought = 1").run();
-      return json({ ok: true });
-    }
-
-    if (path === "/catalogue" && method === "GET") {
+if (path === "/catalogue" && method === "GET") {
       const { results } = await env.DB.prepare(
         "SELECT name, category FROM item_catalogue ORDER BY name ASC"
       ).all();
