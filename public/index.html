@@ -439,14 +439,23 @@ async function saveItemEdit(id) {
   loadList();
 }
 
+function parseItemInput(raw) {
+  const text = raw.trim();
+  let m = text.match(/^(\d+)\s+(.+)$/);
+  if (m) return { name: m[2].trim(), qty: parseInt(m[1], 10) };
+  m = text.match(/^(.+)\s+(\d+)$/);
+  if (m) return { name: m[1].trim(), qty: parseInt(m[2], 10) };
+  return { name: text, qty: 1 };
+}
+
 async function addItem() {
   const input = document.getElementById("addInput");
-  const name = input.value.trim();
+  const { name, qty } = parseItemInput(input.value);
   if (!name) return;
   // guess category from catalogue if known
   const known = catalogue.find(c => c.name.toLowerCase() === name.toLowerCase());
   await api("/list", { method: "POST",
-    body: JSON.stringify({ name, category: known ? known.category : "Annet" }) });
+    body: JSON.stringify({ name, qty, category: known ? known.category : "Annet" }) });
   input.value = "";
   hideSuggestions();
   catalogue = await api("/catalogue");

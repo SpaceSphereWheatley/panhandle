@@ -270,9 +270,10 @@ async function seed() {
     }
 
     if (path === "/list" && method === "POST") {
-      const { name, category, notes } = await request.json();
+      const { name, category, notes, qty } = await request.json();
       const clean = (name || "").trim();
       if (!clean) return json({ error: "Tomt navn" }, 400);
+      const addQty = Math.max(1, parseInt(qty, 10) || 1);
       let cat = await env.DB.prepare(
         "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE"
       ).bind(clean).first();
@@ -288,14 +289,14 @@ async function seed() {
       ).bind(cat.id).first();
       if (existing) {
         const updated = await env.DB.prepare(
-          "UPDATE list_items SET qty = qty + 1 WHERE id = ?1 RETURNING qty"
-        ).bind(existing.id).first();
+          "UPDATE list_items SET qty = qty + ?2 WHERE id = ?1 RETURNING qty"
+        ).bind(existing.id, addQty).first();
         return json({ ok: true, duplicate: true, qty: updated.qty });
       }
       await env.DB.prepare(
-        "INSERT INTO list_items (catalogue_id, added_by, notes) VALUES (?1, ?2, ?3)"
-      ).bind(cat.id, user.username, (notes || "").trim() || null).run();
-      return json({ ok: true, qty: 1 });
+        "INSERT INTO list_items (catalogue_id, added_by, notes, qty) VALUES (?1, ?2, ?3, ?4)"
+      ).bind(cat.id, user.username, (notes || "").trim() || null, addQty).run();
+      return json({ ok: true, qty: addQty });
     }
 
     const patchMatch = path.match(/^\/list\/(\d+)$/);
