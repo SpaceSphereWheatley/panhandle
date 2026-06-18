@@ -4,12 +4,134 @@
 // API = this Worker under /api/* and /seed. Proxies other paths to Pages.
 // Auth: users in D1 with PBKDF2 password hashes, JWT with token versioning,
 //       sliding expiry, in-app password change that logs out other devices.
+// Multi-tenant: every user belongs to exactly one list (users.list_id); all
+//       shopping/meal data is scoped by list_id. is_admin/is_owner are
+//       independent flags (a user can be both). Admins create owner accounts
+//       (each gets its own list); owners add members to their own list.
 
 const CATEGORIES = [
   "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
   "Ingredienser og krydder", "Frysevarer og ferdigmåltid", "Kornprodukter",
   "Snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og helse",
   "Dyreprodukter", "Annet"
+];
+
+// Common Norwegian groceries seeded into a new list's catalogue at creation,
+// so a fresh household gets autocomplete/category-matching for everyday items
+// instead of a blank catalogue. One-time copy per list — editing this array
+// only affects lists created afterwards. Categories must be in CATEGORIES.
+const COMMON_ITEMS = [
+  { name: "Banan", category: "Frukt og grønt" },
+  { name: "Eple", category: "Frukt og grønt" },
+  { name: "Appelsin", category: "Frukt og grønt" },
+  { name: "Sitron", category: "Frukt og grønt" },
+  { name: "Druer", category: "Frukt og grønt" },
+  { name: "Jordbær", category: "Frukt og grønt" },
+  { name: "Blåbær", category: "Frukt og grønt" },
+  { name: "Avokado", category: "Frukt og grønt" },
+  { name: "Tomat", category: "Frukt og grønt" },
+  { name: "Agurk", category: "Frukt og grønt" },
+  { name: "Salat", category: "Frukt og grønt" },
+  { name: "Brokkoli", category: "Frukt og grønt" },
+  { name: "Gulrot", category: "Frukt og grønt" },
+  { name: "Potet", category: "Frukt og grønt" },
+  { name: "Løk", category: "Frukt og grønt" },
+  { name: "Hvitløk", category: "Frukt og grønt" },
+  { name: "Paprika", category: "Frukt og grønt" },
+  { name: "Sopp", category: "Frukt og grønt" },
+  { name: "Spinat", category: "Frukt og grønt" },
+  { name: "Ingefær", category: "Frukt og grønt" },
+  { name: "Grovbrød", category: "Brød og bakevarer" },
+  { name: "Loff", category: "Brød og bakevarer" },
+  { name: "Rundstykker", category: "Brød og bakevarer" },
+  { name: "Knekkebrød", category: "Brød og bakevarer" },
+  { name: "Tortilla", category: "Brød og bakevarer" },
+  { name: "Boller", category: "Brød og bakevarer" },
+  { name: "Melk", category: "Meieriprodukter" },
+  { name: "Lettmelk", category: "Meieriprodukter" },
+  { name: "Fløte", category: "Meieriprodukter" },
+  { name: "Rømme", category: "Meieriprodukter" },
+  { name: "Smør", category: "Meieriprodukter" },
+  { name: "Brunost", category: "Meieriprodukter" },
+  { name: "Hvitost", category: "Meieriprodukter" },
+  { name: "Norvegia", category: "Meieriprodukter" },
+  { name: "Mozzarella", category: "Meieriprodukter" },
+  { name: "Parmesan", category: "Meieriprodukter" },
+  { name: "Yoghurt", category: "Meieriprodukter" },
+  { name: "Gresk yoghurt", category: "Meieriprodukter" },
+  { name: "Skyr", category: "Meieriprodukter" },
+  { name: "Egg", category: "Meieriprodukter" },
+  { name: "Kjøttdeig", category: "Kjøtt og fisk" },
+  { name: "Kylling", category: "Kjøtt og fisk" },
+  { name: "Kyllingfilet", category: "Kjøtt og fisk" },
+  { name: "Bacon", category: "Kjøtt og fisk" },
+  { name: "Pølser", category: "Kjøtt og fisk" },
+  { name: "Kjøttboller", category: "Kjøtt og fisk" },
+  { name: "Laks", category: "Kjøtt og fisk" },
+  { name: "Torsk", category: "Kjøtt og fisk" },
+  { name: "Tunfisk", category: "Kjøtt og fisk" },
+  { name: "Reker", category: "Kjøtt og fisk" },
+  { name: "Fiskekaker", category: "Kjøtt og fisk" },
+  { name: "Kokt skinke", category: "Kjøtt og fisk" },
+  { name: "Salt", category: "Ingredienser og krydder" },
+  { name: "Pepper", category: "Ingredienser og krydder" },
+  { name: "Sukker", category: "Ingredienser og krydder" },
+  { name: "Hvetemel", category: "Ingredienser og krydder" },
+  { name: "Olivenolje", category: "Ingredienser og krydder" },
+  { name: "Soyasaus", category: "Ingredienser og krydder" },
+  { name: "Ketchup", category: "Ingredienser og krydder" },
+  { name: "Sennep", category: "Ingredienser og krydder" },
+  { name: "Majones", category: "Ingredienser og krydder" },
+  { name: "Tomatpuré", category: "Ingredienser og krydder" },
+  { name: "Hermetiske tomater", category: "Ingredienser og krydder" },
+  { name: "Honning", category: "Ingredienser og krydder" },
+  { name: "Grandiosa", category: "Frysevarer og ferdigmåltid" },
+  { name: "Frosne grønnsaker", category: "Frysevarer og ferdigmåltid" },
+  { name: "Frosne bær", category: "Frysevarer og ferdigmåltid" },
+  { name: "Pommes frites", category: "Frysevarer og ferdigmåltid" },
+  { name: "Iskrem boks", category: "Frysevarer og ferdigmåltid" },
+  { name: "Havregryn", category: "Kornprodukter" },
+  { name: "Müsli", category: "Kornprodukter" },
+  { name: "Cornflakes", category: "Kornprodukter" },
+  { name: "Ris", category: "Kornprodukter" },
+  { name: "Pasta", category: "Kornprodukter" },
+  { name: "Spaghetti", category: "Kornprodukter" },
+  { name: "Makaroni", category: "Kornprodukter" },
+  { name: "Couscous", category: "Kornprodukter" },
+  { name: "Kikerter", category: "Kornprodukter" },
+  { name: "Potetgull", category: "Snacks og godteri" },
+  { name: "Melkesjokolade", category: "Snacks og godteri" },
+  { name: "Kjeks", category: "Snacks og godteri" },
+  { name: "Popcorn", category: "Snacks og godteri" },
+  { name: "Sjokolade", category: "Snacks og godteri" },
+  { name: "Vann", category: "Drikkevarer" },
+  { name: "Kullsyret vann", category: "Drikkevarer" },
+  { name: "Cola", category: "Drikkevarer" },
+  { name: "Juice", category: "Drikkevarer" },
+  { name: "Saft", category: "Drikkevarer" },
+  { name: "Kaffe", category: "Drikkevarer" },
+  { name: "Te", category: "Drikkevarer" },
+  { name: "Brus", category: "Drikkevarer" },
+  { name: "Eplejuice", category: "Drikkevarer" },
+  { name: "Toalettpapir", category: "Husholdning" },
+  { name: "Tørkepapir", category: "Husholdning" },
+  { name: "Kjøkkenrull", category: "Husholdning" },
+  { name: "Oppvasksåpe", category: "Husholdning" },
+  { name: "Oppvaskmaskin tabletter", category: "Husholdning" },
+  { name: "Vaskemiddel", category: "Husholdning" },
+  { name: "Allrengjøring", category: "Husholdning" },
+  { name: "Søppelsekker", category: "Husholdning" },
+  { name: "Aluminiumsfolie", category: "Husholdning" },
+  { name: "Bakepapir", category: "Husholdning" },
+  { name: "Tannkrem", category: "Omsorg og helse" },
+  { name: "Tannbørste", category: "Omsorg og helse" },
+  { name: "Sjampo", category: "Omsorg og helse" },
+  { name: "Dusjsåpe", category: "Omsorg og helse" },
+  { name: "Håndsåpe", category: "Omsorg og helse" },
+  { name: "Plaster", category: "Omsorg og helse" },
+  { name: "Kattemat", category: "Dyreprodukter" },
+  { name: "Hundemat", category: "Dyreprodukter" },
+  { name: "Blomster", category: "Annet" }
 ];
 
 // ---------- JWT helpers (HS256, no external deps) ----------
@@ -100,6 +222,34 @@ async function verifyPassword(password, stored) {
   } catch { return false; }
 }
 
+// Generates a short, human-readable random password for admin/owner-created
+// accounts. Charset omits visually ambiguous characters (0/O, 1/l/I) since
+// these are read off a screen and retyped by hand. ~12 chars, grouped
+// xxxx-xxxx-xxxx. Rejection sampling avoids modulo bias. No external deps.
+function genPassword() {
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const len = 12;
+  const max = Math.floor(256 / charset.length) * charset.length;
+  const out = [];
+  while (out.length < len) {
+    const buf = crypto.getRandomValues(new Uint8Array(len));
+    for (const b of buf) {
+      if (b < max) out.push(charset[b % charset.length]);
+      if (out.length === len) break;
+    }
+  }
+  return out.join("").replace(/(.{4})(.{4})(.{4})/, "$1-$2-$3");
+}
+
+// Normalizes/validates a username from request input. Letters (incl. æøå),
+// digits, and . _ - only; 1-32 chars. Returns null if invalid.
+function cleanUsername(u) {
+  const s = (u || "").trim();
+  if (!s || s.length > 32) return null;
+  if (!/^[\p{L}\p{N}._-]+$/u.test(s)) return null;
+  return s;
+}
+
 // ---------- response helpers ----------
 const json = (data, status = 200, extra = {}) =>
   new Response(JSON.stringify(data), {
@@ -116,7 +266,10 @@ async function readJson(request) {
   }
 }
 
-// Verifies JWT signature/expiry AND that token_version matches the DB.
+// Verifies JWT signature/expiry AND that token_version matches the DB. Returns
+// the live user row (flags + list_id) — the DB is the source of truth on every
+// request, so any change to a user's flags/list_id/token_version takes effect
+// on their next call (the JWT's copies are only client-display hints).
 async function requireAuth(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "");
@@ -124,16 +277,21 @@ async function requireAuth(request, env) {
   const payload = await verifyJwt(token, env.JWT_SECRET);
   if (!payload || !payload.sub) return null;
   const row = await env.DB.prepare(
-    "SELECT username, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
+    "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
   ).bind(payload.sub).first();
   if (!row) return null;
   if (payload.tv !== row.token_version) return null;
   return row;
 }
 
-async function mintToken(username, tokenVersion, env) {
+// Mints a 90-day token from a user row. list_id/is_admin/is_owner are carried
+// for the client's convenience; the server always re-reads them from the DB.
+async function mintToken(u, env) {
   const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90;
-  return await signJwt({ sub: username, tv: tokenVersion, exp }, env.JWT_SECRET);
+  return await signJwt({
+    sub: u.username, tv: u.token_version,
+    list_id: u.list_id, is_admin: u.is_admin, is_owner: u.is_owner, exp
+  }, env.JWT_SECRET);
 }
 
 // ---------- main ----------
@@ -167,15 +325,15 @@ export default {
 </head>
 <body>
 <h1>Panhandle - opprett kontoer</h1>
-<div class="warn">Denne siden kjøres <b>én gang</b> for å opprette de to kontoene. Etterpå fjern SEED_SECRET.</div>
+<div class="warn">Denne siden kjøres <b>én gang</b> for å opprette den første admin-/eierkontoen. Etterpå fjern SEED_SECRET. Senere kontoer opprettes inne i appen (admin oppretter eiere, eiere legger til medlemmer).</div>
 <label>SEED_SECRET</label>
 <input id="secret" type="password" placeholder="seed-hemmelighet">
 <hr>
-<label>Bruker 1 - brukernavn</label>
+<label>Bruker 1 - brukernavn (blir admin + eier)</label>
 <input id="u1" value="Mohibb">
 <label>Bruker 1 - passord</label>
 <input id="p1" type="password" placeholder="passord">
-<label>Bruker 2 - brukernavn</label>
+<label>Bruker 2 - brukernavn (medlem, valgfritt)</label>
 <input id="u2" value="Saffa">
 <label>Bruker 2 - passord</label>
 <input id="p2" type="password" placeholder="passord">
@@ -187,16 +345,15 @@ async function seed() {
   out.style.color = "#333";
   out.textContent = "Sender...";
   try {
+    const accounts = [
+      { username: document.getElementById("u1").value.trim(), password: document.getElementById("p1").value }
+    ];
+    const u2 = document.getElementById("u2").value.trim(), p2 = document.getElementById("p2").value;
+    if (u2 && p2) accounts.push({ username: u2, password: p2 });
     const res = await fetch("/seed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        secret: document.getElementById("secret").value,
-        accounts: [
-          { username: document.getElementById("u1").value.trim(), password: document.getElementById("p1").value },
-          { username: document.getElementById("u2").value.trim(), password: document.getElementById("p2").value }
-        ]
-      })
+      body: JSON.stringify({ secret: document.getElementById("secret").value, accounts })
     });
     const data = await res.json();
     if (res.ok && data.ok) {
@@ -227,6 +384,11 @@ async function seed() {
     const path = url.pathname.replace(/^\/api/, "");
 
     // ===== SEED ENDPOINT (POST) =====
+    // Bootstraps the very first account(s) of a fresh deployment. The first
+    // NEW account becomes admin + owner of a freshly-created (COMMON_ITEMS-
+    // seeded) list; any further new accounts in the same call join that list
+    // as plain members. Existing users only get their password reset (flags/
+    // list_id are preserved), so re-running seed never clobbers a live setup.
     if (path === "/seed" && method === "POST") {
       const body = await readJson(request);
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
@@ -238,15 +400,37 @@ async function seed() {
         return json({ error: "Mangler kontoer" }, 400);
       }
       let created = 0;
+      let bootstrapListId = null;
+      let ownerMade = false;
+      const ensureList = async () => {
+        if (bootstrapListId) return bootstrapListId;
+        const l = await env.DB.prepare("INSERT INTO lists DEFAULT VALUES RETURNING id").first();
+        bootstrapListId = l.id;
+        await env.DB.batch(COMMON_ITEMS.map(it =>
+          env.DB.prepare("INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)")
+            .bind(it.name, it.category, bootstrapListId)
+        ));
+        return bootstrapListId;
+      };
       for (const a of accounts) {
-        if (!a.username || !a.password) continue;
+        const uname = cleanUsername(a.username);
+        if (!uname || !a.password) continue;
         const hash = await hashPassword(a.password);
-        await env.DB.prepare(`
-          INSERT INTO users (username, pass_hash, token_version) VALUES (?1, ?2, 1)
-          ON CONFLICT(username) DO UPDATE SET
-            pass_hash = excluded.pass_hash,
-            token_version = users.token_version + 1
-        `).bind(a.username.trim(), hash).run();
+        const existing = await env.DB.prepare(
+          "SELECT username FROM users WHERE username = ?1 COLLATE NOCASE"
+        ).bind(uname).first();
+        if (existing) {
+          await env.DB.prepare(
+            "UPDATE users SET pass_hash = ?1, token_version = token_version + 1 WHERE username = ?2 COLLATE NOCASE"
+          ).bind(hash, uname).run();
+        } else {
+          const lid = await ensureList();
+          const isOwner = ownerMade ? 0 : 1;
+          await env.DB.prepare(
+            "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, ?3, ?4, ?5, 'seed')"
+          ).bind(uname, hash, isOwner, isOwner, lid).run();
+          ownerMade = true;
+        }
         created++;
       }
       return json({ ok: true, created });
@@ -258,7 +442,7 @@ async function seed() {
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { username, password } = body;
       const row = await env.DB.prepare(
-        "SELECT username, pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
+        "SELECT username, pass_hash, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind((username || "").trim()).first();
       // Always run the PBKDF2 check (against a dummy hash for unknown users) so
       // login latency doesn't reveal whether a username exists.
@@ -266,14 +450,17 @@ async function seed() {
       if (!row || !ok) {
         return json({ error: "Feil brukernavn eller passord" }, 401);
       }
-      const token = await mintToken(row.username, row.token_version, env);
-      return json({ token, user: row.username });
+      const token = await mintToken(row, env);
+      return json({
+        token, user: row.username,
+        is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id
+      });
     }
 
     // ===== AUTH REQUIRED BELOW =====
     const user = await requireAuth(request, env);
     if (!user) return json({ error: "Ikke autorisert" }, 401);
-    const freshToken = await mintToken(user.username, user.token_version, env);
+    const freshToken = await mintToken(user, env);
     // Sliding expiry: every authenticated response carries a freshly-minted
     // token so the session is extended no matter which endpoint is used (not
     // just /list). /change-password is the exception — it returns the
@@ -301,18 +488,163 @@ async function seed() {
       await env.DB.prepare(
         "UPDATE users SET pass_hash = ?1, token_version = ?2 WHERE username = ?3 COLLATE NOCASE"
       ).bind(newHash, newVersion, user.username).run();
-      const tokenAfter = await mintToken(user.username, newVersion, env);
+      const tokenAfter = await mintToken({ ...user, token_version: newVersion }, env);
       return json({ ok: true, token: tokenAfter });
     }
 
-    // ===== SHOPPING LIST =====
+    // ===== ADMIN ENDPOINTS (require is_admin) =====
+    // Create a new owner + their own list, seeded with COMMON_ITEMS.
+    if (path === "/admin/owners" && method === "POST") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const uname = cleanUsername(body.username);
+      if (!uname) return authedJson({ error: "Ugyldig brukernavn" }, 400);
+      const exists = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(uname).first();
+      if (exists) return authedJson({ error: "Brukernavnet er opptatt" }, 409);
+      const password = genPassword();
+      const hash = await hashPassword(password);
+      const list = await env.DB.prepare("INSERT INTO lists DEFAULT VALUES RETURNING id").first();
+      const listId = list.id;
+      const stmts = COMMON_ITEMS.map(it =>
+        env.DB.prepare("INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)")
+          .bind(it.name, it.category, listId)
+      );
+      stmts.push(env.DB.prepare(
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, 0, 1, ?3, ?4)"
+      ).bind(uname, hash, listId, user.username));
+      await env.DB.batch(stmts);
+      return authedJson({ username: uname, password });
+    }
+
+    // Every user in the system (across all lists) with their flags.
+    if (path === "/admin/users" && method === "GET") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      const { results } = await env.DB.prepare(
+        "SELECT username, is_admin, is_owner, list_id, created_by FROM users ORDER BY list_id, username"
+      ).all();
+      return authedJson(results);
+    }
+
+    // Reset any user's password (recovery path). Bumps token_version.
+    const rpMatch = path.match(/^\/admin\/users\/([^/]+)\/reset-password$/);
+    if (rpMatch && method === "POST") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      const target = decodeURIComponent(rpMatch[1]);
+      const row = await env.DB.prepare(
+        "SELECT username FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(target).first();
+      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      const password = genPassword();
+      const hash = await hashPassword(password);
+      await env.DB.prepare(
+        "UPDATE users SET pass_hash = ?1, token_version = token_version + 1 WHERE username = ?2 COLLATE NOCASE"
+      ).bind(hash, row.username).run();
+      return authedJson({ username: row.username, password });
+    }
+
+    // Set is_admin / is_owner flags independently. Bumps token_version.
+    const flagMatch = path.match(/^\/admin\/users\/([^/]+)\/flags$/);
+    if (flagMatch && method === "PATCH") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      const target = decodeURIComponent(flagMatch[1]);
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const row = await env.DB.prepare(
+        "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(target).first();
+      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      let newAdmin = row.is_admin, newOwner = row.is_owner;
+      if (body.is_admin !== undefined) newAdmin = body.is_admin ? 1 : 0;
+      if (body.is_owner !== undefined) newOwner = body.is_owner ? 1 : 0;
+      // Never let the last admin be demoted.
+      if (row.is_admin === 1 && newAdmin === 0) {
+        const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").first();
+        if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne siste admin" }, 400);
+      }
+      // Never let a list lose its only owner.
+      if (row.is_owner === 1 && newOwner === 0) {
+        const c = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
+        ).bind(row.list_id).first();
+        if (c.n <= 1) return authedJson({ error: "Listen ville miste sin eneste eier" }, 400);
+      }
+      await env.DB.prepare(
+        "UPDATE users SET is_admin = ?1, is_owner = ?2, token_version = token_version + 1 WHERE username = ?3 COLLATE NOCASE"
+      ).bind(newAdmin, newOwner, row.username).run();
+      return authedJson({ ok: true, username: row.username, is_admin: newAdmin, is_owner: newOwner });
+    }
+
+    // ===== LIST-USER ENDPOINTS =====
+    // Members of the caller's own list. Readable by any authed user on the
+    // list (used to populate the meal-responsible dropdown).
+    if (path === "/list-users" && method === "GET") {
+      const { results } = await env.DB.prepare(
+        "SELECT username, is_admin, is_owner FROM users WHERE list_id = ?1 ORDER BY username"
+      ).bind(user.list_id).all();
+      return authedJson(results);
+    }
+
+    // Add a plain member to the caller's list (owner only). Capped at 10.
+    if (path === "/list-users" && method === "POST") {
+      if (!user.is_owner) return authedJson({ error: "Krever eier" }, 403);
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const uname = cleanUsername(body.username);
+      if (!uname) return authedJson({ error: "Ugyldig brukernavn" }, 400);
+      const c = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM users WHERE list_id = ?1"
+      ).bind(user.list_id).first();
+      if (c.n >= 10) return authedJson({ error: "Listen er full (maks 10 brukere)" }, 400);
+      const exists = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(uname).first();
+      if (exists) return authedJson({ error: "Brukernavnet er opptatt" }, 409);
+      const password = genPassword();
+      const hash = await hashPassword(password);
+      // is_admin/is_owner are hardcoded 0 — never taken from the request body,
+      // so an owner can't self-escalate a member into an admin/owner.
+      await env.DB.prepare(
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, 0, 0, ?3, ?4)"
+      ).bind(uname, hash, user.list_id, user.username).run();
+      return authedJson({ username: uname, password });
+    }
+
+    // Remove a member from the caller's list (owner only).
+    const luDelMatch = path.match(/^\/list-users\/([^/]+)$/);
+    if (luDelMatch && method === "DELETE") {
+      if (!user.is_owner) return authedJson({ error: "Krever eier" }, 403);
+      const target = decodeURIComponent(luDelMatch[1]);
+      const row = await env.DB.prepare(
+        "SELECT username, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(target).first();
+      if (!row || row.list_id !== user.list_id) {
+        return authedJson({ error: "Fant ikke bruker på listen" }, 404);
+      }
+      if (row.is_owner === 1) {
+        const c = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
+        ).bind(user.list_id).first();
+        if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne listens eneste eier" }, 400);
+      }
+      // Deleting the row makes requireAuth's DB lookup fail (no row) on the
+      // user's next request → 401 → re-login, so no token_version bump needed.
+      await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
+        .bind(row.username).run();
+      return authedJson({ ok: true });
+    }
+
+    // ===== SHOPPING LIST (all queries scoped to user.list_id) =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`
         SELECT li.id, li.bought, li.added_by, li.added_at, li.bought_at, li.qty, li.notes, c.name, c.category
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
+        WHERE li.list_id = ?1
         ORDER BY li.bought ASC, c.category ASC, c.name ASC
-      `).all();
+      `).bind(user.list_id).all();
       return authedJson(results);
     }
 
@@ -324,21 +656,21 @@ async function seed() {
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
       let cat = await env.DB.prepare(
-        "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE"
-      ).bind(clean).first();
+        "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+      ).bind(clean, user.list_id).first();
       if (!cat) {
         const chosenCat = CATEGORIES.includes(category) ? category : "Annet";
         // Upsert so two concurrent adds of a new name can't collide on the
-        // UNIQUE(name) constraint — the loser gets the existing row back.
+        // UNIQUE(list_id, name) constraint — the loser gets the existing row.
         cat = await env.DB.prepare(`
-          INSERT INTO item_catalogue (name, category) VALUES (?1, ?2)
-          ON CONFLICT(name) DO UPDATE SET name = name
+          INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)
+          ON CONFLICT(list_id, name) DO UPDATE SET name = name
           RETURNING id, category
-        `).bind(clean, chosenCat).first();
+        `).bind(clean, chosenCat, user.list_id).first();
       }
       const existing = await env.DB.prepare(
-        "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0"
-      ).bind(cat.id).first();
+        "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0 AND list_id = ?2"
+      ).bind(cat.id, user.list_id).first();
       if (existing) {
         const updated = await env.DB.prepare(
           "UPDATE list_items SET qty = qty + ?2 WHERE id = ?1 RETURNING qty"
@@ -346,8 +678,8 @@ async function seed() {
         return authedJson({ ok: true, duplicate: true, qty: updated.qty });
       }
       await env.DB.prepare(
-        "INSERT INTO list_items (catalogue_id, added_by, notes, qty) VALUES (?1, ?2, ?3, ?4)"
-      ).bind(cat.id, user.username, (notes || "").trim() || null, addQty).run();
+        "INSERT INTO list_items (catalogue_id, added_by, notes, qty, list_id) VALUES (?1, ?2, ?3, ?4, ?5)"
+      ).bind(cat.id, user.username, (notes || "").trim() || null, addQty, user.list_id).run();
       return authedJson({ ok: true, qty: addQty });
     }
 
@@ -357,21 +689,21 @@ async function seed() {
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { qty, notes, category } = body;
       const row = await env.DB.prepare(
-        "SELECT catalogue_id FROM list_items WHERE id = ?1"
-      ).bind(patchMatch[1]).first();
+        "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
+      ).bind(patchMatch[1], user.list_id).first();
       if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
       if (qty !== undefined) {
         const cleanQty = Math.max(1, parseInt(qty, 10) || 1);
-        await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2")
-          .bind(cleanQty, patchMatch[1]).run();
+        await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(cleanQty, patchMatch[1], user.list_id).run();
       }
       if (notes !== undefined) {
-        await env.DB.prepare("UPDATE list_items SET notes = ?1 WHERE id = ?2")
-          .bind((notes || "").trim() || null, patchMatch[1]).run();
+        await env.DB.prepare("UPDATE list_items SET notes = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind((notes || "").trim() || null, patchMatch[1], user.list_id).run();
       }
       if (category !== undefined && CATEGORIES.includes(category)) {
-        await env.DB.prepare("UPDATE item_catalogue SET category = ?1 WHERE id = ?2")
-          .bind(category, row.catalogue_id).run();
+        await env.DB.prepare("UPDATE item_catalogue SET category = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(category, row.catalogue_id, user.list_id).run();
       }
       return authedJson({ ok: true });
     }
@@ -381,29 +713,30 @@ async function seed() {
       await env.DB.prepare(`
         UPDATE list_items SET bought = CASE bought WHEN 0 THEN 1 ELSE 0 END,
             bought_at = CASE bought WHEN 0 THEN datetime('now') ELSE NULL END
-        WHERE id = ?1
-      `).bind(toggleMatch[1]).run();
+        WHERE id = ?1 AND list_id = ?2
+      `).bind(toggleMatch[1], user.list_id).run();
       return authedJson({ ok: true });
     }
 
     const delMatch = path.match(/^\/list\/(\d+)$/);
     if (delMatch && method === "DELETE") {
-      await env.DB.prepare("DELETE FROM list_items WHERE id = ?1").bind(delMatch[1]).run();
+      await env.DB.prepare("DELETE FROM list_items WHERE id = ?1 AND list_id = ?2")
+        .bind(delMatch[1], user.list_id).run();
       return authedJson({ ok: true });
     }
 
-if (path === "/catalogue" && method === "GET") {
+    if (path === "/catalogue" && method === "GET") {
       const { results } = await env.DB.prepare(
-        "SELECT name, category FROM item_catalogue ORDER BY name ASC"
-      ).all();
+        "SELECT name, category FROM item_catalogue WHERE list_id = ?1 ORDER BY name ASC"
+      ).bind(user.list_id).all();
       return authedJson(results);
     }
 
     // ===== MEALS =====
     if (path === "/meals" && method === "GET") {
       const { results } = await env.DB.prepare(
-        "SELECT id, name, ingredients FROM meal_catalogue ORDER BY name ASC"
-      ).all();
+        "SELECT id, name, ingredients FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
+      ).bind(user.list_id).all();
       return authedJson(results);
     }
 
@@ -411,12 +744,12 @@ if (path === "/catalogue" && method === "GET") {
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
       let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id
-        FROM meal_plan p JOIN meal_catalogue m ON m.id = p.meal_id`;
-      const binds = [];
-      if (from && to) { q += " WHERE p.plan_date BETWEEN ?1 AND ?2"; binds.push(from, to); }
+        FROM meal_plan p JOIN meal_catalogue m ON m.id = p.meal_id
+        WHERE p.list_id = ?1`;
+      const binds = [user.list_id];
+      if (from && to) { q += " AND p.plan_date BETWEEN ?2 AND ?3"; binds.push(from, to); }
       q += " ORDER BY p.plan_date ASC";
-      const stmt = binds.length ? env.DB.prepare(q).bind(...binds) : env.DB.prepare(q);
-      const { results } = await stmt.all();
+      const { results } = await env.DB.prepare(q).bind(...binds).all();
       return authedJson(results);
     }
 
@@ -427,31 +760,31 @@ if (path === "/catalogue" && method === "GET") {
       if (!plan_date || !meal_name) return authedJson({ error: "Mangler dato eller måltid" }, 400);
       const clean = meal_name.trim();
       let meal = await env.DB.prepare(
-        "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE"
-      ).bind(clean).first();
+        "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+      ).bind(clean, user.list_id).first();
       if (!meal) {
-        // Upsert to avoid a UNIQUE(name) collision on concurrent first use.
+        // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
         meal = await env.DB.prepare(`
-          INSERT INTO meal_catalogue (name) VALUES (?1)
-          ON CONFLICT(name) DO UPDATE SET name = name
+          INSERT INTO meal_catalogue (name, list_id) VALUES (?1, ?2)
+          ON CONFLICT(list_id, name) DO UPDATE SET name = name
           RETURNING id
-        `).bind(clean).first();
+        `).bind(clean, user.list_id).first();
       }
       await env.DB.prepare(`
-        INSERT INTO meal_plan (plan_date, meal_id, responsible)
-        VALUES (?1, ?2, ?3)
-        ON CONFLICT(plan_date) DO UPDATE SET
+        INSERT INTO meal_plan (plan_date, meal_id, responsible, list_id)
+        VALUES (?1, ?2, ?3, ?4)
+        ON CONFLICT(list_id, plan_date) DO UPDATE SET
           meal_id = excluded.meal_id,
           responsible = excluded.responsible,
           updated_at = datetime('now')
-      `).bind(plan_date, meal.id, responsible || "").run();
+      `).bind(plan_date, meal.id, responsible || "", user.list_id).run();
       return authedJson({ ok: true });
     }
 
     const planDelMatch = path.match(/^\/plan\/(\d{4}-\d{2}-\d{2})$/);
     if (planDelMatch && method === "DELETE") {
-      await env.DB.prepare("DELETE FROM meal_plan WHERE plan_date = ?1")
-        .bind(planDelMatch[1]).run();
+      await env.DB.prepare("DELETE FROM meal_plan WHERE plan_date = ?1 AND list_id = ?2")
+        .bind(planDelMatch[1], user.list_id).run();
       return authedJson({ ok: true });
     }
 

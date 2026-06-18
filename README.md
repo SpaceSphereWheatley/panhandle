@@ -51,6 +51,10 @@ Both halves deploy automatically on push to `main`:
 - `migrations/` — D1 schema
   - `0001_init.sql` — shopping list and meal plan tables
   - `0002_users.sql` — user accounts with password hashing
+  - `0003_list_items_qty_notes.sql` — qty + notes columns
+  - `0004_seed_catalogue.sql` — 500 common Norwegian items
+  - `0005_multi_tenant.sql` — per-list isolation + owner/admin flags
+    (see `docs/multi-tenant-setup.md` for the rollout steps)
 
 ## Known Limitations
 

@@ -267,6 +267,36 @@
     border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer;
     font-family: inherit; }
 
+  /* User management rows (owner + admin panels) */
+  .mgmt-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--bg-sunken); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+  }
+  .mgmt-row .who { min-width: 0; flex: 1; }
+  .mgmt-row .who .uname { font-size: 14px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mgmt-row .who .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .mgmt-row .acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .mgmt-row button.mini {
+    border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
+    border-radius: 8px; font-size: 12px; padding: 6px 8px; cursor: pointer; font-family: inherit;
+  }
+  .mgmt-row button.mini.danger { color: var(--accent); border-color: var(--accent); }
+  .mgmt-row label.flag {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted);
+  }
+  .badge-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+    background: var(--tile); color: #fff; border-radius: 6px; padding: 2px 6px; }
+  .badge-tag.admin { background: var(--accent); }
+
+  /* Credential / invite dialog reuses .modal; this is the copyable block */
+  .cred-box {
+    background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-all;
+  }
+  .cred-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
   /* Modal */
   .modal-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
@@ -363,6 +393,34 @@
         <div id="iconGapList" class="icon-gap-list"></div>
       </div>
 
+      <!-- Owner: manage members of this list -->
+      <div class="setrow hidden" id="ownerPanel">
+        <div class="k" style="margin-bottom:4px">Brukere på listen</div>
+        <div class="v" id="memberCount" style="margin-bottom:10px">-</div>
+        <div id="memberList"></div>
+        <div id="addMemberRow" style="margin-top:12px">
+          <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
+                 style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
+          <button onclick="addMember()" id="addMemberBtn"
+                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+            + Legg til bruker</button>
+          <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
+        </div>
+      </div>
+
+      <!-- Admin: create owners and manage every user -->
+      <div class="setrow hidden" id="adminPanel">
+        <div class="k" style="margin-bottom:10px">Admin · opprett eier</div>
+        <input id="newOwnerName" placeholder="Brukernavn for ny eier"
+               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
+        <button onclick="createOwner()" id="createOwnerBtn"
+                style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+          + Opprett eier (ny liste)</button>
+        <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
+        <div class="k" style="margin:18px 0 8px">Alle brukere</div>
+        <div id="allUsers"></div>
+      </div>
+
       <div class="setrow">
         <div class="k" style="margin-bottom:10px">Bytt passord</div>
         <input id="pwCurrent" type="password" placeholder="Nåværende passord"
@@ -398,6 +456,9 @@
 const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
+let isAdmin = localStorage.getItem("ph_is_admin") === "1";
+let isOwner = localStorage.getItem("ph_is_owner") === "1";
+let listUsers = []; // members of the current list (from /list-users), cached in memory
 let catalogue = [];
 let currentTab = "list";
 let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
@@ -406,7 +467,9 @@ let lastItems = []; // most recently loaded /list rows, keyed lookup for the ite
 let collapsedCats = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
 let sortMode = localStorage.getItem("ph_sort") === "alpha" ? "alpha" : "default";
 
-const PEOPLE = ["Mohibb", "Saffa"]; // edit if names differ
+// People to assign meals to are the members of the current list, fetched from
+// the server (replaces the old hardcoded two-name list).
+function people() { return listUsers.map(u => u.username); }
 const CATEGORIES = ["Frukt og grønt","Brød og bakevarer","Meieriprodukter","Kjøtt og fisk",
   "Ingredienser og krydder","Frysevarer og ferdigmåltid","Kornprodukter","Snacks og godteri",
   "Drikkevarer","Husholdning","Omsorg og helse","Dyreprodukter","Annet"];
@@ -452,8 +515,11 @@ async function doLogin() {
     const data = await res.json();
     if (!res.ok) { errEl.textContent = data.error || "Innlogging feilet"; return; }
     token = data.token; currentUser = data.user;
+    isAdmin = !!data.is_admin; isOwner = !!data.is_owner;
     localStorage.setItem("ph_token", token);
     localStorage.setItem("ph_user", currentUser);
+    localStorage.setItem("ph_is_admin", isAdmin ? "1" : "0");
+    localStorage.setItem("ph_is_owner", isOwner ? "1" : "0");
     showApp();
   } catch { errEl.textContent = "Nettverksfeil"; }
 }
@@ -461,7 +527,9 @@ async function doLogin() {
 function logout() {
   localStorage.removeItem("ph_token");
   localStorage.removeItem("ph_user");
-  token = null; currentUser = null;
+  localStorage.removeItem("ph_is_admin");
+  localStorage.removeItem("ph_is_owner");
+  token = null; currentUser = null; isAdmin = false; isOwner = false; listUsers = [];
   clearInterval(pollTimer);
   document.getElementById("app").classList.add("hidden");
   document.getElementById("login").classList.remove("hidden");
@@ -473,6 +541,8 @@ function showApp() {
   document.getElementById("setUser").textContent = currentUser;
   document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
   document.getElementById("sortBtn").classList.remove("hidden");
+  applyRoleVisibility();
+  loadListUsers();
   refreshAll();
   pollTimer = setInterval(() => {
     if (currentTab === "list") loadList();
@@ -833,6 +903,7 @@ async function loadPlan() {
 }
 
 async function openMealModal(iso) {
+  if (!listUsers.length) await loadListUsers();
   const meals = await api("/meals");
   const plan = await api(`/plan?from=${iso}&to=${iso}`);
   const current = plan[0] || {};
@@ -848,7 +919,8 @@ async function openMealModal(iso) {
         </datalist>
         <label>Ansvarlig</label>
         <select id="mealResp">
-          ${PEOPLE.map(p => `<option ${current.responsible===p?"selected":""}>${p}</option>`).join("")}
+          <option value=""${current.responsible ? "" : " selected"}>Ingen</option>
+          ${people().map(p => `<option ${current.responsible===p?"selected":""}>${escapeHtml(p)}</option>`).join("")}
         </select>
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Avbryt</button>
@@ -875,6 +947,9 @@ async function deletePlan(iso) {
 
 // ---------- settings ----------
 async function loadSettings() {
+  applyRoleVisibility();
+  if (isOwner) loadListUsers();
+  if (isAdmin) loadAllUsers();
   const cat = await api("/catalogue");
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
@@ -908,6 +983,142 @@ async function changePassword() {
   } catch {
     msg.textContent = "Noe gikk galt";
   }
+}
+
+// ---------- user management (owner + admin) ----------
+function applyRoleVisibility() {
+  document.getElementById("ownerPanel").classList.toggle("hidden", !isOwner);
+  document.getElementById("adminPanel").classList.toggle("hidden", !isAdmin);
+}
+
+// Members of the current list — drives both the meal-responsible dropdown and
+// the owner's "Brukere på listen" panel.
+async function loadListUsers() {
+  try { listUsers = await api("/list-users"); } catch { return; }
+  if (isOwner) renderMembers();
+}
+
+function renderMembers() {
+  const box = document.getElementById("memberList");
+  if (!box) return;
+  document.getElementById("memberCount").textContent = `${listUsers.length} / 10 brukere`;
+  box.innerHTML = listUsers.map(u => {
+    const tags = [u.is_owner ? `<span class="badge-tag">Eier</span>` : "",
+                  u.is_admin ? `<span class="badge-tag admin">Admin</span>` : ""].join(" ");
+    const self = u.username === currentUser;
+    return `<div class="mgmt-row">
+      <div class="who"><div class="uname">${escapeHtml(u.username)} ${tags}</div>
+        ${self ? `<div class="sub">deg</div>` : ""}</div>
+      <div class="acts">
+        <button class="mini danger" onclick="removeMember('${encodeURIComponent(u.username)}')">Fjern</button>
+      </div></div>`;
+  }).join("");
+  const full = listUsers.length >= 10;
+  document.getElementById("addMemberBtn").disabled = full;
+  document.getElementById("addMemberBtn").style.opacity = full ? ".5" : "1";
+}
+
+async function addMember() {
+  const input = document.getElementById("newMemberName");
+  const msg = document.getElementById("memberMsg");
+  const name = input.value.trim();
+  msg.textContent = "";
+  if (!name) { msg.textContent = "Skriv inn et brukernavn"; return; }
+  const res = await api("/list-users", { method: "POST", body: JSON.stringify({ username: name }) });
+  if (res.error) { msg.textContent = res.error; return; }
+  input.value = "";
+  await loadListUsers();
+  showCredentials(res.username, res.password);
+}
+
+async function removeMember(encName) {
+  const name = decodeURIComponent(encName);
+  if (!confirm(`Fjerne ${name} fra listen?`)) return;
+  const res = await api(`/list-users/${encodeURIComponent(name)}`, { method: "DELETE" });
+  if (res.error) { alert(res.error); return; }
+  await loadListUsers();
+  if (isAdmin) loadAllUsers();
+}
+
+async function createOwner() {
+  const input = document.getElementById("newOwnerName");
+  const msg = document.getElementById("ownerMsg");
+  const name = input.value.trim();
+  msg.textContent = "";
+  if (!name) { msg.textContent = "Skriv inn et brukernavn"; return; }
+  const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ username: name }) });
+  if (res.error) { msg.textContent = res.error; return; }
+  input.value = "";
+  loadAllUsers();
+  showCredentials(res.username, res.password);
+}
+
+async function loadAllUsers() {
+  if (!isAdmin) return;
+  let users;
+  try { users = await api("/admin/users"); } catch { return; }
+  const box = document.getElementById("allUsers");
+  box.innerHTML = users.map(u => {
+    const en = encodeURIComponent(u.username);
+    return `<div class="mgmt-row">
+      <div class="who"><div class="uname">${escapeHtml(u.username)}</div>
+        <div class="sub">liste ${u.list_id ?? "-"}${u.created_by ? " · av " + escapeHtml(u.created_by) : ""}</div></div>
+      <div class="acts">
+        <label class="flag"><input type="checkbox" ${u.is_admin ? "checked" : ""}
+          onchange="setFlag('${en}','is_admin',this.checked)">Admin</label>
+        <label class="flag"><input type="checkbox" ${u.is_owner ? "checked" : ""}
+          onchange="setFlag('${en}','is_owner',this.checked)">Eier</label>
+        <button class="mini" onclick="resetUserPassword('${en}')">Nullstill pw</button>
+      </div></div>`;
+  }).join("");
+}
+
+async function setFlag(encName, flag, value) {
+  const name = decodeURIComponent(encName);
+  const res = await api(`/admin/users/${encodeURIComponent(name)}/flags`, {
+    method: "PATCH", body: JSON.stringify({ [flag]: value })
+  });
+  if (res.error) { alert(res.error); }
+  loadAllUsers();
+  loadListUsers();
+}
+
+async function resetUserPassword(encName) {
+  const name = decodeURIComponent(encName);
+  if (!confirm(`Nullstille passordet til ${name}? Alle deres aktive økter logges ut.`)) return;
+  const res = await api(`/admin/users/${encodeURIComponent(name)}/reset-password`, { method: "POST" });
+  if (res.error) { alert(res.error); return; }
+  showCredentials(res.username, res.password);
+}
+
+// One-time credential dialog with a "copy invite text" button. The password is
+// never recoverable after this — the server only stores its hash.
+function showCredentials(username, password) {
+  const invite =
+`Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com
+Brukernavn: ${username}
+Passord: ${password}
+(Bytt passord etter at du har logget inn.)`;
+  window._lastInvite = invite;
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Konto opprettet</h3>
+        <p class="cred-note">Dette passordet vises bare nå. Kopier og send det til brukeren.</p>
+        <div class="cred-box">${escapeHtml(invite)}</div>
+        <div class="actions">
+          <button class="cancel" onclick="closeModal()">Lukk</button>
+          <button class="save" onclick="copyInvite()">Kopier invitasjon</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function copyInvite() {
+  try { await navigator.clipboard.writeText(window._lastInvite || ""); }
+  catch { /* clipboard may be blocked; user can still select the text */ }
+  closeModal();
 }
 
 // ---------- misc ----------
