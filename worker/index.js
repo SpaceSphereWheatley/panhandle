@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 const CATEGORIES = [
   "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",

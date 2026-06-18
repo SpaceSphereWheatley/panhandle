@@ -27,10 +27,11 @@ sliding expiry on every authenticated response. Remaining items:
     storage; deferred pending a decision between a D1 table and a Cloudflare
     Rate Limiting binding.
     _Value: High · Importance: High · Type: Security_
-15. Meal-plan date off-by-one — `Date.toISOString().slice(0,10)` formats in
+~~15. Meal-plan date off-by-one — `Date.toISOString().slice(0,10)` formats in
     UTC while the week is built in local time, so between local midnight and
     ~02:00 (UTC+1/+2) the whole week, "today", and the saved `plan_date`
-    shift back a day. Format from local date components instead.
+    shift back a day.~~ Fixed in 1.0.1 — a `localIso()` helper formats from
+    local date components instead.
     _Value: High · Importance: High · Type: Bug (correctness)_
 16. Missing CSS variables `--green` / `--danger` — referenced by the
     change-password button/messages in `public/index.html` but never defined

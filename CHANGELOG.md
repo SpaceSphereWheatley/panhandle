@@ -13,6 +13,15 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.1] — 2026-06-18
+
+### Fixed
+- Meal-plan date off-by-one: the week grid, "today", and the saved
+  `plan_date` were formatted with `Date#toISOString()`, which converts to UTC
+  first — between local midnight and the UTC offset (00:00–02:00 in
+  UTC+1/+2) the whole week view, "today", and what got saved all silently
+  shifted back a day. Now formatted from local date components instead.
+
 ## [1.0.0] — 2026-06-18
 
 First tagged version. Establishes versioning for the already-live app; captures
