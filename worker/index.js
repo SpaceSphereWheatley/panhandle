@@ -89,6 +89,16 @@ const json = (data, status = 200, extra = {}) =>
     status, headers: { "Content-Type": "application/json", ...extra }
   });
 
+// Parses a JSON request body, returning null on empty/malformed input so
+// callers can answer 400 instead of throwing an opaque 500.
+async function readJson(request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
+
 // Verifies JWT signature/expiry AND that token_version matches the DB.
 async function requireAuth(request, env) {
   const auth = request.headers.get("Authorization") || "";
@@ -201,13 +211,16 @@ async function seed() {
 
     // ===== SEED ENDPOINT (POST) =====
     if (path === "/seed" && method === "POST") {
-      const { secret, accounts } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { secret, accounts } = body;
       if (!env.SEED_SECRET || secret !== env.SEED_SECRET) {
         return json({ error: "Feil seed-hemmelighet" }, 403);
       }
       if (!Array.isArray(accounts) || !accounts.length) {
         return json({ error: "Mangler kontoer" }, 400);
       }
+      let created = 0;
       for (const a of accounts) {
         if (!a.username || !a.password) continue;
         const hash = await hashPassword(a.password);
@@ -215,13 +228,16 @@ async function seed() {
           INSERT INTO users (username, pass_hash, token_version) VALUES (?1, ?2, 1)
           ON CONFLICT(username) DO UPDATE SET pass_hash = excluded.pass_hash
         `).bind(a.username.trim(), hash).run();
+        created++;
       }
-      return json({ ok: true, created: accounts.length });
+      return json({ ok: true, created });
     }
 
     // ===== LOGIN =====
     if (path === "/login" && method === "POST") {
-      const { username, password } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { username, password } = body;
       const row = await env.DB.prepare(
         "SELECT username, pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind((username || "").trim()).first();
@@ -239,7 +255,9 @@ async function seed() {
 
     // ===== CHANGE PASSWORD =====
     if (path === "/change-password" && method === "POST") {
-      const { current_password, new_password } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { current_password, new_password } = body;
       if (!new_password || new_password.length < 6) {
         return json({ error: "Nytt passord må være minst 6 tegn" }, 400);
       }
@@ -272,7 +290,9 @@ async function seed() {
     }
 
     if (path === "/list" && method === "POST") {
-      const { name, category, notes, qty } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { name, category, notes, qty } = body;
       const clean = (name || "").trim();
       if (!clean) return json({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
@@ -281,10 +301,13 @@ async function seed() {
       ).bind(clean).first();
       if (!cat) {
         const chosenCat = CATEGORIES.includes(category) ? category : "Annet";
-        const res = await env.DB.prepare(
-          "INSERT INTO item_catalogue (name, category) VALUES (?1, ?2)"
-        ).bind(clean, chosenCat).run();
-        cat = { id: res.meta.last_row_id, category: chosenCat };
+        // Upsert so two concurrent adds of a new name can't collide on the
+        // UNIQUE(name) constraint — the loser gets the existing row back.
+        cat = await env.DB.prepare(`
+          INSERT INTO item_catalogue (name, category) VALUES (?1, ?2)
+          ON CONFLICT(name) DO UPDATE SET name = name
+          RETURNING id, category
+        `).bind(clean, chosenCat).first();
       }
       const existing = await env.DB.prepare(
         "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0"
@@ -303,7 +326,9 @@ async function seed() {
 
     const patchMatch = path.match(/^\/list\/(\d+)$/);
     if (patchMatch && method === "PATCH") {
-      const { qty, notes, category } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { qty, notes, category } = body;
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1"
       ).bind(patchMatch[1]).first();
@@ -369,17 +394,21 @@ if (path === "/catalogue" && method === "GET") {
     }
 
     if (path === "/plan" && method === "POST") {
-      const { plan_date, meal_name, responsible } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { plan_date, meal_name, responsible } = body;
       if (!plan_date || !meal_name) return json({ error: "Mangler dato eller måltid" }, 400);
       const clean = meal_name.trim();
       let meal = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE"
       ).bind(clean).first();
       if (!meal) {
-        const res = await env.DB.prepare(
-          "INSERT INTO meal_catalogue (name) VALUES (?1)"
-        ).bind(clean).run();
-        meal = { id: res.meta.last_row_id };
+        // Upsert to avoid a UNIQUE(name) collision on concurrent first use.
+        meal = await env.DB.prepare(`
+          INSERT INTO meal_catalogue (name) VALUES (?1)
+          ON CONFLICT(name) DO UPDATE SET name = name
+          RETURNING id
+        `).bind(clean).first();
       }
       await env.DB.prepare(`
         INSERT INTO meal_plan (plan_date, meal_id, responsible)
