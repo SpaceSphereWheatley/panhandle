@@ -1,12 +1,11 @@
 -- 0004_seed_catalogue.sql
--- Reset the shopping data and seed 500 common Norwegian household items.
+-- Catalogue of common Norwegian household items. Re-runnable and
+-- NON-destructive: it adds each item to EVERY list (CROSS JOIN lists) and
+-- overwrites the category if that item already exists in the list (upsert).
+-- It does NOT delete any existing shopping-list or catalogue rows.
 -- Run manually in the D1 console (there is no migration runner).
--- WARNING: this clears the existing shopping list and item catalogue.
 
-DELETE FROM list_items;
-DELETE FROM item_catalogue;
-
-INSERT INTO item_catalogue (name, category) VALUES
+WITH seed(name, category) AS (VALUES
   ('Banan', 'Frukt og grønt'),
   ('Eple', 'Frukt og grønt'),
   ('Pære', 'Frukt og grønt'),
@@ -506,4 +505,17 @@ INSERT INTO item_catalogue (name, category) VALUES
   ('Blomster', 'Annet'),
   ('Potteplante', 'Annet'),
   ('Jord', 'Annet'),
-  ('Frø', 'Annet');
+  ('Frø', 'Annet'),
+  -- Generic staples (catalogue previously had only specific variants)
+  ('Brød', 'Brød og bakevarer'),
+  ('Ost', 'Meieriprodukter'),
+  ('Mel', 'Ingredienser og krydder'),
+  ('Olje', 'Ingredienser og krydder'),
+  ('Kjøtt', 'Kjøtt og fisk'),
+  ('Fisk', 'Kjøtt og fisk')
+)
+INSERT INTO item_catalogue (name, category, list_id)
+SELECT s.name, s.category, l.id
+FROM seed s CROSS JOIN lists l
+WHERE true
+ON CONFLICT(list_id, name) DO UPDATE SET category = excluded.category;
