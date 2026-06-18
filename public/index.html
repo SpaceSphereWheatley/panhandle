@@ -410,6 +410,7 @@
       <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
       <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
       <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
+      <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
       <!-- Owner: manage members of this list -->
       <div class="setrow hidden" id="ownerPanel">
@@ -493,6 +494,10 @@
 <script>
 // Laget av Mohibb Malik, 2026
 const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
+// Frontend (Pages) version. Bumped together with the Worker's VERSION on each
+// release (see CHANGELOG.md). The Profile page shows this alongside the live
+// API version from GET /api/version so a stale half of a deploy is visible.
+const APP_VERSION = "1.0.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1001,6 +1006,15 @@ async function loadSettings() {
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
   document.getElementById("setMealCount").textContent = meals.length;
+
+  // App (Pages) and API (Worker) deploy independently; show both versions so a
+  // half-finished deploy is obvious. They match in the normal case.
+  let apiVersion = null;
+  try { apiVersion = (await api("/version")).version; } catch { /* offline */ }
+  document.getElementById("setVersion").textContent =
+    !apiVersion || apiVersion === APP_VERSION
+      ? APP_VERSION
+      : `${APP_VERSION} (app) / ${apiVersion} (api)`;
 }
 
 async function loadIconGaps() {

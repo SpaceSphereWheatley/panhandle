@@ -1,6 +1,9 @@
 -- 0005_multi_tenant.sql
 -- Multi-tenant migration: per-list isolation + owner/admin flags.
--- Run manually in the D1 console (there is no migration runner).
+-- This file was originally run by hand in the D1 console during a coordinated
+-- cutover (see docs/multi-tenant-setup.md); it is now tracked by Wrangler's D1
+-- migrations runner like the rest. The PRAGMA foreign_keys caveats in section 6
+-- reflect that hand-run history and the cascade incident in the migration log.
 --
 -- ORDERING MATTERS — run this AT CUTOVER, i.e. right before/after the new
 -- worker/index.js goes live on `main`. The table rebuilds below change

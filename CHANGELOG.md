@@ -1,0 +1,39 @@
+# Changelog
+
+All notable changes to Panhandle are recorded here. The version is duplicated
+in two places (there is no build step to inject it) and bumped together on each
+release:
+
+- `worker/index.js` → `const VERSION`
+- `public/index.html` → `const APP_VERSION`
+
+The Profile page reads `GET /api/version` and shows both the app (Pages) and API
+(Worker) versions, so a deploy where only one half landed is visible at a glance.
+
+Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
+project uses simple `MAJOR.MINOR.PATCH` numbers.
+
+## [1.0.0] — 2026-06-18
+
+First tagged version. Establishes versioning for the already-live app; captures
+the feature set shipped to date.
+
+### Added
+- Shared shopping list with a catalogue-backed autocomplete, per-category
+  grouping, quantity + notes, list and grid views, swipe-to-buy, and an item
+  detail modal.
+- Meal planner with a Monday–Sunday week view, any-week navigation, and an
+  assigned-responsible person per day.
+- Accounts and auth: PBKDF2 password hashing, hand-rolled HS256 JWTs with
+  token versioning, sliding expiry on every authenticated response, and an
+  in-app password change that logs out other devices.
+- Multi-tenant model (`0005_multi_tenant.sql`): per-list data isolation with
+  independent `is_admin` / `is_owner` flags, admin-created owner lists, and
+  owner-managed members.
+- Catalogue seeds: `0004_seed_catalogue.sql` (~506 Norwegian items) and
+  `0006_expand_catalogue.sql` (+200, ~706 total), both non-destructive upserts.
+- PWA install prompt, emoji/SVG item icons, and a one-time credential/invite
+  dialog for newly created accounts.
+- `GET /api/version` endpoint and a Profile-page version readout.
+
+[1.0.0]: https://github.com/SpaceSphereWheatley/panhandle/releases/tag/v1.0.0

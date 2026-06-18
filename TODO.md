@@ -9,10 +9,10 @@ rest keep their numbers (re-pack the list only if it gets sparse).
    it's stored but currently unused/unedited by the frontend.
    _Value: Medium · Importance: Low · Type: Feature (UX)_
 13. ~~Multi-owner lists, admin-created accounts, per-list isolation —
-    see docs/multi-tenant-plan.md for full design.~~ Built on branch
-    `claude/funny-carson-8da81i` (migration `0005_multi_tenant.sql`, worker
-    list-scoping + admin/owner endpoints, frontend user-management UI).
-    Pending manual cutover — see docs/multi-tenant-setup.md.
+    see docs/multi-tenant-plan.md for full design. Migration
+    `0005_multi_tenant.sql`, worker list-scoping + admin/owner endpoints,
+    frontend user-management UI. Cutover complete and deployed to `main`
+    (see docs/multi-tenant-migration-log.md).~~ Done.
     _Value: High · Importance: Low · Type: Feature / Architecture_
 
 ### From codebase audit (2026-06-18)

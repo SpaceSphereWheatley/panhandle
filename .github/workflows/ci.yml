@@ -90,10 +90,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # There's no migration runner (CLAUDE.md: "run manually in the D1
-      # console, in order"), so the only thing CI can realistically enforce
-      # is that migration numbers are sequential and non-duplicated — the one
-      # invariant a manual process is most likely to silently violate.
+      # Migrations are applied out-of-band by a developer running Wrangler's
+      # D1 migrations runner (`npx wrangler d1 migrations apply panhandle
+      # --remote`), not by CI. The one invariant CI can cheaply enforce is
+      # that the numbered files are sequential and non-duplicated — what a
+      # hand-numbered set is most likely to silently get wrong.
       - name: Check migration numbering is sequential
         run: |
           cd migrations

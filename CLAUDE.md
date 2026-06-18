@@ -45,6 +45,10 @@ There is no build step and no Node toolchain in this repo. Both the Pages projec
 
 `CATEGORIES` is duplicated in both `worker/index.js` (server-side validation/default) and `public/index.html` (display grouping) — keep them in sync if changed. People are no longer hardcoded: the frontend's `people()` derives the meal-responsible list from `GET /list-users` (the members of the current list). `COMMON_ITEMS` (new-list catalogue seed) lives only in `worker/index.js`.
 
+### Versioning
+
+There's a single version number, duplicated (no build step to inject it): `VERSION` in `worker/index.js` and `APP_VERSION` in `public/index.html` — bump both together on a release and add a `CHANGELOG.md` entry. The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
+
 ## Deployment
 
 There is no local dev server or test suite. Changes are validated by deploying:
