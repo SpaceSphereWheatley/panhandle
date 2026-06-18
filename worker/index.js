@@ -21,6 +21,8 @@ const CATEGORIES = [
 // instead of a blank catalogue. One-time copy per list — editing this array
 // only affects lists created afterwards. Categories must be in CATEGORIES.
 const COMMON_ITEMS = [
+  { name: "Frukt", category: "Frukt og grønt" },
+  { name: "Grønnsaker", category: "Frukt og grønt" },
   { name: "Banan", category: "Frukt og grønt" },
   { name: "Eple", category: "Frukt og grønt" },
   { name: "Appelsin", category: "Frukt og grønt" },
@@ -65,6 +67,7 @@ const COMMON_ITEMS = [
   { name: "Egg", category: "Meieriprodukter" },
   { name: "Kjøtt", category: "Kjøtt og fisk" },
   { name: "Fisk", category: "Kjøtt og fisk" },
+  { name: "Pålegg", category: "Kjøtt og fisk" },
   { name: "Kjøttdeig", category: "Kjøtt og fisk" },
   { name: "Kylling", category: "Kjøtt og fisk" },
   { name: "Kyllingfilet", category: "Kjøtt og fisk" },
@@ -96,6 +99,7 @@ const COMMON_ITEMS = [
   { name: "Frosne bær", category: "Frysevarer og ferdigmåltid" },
   { name: "Pommes frites", category: "Frysevarer og ferdigmåltid" },
   { name: "Iskrem boks", category: "Frysevarer og ferdigmåltid" },
+  { name: "Frokostblanding", category: "Kornprodukter" },
   { name: "Havregryn", category: "Kornprodukter" },
   { name: "Müsli", category: "Kornprodukter" },
   { name: "Cornflakes", category: "Kornprodukter" },
