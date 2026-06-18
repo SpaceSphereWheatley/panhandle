@@ -267,6 +267,28 @@
     border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer;
     font-family: inherit; }
 
+  /* Settings drill-down: clickable nav row + subpage back button */
+  .nav-row {
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--text);
+    text-align: left; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-row .nav-row-arrow {
+    width: 9px; height: 9px; flex-shrink: 0;
+    border-right: 2px solid var(--tile); border-top: 2px solid var(--tile);
+    transform: rotate(45deg); /* chevron pointing right */
+  }
+  .subpage-back {
+    background: none; border: none; color: var(--tile); font-family: inherit;
+    font-size: 15px; font-weight: 600; cursor: pointer; padding: 4px 0; margin-bottom: 8px;
+  }
+  /* Per-list group header inside the admin "Alle brukere" list */
+  .admin-group {
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .6px; margin: 14px 0 6px;
+  }
+  #allUsers > .admin-group:first-child { margin-top: 0; }
+
   /* User management rows (owner + admin panels) */
   .mgmt-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -382,6 +404,8 @@
 
     <!-- TAB: SETTINGS -->
     <section id="tab-settings" class="hidden">
+      <!-- Main profile view -->
+      <div id="settings-main">
       <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
       <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
       <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
@@ -408,18 +432,11 @@
         </div>
       </div>
 
-      <!-- Admin: create owners and manage every user -->
-      <div class="setrow hidden" id="adminPanel">
-        <div class="k" style="margin-bottom:10px">Admin · opprett eier</div>
-        <input id="newOwnerName" placeholder="Brukernavn for ny eier"
-               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-        <button onclick="createOwner()" id="createOwnerBtn"
-                style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
-          + Opprett eier (ny liste)</button>
-        <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
-        <div class="k" style="margin:18px 0 8px">Alle brukere</div>
-        <div id="allUsers"></div>
-      </div>
+      <!-- Admin: entry into the admin-management subpage (admins only) -->
+      <button id="adminEntry" class="setrow nav-row hidden" onclick="showSettingsSub('admin')">
+        <span>Administrasjon</span>
+        <span class="nav-row-arrow"></span>
+      </button>
 
       <div class="setrow">
         <div class="k" style="margin-bottom:10px">Bytt passord</div>
@@ -434,6 +451,28 @@
       </div>
 
       <button class="logout" onclick="logout()">Logg ut</button>
+      </div><!-- /settings-main -->
+
+      <!-- Admin management subpage (drill-down from #adminEntry) -->
+      <div id="settings-admin" class="hidden">
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
+        <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
+
+        <div class="setrow">
+          <div class="k" style="margin-bottom:10px">Opprett eier (ny liste)</div>
+          <input id="newOwnerName" placeholder="Brukernavn for ny eier"
+                 style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
+          <button onclick="createOwner()" id="createOwnerBtn"
+                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+            + Opprett eier</button>
+          <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
+        </div>
+
+        <div class="setrow">
+          <div class="k" style="margin-bottom:10px">Alle brukere</div>
+          <div id="allUsers"></div>
+        </div>
+      </div><!-- /settings-admin -->
     </section>
   </main>
 
@@ -562,7 +601,15 @@ function switchTab(tab) {
   document.getElementById("sortBtn").classList.toggle("hidden", tab !== "list");
   if (tab === "list") loadList();
   if (tab === "meals") loadPlan();
-  if (tab === "settings") loadSettings();
+  if (tab === "settings") { showSettingsSub("main"); loadSettings(); }
+}
+
+// Settings drill-down: "main" profile view <-> "admin" management subpage.
+function showSettingsSub(view) {
+  document.getElementById("settings-main").classList.toggle("hidden", view !== "main");
+  document.getElementById("settings-admin").classList.toggle("hidden", view !== "admin");
+  document.getElementById("title").textContent = view === "admin" ? "Administrasjon" : "Profil";
+  if (view === "admin") loadAllUsers();
 }
 
 function toggleSort() {
@@ -949,7 +996,7 @@ async function deletePlan(iso) {
 async function loadSettings() {
   applyRoleVisibility();
   if (isOwner) loadListUsers();
-  if (isAdmin) loadAllUsers();
+  // Admin user list loads when the admin subpage is opened (showSettingsSub).
   const cat = await api("/catalogue");
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
@@ -988,7 +1035,7 @@ async function changePassword() {
 // ---------- user management (owner + admin) ----------
 function applyRoleVisibility() {
   document.getElementById("ownerPanel").classList.toggle("hidden", !isOwner);
-  document.getElementById("adminPanel").classList.toggle("hidden", !isAdmin);
+  document.getElementById("adminEntry").classList.toggle("hidden", !isAdmin);
 }
 
 // Members of the current list — drives both the meal-responsible dropdown and
@@ -1057,12 +1104,23 @@ async function loadAllUsers() {
   if (!isAdmin) return;
   let users;
   try { users = await api("/admin/users"); } catch { return; }
-  const box = document.getElementById("allUsers");
-  box.innerHTML = users.map(u => {
+
+  // Header totals: N users across M distinct lists.
+  const listIds = [...new Set(users.map(u => u.list_id))];
+  document.getElementById("adminTotals").textContent =
+    `${users.length} ${users.length === 1 ? "bruker" : "brukere"} · ` +
+    `${listIds.length} ${listIds.length === 1 ? "liste" : "lister"}`;
+
+  // Group users by list_id (the API already orders by list_id, username).
+  const groups = {};
+  for (const u of users) (groups[u.list_id] = groups[u.list_id] || []).push(u);
+
+  const userRow = (u) => {
     const en = encodeURIComponent(u.username);
+    const self = u.username === currentUser;
     return `<div class="mgmt-row">
       <div class="who"><div class="uname">${escapeHtml(u.username)}</div>
-        <div class="sub">liste ${u.list_id ?? "-"}${u.created_by ? " · av " + escapeHtml(u.created_by) : ""}</div></div>
+        <div class="sub">${self ? "deg" : (u.created_by ? "av " + escapeHtml(u.created_by) : "&nbsp;")}</div></div>
       <div class="acts">
         <label class="flag"><input type="checkbox" ${u.is_admin ? "checked" : ""}
           onchange="setFlag('${en}','is_admin',this.checked)">Admin</label>
@@ -1070,6 +1128,13 @@ async function loadAllUsers() {
           onchange="setFlag('${en}','is_owner',this.checked)">Eier</label>
         <button class="mini" onclick="resetUserPassword('${en}')">Nullstill pw</button>
       </div></div>`;
+  };
+
+  document.getElementById("allUsers").innerHTML = listIds.map(id => {
+    const members = groups[id];
+    return `<div class="admin-group">Liste ${id ?? "-"} · ${members.length} ` +
+           `${members.length === 1 ? "bruker" : "brukere"}</div>` +
+           members.map(userRow).join("");
   }).join("");
 }
 
