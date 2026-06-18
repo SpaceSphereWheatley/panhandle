@@ -9,6 +9,15 @@ integration).
 
 Read the whole thing once before starting — **ordering matters**.
 
+> **Status update:** Steps 1–2 (backup + migration) have already been run
+> against the live `panhandle` D1 database via the Cloudflare connection — the
+> schema is migrated and all data is intact (a `foreign_keys`-cascade hiccup
+> during the rebuild was caught and the affected rows restored from backup; see
+> `multi-tenant-migration-log.md`). The only remaining step is **Step 3 (merge
+> to `main` to deploy the code)**, after which run the Step 4–5 smoke tests.
+> Until the code is deployed, the live (old) Worker's *writes* fail against the
+> new schema — reads still work — so deploy promptly.
+
 ---
 
 ## What's already done (in the branch)

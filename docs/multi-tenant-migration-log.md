@@ -111,6 +111,34 @@ lines, and wrote the two companion docs.
   Worker (no deploy happens until you merge to `main`). The verification
   checklist lives in `multi-tenant-setup.md`.
 
+## Production execution (cutover)
+
+Executed against the live `panhandle` D1 database via the Cloudflare connection.
+
+1. **Backup** — captured a full in-session snapshot of every table (users incl.
+   hashes, 501 catalogue rows, 6 list_items, 2 meals, 1 plan) before touching
+   anything.
+2. **Phase A (additive)** — `lists` table, new columns, backfill to list 1
+   (Mohibb owner+admin, Saffa member). Verified: 0 nulls, all data on list 1.
+3. **Phase B (rebuilds)** — the four table rebuilds for the compound UNIQUE
+   constraints. **Incident:** D1's query path runs with
+   `PRAGMA foreign_keys = ON` (my migration had assumed OFF, the SQLite CLI
+   default). `DROP TABLE item_catalogue` / `meal_catalogue` therefore performed
+   an implicit row DELETE that cascaded (`ON DELETE CASCADE`) and wiped
+   `list_items` (6 rows) and `meal_plan` (1 row). The parent tables and their
+   data were fine; only the two children were emptied.
+4. **Recovery** — re-inserted the 6 `list_items` and 1 `meal_plan` rows from
+   the Step 1 backup (referenced catalogue/meal ids and `list_id` all still
+   existed, so the FK-on inserts succeeded). Re-verified: 501 / 6 / 2 / 1, all
+   on list 1, matching the pre-migration snapshot exactly. No data lost.
+5. **Migration file hardened** — added `PRAGMA foreign_keys = OFF/ON` wrappers
+   and a warning comment to `0005_multi_tenant.sql` so a re-run on a *populated*
+   DB won't repeat the cascade. (Fresh deploys are unaffected: `list_items`/
+   `meal_plan` are empty at that point, so there's nothing to cascade.)
+
+Net: production schema is fully migrated and all original data is intact. What
+remained after this was deploying the code (merge to `main`).
+
 ## Known sharp edges / follow-ups
 
 - An admin resetting *their own* password (or toggling their own flags)

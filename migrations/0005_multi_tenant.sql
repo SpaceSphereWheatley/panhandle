@@ -13,6 +13,18 @@
 -- RENAME rebuild pattern below is safe even though list_items references
 -- item_catalogue and meal_plan references meal_catalogue.
 
+-- D1's query path enforces foreign keys (PRAGMA foreign_keys = ON), so a
+-- `DROP TABLE` on a parent performs an implicit DELETE of its rows and fires
+-- ON DELETE CASCADE on children. Dropping item_catalogue/meal_catalogue would
+-- therefore wipe list_items/meal_plan. The rebuild section (6) MUST run with
+-- foreign keys disabled — hence the PRAGMA wrappers below. IMPORTANT: if your
+-- runner wraps this whole file in one transaction, `PRAGMA foreign_keys` is a
+-- silent no-op inside a transaction; in that case run section 6 on its own (or
+-- back up list_items + meal_plan first). The D1 dashboard console honors the
+-- PRAGMA when the statement runs outside an explicit transaction.
+
+PRAGMA foreign_keys = OFF;
+
 -- 1. The lists table. No owner_username column: ownership lives on
 --    users.is_owner, and a list can have more than one owner.
 CREATE TABLE IF NOT EXISTS lists (
@@ -120,3 +132,5 @@ CREATE INDEX IF NOT EXISTS idx_list_bought ON list_items(list_id, bought);
 CREATE INDEX IF NOT EXISTS idx_plan_date   ON meal_plan(list_id, plan_date);
 CREATE INDEX IF NOT EXISTS idx_item_list   ON item_catalogue(list_id);
 CREATE INDEX IF NOT EXISTS idx_users_list  ON users(list_id);
+
+PRAGMA foreign_keys = ON;
