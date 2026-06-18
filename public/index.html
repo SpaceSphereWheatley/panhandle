@@ -408,9 +408,6 @@
       <!-- Main profile view -->
       <div id="settings-main">
       <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
-      <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
-      <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
-      <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
       <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
       <!-- Owner: manage members of this list -->
@@ -453,6 +450,8 @@
       <div id="settings-admin" class="hidden">
         <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
         <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
+        <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
+        <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
 
         <div class="setrow">
           <div class="k">Varer uten ikon</div>
@@ -498,7 +497,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -615,7 +614,14 @@ function showSettingsSub(view) {
   document.getElementById("settings-main").classList.toggle("hidden", view !== "main");
   document.getElementById("settings-admin").classList.toggle("hidden", view !== "admin");
   document.getElementById("title").textContent = view === "admin" ? "Administrasjon" : "Profil";
-  if (view === "admin") { loadAllUsers(); loadIconGaps(); }
+  if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
+}
+
+async function loadAdminCounts() {
+  const cat = await api("/catalogue");
+  const meals = await api("/meals");
+  document.getElementById("setCatCount").textContent = cat.length;
+  document.getElementById("setMealCount").textContent = meals.length;
 }
 
 function toggleSort() {
@@ -1018,11 +1024,8 @@ async function deletePlan(iso) {
 async function loadSettings() {
   applyRoleVisibility();
   if (isOwner) loadListUsers();
-  // Admin user list loads when the admin subpage is opened (showSettingsSub).
-  const cat = await api("/catalogue");
-  const meals = await api("/meals");
-  document.getElementById("setCatCount").textContent = cat.length;
-  document.getElementById("setMealCount").textContent = meals.length;
+  // Admin user list and catalogue/meal counts load when the admin subpage is
+  // opened (showSettingsSub).
 
   // App (Pages) and API (Worker) deploy independently; show both versions so a
   // half-finished deploy is obvious. They match in the normal case.

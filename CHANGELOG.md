@@ -13,6 +13,15 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.3] — 2026-06-18
+
+### Changed
+- Profile page: moved "Varer i katalog" and "Måltider i database" into the
+  admin-only Administrasjon subpage (they're internal/operational figures,
+  not relevant to regular members). Removed the hardcoded "Synkronisering:
+  Hvert 7. sekund" row — it was a non-actionable, easily-stale label for an
+  internal implementation detail (the poll interval).
+
 ## [1.0.2] — 2026-06-18
 
 ### Changed
