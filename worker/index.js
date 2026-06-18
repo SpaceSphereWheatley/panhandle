@@ -17,13 +17,25 @@ function b64url(input) {
   return btoa(String.fromCharCode(...new Uint8Array(input)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+// Encode via UTF-8 bytes so payloads with non-ASCII characters (e.g. a
+// username with æ/ø/å) don't make btoa throw.
 function b64urlStr(str) {
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return b64url(new TextEncoder().encode(str));
 }
 function b64urlDecode(str) {
   str = str.replace(/-/g, "+").replace(/_/g, "/");
   while (str.length % 4) str += "=";
-  return atob(str);
+  const bin = atob(str);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+// Constant-time string comparison so a JWT signature check can't be probed
+// byte-by-byte via response timing.
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
 }
 async function hmac(secret, data) {
   const key = await crypto.subtle.importKey(
@@ -44,7 +56,7 @@ async function verifyJwt(token, secret) {
   if (parts.length !== 3) return null;
   const [header, body, sig] = parts;
   const expected = await hmac(secret, `${header}.${body}`);
-  if (expected !== sig) return null;
+  if (!timingSafeEqual(expected, sig)) return null;
   try {
     const payload = JSON.parse(b64urlDecode(body));
     if (payload.exp && Date.now() / 1000 > payload.exp) return null;
@@ -54,6 +66,11 @@ async function verifyJwt(token, secret) {
 
 // ---------- password hashing (PBKDF2 via Web Crypto) ----------
 const PBKDF2_ITER = 100000;
+// A well-formed but unmatchable hash. Verified against this when the supplied
+// username doesn't exist, so login spends the same PBKDF2 time either way and
+// can't be used to enumerate valid usernames by response latency.
+const DUMMY_PASS_HASH =
+  "100000:AAAAAAAAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 async function hashPassword(password, saltBytes) {
   const salt = saltBytes || crypto.getRandomValues(new Uint8Array(16));
   const keyMaterial = await crypto.subtle.importKey(
@@ -88,6 +105,16 @@ const json = (data, status = 200, extra = {}) =>
   new Response(JSON.stringify(data), {
     status, headers: { "Content-Type": "application/json", ...extra }
   });
+
+// Parses a JSON request body, returning null on empty/malformed input so
+// callers can answer 400 instead of throwing an opaque 500.
+async function readJson(request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
 
 // Verifies JWT signature/expiry AND that token_version matches the DB.
 async function requireAuth(request, env) {
@@ -201,31 +228,42 @@ async function seed() {
 
     // ===== SEED ENDPOINT (POST) =====
     if (path === "/seed" && method === "POST") {
-      const { secret, accounts } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { secret, accounts } = body;
       if (!env.SEED_SECRET || secret !== env.SEED_SECRET) {
         return json({ error: "Feil seed-hemmelighet" }, 403);
       }
       if (!Array.isArray(accounts) || !accounts.length) {
         return json({ error: "Mangler kontoer" }, 400);
       }
+      let created = 0;
       for (const a of accounts) {
         if (!a.username || !a.password) continue;
         const hash = await hashPassword(a.password);
         await env.DB.prepare(`
           INSERT INTO users (username, pass_hash, token_version) VALUES (?1, ?2, 1)
-          ON CONFLICT(username) DO UPDATE SET pass_hash = excluded.pass_hash
+          ON CONFLICT(username) DO UPDATE SET
+            pass_hash = excluded.pass_hash,
+            token_version = users.token_version + 1
         `).bind(a.username.trim(), hash).run();
+        created++;
       }
-      return json({ ok: true, created: accounts.length });
+      return json({ ok: true, created });
     }
 
     // ===== LOGIN =====
     if (path === "/login" && method === "POST") {
-      const { username, password } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { username, password } = body;
       const row = await env.DB.prepare(
         "SELECT username, pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind((username || "").trim()).first();
-      if (!row || !(await verifyPassword(password || "", row.pass_hash))) {
+      // Always run the PBKDF2 check (against a dummy hash for unknown users) so
+      // login latency doesn't reveal whether a username exists.
+      const ok = await verifyPassword(password || "", row ? row.pass_hash : DUMMY_PASS_HASH);
+      if (!row || !ok) {
         return json({ error: "Feil brukernavn eller passord" }, 401);
       }
       const token = await mintToken(row.username, row.token_version, env);
@@ -236,10 +274,19 @@ async function seed() {
     const user = await requireAuth(request, env);
     if (!user) return json({ error: "Ikke autorisert" }, 401);
     const freshToken = await mintToken(user.username, user.token_version, env);
+    // Sliding expiry: every authenticated response carries a freshly-minted
+    // token so the session is extended no matter which endpoint is used (not
+    // just /list). /change-password is the exception — it returns the
+    // authoritative new-version token in its body, and the frontend ignores
+    // this header on that path.
+    const authedJson = (data, status = 200, extra = {}) =>
+      json(data, status, { "X-Refresh-Token": freshToken, ...extra });
 
     // ===== CHANGE PASSWORD =====
     if (path === "/change-password" && method === "POST") {
-      const { current_password, new_password } = await request.json();
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const { current_password, new_password } = body;
       if (!new_password || new_password.length < 6) {
         return json({ error: "Nytt passord må være minst 6 tegn" }, 400);
       }
@@ -266,25 +313,28 @@ async function seed() {
         JOIN item_catalogue c ON c.id = li.catalogue_id
         ORDER BY li.bought ASC, c.category ASC, c.name ASC
       `).all();
-      return new Response(JSON.stringify(results), {
-        status: 200, headers: { "Content-Type": "application/json", "X-Refresh-Token": freshToken }
-      });
+      return authedJson(results);
     }
 
     if (path === "/list" && method === "POST") {
-      const { name, category, notes, qty } = await request.json();
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const { name, category, notes, qty } = body;
       const clean = (name || "").trim();
-      if (!clean) return json({ error: "Tomt navn" }, 400);
+      if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
       let cat = await env.DB.prepare(
         "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE"
       ).bind(clean).first();
       if (!cat) {
         const chosenCat = CATEGORIES.includes(category) ? category : "Annet";
-        const res = await env.DB.prepare(
-          "INSERT INTO item_catalogue (name, category) VALUES (?1, ?2)"
-        ).bind(clean, chosenCat).run();
-        cat = { id: res.meta.last_row_id, category: chosenCat };
+        // Upsert so two concurrent adds of a new name can't collide on the
+        // UNIQUE(name) constraint — the loser gets the existing row back.
+        cat = await env.DB.prepare(`
+          INSERT INTO item_catalogue (name, category) VALUES (?1, ?2)
+          ON CONFLICT(name) DO UPDATE SET name = name
+          RETURNING id, category
+        `).bind(clean, chosenCat).first();
       }
       const existing = await env.DB.prepare(
         "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0"
@@ -293,21 +343,23 @@ async function seed() {
         const updated = await env.DB.prepare(
           "UPDATE list_items SET qty = qty + ?2 WHERE id = ?1 RETURNING qty"
         ).bind(existing.id, addQty).first();
-        return json({ ok: true, duplicate: true, qty: updated.qty });
+        return authedJson({ ok: true, duplicate: true, qty: updated.qty });
       }
       await env.DB.prepare(
         "INSERT INTO list_items (catalogue_id, added_by, notes, qty) VALUES (?1, ?2, ?3, ?4)"
       ).bind(cat.id, user.username, (notes || "").trim() || null, addQty).run();
-      return json({ ok: true, qty: addQty });
+      return authedJson({ ok: true, qty: addQty });
     }
 
     const patchMatch = path.match(/^\/list\/(\d+)$/);
     if (patchMatch && method === "PATCH") {
-      const { qty, notes, category } = await request.json();
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const { qty, notes, category } = body;
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1"
       ).bind(patchMatch[1]).first();
-      if (!row) return json({ error: "Fant ikke vare" }, 404);
+      if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
       if (qty !== undefined) {
         const cleanQty = Math.max(1, parseInt(qty, 10) || 1);
         await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2")
@@ -321,7 +373,7 @@ async function seed() {
         await env.DB.prepare("UPDATE item_catalogue SET category = ?1 WHERE id = ?2")
           .bind(category, row.catalogue_id).run();
       }
-      return json({ ok: true });
+      return authedJson({ ok: true });
     }
 
     const toggleMatch = path.match(/^\/list\/(\d+)\/toggle$/);
@@ -331,20 +383,20 @@ async function seed() {
             bought_at = CASE bought WHEN 0 THEN datetime('now') ELSE NULL END
         WHERE id = ?1
       `).bind(toggleMatch[1]).run();
-      return json({ ok: true });
+      return authedJson({ ok: true });
     }
 
     const delMatch = path.match(/^\/list\/(\d+)$/);
     if (delMatch && method === "DELETE") {
       await env.DB.prepare("DELETE FROM list_items WHERE id = ?1").bind(delMatch[1]).run();
-      return json({ ok: true });
+      return authedJson({ ok: true });
     }
 
 if (path === "/catalogue" && method === "GET") {
       const { results } = await env.DB.prepare(
         "SELECT name, category FROM item_catalogue ORDER BY name ASC"
       ).all();
-      return json(results);
+      return authedJson(results);
     }
 
     // ===== MEALS =====
@@ -352,7 +404,7 @@ if (path === "/catalogue" && method === "GET") {
       const { results } = await env.DB.prepare(
         "SELECT id, name, ingredients FROM meal_catalogue ORDER BY name ASC"
       ).all();
-      return json(results);
+      return authedJson(results);
     }
 
     if (path === "/plan" && method === "GET") {
@@ -365,21 +417,25 @@ if (path === "/catalogue" && method === "GET") {
       q += " ORDER BY p.plan_date ASC";
       const stmt = binds.length ? env.DB.prepare(q).bind(...binds) : env.DB.prepare(q);
       const { results } = await stmt.all();
-      return json(results);
+      return authedJson(results);
     }
 
     if (path === "/plan" && method === "POST") {
-      const { plan_date, meal_name, responsible } = await request.json();
-      if (!plan_date || !meal_name) return json({ error: "Mangler dato eller måltid" }, 400);
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const { plan_date, meal_name, responsible } = body;
+      if (!plan_date || !meal_name) return authedJson({ error: "Mangler dato eller måltid" }, 400);
       const clean = meal_name.trim();
       let meal = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE"
       ).bind(clean).first();
       if (!meal) {
-        const res = await env.DB.prepare(
-          "INSERT INTO meal_catalogue (name) VALUES (?1)"
-        ).bind(clean).run();
-        meal = { id: res.meta.last_row_id };
+        // Upsert to avoid a UNIQUE(name) collision on concurrent first use.
+        meal = await env.DB.prepare(`
+          INSERT INTO meal_catalogue (name) VALUES (?1)
+          ON CONFLICT(name) DO UPDATE SET name = name
+          RETURNING id
+        `).bind(clean).first();
       }
       await env.DB.prepare(`
         INSERT INTO meal_plan (plan_date, meal_id, responsible)
@@ -389,16 +445,16 @@ if (path === "/catalogue" && method === "GET") {
           responsible = excluded.responsible,
           updated_at = datetime('now')
       `).bind(plan_date, meal.id, responsible || "").run();
-      return json({ ok: true });
+      return authedJson({ ok: true });
     }
 
     const planDelMatch = path.match(/^\/plan\/(\d{4}-\d{2}-\d{2})$/);
     if (planDelMatch && method === "DELETE") {
       await env.DB.prepare("DELETE FROM meal_plan WHERE plan_date = ?1")
         .bind(planDelMatch[1]).run();
-      return json({ ok: true });
+      return authedJson({ ok: true });
     }
 
-    return json({ error: "Not found" }, 404);
+    return authedJson({ error: "Not found" }, 404);
   }
 };
