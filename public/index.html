@@ -169,21 +169,21 @@
     background: var(--bg-sunken); border-radius: 10px; overflow: hidden;
   }
   .grid-card {
-    background: var(--tile); padding: 12px 6px;
+    background: var(--tile); padding: 8px 6px;
     cursor: pointer; transition: background-color .15s;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    text-align: center; gap: 6px; height: 108px; box-sizing: border-box; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 4px; height: 104px; box-sizing: border-box; overflow: hidden;
     min-width: 0; border: 1px solid var(--bg-sunken); color: #fff; touch-action: manipulation;
     -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   }
   .grid-card.bought { background: var(--bought-bg); color: var(--muted); }
   .grid-card.bought .grid-name { text-decoration: line-through; }
   .grid-card .badge {
-    width: 40px; height: 40px; border-radius: 10px; background: var(--tile-dark); color: #fff;
-    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
-    flex-shrink: 0;
+    flex-shrink: 0; color: #fff; line-height: 1;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700;
   }
-  .grid-card.bought .badge { background: var(--bg-sunken); }
+  .grid-card.bought .badge { opacity: .45; }
+  .grid-card .badge .item-icon { width: 54px; height: 54px; display: block; }
   .grid-card .grid-name {
     font-size: 12px; font-weight: 500; line-height: 1.2; width: 100%;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
@@ -283,6 +283,17 @@
 </head>
 <body>
 <!-- Laget av Mohibb Malik, 2026 -->
+
+<!-- Hand-drawn wobble filter for item icons (see itemIcons.js). Defined once;
+     every icon's <g> references it via filter="url(#sketchy)". -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="sketchy" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.05" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 
 <!-- LOGIN -->
 <div id="login">
