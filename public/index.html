@@ -29,6 +29,7 @@
     background: var(--bg); color: var(--text); padding-bottom: 72px;
   }
   .hidden { display: none !important; }
+  .ui-icon { vertical-align: middle; flex-shrink: 0; }
 
   /* Login */
   #login {
@@ -324,8 +325,8 @@
         <div id="suggestions" class="suggestions hidden"></div>
       </div>
       <div class="view-toggle">
-        <button id="viewListBtn" onclick="setView('list')">☰</button>
-        <button id="viewGridBtn" onclick="setView('grid')">⊞</button>
+        <button id="viewListBtn" onclick="setView('list')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
+        <button id="viewGridBtn" onclick="setView('grid')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
       </div>
       <div id="listContainer"></div>
       <div id="recentContainer"></div>
@@ -373,17 +374,18 @@
 
   <nav>
     <button id="nav-list" class="active" onclick="switchTab('list')">
-      <span class="ico">🛒</span>Handleliste</button>
+      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg></span>Handleliste</button>
     <button id="nav-meals" onclick="switchTab('meals')">
-      <span class="ico">🍽️</span>Måltider</button>
+      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>Måltider</button>
     <button id="nav-settings" onclick="switchTab('settings')">
-      <span class="ico">⚙️</span>Profil</button>
+      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M4.8 4.8l2.1 2.1M17.1 17.1l2.1 2.1M2.6 12h3M18.4 12h3M4.8 19.2l2.1-2.1M17.1 6.9l2.1-2.1"/></svg></span>Profil</button>
   </nav>
 </div>
 
 <div id="modalRoot"></div>
 
 <script src="/itemIcons.js"></script>
+<script src="/uiIcons.js"></script>
 <script>
 // Laget av Mohibb Malik, 2026
 const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
@@ -560,7 +562,7 @@ function catSection(key, items) {
   const label = document.createElement("button");
   label.className = "cat-label";
   label.onclick = () => toggleCat(key);
-  label.innerHTML = `<span>${escapeHtml(key)}</span><span class="arrow${collapsed ? " collapsed" : ""}">▾</span>`;
+  label.innerHTML = `<span>${escapeHtml(key)}</span><span class="arrow${collapsed ? " collapsed" : ""}">${uiIcon("chevronDown", 14)}</span>`;
   wrap.appendChild(label);
   const content = document.createElement("div");
   content.className = "cat-content" + (collapsed ? " collapsed" : "");
@@ -635,13 +637,13 @@ function card(it) {
       <div class="meta" style="font-style:italic">${it.notes ? escapeHtml(it.notes) : ""}</div>
     </div>
     <div style="display:flex;align-items:center">
-      <button class="more" onclick="openItemModal(${it.id})">⋮</button>
-      <button class="del" onclick="delItem(${it.id})">🗑</button>
+      <button class="more" onclick="openItemModal(${it.id})">${uiIcon("more", 18)}</button>
+      <button class="del" onclick="delItem(${it.id})">${uiIcon("trash", 18)}</button>
       <div class="check"></div>
     </div>`;
   const bg = document.createElement("div");
   bg.className = "swipe-bg";
-  bg.textContent = "✓";
+  bg.innerHTML = uiIcon("check", 20);
   wrap.appendChild(bg);
   wrap.appendChild(el);
   return wrap;
@@ -943,17 +945,17 @@ function showInstallBanner() {
   const banner = document.getElementById("installBanner");
   if (deferredInstallEvent) {
     banner.innerHTML = `
-      <span class="ico">📲</span>
+      <span class="ico">${uiIcon("download", 22)}</span>
       <span class="txt">Installer Panhandle på hjemskjermen for raskere tilgang.</span>
       <button class="install" onclick="doInstall()">Installer</button>
-      <button class="dismiss" onclick="dismissInstallBanner()">✕</button>`;
+      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
     banner.classList.remove("hidden");
   } else if (isIos()) {
     banner.innerHTML = `
-      <span class="ico">📲</span>
+      <span class="ico">${uiIcon("download", 22)}</span>
       <span class="txt">Legg til Panhandle på hjemskjermen: trykk del-ikonet
         <span style="font-weight:600">⎋</span> og velg "Legg til på Hjemskjerm".</span>
-      <button class="dismiss" onclick="dismissInstallBanner()">✕</button>`;
+      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
     banner.classList.remove("hidden");
   }
 }
