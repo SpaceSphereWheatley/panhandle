@@ -512,7 +512,11 @@ WITH seed(name, category) AS (VALUES
   ('Mel', 'Ingredienser og krydder'),
   ('Olje', 'Ingredienser og krydder'),
   ('Kjøtt', 'Kjøtt og fisk'),
-  ('Fisk', 'Kjøtt og fisk')
+  ('Fisk', 'Kjøtt og fisk'),
+  ('Frukt', 'Frukt og grønt'),
+  ('Grønnsaker', 'Frukt og grønt'),
+  ('Frokostblanding', 'Kornprodukter'),
+  ('Pålegg', 'Kjøtt og fisk')
 )
 INSERT INTO item_catalogue (name, category, list_id)
 SELECT s.name, s.category, l.id
