@@ -411,12 +411,6 @@
       <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
       <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
 
-      <div class="setrow">
-        <div class="k">Varer uten ikon</div>
-        <div class="v" id="setIconGapCount">-</div>
-        <div id="iconGapList" class="icon-gap-list"></div>
-      </div>
-
       <!-- Owner: manage members of this list -->
       <div class="setrow hidden" id="ownerPanel">
         <div class="k" style="margin-bottom:4px">Brukere på listen</div>
@@ -457,6 +451,12 @@
       <div id="settings-admin" class="hidden">
         <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
         <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
+
+        <div class="setrow">
+          <div class="k">Varer uten ikon</div>
+          <div class="v" id="setIconGapCount">-</div>
+          <div id="iconGapList" class="icon-gap-list"></div>
+        </div>
 
         <div class="setrow">
           <div class="k" style="margin-bottom:10px">Opprett eier (ny liste)</div>
@@ -609,7 +609,7 @@ function showSettingsSub(view) {
   document.getElementById("settings-main").classList.toggle("hidden", view !== "main");
   document.getElementById("settings-admin").classList.toggle("hidden", view !== "admin");
   document.getElementById("title").textContent = view === "admin" ? "Administrasjon" : "Profil";
-  if (view === "admin") loadAllUsers();
+  if (view === "admin") { loadAllUsers(); loadIconGaps(); }
 }
 
 function toggleSort() {
@@ -1001,7 +1001,11 @@ async function loadSettings() {
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
   document.getElementById("setMealCount").textContent = meals.length;
+}
 
+async function loadIconGaps() {
+  if (!isAdmin) return;
+  const cat = await api("/catalogue");
   const missing = cat.filter(c => !iconForItem(c.name)).map(c => c.name).sort();
   document.getElementById("setIconGapCount").textContent =
     `${missing.length} av ${cat.length}`;
