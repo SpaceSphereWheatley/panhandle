@@ -184,6 +184,7 @@
     flex-shrink: 0;
   }
   .grid-card.bought .badge { background: var(--bg-sunken); }
+  .grid-card .badge .item-icon { width: 30px; height: 30px; display: block; }
   .grid-card .grid-name {
     font-size: 12px; font-weight: 500; line-height: 1.2; width: 100%;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
@@ -283,6 +284,17 @@
 </head>
 <body>
 <!-- Laget av Mohibb Malik, 2026 -->
+
+<!-- Hand-drawn wobble filter for item icons (see itemIcons.js). Defined once;
+     every icon's <g> references it via filter="url(#sketchy)". -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="sketchy" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.05" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 
 <!-- LOGIN -->
 <div id="login">
