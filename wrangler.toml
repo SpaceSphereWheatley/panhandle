@@ -1,6 +1,13 @@
 # Laget av Mohibb Malik, 2026
 # Architecture: Pages hosts the frontend, Worker handles API + routing.
 # You will deploy via the Cloudflare dashboard, not the CLI.
+#
+# Schema/data migrations (migrations/*.sql) are applied with Wrangler's
+# built-in D1 migrations runner, not by hand in the dashboard:
+#   npx wrangler d1 migrations apply panhandle --remote
+# Wrangler tracks applied migrations in the `d1_migrations` table in the
+# DB itself (bootstrapped to cover 0001-0006, which were already applied
+# manually before this was set up), so it only runs new numbered files.
 
 name = "panhandle"
 main = "worker/index.js"
