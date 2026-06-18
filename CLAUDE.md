@@ -38,12 +38,16 @@ There is no build step and no Node toolchain in this repo. Both the Pages projec
 ### Data flow
 
 - Shopping items reference a shared `item_catalogue` (name + category) so a name typed once is remembered with its category afterward; `list_items` just tracks bought/added-by state against a catalogue entry.
-- Meals follow the same pattern: `meal_catalogue` holds known meal names, `meal_plan` assigns one meal + a responsible person to a given `plan_date` (one row per date, upserted via `ON CONFLICT(plan_date)`).
+- Meals follow the same pattern: `meal_catalogue` holds known meal names, `meal_plan` assigns one meal + a responsible person to a given `plan_date` (one row per date, upserted via `ON CONFLICT(plan_date)`). `meal_plan` has no long-term history: the frontend only ever navigates to last/this/next week (`weekOffset` clamped to `[-1, 1]` in `public/index.html`), and `GET /plan` opportunistically deletes rows older than 14 days on every read — there's no cron trigger, so cleanup piggybacks on normal traffic. `meal_catalogue` (the reusable meal *names*, for autocomplete) is unaffected and keeps growing.
 - Frontend polls `/list` and `/plan` every 7 seconds while the relevant tab is active (no websockets/push).
 
 ### Categories and people
 
 `CATEGORIES` is duplicated in both `worker/index.js` (server-side validation/default) and `public/index.html` (display grouping) — keep them in sync if changed. People are no longer hardcoded: the frontend's `people()` derives the meal-responsible list from `GET /list-users` (the members of the current list). `COMMON_ITEMS` (new-list catalogue seed) lives only in `worker/index.js`.
+
+### Versioning
+
+There's a single version number, duplicated (no build step to inject it): `VERSION` in `worker/index.js` and `APP_VERSION` in `public/index.html` — bump both together on a release and add a `CHANGELOG.md` entry. The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
 
 ## Deployment
 

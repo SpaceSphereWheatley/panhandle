@@ -7,11 +7,12 @@ A shared shopping list and meal planner PWA for two people, built on Cloudflare 
 ## Features
 
 - **Shopping list** with categories, autocomplete, and one-click checkout
-- **Meal planning** for the next 14 days with assigned responsibility
-- **Real-time sync** between two devices (polling every 7 seconds)
+- **Meal planning** with a Monday–Sunday week view (navigate to any week) and assigned responsibility
+- **Multi-tenant** — isolated per-household lists with independent owner/admin roles: admins create new lists, owners add/remove members (see `docs/multi-tenant-setup.md`)
+- **Real-time sync** between devices (polling every 7 seconds)
 - **In-app password change** that logs out other devices
 - **Sliding token expiry** — you stay logged in as long as the app is used
-- **Installable** as a home-screen app on Android
+- **Installable** as a home-screen app on Android/iOS
 
 ## Architecture
 
@@ -26,7 +27,7 @@ Both the Pages project and the Worker are connected directly to this GitHub repo
 
 - **Pages:** Connect to Git → this repo → branch `main` → build output directory `public/`, no build command.
 - **Worker:** Connect to Git → this repo → branch `main` → deploy command `npx wrangler deploy` (reads `wrangler.toml` at repo root), no build command.
-- **D1 database:** schema is applied manually — run the SQL in `migrations/` (in order) against the `panhandle` D1 database via the Cloudflare dashboard's D1 console. There's no migration runner.
+- **D1 database:** schema/data changes live in `migrations/` and are applied with Wrangler's built-in D1 migrations runner: `npx wrangler d1 migrations apply panhandle --remote` (requires `wrangler login` or `CLOUDFLARE_API_TOKEN`). Wrangler records applied files in the `d1_migrations` table inside the DB, so only new numbered files run. This is a manual step a developer runs after merging a migration file — it is intentionally **not** wired into the Git integration/CI.
 - **Worker secrets:** `JWT_SECRET` and `SEED_SECRET` are set directly in the Worker's dashboard (Settings → Variables and Secrets) — independent of the Git integration.
 
 ## Development
@@ -52,9 +53,11 @@ Both halves deploy automatically on push to `main`:
   - `0001_init.sql` — shopping list and meal plan tables
   - `0002_users.sql` — user accounts with password hashing
   - `0003_list_items_qty_notes.sql` — qty + notes columns
-  - `0004_seed_catalogue.sql` — 500 common Norwegian items
+  - `0004_seed_catalogue.sql` — ~500 common Norwegian items (non-destructive upsert)
   - `0005_multi_tenant.sql` — per-list isolation + owner/admin flags
     (see `docs/multi-tenant-setup.md` for the rollout steps)
+  - `0006_expand_catalogue.sql` — +200 more catalogue items (~706 total)
+- `CHANGELOG.md` — released versions and what changed
 
 ## Known Limitations
 

@@ -237,6 +237,7 @@
     background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px;
     padding: 8px 12px; font-size: 14px; cursor: pointer; color: var(--text); font-family: inherit;
   }
+  .week-nav button:disabled { opacity: .4; cursor: default; }
   .week-nav .label { font-size: 13px; font-weight: 600; color: var(--muted); text-align: center; flex: 1; }
   .day {
     background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
@@ -394,10 +395,10 @@
     <!-- TAB: MEALS -->
     <section id="tab-meals" class="hidden">
       <div class="week-nav">
-        <button onclick="shiftWeek(-1)">‹ Forrige</button>
+        <button id="weekPrevBtn" onclick="shiftWeek(-1)">‹ Forrige</button>
         <span class="label" id="weekLabel"></span>
         <button onclick="shiftWeek(0)">Denne uken</button>
-        <button onclick="shiftWeek(1)">Neste ›</button>
+        <button id="weekNextBtn" onclick="shiftWeek(1)">Neste ›</button>
       </div>
       <div id="planContainer"></div>
     </section>
@@ -410,6 +411,7 @@
       <div class="setrow"><div class="k">Synkronisering</div><div class="v">Hvert 7. sekund</div></div>
       <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
       <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
+      <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
       <!-- Owner: manage members of this list -->
       <div class="setrow hidden" id="ownerPanel">
@@ -493,6 +495,10 @@
 <script>
 // Laget av Mohibb Malik, 2026
 const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
+// Frontend (Pages) version. Bumped together with the Worker's VERSION on each
+// release (see CHANGELOG.md). The Profile page shows this alongside the live
+// API version from GET /api/version so a stale half of a deploy is visible.
+const APP_VERSION = "1.0.2";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -899,6 +905,18 @@ function hideSuggestions() { document.getElementById("suggestions").classList.ad
 // ---------- meal plan ----------
 let weekOffset = 0; // weeks relative to the current week (Mon-Sun), shifted by shiftWeek()
 
+// Formats a Date as YYYY-MM-DD from its *local* components. Date#toISOString
+// converts to UTC first, which shifts the date backwards by a day between
+// local midnight and the UTC offset (e.g. 00:00-02:00 in UTC+1/+2) — exactly
+// when "today"/the week grid/the saved plan_date need to agree with the
+// browser's local calendar, not UTC's.
+function localIso(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function mondayOf(date) {
   const d = new Date(date);
   const dow = d.getDay(); // 0 = Sunday
@@ -907,8 +925,10 @@ function mondayOf(date) {
   return d;
 }
 
+// Only last week, this week, and next week are ever navigable — there's no
+// long-term meal-plan history, so weekOffset is clamped to [-1, 1].
 function shiftWeek(delta) {
-  weekOffset = delta === 0 ? 0 : weekOffset + delta;
+  weekOffset = delta === 0 ? 0 : Math.max(-1, Math.min(1, weekOffset + delta));
   loadPlan();
 }
 
@@ -917,9 +937,11 @@ async function loadPlan() {
   monday.setDate(monday.getDate() + weekOffset * 7);
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  const fromIso = monday.toISOString().slice(0, 10);
-  const toIso = sunday.toISOString().slice(0, 10);
+  const fromIso = localIso(monday);
+  const toIso = localIso(sunday);
 
+  document.getElementById("weekPrevBtn").disabled = weekOffset <= -1;
+  document.getElementById("weekNextBtn").disabled = weekOffset >= 1;
   document.getElementById("weekLabel").textContent =
     `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ` +
     `${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
@@ -931,10 +953,10 @@ async function loadPlan() {
   for (const p of plan) byDate[p.plan_date] = p;
   const c = document.getElementById("planContainer");
   c.innerHTML = "";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localIso(new Date());
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday); d.setDate(d.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = localIso(d);
     const p = byDate[iso];
     const el = document.createElement("div");
     el.className = "day";
@@ -1001,6 +1023,15 @@ async function loadSettings() {
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
   document.getElementById("setMealCount").textContent = meals.length;
+
+  // App (Pages) and API (Worker) deploy independently; show both versions so a
+  // half-finished deploy is obvious. They match in the normal case.
+  let apiVersion = null;
+  try { apiVersion = (await api("/version")).version; } catch { /* offline */ }
+  document.getElementById("setVersion").textContent =
+    !apiVersion || apiVersion === APP_VERSION
+      ? APP_VERSION
+      : `${APP_VERSION} (app) / ${apiVersion} (api)`;
 }
 
 async function loadIconGaps() {

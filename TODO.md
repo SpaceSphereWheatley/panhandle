@@ -9,10 +9,10 @@ rest keep their numbers (re-pack the list only if it gets sparse).
    it's stored but currently unused/unedited by the frontend.
    _Value: Medium · Importance: Low · Type: Feature (UX)_
 13. ~~Multi-owner lists, admin-created accounts, per-list isolation —
-    see docs/multi-tenant-plan.md for full design.~~ Built on branch
-    `claude/funny-carson-8da81i` (migration `0005_multi_tenant.sql`, worker
-    list-scoping + admin/owner endpoints, frontend user-management UI).
-    Pending manual cutover — see docs/multi-tenant-setup.md.
+    see docs/multi-tenant-plan.md for full design. Migration
+    `0005_multi_tenant.sql`, worker list-scoping + admin/owner endpoints,
+    frontend user-management UI. Cutover complete and deployed to `main`
+    (see docs/multi-tenant-migration-log.md).~~ Done.
     _Value: High · Importance: Low · Type: Feature / Architecture_
 
 ### From codebase audit (2026-06-18)
@@ -27,10 +27,11 @@ sliding expiry on every authenticated response. Remaining items:
     storage; deferred pending a decision between a D1 table and a Cloudflare
     Rate Limiting binding.
     _Value: High · Importance: High · Type: Security_
-15. Meal-plan date off-by-one — `Date.toISOString().slice(0,10)` formats in
+~~15. Meal-plan date off-by-one — `Date.toISOString().slice(0,10)` formats in
     UTC while the week is built in local time, so between local midnight and
     ~02:00 (UTC+1/+2) the whole week, "today", and the saved `plan_date`
-    shift back a day. Format from local date components instead.
+    shift back a day.~~ Fixed in 1.0.1 — a `localIso()` helper formats from
+    local date components instead.
     _Value: High · Importance: High · Type: Bug (correctness)_
 16. Missing CSS variables `--green` / `--danger` — referenced by the
     change-password button/messages in `public/index.html` but never defined
