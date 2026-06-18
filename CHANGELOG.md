@@ -13,6 +13,24 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.5] — 2026-06-18
+
+### Added
+- TODO #9: Meal plan now has an "Ingredienser" field (comma-separated) in
+  the meal-edit modal, stored as a JSON array on
+  `meal_catalogue.ingredients` and shared across every occurrence of that
+  meal name. Picking a known meal name auto-fills its stored ingredients.
+
+### Fixed
+- TODO #18: `parseItemInput` no longer strips a leading/trailing number
+  from text that's an exact match for an existing catalogue item, so a
+  product name containing a number isn't mis-split into name+quantity.
+- TODO #19: New shopping-list items are stored as typed instead of being
+  force-uppercased, matching the Title Case of the seeded catalogue.
+- TODO #24: Removed the Worker's inline, stale copy of the seed-account
+  form; `/seed.html` now serves only from `public/seed.html` via the
+  existing Pages proxy.
+
 ## [1.0.4] — 2026-06-18
 
 ### Fixed
