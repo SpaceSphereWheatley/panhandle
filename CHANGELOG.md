@@ -13,6 +13,20 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.4] — 2026-06-18
+
+### Fixed
+- TODO #14: Login rate-limiting — `/login` now tracks failed attempts per
+  source IP in a new `login_attempts` D1 table (migration
+  `0007_login_attempts.sql`) and returns 429 after 10 failures in a
+  15-minute sliding window. Keyed by IP rather than username so flooding a
+  known account's login can't lock out its real owner. Requires running
+  `npx wrangler d1 migrations apply panhandle --remote` before this lands.
+- TODO #16: `--green` / `--danger` CSS variables were referenced by the
+  change-password button/messages but never defined in `:root`, so the
+  button had no background and messages had no colour. Both vars are now
+  defined.
+
 ## [1.0.3] — 2026-06-18
 
 ### Changed

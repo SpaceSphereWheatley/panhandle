@@ -14,7 +14,15 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.3";
+const VERSION = "1.0.4";
+
+// Login rate-limiting (TODO #14): max failed attempts per source IP within
+// the sliding window below, backed by the login_attempts table (see
+// migrations/0007_login_attempts.sql). Keyed by IP rather than username so a
+// flood of failed attempts against one account can't be used to lock out its
+// real owner.
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
 
 const CATEGORIES = [
   "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
@@ -462,6 +470,17 @@ async function seed() {
 
     // ===== LOGIN =====
     if (path === "/login" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const windowStart = Date.now() - LOGIN_WINDOW_MS;
+      // Opportunistic cleanup, same pattern as /plan's meal_plan pruning:
+      // drop attempts outside the window on every login, no cron needed.
+      await env.DB.prepare("DELETE FROM login_attempts WHERE created_at < ?1").bind(windowStart).run();
+      const { attempts } = await env.DB.prepare(
+        "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
+      ).bind(ip, windowStart).first();
+      if (attempts >= LOGIN_MAX_ATTEMPTS) {
+        return json({ error: "For mange innloggingsforsøk. Prøv igjen senere." }, 429);
+      }
       const body = await readJson(request);
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { username, password } = body;
@@ -472,6 +491,8 @@ async function seed() {
       // login latency doesn't reveal whether a username exists.
       const ok = await verifyPassword(password || "", row ? row.pass_hash : DUMMY_PASS_HASH);
       if (!row || !ok) {
+        await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
+          .bind(ip, Date.now()).run();
         return json({ error: "Feil brukernavn eller passord" }, 401);
       }
       const token = await mintToken(row, env);
