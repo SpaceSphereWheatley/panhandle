@@ -13,6 +13,15 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.2] — 2026-06-18
+
+### Changed
+- Meal plan no longer keeps long-term history: week navigation is clamped to
+  last week / this week / next week (`weekOffset` in `[-1, 1]`, with the
+  "Forrige"/"Neste" buttons disabling at the edges), and `GET /plan`
+  opportunistically deletes `meal_plan` rows older than 14 days on every
+  read. `meal_catalogue` (the reusable meal names) is untouched.
+
 ## [1.0.1] — 2026-06-18
 
 ### Fixed

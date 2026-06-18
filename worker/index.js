@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 
 const CATEGORIES = [
   "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
@@ -765,6 +765,14 @@ async function seed() {
     }
 
     if (path === "/plan" && method === "GET") {
+      // The frontend only ever navigates to last/this/next week (at most 13
+      // days before today), so there's no value in keeping plan rows beyond
+      // that — opportunistically drop anything older on every read. The
+      // 14-day cutoff (vs. 13) is a safety margin against clock/timezone
+      // skew between the server's `now` and a client's local "today".
+      await env.DB.prepare(
+        "DELETE FROM meal_plan WHERE list_id = ?1 AND plan_date < date('now', '-14 days')"
+      ).bind(user.list_id).run();
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
       let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id
