@@ -123,7 +123,14 @@
     color: #fff; position: relative; z-index: 1; height: 64px; box-sizing: border-box;
     -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   }
-  .card > div:first-child { min-width: 0; overflow: hidden; }
+  .card .info { min-width: 0; overflow: hidden; flex: 1 1 auto; }
+  .card .item-badge {
+    flex-shrink: 0; width: 36px; height: 36px; margin-right: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px;
+  }
+  .card.bought .item-badge { opacity: .45; }
+  .card .item-badge .item-icon { width: 34px; height: 34px; display: block; }
   .card .name {
     font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
@@ -631,8 +638,10 @@ function card(it) {
     if (longPressed || swiping || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
     toggleItem(it.id);
   };
+  const icon = iconForItem(it.name);
   el.innerHTML = `
-    <div>
+    <div class="item-badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
+    <div class="info">
       <div class="name">${escapeHtml(it.name)}${it.qty > 1 ? `<span class="qty-badge">x${it.qty}</span>` : ""}</div>
       <div class="meta" style="font-style:italic">${it.notes ? escapeHtml(it.notes) : ""}</div>
     </div>
