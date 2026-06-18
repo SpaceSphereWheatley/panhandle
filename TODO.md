@@ -22,10 +22,14 @@ the seed count. PR #22 (in review) hardens auth: constant-time JWT check,
 UTF-8 JWT, no username enumeration, `token_version` bump on seed reset, and
 sliding expiry on every authenticated response. Remaining items:
 
-14. Login rate-limiting — no throttling/lockout on `/api/login`, so it's
+~~14. Login rate-limiting — no throttling/lockout on `/api/login`, so it's
     brute-forceable (PBKDF2 only raises per-attempt cost). Needs persistent
     storage; deferred pending a decision between a D1 table and a Cloudflare
-    Rate Limiting binding.
+    Rate Limiting binding.~~ Fixed in 1.0.4 — a `login_attempts` D1 table
+    (migration `0007_login_attempts.sql`) tracks failed attempts per source
+    IP; 10 failures in a 15-minute sliding window returns 429. Keyed by IP
+    rather than username so flooding one account's login can't lock out its
+    real owner.
     _Value: High · Importance: High · Type: Security_
 ~~15. Meal-plan date off-by-one — `Date.toISOString().slice(0,10)` formats in
     UTC while the week is built in local time, so between local midnight and
@@ -33,10 +37,11 @@ sliding expiry on every authenticated response. Remaining items:
     shift back a day.~~ Fixed in 1.0.1 — a `localIso()` helper formats from
     local date components instead.
     _Value: High · Importance: High · Type: Bug (correctness)_
-16. Missing CSS variables `--green` / `--danger` — referenced by the
+~~16. Missing CSS variables `--green` / `--danger` — referenced by the
     change-password button/messages in `public/index.html` but never defined
     in `:root`, so the button renders with no background and messages get no
-    colour. Use `--tile` / `--accent` or define the vars.
+    colour. Use `--tile` / `--accent` or define the vars.~~ Fixed in 1.0.4 —
+    both vars defined in `:root`.
     _Value: High · Importance: Medium · Type: UI bug_
 17. No service worker despite the PWA manifest — the app is installable but
     has zero offline capability. Add a minimal app-shell service worker, or

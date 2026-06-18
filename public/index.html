@@ -22,6 +22,8 @@
     --muted: #9FB6B3;
     --border: rgba(255,255,255,0.09);
     --bought-bg: #324A4C;
+    --green: #4CAF7D;
+    --danger: #ED6A6A;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -497,7 +499,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
