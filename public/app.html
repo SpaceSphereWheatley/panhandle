@@ -613,7 +613,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.16";
+const APP_VERSION = "1.0.17";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -946,7 +946,7 @@ function card(it) {
   el.innerHTML = `
     <div class="item-badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
     <div class="info">
-      <div class="name">${escapeHtml(it.name)}${it.qty > 1 ? `<span class="qty-badge">x${it.qty}</span>` : ""}</div>
+      <div class="name">${escapeHtml(cap(it.name))}${it.qty > 1 ? `<span class="qty-badge">x${it.qty}</span>` : ""}</div>
       <div class="meta" style="font-style:italic">${it.notes ? escapeHtml(it.notes) : ""}</div>
     </div>
     <div style="display:flex;align-items:center;gap:4px">
@@ -988,7 +988,7 @@ function gridCard(it) {
   const icon = iconForItem(it.name);
   el.innerHTML = `
     <div class="badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
-    <div class="grid-name">${escapeHtml(it.name)}</div>
+    <div class="grid-name">${escapeHtml(cap(it.name))}</div>
     <div class="grid-meta">${meta ? escapeHtml(meta) : ""}</div>`;
   return el;
 }
@@ -1001,10 +1001,10 @@ function openItemModal(id) {
   root.innerHTML = `
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
       <div class="modal">
-        <h3>${escapeHtml(it.name)}</h3>
+        <h3>${escapeHtml(cap(it.name))}</h3>
         <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
         <label>Navn</label>
-        <input id="itemName" value="${escapeHtml(it.name)}">
+        <input id="itemName" value="${escapeHtml(cap(it.name))}">
         <label>Kategori</label>
         <select id="itemCategory">
           ${CATEGORIES.map(c => `<option ${c===it.category?"selected":""}>${c}</option>`).join("")}
@@ -1045,7 +1045,7 @@ async function saveItemEdit(id) {
 async function deleteFromCatalogue(id) {
   const it = lastItems.find(x => x.id === id);
   if (!it) return;
-  if (!confirm(`Fjerne «${it.name}» helt fra listens lagrede varer? Den slettes fra handlelisten og blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`)) return;
+  if (!confirm(`Fjerne «${cap(it.name)}» helt fra listens lagrede varer? Den slettes fra handlelisten og blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`)) return;
   await api(`/list/${id}/catalogue`, { method: "DELETE" });
   closeModal();
   catalogue = await api("/catalogue");
@@ -1115,7 +1115,7 @@ async function addItem() {
   if (res && res.error) { input.value = typed; toast(res.error, true); return; }
   // The server merges a repeat add into the existing line and bumps its qty;
   // tell the user instead of leaving them wondering where the new row went.
-  if (res && res.duplicate) toast(`«${name}» var alt på listen – antall økt til ${res.qty}`);
+  if (res && res.duplicate) toast(`«${cap(name)}» var alt på listen – antall økt til ${res.qty}`);
   catalogue = await api("/catalogue");
   loadList();
 }
@@ -1148,7 +1148,7 @@ function delItem(id) {
   pendingDeleteIds.add(id);
   renderList();
   const timer = setTimeout(() => commitDelete(id), 5000);
-  showToast(`«${item.name}» slettet`, { undoFn: () => {
+  showToast(`«${cap(item.name)}» slettet`, { undoFn: () => {
     clearTimeout(timer);
     pendingDeleteIds.delete(id);
     lastItems.splice(Math.min(idx, lastItems.length), 0, item);
@@ -1179,7 +1179,7 @@ async function addItemExact() {
   try { res = await api("/list", { method: "POST", body: JSON.stringify({ name, qty: 1, category: "Annet" }) }); }
   catch { input.value = name; toast("Kunne ikke legge til – sjekk nettforbindelsen", true); return; }
   if (res && res.error) { input.value = name; toast(res.error, true); return; }
-  if (res && res.duplicate) toast(`«${name}» var alt på listen – antall økt til ${res.qty}`);
+  if (res && res.duplicate) toast(`«${cap(name)}» var alt på listen – antall økt til ${res.qty}`);
   catalogue = await api("/catalogue");
   loadList();
 }
@@ -1197,8 +1197,8 @@ function onAddInput() {
     const d = document.createElement("div");
     // Show the clean catalogue name but keep any GF marker the user typed, so
     // picking a suggestion for "Pasta GF" still files it under a "GF" note.
-    d.textContent = m.name + (gf ? " GF" : "");
-    d.onclick = () => { document.getElementById("addInput").value = m.name + (gf ? " GF" : ""); addItem(); };
+    d.textContent = cap(m.name) + (gf ? " GF" : "");
+    d.onclick = () => { document.getElementById("addInput").value = cap(m.name) + (gf ? " GF" : ""); addItem(); };
     box.appendChild(d);
   }
   const exact = document.createElement("div");
@@ -1412,7 +1412,7 @@ async function openIngredientPicker(rawIngredients, iso) {
             <label class="ing-row">
               <input type="checkbox" data-name="${escapeHtml(r.name)}"
                      data-category="${escapeHtml(r.category)}" ${r.already ? "" : "checked"}>
-              <span class="ing-name">${escapeHtml(r.name)}</span>
+              <span class="ing-name">${escapeHtml(cap(r.name))}</span>
               ${r.already ? `<span class="ing-tag">allerede på listen</span>` : ""}
             </label>`).join("")}
         </div>
@@ -1714,6 +1714,15 @@ window.addEventListener("online", () => {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+// Upper-cases the first character of an item/catalogue name for display, leaving
+// the rest as stored. The server capitalises new names on save, but this is the
+// display-side guarantee that an item is never shown lowercase — including any
+// legacy rows saved before that. Mirrors the server's capitalizeName.
+function cap(s) {
+  const t = (s == null ? "" : String(s));
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 }
 
 // ---------- install prompt ----------

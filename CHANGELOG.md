@@ -13,6 +13,17 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.17] — 2026-06-19
+
+### Changed
+- Item names are now always capitalised. New catalogue names are saved with a
+  capital first letter on the server (`capitalizeName`, applied on add and on
+  rename), and the frontend capitalises every place an item name is shown
+  (list, grid, recent, the edit modal, suggestions, meal-ingredient picker and
+  toasts) via a `cap()` helper — so even legacy lowercase rows never display
+  uncapitalised. The rest of the name is left as typed, so proper nouns,
+  acronyms and casing like "7 Up" are preserved.
+
 ## [1.0.16] — 2026-06-19
 
 ### Added

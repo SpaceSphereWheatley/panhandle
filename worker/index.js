@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.16";
+const VERSION = "1.0.17";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -290,6 +290,15 @@ function extractGlutenFree(name) {
     .trim();
   if (!gf || !cleaned) return { name: (name || "").trim(), gf: false };
   return { name: cleaned, gf: true };
+}
+
+// Upper-cases the first character of an item/catalogue name so stored names are
+// always capitalised ("brød" -> "Brød"), leaving the rest as typed (proper
+// nouns, acronyms and casing like "7 Up" survive). Applied wherever a catalogue
+// name is created or renamed; the frontend mirrors it at display time.
+function capitalizeName(name) {
+  const s = (name || "").trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 // ---------- response helpers ----------
@@ -645,7 +654,8 @@ export default {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { name, category, notes, qty } = body;
-      const { name: clean, gf } = extractGlutenFree(name);
+      const { name: stripped, gf } = extractGlutenFree(name);
+      const clean = capitalizeName(stripped);
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
       // A gluten-free marker pulled out of the name is recorded as a "Glutenfri"
@@ -711,7 +721,7 @@ export default {
           .bind(category, row.catalogue_id, user.list_id).run();
       }
       if (name !== undefined) {
-        const cleanName = (name || "").trim();
+        const cleanName = capitalizeName(name);
         if (!cleanName) return authedJson({ error: "Tomt navn" }, 400);
         const clash = await env.DB.prepare(
           "SELECT id FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
