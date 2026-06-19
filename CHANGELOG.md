@@ -13,6 +13,16 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.8] — 2026-06-19
+
+### Fixed
+- TODO #2: Polling (`/list`/`/plan`, every 7s) kept running while the tab
+  was backgrounded, and `showApp()` never cleared a prior interval before
+  starting a new one, risking stacked timers. The poll tick now skips work
+  when `document.hidden`, `showApp()` clears any existing timer first, and
+  a `visibilitychange` listener triggers an immediate refresh on returning
+  to the tab so data isn't stale.
+
 ## [1.0.7] — 2026-06-19
 
 ### Fixed

@@ -29,6 +29,13 @@ details live in `CHANGELOG.md`, not here.
    `meal_catalogue.ingredients` but not exposed as a "add to list" action. Should
    be able to select which of a meal's ingredients to add when viewing a plan.
    _Value: Medium · Importance: Low · Type: Feature (workflow)_
+10. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+    interaction for a while) but visible. At 2 users on D1 this costs
+    nothing today — only worth doing once user count or request volume
+    actually grows, and it trades off responsiveness (stale data right
+    after returning from idle) for load savings, so don't add it
+    speculatively.
+    _Value: Low · Importance: Low · Type: Performance_
 
 ## Done
 
