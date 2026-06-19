@@ -13,6 +13,25 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.16] — 2026-06-19
+
+### Added
+- Gluten-free shorthand: adding an item with a `GF`, `gf` or `glutenfri` marker
+  in its name (e.g. "Pasta GF") now files it under the normal catalogue name
+  ("Pasta") with a "Glutenfri" note instead of creating a separate "Pasta GF"
+  catalogue entry. The note always reads "Glutenfri" regardless of how the
+  marker was typed. The plain item and its gluten-free variant coexist as two
+  distinct lines — the add-merge check is now notes-aware, so one no longer
+  bumps the other's quantity. Handled authoritatively in the Worker, with the
+  frontend mirroring it for catalogue matching, suggestions and toasts.
+
+## [1.0.15] — 2026-06-19
+
+### Changed
+- Shopping list: the "N varer igjen" count now shares a row with the list/grid
+  view-toggle buttons (count on the left, toggle on the right) instead of
+  sitting on its own line below them.
+
 ## [1.0.14] — 2026-06-19
 
 Completes Phase 4 / the UX improvement plan. (T15, multiple meals per day, was
