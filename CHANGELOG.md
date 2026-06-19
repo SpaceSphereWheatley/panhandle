@@ -11,7 +11,12 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 (Worker) versions, so a deploy where only one half landed is visible at a glance.
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
-project uses simple `MAJOR.MINOR.PATCH` numbers.
+project uses simple `MAJOR.MINOR.PATCH` numbers. In practice every release so
+far has only bumped PATCH, even for substantial changes (dark mode,
+multi-tenant support). Going forward: bump MINOR for a release that adds a new
+user-facing capability or completes a planned phase/epic; bump PATCH for fixes,
+tweaks, and small additions; MAJOR is reserved for breaking changes (e.g. an
+incompatible API/schema change requiring coordinated migration).
 
 ## [1.0.19] — 2026-06-19
 
