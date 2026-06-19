@@ -19,7 +19,7 @@
     --accent: #556B2F;
     --accent-dark: #3D4C1F;
     --text: #3D3D3D;
-    --muted: #8B7D6E;
+    --muted: #6E6253;
     --border: rgba(61,61,61,0.08);
     --bought-bg: #D9D0C3;
     --green: #C89B7B;
@@ -525,6 +525,7 @@
       <div id="settings-admin" class="hidden">
         <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
         <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
+        <div class="setrow"><div class="k">Versjon (app / API)</div><div class="v" id="setVersionDetail">-</div></div>
         <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
         <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
 
@@ -571,7 +572,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.12";
+const APP_VERSION = "1.0.13";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -725,6 +726,18 @@ async function loadAdminCounts() {
   const meals = await api("/meals");
   document.getElementById("setCatCount").textContent = cat.length;
   document.getElementById("setMealCount").textContent = meals.length;
+
+  // App (Pages) and API (Worker) deploy independently; surfacing both versions
+  // makes a half-finished deploy obvious. Lives here (admin) rather than on the
+  // user-facing Profile.
+  let apiVersion = null;
+  try { apiVersion = (await api("/version")).version; } catch { /* offline */ }
+  document.getElementById("setVersionDetail").textContent =
+    !apiVersion
+      ? `${APP_VERSION} (app) / ? (api)`
+      : apiVersion === APP_VERSION
+        ? `${APP_VERSION} ✓`
+        : `${APP_VERSION} (app) / ${apiVersion} (api) — avvik`;
 }
 
 function toggleSort() {
@@ -1375,14 +1388,9 @@ async function loadSettings() {
   // Admin user list and catalogue/meal counts load when the admin subpage is
   // opened (showSettingsSub).
 
-  // App (Pages) and API (Worker) deploy independently; show both versions so a
-  // half-finished deploy is obvious. They match in the normal case.
-  let apiVersion = null;
-  try { apiVersion = (await api("/version")).version; } catch { /* offline */ }
-  document.getElementById("setVersion").textContent =
-    !apiVersion || apiVersion === APP_VERSION
-      ? APP_VERSION
-      : `${APP_VERSION} (app) / ${apiVersion} (api)`;
+  // The Profile shows a plain version number; the app-vs-API mismatch detail
+  // (deploy-debugging) lives in the admin subpage instead (loadAdminCounts).
+  document.getElementById("setVersion").textContent = APP_VERSION;
 }
 
 async function loadIconGaps() {
