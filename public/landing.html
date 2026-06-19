@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Mohibb Malik">
+<meta name="theme-color" content="#F5F1ED">
+<meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for to.">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<title>Panhandle — Måltidsplanlegging og handleliste, sammen</title>
+<style>
+  :root {
+    --bg: #F5F1ED;
+    --bg-elevated: #E3DDD4;
+    --bg-sunken: #C9C2B8;
+    --tile: #9CAF88;
+    --tile-dark: #7A956F;
+    --accent: #556B2F;
+    --accent-dark: #3D4C1F;
+    --text: #3D3D3D;
+    --muted: #8B7D6E;
+    --border: rgba(61,61,61,0.08);
+    --bought-bg: #D9D0C3;
+    --green: #C89B7B;
+    --danger: #A85C3D;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: "Roboto", -apple-system, system-ui, "Segoe UI", Verdana, sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  .hidden { display: none !important; }
+
+  /* Header */
+  header.site {
+    position: sticky; top: 0; z-index: 30; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-row {
+    max-width: 1080px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; color: var(--accent-dark); }
+  .brand .mark {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--tile);
+    display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; border-radius: 12px; font-family: inherit; font-weight: 700;
+    font-size: 15px; cursor: pointer; padding: 12px 22px; text-decoration: none;
+  }
+  .btn-login { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; }
+  .btn-login:hover { background: var(--bg-sunken); }
+  .btn-primary { background: var(--tile); color: #fff; }
+  .btn-primary:hover { background: var(--tile-dark); }
+  .btn-primary.lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
+
+  /* Hero */
+  .hero { padding: 64px 0 48px; text-align: center; }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 46px); font-weight: 900; line-height: 1.15;
+    margin: 0 0 18px; color: var(--accent-dark);
+  }
+  .hero h1 span { color: var(--tile); }
+  .hero p.lead {
+    font-size: 18px; color: var(--muted); max-width: 620px; margin: 0 auto 32px; line-height: 1.55;
+  }
+  .hero .cta-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .hero .secondary-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+
+  /* Showcase */
+  .showcase { padding: 56px 0 64px; }
+  .showcase h2 {
+    text-align: center; font-size: clamp(22px, 3.5vw, 30px); font-weight: 900;
+    color: var(--accent-dark); margin: 0 0 8px;
+  }
+  .showcase p.sub { text-align: center; color: var(--muted); margin: 0 0 40px; font-size: 15px; }
+  .mock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; margin-bottom: 48px; }
+  @media (max-width: 760px) { .mock-grid { grid-template-columns: 1fr; } }
+
+  .mock-card {
+    background: var(--bg-elevated); border-radius: 20px; padding: 18px;
+    border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(61,40,20,0.08);
+  }
+  .mock-screen {
+    background: var(--bg); border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .mock-screen .mock-head {
+    background: var(--bg-sunken); padding: 12px 16px; font-weight: 700; font-size: 15px;
+    display: flex; justify-content: space-between; align-items: center; color: var(--text);
+  }
+  .mock-screen .mock-body { padding: 14px; }
+
+  /* shopping list mock */
+  .mock-row {
+    background: var(--tile); color: #fff; border-radius: 12px; padding: 11px 14px;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-size: 14px;
+  }
+  .mock-row.bought { background: var(--bought-bg); color: var(--muted); text-decoration: line-through; }
+  .mock-row .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); flex-shrink: 0; }
+  .mock-row.bought .dot { background: var(--tile-dark); border-color: var(--tile-dark); }
+
+  /* meal calendar mock */
+  .mock-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .mock-day {
+    background: var(--bg-sunken); border-radius: 8px; padding: 6px 4px; font-size: 9px;
+    color: var(--muted); text-align: center; min-height: 56px;
+  }
+  .mock-day .d { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .mock-day .meal {
+    background: var(--tile); color: #fff; border-radius: 5px; padding: 3px 2px; font-size: 8.5px;
+    line-height: 1.2; margin-top: 2px; font-weight: 500;
+  }
+  .mock-day.today { outline: 2px solid var(--accent); }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    background: var(--bg-elevated); border-radius: 16px; padding: 22px;
+    border: 1px solid var(--border);
+  }
+  .feature .ico {
+    width: 40px; height: 40px; border-radius: 10px; background: var(--tile);
+    color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+  }
+  .feature h3 { font-size: 16px; margin: 0 0 6px; color: var(--accent-dark); }
+  .feature p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+  footer.site {
+    border-top: 1px solid var(--border); padding: 28px 0; text-align: center;
+    color: var(--muted); font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(61,40,20,0.45);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal-box {
+    background: var(--bg); border-radius: 18px; padding: 28px; max-width: 420px; width: 100%;
+    text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }
+  .modal-box .ico {
+    width: 52px; height: 52px; border-radius: 50%; background: var(--tile); color: #fff;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+  }
+  .modal-box h3 { margin: 0 0 10px; color: var(--accent-dark); font-size: 19px; }
+  .modal-box p { color: var(--text); font-size: 15px; line-height: 1.55; margin: 0 0 20px; }
+  .modal-box a.email { font-weight: 700; color: var(--accent); }
+  .modal-box .btn-close { background: var(--bg-elevated); color: var(--text); width: 100%; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="nav-row">
+    <div class="brand">
+      <span class="mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg>
+      </span>
+      Panhandle
+    </div>
+    <a class="btn btn-login" href="/">Logg inn</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <h1>Planlegg middager.<br>Handlelisten <span>lager seg selv.</span></h1>
+    <p class="lead">
+      Panhandle kobler ukeplanen for middager rett til en delt handleliste —
+      legg en middag inn i kalenderen, og det dere trenger dukker opp på listen.
+      Ingen dobbeltarbeid, ingen "hva skal vi ha til middag i dag".
+    </p>
+    <div class="cta-row">
+      <button class="btn btn-primary lg" onclick="openSignupModal()">Registrer deg</button>
+      <a class="btn btn-login lg" href="/">Logg inn</a>
+    </div>
+    <div class="secondary-note">Bygget for husholdninger på to. Fungerer på mobil og desktop.</div>
+  </div>
+</section>
+
+<section class="showcase">
+  <div class="wrap">
+    <h2>Sett sammen for hvordan dere faktisk handler</h2>
+    <p class="sub">Måltidskalenderen og handlelisten henger sammen — slik ser det ut.</p>
+
+    <div class="mock-grid">
+      <div class="mock-card">
+        <div class="mock-screen">
+          <div class="mock-head">Måltider — denne uka</div>
+          <div class="mock-body">
+            <div class="mock-cal">
+              <div class="mock-day"><div class="d">Man</div><div class="meal">Taco</div></div>
+              <div class="mock-day"><div class="d">Tir</div><div class="meal">Pasta</div></div>
+              <div class="mock-day today"><div class="d">Ons</div><div class="meal">Laks</div></div>
+              <div class="mock-day"><div class="d">Tor</div></div>
+              <div class="mock-day"><div class="d">Fre</div><div class="meal">Pizza</div></div>
+              <div class="mock-day"><div class="d">Lør</div><div class="meal">Wok</div></div>
+              <div class="mock-day"><div class="d">Søn</div><div class="meal">Suppe</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-screen">
+          <div class="mock-head">Handleliste</div>
+          <div class="mock-body">
+            <div class="mock-row"><span>Laksefilet</span><span class="dot"></span></div>
+            <div class="mock-row"><span>Tacolefse</span><span class="dot"></span></div>
+            <div class="mock-row"><span>Kremost</span><span class="dot"></span></div>
+            <div class="mock-row bought"><span>Pasta</span><span class="dot"></span></div>
+            <div class="mock-row bought"><span>Parmesan</span><span class="dot"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>
+        <h3>Ukeplan for middager</h3>
+        <p>Sett opp hvem som lager hva og når, sammen med den andre — ingen flere meldinger om middag.</p>
+      </div>
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg></span>
+        <h3>Delt handleliste, live</h3>
+        <p>Begge ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
+      </div>
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg></span>
+        <h3>Gjenkjenner varer</h3>
+        <p>Listen kommer med et stort katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">© Panhandle · Laget for to.</div>
+</footer>
+
+<div id="signupModal" class="modal-overlay hidden" onclick="if(event.target===this) closeSignupModal()">
+  <div class="modal-box">
+    <span class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    </span>
+    <h3>Vi er i en lukket beta</h3>
+    <p>
+      Panhandle er foreløpig kun tilgjengelig for inviterte testere.
+      Send en e-post til utvikleren for å be om en testkonto:
+      <br><a class="email" href="mailto:mohibb91@gmail.com">mohibb91@gmail.com</a>
+    </p>
+    <button class="btn btn-close" onclick="closeSignupModal()">Lukk</button>
+  </div>
+</div>
+
+<script>
+function openSignupModal() { document.getElementById('signupModal').classList.remove('hidden'); }
+function closeSignupModal() { document.getElementById('signupModal').classList.add('hidden'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSignupModal(); });
+</script>
+</body>
+</html>
