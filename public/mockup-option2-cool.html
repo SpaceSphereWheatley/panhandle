@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panhandle - Option 2: Cool Modern</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F172E;
+    --bg-elevated: #1B2555;
+    --bg-sunken: #141E3C;
+    --tile: #7C3AED;
+    --tile-dark: #6D28D9;
+    --accent: #EC4899;
+    --accent-dark: #BE185D;
+    --text: #FFFFFF;
+    --muted: #94A3B8;
+    --border: rgba(255,255,255,0.08);
+    --bought-bg: #1F2937;
+    --green: #3B82F6;
+    --danger: #EC4899;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Roboto", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); padding: 20px;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  h1 { margin-top: 0; color: var(--text); font-size: 28px; }
+  .section { background: var(--bg-elevated); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid var(--border); }
+  .section h2 { margin-top: 0; font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+  header {
+    background: var(--bg-sunken); color: var(--text); padding: 14px 16px;
+    font-size: 18px; font-weight: 700; display: flex; justify-content: space-between; align-items: center;
+    border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border);
+  }
+  header .sync { font-size: 11px; color: var(--muted); }
+
+  .card {
+    background: var(--tile); color: white; border-radius: 12px; padding: 12px 14px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 12px; height: 56px;
+  }
+  .card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border-radius: 8px; font-weight: 700; }
+  .card-info { flex: 1; }
+  .card-name { font-weight: 500; }
+  .card-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); }
+  .card.bought { background: var(--bought-bg); color: var(--muted); }
+
+  .addbar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .addbar input {
+    flex: 1; padding: 12px; font-size: 16px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-sunken); color: var(--text);
+  }
+  .addbar button {
+    background: var(--tile); color: white; border: none; border-radius: 10px;
+    padding: 0 16px; font-weight: 600; cursor: pointer;
+  }
+
+  nav {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); height: 56px;
+    max-width: 480px; width: calc(100% - 40px);
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    display: flex; border-radius: 12px;
+  }
+  nav button {
+    flex: 1; border: none; background: none; font-size: 11px; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; cursor: pointer; padding: 0;
+  }
+  nav button.active { color: var(--tile); }
+
+  .pill {
+    background: var(--tile); color: white; border: none; border-radius: 999px;
+    padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .pill.danger { background: var(--accent); }
+
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .palette-item { padding: 20px; border-radius: 8px; text-align: center; font-size: 11px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.4); border: 1px solid var(--border); }
+
+  .modal-demo {
+    background: var(--bg-sunken); border-radius: 16px; padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .modal-demo h3 { margin-top: 0; }
+  .modal-demo label { font-size: 12px; color: var(--muted); display: block; margin: 12px 0 6px; }
+  .modal-demo input, .modal-demo select {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-elevated); color: var(--text); font-family: inherit; margin-bottom: 10px;
+  }
+  .modal-demo .actions { display: flex; gap: 8px; }
+  .modal-demo button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+  .modal-demo .save { background: var(--tile); color: white; }
+  .modal-demo .cancel { background: var(--bg-elevated); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Option 2: Cool Modern</h1>
+  <p style="color: var(--muted); margin-bottom: 20px;">Contemporary, energetic aesthetic. Bold purple & pink, deep navy backgrounds, sharp contrast.</p>
+
+  <div class="section">
+    <h2>Color Palette</h2>
+    <div class="palette">
+      <div class="palette-item" style="background: var(--bg)">
+        <strong>Background</strong><br>#0F172E
+      </div>
+      <div class="palette-item" style="background: var(--bg-elevated)">
+        <strong>Elevated</strong><br>#1B2555
+      </div>
+      <div class="palette-item" style="background: var(--tile)">
+        <strong>Primary</strong><br>#7C3AED
+      </div>
+      <div class="palette-item" style="background: var(--accent)">
+        <strong>Accent</strong><br>#EC4899
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Header & Navigation</h2>
+    <header>
+      <span>Handleliste</span>
+      <span class="sync">Oppdatert 14:32</span>
+    </header>
+  </div>
+
+  <div class="section">
+    <h2>Add Item Bar</h2>
+    <div class="addbar">
+      <input placeholder="Legg til vare..." />
+      <button>+</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Shopping List Items</h2>
+    <div class="card">
+      <div class="card-icon">🥕</div>
+      <div class="card-info">
+        <div class="card-name">Paprika og løk</div>
+        <div style="font-size: 12px; opacity: 0.9;">Til ukens mat</div>
+      </div>
+      <div class="card-check"></div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🥛</div>
+      <div class="card-info">
+        <div class="card-name">Melk <span style="background: var(--accent); padding: 2px 8px; border-radius: 6px; font-size: 11px; margin-left: 6px;">x2</span></div>
+      </div>
+      <div class="card-check"></div>
+    </div>
+    <div class="card bought">
+      <div class="card-icon">🍞</div>
+      <div class="card-info">
+        <div class="card-name" style="text-decoration: line-through;">Brød</div>
+      </div>
+      <div class="card-check"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Buttons</h2>
+    <button class="pill" style="margin-right: 8px;">Sorter</button>
+    <button class="pill danger">Slett</button>
+  </div>
+
+  <div class="section">
+    <h2>Modal Dialog</h2>
+    <div class="modal-demo">
+      <h3>Rediger vare</h3>
+      <label>Vare</label>
+      <input value="Paprika og løk" />
+      <label>Kategori</label>
+      <select>
+        <option selected>Frukt og grønt</option>
+        <option>Brød og bakevarer</option>
+      </select>
+      <label>Antall</label>
+      <input type="number" value="1" />
+      <div class="actions">
+        <button class="cancel">Avbryt</button>
+        <button class="save">Lagre</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 80px;"></div>
+</div>
+
+<nav>
+  <button class="active">🛒 Handleliste</button>
+  <button>🍽️ Måltider</button>
+  <button>⚙️ Profil</button>
+</nav>
+</body>
+</html>
