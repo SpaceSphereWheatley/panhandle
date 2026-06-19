@@ -2,13 +2,14 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="author" content="Mohibb Malik">
 <meta name="theme-color" content="#F5F1ED">
+<meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for to.">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-<title>Panhandle</title>
+<title>Panhandle — Måltidsplanlegging og handleliste, sammen</title>
 <style>
   :root {
     --bg: #F5F1ED;
@@ -26,1374 +27,335 @@
     --danger: #A85C3D;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0; font-family: "Roboto", -apple-system, system-ui, "Segoe UI", Verdana, sans-serif;
-    background: var(--bg); color: var(--text); padding-bottom: 72px;
+    background: var(--bg); color: var(--text);
   }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
   .hidden { display: none !important; }
-  .ui-icon { vertical-align: middle; flex-shrink: 0; }
 
-  /* Login */
-  #login {
-    min-height: 100vh; display: flex; flex-direction: column;
-    justify-content: center; align-items: center; padding: 24px; gap: 12px;
-    background: var(--bg);
+  /* Header */
+  header.site {
+    position: sticky; top: 0; z-index: 30; background: var(--bg);
+    border-bottom: 1px solid var(--border);
   }
-  #login h1 { color: var(--tile); margin-bottom: 8px; letter-spacing: 0.5px; }
-  #login input, #login button { width: 100%; max-width: 320px; padding: 14px; font-size: 16px;
-    border-radius: 12px; border: 1px solid var(--border); font-family: inherit; }
-  #login input { background: var(--bg-elevated); color: var(--text); }
-  #login input::placeholder { color: var(--muted); }
-  #login button { background: var(--tile); color: #fff; border: none; font-weight: 700; cursor: pointer; }
-  #loginErr { color: var(--accent); font-size: 14px; min-height: 18px; }
+  .nav-row {
+    max-width: 1080px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; color: var(--accent-dark); }
+  .brand .mark {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--tile);
+    display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; border-radius: 12px; font-family: inherit; font-weight: 700;
+    font-size: 15px; cursor: pointer; padding: 12px 22px; text-decoration: none;
+  }
+  .btn-login { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; }
+  .btn-login:hover { background: var(--bg-sunken); }
+  .btn-primary { background: var(--tile); color: #fff; }
+  .btn-primary:hover { background: var(--tile-dark); }
+  .btn.lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
 
-  header {
-    background: var(--bg-sunken); color: var(--text); padding: 16px 20px;
-    font-size: 20px; font-weight: 700; position: sticky; top: 0; z-index: 10;
-    display: flex; justify-content: space-between; align-items: center;
-    max-width: 480px; margin: 0 auto; border-bottom: 1px solid var(--border);
+  /* Hero */
+  .hero { padding: 64px 0 48px; text-align: center; }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 46px); font-weight: 900; line-height: 1.15;
+    margin: 0 0 18px; color: var(--accent-dark);
   }
-  header .header-actions { display: flex; align-items: center; gap: 10px; }
-  header .sync { font-size: 11px; font-weight: 400; color: var(--muted); }
+  .hero h1 span { color: var(--tile); }
+  .hero p.lead {
+    font-size: 18px; color: var(--muted); max-width: 620px; margin: 0 auto 32px; line-height: 1.55;
+  }
+  .hero .cta-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .hero .secondary-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
 
-  .pill {
-    background: var(--tile); color: #fff; border: none; border-radius: 999px;
-    padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
-    font-family: inherit; letter-spacing: 0.2px;
+  /* Showcase */
+  .showcase { padding: 56px 0 64px; }
+  .showcase h2 {
+    text-align: center; font-size: clamp(22px, 3.5vw, 30px); font-weight: 900;
+    color: var(--accent-dark); margin: 0 0 8px;
   }
-  .pill.active { background: var(--accent); }
+  .showcase p.sub { text-align: center; color: var(--muted); margin: 0 0 40px; font-size: 15px; }
+  .mock-grid {
+    display: flex; gap: 20px; margin-bottom: 48px;
+    overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity;
+  }
+  .mock-grid .mock-card { flex: 1 1 0; min-width: 220px; scroll-snap-align: start; }
+  @media (max-width: 700px) { .mock-grid .mock-card { flex: 0 0 78%; } }
 
-  /* Tabs */
-  nav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); height: 64px;
-    width: 100%; max-width: 480px;
-    background: var(--bg-sunken); border-top: 1px solid var(--border);
-    display: flex; z-index: 10;
+  .mock-card {
+    background: var(--bg-elevated); border-radius: 20px; padding: 18px;
+    border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(61,40,20,0.08);
+    display: flex; justify-content: center;
   }
-  nav button {
-    flex: 1; border: none; background: none; font-size: 11px; color: var(--muted);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; cursor: pointer; padding: 0; font-family: inherit;
+  .mock-screen {
+    background: var(--bg); border-radius: 22px; overflow: hidden; border: 1px solid var(--border);
+    width: 100%; max-width: 280px; aspect-ratio: 9 / 18.5;
+    display: flex; flex-direction: column;
   }
-  nav button.active { color: var(--tile); }
-  nav button .ico { font-size: 22px; }
+  .mock-screen .mock-head {
+    background: var(--bg-sunken); padding: 12px 16px; font-weight: 700; font-size: 15px;
+    display: flex; justify-content: space-between; align-items: center; color: var(--text);
+    flex-shrink: 0;
+  }
+  .mock-screen .mock-body { padding: 14px; overflow-y: auto; flex: 1 1 auto; }
 
-  main { padding: 16px; max-width: 480px; margin: 0 auto; }
-
-  /* Add bar */
-  .addbar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
-  .addbar input {
-    flex: 1; padding: 14px; font-size: 16px; border-radius: 12px;
-    border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
-    font-family: inherit;
-  }
-  .addbar input::placeholder { color: var(--muted); }
-  .addbar button {
-    background: var(--tile); color: #fff; border: none; border-radius: 12px;
-    padding: 0 20px; font-size: 24px; font-weight: 600; cursor: pointer;
-  }
-  .suggestions {
-    position: absolute; top: 52px; left: 0; right: 56px; background: var(--bg-elevated);
-    border: 1px solid var(--border); border-radius: 12px; z-index: 20;
-    max-height: 220px; overflow-y: auto; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-  }
-  .suggestions div { padding: 12px 14px; cursor: pointer; color: var(--text); }
-  .suggestions div:active { background: var(--bg-sunken); }
-
-  /* Category groups (collapsible) */
-  .cat-section { margin-bottom: 4px; }
-  .cat-label {
-    width: 100%; display: flex; align-items: center; justify-content: space-between;
-    background: none; border: none; font-family: inherit; cursor: pointer;
-    font-size: 12px; font-weight: 700; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.6px; margin: 18px 0 8px;
-    padding: 14px 4px 0; border-top: 1px solid var(--border);
-  }
-  #listContainer > .cat-section:first-child .cat-label,
-  #recentContainer > .cat-section:first-child .cat-label {
-    padding-top: 0; border-top: none; margin-top: 0;
-  }
-  .cat-label .arrow { font-size: 13px; transition: transform .15s ease; color: var(--tile); }
-  .cat-label .arrow.collapsed { transform: rotate(-90deg); }
-  .cat-content.collapsed { display: none; }
-
-  /* Item cards (list view) */
-  .card {
-    background: var(--tile); border-radius: 14px; padding: 14px 16px;
-    margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; transition: background-color .15s;
-    color: #fff; position: relative; z-index: 1; height: 64px; box-sizing: border-box;
-    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-  }
-  .card .info { min-width: 0; overflow: hidden; flex: 1 1 auto; }
-  .card .item-badge {
-    flex-shrink: 0; width: 36px; height: 36px; margin-right: 12px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-weight: 700; font-size: 16px;
-  }
-  .card.bought .item-badge { opacity: .45; }
-  .card .item-badge .item-icon { width: 34px; height: 34px; display: block; }
-  .card .name {
-    font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .card .qty-badge {
-    display: inline-block; background: var(--accent); color: #fff;
-    font-size: 13px; font-weight: 700; border-radius: 8px; padding: 2px 8px;
-    margin-left: 8px;
-  }
-  .card .meta {
-    font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 15px;
-  }
-  .card.bought { background: var(--bought-bg); color: var(--muted); }
-  .card.bought .name { text-decoration: line-through; }
-  .card .check {
-    width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    margin-left: 12px; font-size: 16px; color: #fff;
-  }
-  .card.bought .check { background: var(--tile-dark); border-color: var(--tile-dark); }
-  .card .del { color: var(--accent); background: none; border: none; font-size: 18px; padding: 4px 8px; }
-  .card .more { color: rgba(255,255,255,0.8); background: none; border: none; font-size: 18px; padding: 4px 8px; }
-  .card.bought .more { color: var(--muted); }
-
-  .card-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 8px; }
-  .card-wrap .swipe-bg {
-    position: absolute; inset: 0; background: var(--tile-dark); color: #fff;
-    display: flex; align-items: center; justify-content: flex-end; padding-right: 24px;
-    font-size: 20px;
-  }
-  .card-wrap .card { margin-bottom: 0; touch-action: pan-y; }
-
-  /* View toggle */
-  .view-toggle { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
-  .view-toggle button {
+  /* shopping list mock */
+  .mock-addbar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .mock-addbar .field {
+    flex: 1; padding: 9px 12px; font-size: 12px; border-radius: 10px;
     border: 1px solid var(--border); background: var(--bg-elevated); color: var(--muted);
-    border-radius: 10px; font-size: 16px; padding: 6px 10px; cursor: pointer;
   }
-  .view-toggle button.active { color: #fff; background: var(--tile); border-color: var(--tile); }
+  .mock-addbar .plus {
+    background: var(--tile); color: #fff; border-radius: 10px;
+    width: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 600;
+  }
+  .mock-cat-label {
+    font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 14px 0 7px; padding-top: 10px; border-top: 1px solid var(--border);
+  }
+  .mock-body > .mock-cat-label:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .mock-row {
+    background: var(--tile); color: #fff; border-radius: 12px; padding: 11px 14px;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-size: 14px;
+  }
+  .mock-row.bought { background: var(--bought-bg); color: var(--muted); text-decoration: line-through; }
+  .mock-row .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); flex-shrink: 0; }
+  .mock-row.bought .dot { background: var(--tile-dark); border-color: var(--tile-dark); }
 
-  /* Grid view: tight, scannable tile matrix */
-  .grid-wrap {
+  /* grid view of the shopping list */
+  .mock-subhead { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.4px; margin: 4px 0 6px; }
+  .mock-head .mock-subhead { color: var(--text); opacity: .65; }
+  .mock-grid-tiles {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
     background: var(--bg-sunken); border-radius: 10px; overflow: hidden;
   }
-  .grid-card {
-    background: var(--tile); padding: 8px 6px;
-    cursor: pointer; transition: background-color .15s;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; gap: 4px; height: 104px; box-sizing: border-box; overflow: hidden;
-    min-width: 0; border: 1px solid var(--bg-sunken); color: #fff; touch-action: manipulation;
-    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  .mock-tile {
+    background: var(--tile); color: #fff; padding: 8px 6px; text-align: center;
+    height: 76px; box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   }
-  .grid-card.bought { background: var(--bought-bg); color: var(--muted); }
-  .grid-card.bought .grid-name { text-decoration: line-through; }
-  .grid-card .badge {
-    flex-shrink: 0; color: #fff; line-height: 1;
-    display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700;
-  }
-  .grid-card.bought .badge { opacity: .45; }
-  .grid-card .badge .item-icon { width: 54px; height: 54px; display: block; }
-  .grid-card .grid-name {
-    font-size: 12px; font-weight: 500; line-height: 1.2; width: 100%;
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  .grid-card .grid-meta {
-    font-size: 10px; color: rgba(255,255,255,0.75); white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; max-width: 100%; min-height: 13px;
-  }
-  .grid-card.bought .grid-meta { color: var(--muted); }
-  .grid-card .qty-badge { margin-left: 0; }
+  .mock-tile .badge { font-size: 22px; font-weight: 700; line-height: 1; }
+  .mock-tile .name { font-size: 11px; font-weight: 500; line-height: 1.2; }
+  .mock-tile.bought { background: var(--bought-bg); color: var(--muted); }
+  .mock-tile.bought .badge { opacity: .45; }
+  .mock-tile.bought .name { text-decoration: line-through; }
 
-  .empty-state {
-    text-align: center; color: var(--muted); padding: 48px 16px; font-size: 15px;
-  }
-
-  .sync.offline { color: var(--accent); }
-
-  /* Install prompt banner */
-  #installBanner {
-    max-width: 480px; margin: 12px auto 0; background: var(--bg-elevated);
-    border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px;
-    display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  #installBanner .ico { font-size: 22px; flex-shrink: 0; }
-  #installBanner .txt { flex: 1; font-size: 13px; line-height: 1.3; color: var(--text); }
-  #installBanner .install { background: var(--tile); color: #fff; border: none;
-    border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
-    flex-shrink: 0; }
-  #installBanner .dismiss { background: none; border: none; color: var(--muted);
-    font-size: 18px; padding: 4px 6px; cursor: pointer; flex-shrink: 0; }
-
-  #recentContainer:not(:empty) {
-    margin-top: 28px; padding-top: 16px; border-top: 2px solid var(--border);
-  }
-
-/* Meal plan */
-  .week-nav {
+  /* meal plan mock — vertical day cards, matching the real app */
+  .mock-week-nav {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px; gap: 8px;
+    margin-bottom: 10px; gap: 6px; font-size: 11px; color: var(--muted);
   }
-  .week-nav button {
-    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px;
-    padding: 8px 12px; font-size: 14px; cursor: pointer; color: var(--text); font-family: inherit;
+  .mock-week-nav span.navbtn {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 9px;
   }
-  .week-nav button:disabled { opacity: .4; cursor: default; }
-  .week-nav .label { font-size: 13px; font-weight: 600; color: var(--muted); text-align: center; flex: 1; }
-  .day {
-    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
-    padding: 14px 16px; margin-bottom: 10px;
+  .mock-day {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; margin-bottom: 6px;
   }
-  .day .date { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
-  .day .meal { font-size: 17px; font-weight: 600; margin: 4px 0; color: var(--text); }
-  .day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
-  .day .resp { font-size: 13px; color: var(--tile); font-weight: 600; }
-  .day .edit { float: right; background: none; border: none; color: var(--tile); font-size: 14px; font-family: inherit; }
+  .mock-day .d {
+    font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase;
+    display: flex; justify-content: space-between;
+  }
+  .mock-day .d .edit { color: var(--tile); font-weight: 700; text-transform: none; }
+  .mock-day .meal { font-size: 14px; font-weight: 600; margin: 3px 0 2px; color: var(--text); }
+  .mock-day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+  .mock-day .resp { font-size: 11px; color: var(--tile); font-weight: 600; }
 
-  /* Settings */
-  .setrow {
-    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px; margin-bottom: 10px;
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    background: var(--bg-elevated); border-radius: 16px; padding: 22px;
+    border: 1px solid var(--border);
   }
-  .setrow .k { font-size: 12px; color: var(--muted); }
-  .setrow .v { font-size: 16px; font-weight: 600; margin-top: 4px; color: var(--text); }
-  .icon-gap-list {
-    margin-top: 10px; max-height: 180px; overflow-y: auto;
-    font-size: 13px; color: var(--text); line-height: 1.8;
+  .feature .ico {
+    width: 40px; height: 40px; border-radius: 10px; background: var(--tile);
+    color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
   }
-  .icon-gap-list span {
-    display: inline-block; background: var(--bg-sunken); border-radius: 8px;
-    padding: 3px 8px; margin: 0 4px 4px 0;
-  }
-  .logout { background: var(--accent); color: #fff; border: none; padding: 14px;
-    border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer;
-    font-family: inherit; }
+  .feature h3 { font-size: 16px; margin: 0 0 6px; color: var(--accent-dark); }
+  .feature p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.5; }
 
-  /* Settings drill-down: clickable nav row + subpage back button */
-  .nav-row {
-    width: 100%; font-family: inherit; font-size: 16px; color: var(--text);
-    text-align: left; cursor: pointer;
-    display: flex; align-items: center; justify-content: space-between;
+  footer.site {
+    border-top: 1px solid var(--border); padding: 28px 0; text-align: center;
+    color: var(--muted); font-size: 13px;
   }
-  .nav-row .nav-row-arrow {
-    width: 9px; height: 9px; flex-shrink: 0;
-    border-right: 2px solid var(--tile); border-top: 2px solid var(--tile);
-    transform: rotate(45deg); /* chevron pointing right */
-  }
-  .subpage-back {
-    background: none; border: none; color: var(--tile); font-family: inherit;
-    font-size: 15px; font-weight: 600; cursor: pointer; padding: 4px 0; margin-bottom: 8px;
-  }
-  /* Per-list group header inside the admin "Alle brukere" list */
-  .admin-group {
-    font-size: 12px; font-weight: 700; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .6px; margin: 14px 0 6px;
-  }
-  #allUsers > .admin-group:first-child { margin-top: 0; }
-
-  /* User management rows (owner + admin panels) */
-  .mgmt-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    background: var(--bg-sunken); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
-  }
-  .mgmt-row .who { min-width: 0; flex: 1; }
-  .mgmt-row .who .uname { font-size: 14px; font-weight: 600; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mgmt-row .who .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .mgmt-row .acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .mgmt-row button.mini {
-    border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
-    border-radius: 8px; font-size: 12px; padding: 6px 8px; cursor: pointer; font-family: inherit;
-  }
-  .mgmt-row button.mini.danger { color: var(--accent); border-color: var(--accent); }
-  .mgmt-row label.flag {
-    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted);
-  }
-  .badge-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
-    background: var(--tile); color: #fff; border-radius: 6px; padding: 2px 6px; }
-  .badge-tag.admin { background: var(--accent); }
-
-  /* Credential / invite dialog reuses .modal; this is the copyable block */
-  .cred-box {
-    background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 14px; font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-all;
-  }
-  .cred-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
 
   /* Modal */
-  .modal-bg {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
-    display: flex; align-items: flex-end; justify-content: center;
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(61,40,20,0.45);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
   }
-  .modal {
-    background: var(--bg-elevated); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
-    padding: 24px 20px; animation: slideup .2s ease; color: var(--text);
+  .modal-box {
+    background: var(--bg); border-radius: 18px; padding: 28px; max-width: 420px; width: 100%;
+    text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
   }
-  @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  .modal h3 { margin: 0 0 16px; }
-  .modal label { font-size: 13px; color: var(--muted); display: block; margin: 12px 0 4px; }
-  .modal input, .modal select {
-    width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border);
-    background: var(--bg-sunken); color: var(--text); font-family: inherit;
+  .modal-box .ico {
+    width: 52px; height: 52px; border-radius: 50%; background: var(--tile); color: #fff;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
   }
-  .modal .actions { display: flex; gap: 8px; margin-top: 20px; }
-  .modal .actions button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
-  .modal .save { background: var(--tile); color: #fff; }
-  .modal .cancel { background: var(--bg-sunken); color: var(--text); }
-
-  /* Button variants */
-  .btn-primary {
-    width: 100%; padding: 12px; border-radius: 10px; border: none;
-    background: var(--tile); color: #fff; font-size: 15px; font-weight: 600;
-    cursor: pointer; font-family: inherit;
-  }
-  .btn-primary.mt-8 { margin-top: 8px; }
+  .modal-box h3 { margin: 0 0 10px; color: var(--accent-dark); font-size: 19px; }
+  .modal-box p { color: var(--text); font-size: 15px; line-height: 1.55; margin: 0 0 20px; }
+  .modal-box .btn-close { background: var(--bg-elevated); color: var(--text); width: 100%; border: 1px solid var(--border); }
 </style>
 </head>
 <body>
-<!-- Laget av Mohibb Malik, 2026 -->
 
-<!-- Hand-drawn wobble filter for item icons (see itemIcons.js). Defined once;
-     every icon's <g> references it via filter="url(#sketchy)". -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <filter id="sketchy" x="-30%" y="-30%" width="160%" height="160%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.05" numOctaves="2" seed="7" result="n"/>
-      <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>
-</svg>
-
-<!-- LOGIN -->
-<div id="login">
-  <h1>Panhandle</h1>
-  <input id="luser" placeholder="Brukernavn" autocomplete="username">
-  <input id="lpass" type="password" placeholder="Passord" autocomplete="current-password">
-  <button onclick="doLogin()">Logg inn</button>
-  <div id="loginErr"></div>
-</div>
-
-<!-- APP -->
-<div id="app" class="hidden">
-  <header>
-    <span id="title">Handleliste</span>
-    <div class="header-actions">
-      <button id="sortBtn" class="pill hidden" onclick="toggleSort()">Sorter liste</button>
-      <span class="sync" id="syncStatus"></span>
+<header class="site">
+  <div class="nav-row">
+    <div class="brand">
+      <span class="mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg>
+      </span>
+      Panhandle
     </div>
-  </header>
-  <div id="installBanner" class="hidden"></div>
-  <main>
-    <!-- TAB: SHOPPING -->
-    <section id="tab-list">
-      <div class="addbar">
-        <input id="addInput" placeholder="Legg til vare..." autocomplete="off"
-               oninput="onAddInput()" onkeydown="if(event.key==='Enter')addItem()">
-        <button onclick="addItem()">+</button>
-        <div id="suggestions" class="suggestions hidden"></div>
-      </div>
-      <div class="view-toggle">
-        <button id="viewListBtn" onclick="setView('list')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
-        <button id="viewGridBtn" onclick="setView('grid')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
-      </div>
-      <div id="listContainer"></div>
-      <div id="recentContainer"></div>
-    </section>
+    <a class="btn btn-login" href="/app.html">Logg inn</a>
+  </div>
+</header>
 
-    <!-- TAB: MEALS -->
-    <section id="tab-meals" class="hidden">
-      <div class="week-nav">
-        <button id="weekPrevBtn" onclick="shiftWeek(-1)">‹ Forrige</button>
-        <span class="label" id="weekLabel"></span>
-        <button onclick="shiftWeek(0)">Denne uken</button>
-        <button id="weekNextBtn" onclick="shiftWeek(1)">Neste ›</button>
-      </div>
-      <div id="planContainer"></div>
-    </section>
+<section class="hero">
+  <div class="wrap">
+    <h1>Planlegg middager.<br>Hold handlelisten <span>i synk.</span></h1>
+    <p class="lead">
+      Panhandle kobler ukeplanen for middager til en delt handleliste —
+      legg en middag inn i kalenderen, skriv inn ingrediensene, og de dukker opp
+      på listen til dere. Begge ser samme liste i sanntid, fra hver sin telefon.
+    </p>
+    <div class="cta-row">
+      <button class="btn btn-primary lg" onclick="openSignupModal()">Registrer deg</button>
+      <a class="btn btn-login lg" href="/app.html">Logg inn</a>
+    </div>
+    <div class="secondary-note">Fungerer på mobil og desktop.</div>
+  </div>
+</section>
 
-    <!-- TAB: SETTINGS -->
-    <section id="tab-settings" class="hidden">
-      <!-- Main profile view -->
-      <div id="settings-main">
-      <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
-      <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
+<section class="showcase">
+  <div class="wrap">
+    <h2>Sett sammen for hvordan dere faktisk handler</h2>
+    <p class="sub">Måltidskalenderen og handlelisten henger sammen — slik ser det ut.</p>
 
-      <!-- Owner: manage members of this list -->
-      <div class="setrow hidden" id="ownerPanel">
-        <div class="k" style="margin-bottom:4px">Brukere på listen</div>
-        <div class="v" id="memberCount" style="margin-bottom:10px">-</div>
-        <div id="memberList"></div>
-        <div id="addMemberRow" style="margin-top:12px">
-          <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
-                 style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="addMember()" id="addMemberBtn" class="btn-primary mt-8">
-            + Legg til bruker</button>
-          <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
+    <div class="mock-grid">
+      <div class="mock-card">
+        <div class="mock-screen">
+          <div class="mock-head">Måltider</div>
+          <div class="mock-body">
+            <div class="mock-week-nav">
+              <span class="navbtn">‹ Forrige</span><span>9. – 15. jun</span><span class="navbtn">Neste ›</span>
+            </div>
+            <div class="mock-day">
+              <div class="d">I dag <span class="edit">Endre</span></div>
+              <div class="meal">Laks i form</div>
+              <div class="resp">Ansvarlig: Kristin</div>
+            </div>
+            <div class="mock-day">
+              <div class="d">Torsdag 12. jun <span class="edit">Legg til</span></div>
+              <div class="meal empty">Ingen måltid planlagt</div>
+            </div>
+            <div class="mock-day">
+              <div class="d">Fredag 13. jun <span class="edit">Endre</span></div>
+              <div class="meal">Taco</div>
+              <div class="resp">Ansvarlig: Anders</div>
+            </div>
+          </div>
         </div>
       </div>
+      <div class="mock-card">
+        <div class="mock-screen">
+          <div class="mock-head">Handleliste<span class="mock-subhead" style="margin:0">Listevisning</span></div>
+          <div class="mock-body">
+            <div class="mock-addbar"><span class="field">Legg til vare...</span><span class="plus">+</span></div>
 
-      <!-- Admin: entry into the admin-management subpage (admins only) -->
-      <button id="adminEntry" class="setrow nav-row hidden" onclick="showSettingsSub('admin')">
-        <span>Administrasjon</span>
-        <span class="nav-row-arrow"></span>
-      </button>
+            <div class="mock-cat-label">Kjøtt og fisk</div>
+            <div class="mock-row"><span>Laksefilet</span><span class="dot"></span></div>
 
-      <div class="setrow">
-        <div class="k" style="margin-bottom:10px">Bytt passord</div>
-        <input id="pwCurrent" type="password" placeholder="Nåværende passord"
-               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
-        <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
-               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
-        <button onclick="changePassword()" class="btn-primary">
-          Lagre nytt passord</button>
-        <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
+            <div class="mock-cat-label">Meieri</div>
+            <div class="mock-row"><span>Kremost</span><span class="dot"></span></div>
+
+            <div class="mock-cat-label">Bakevarer</div>
+            <div class="mock-row"><span>Tacolefse</span><span class="dot"></span></div>
+
+            <div class="mock-cat-label">Nylig kjøpt</div>
+            <div class="mock-row bought"><span>Pasta</span><span class="dot"></span></div>
+            <div class="mock-row bought"><span>Parmesan</span><span class="dot"></span></div>
+          </div>
+        </div>
       </div>
+      <div class="mock-card">
+        <div class="mock-screen">
+          <div class="mock-head">Handleliste<span class="mock-subhead" style="margin:0">Rutenettvisning</span></div>
+          <div class="mock-body">
+            <div class="mock-addbar"><span class="field">Legg til vare...</span><span class="plus">+</span></div>
 
-      <button class="logout" onclick="logout()">Logg ut</button>
-      </div><!-- /settings-main -->
+            <div class="mock-cat-label">Kjøtt og fisk</div>
+            <div class="mock-grid-tiles">
+              <div class="mock-tile"><span class="badge">L</span><span class="name">Laksefilet</span></div>
+            </div>
 
-      <!-- Admin management subpage (drill-down from #adminEntry) -->
-      <div id="settings-admin" class="hidden">
-        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
-        <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
-        <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
-        <div class="setrow"><div class="k">Måltider i database</div><div class="v" id="setMealCount">-</div></div>
+            <div class="mock-cat-label">Meieri</div>
+            <div class="mock-grid-tiles">
+              <div class="mock-tile"><span class="badge">K</span><span class="name">Kremost</span></div>
+              <div class="mock-tile"><span class="badge">S</span><span class="name">Salat</span></div>
+            </div>
 
-        <div class="setrow">
-          <div class="k">Varer uten ikon</div>
-          <div class="v" id="setIconGapCount">-</div>
-          <div id="iconGapList" class="icon-gap-list"></div>
+            <div class="mock-cat-label">Nylig kjøpt</div>
+            <div class="mock-grid-tiles">
+              <div class="mock-tile bought"><span class="badge">P</span><span class="name">Pasta</span></div>
+              <div class="mock-tile bought"><span class="badge">P</span><span class="name">Parmesan</span></div>
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div class="setrow">
-          <div class="k" style="margin-bottom:10px">Opprett eier (ny liste)</div>
-          <input id="newOwnerName" placeholder="Brukernavn for ny eier"
-                 style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="createOwner()" id="createOwnerBtn" class="btn-primary mt-8">
-            + Opprett eier</button>
-          <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
-        </div>
+    <div class="features">
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>
+        <h3>Ukeplan for middager</h3>
+        <p>Sett opp hvem som lager hva og når, sammen med den andre — ingen flere meldinger om middag.</p>
+      </div>
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg></span>
+        <h3>Delt handleliste, live</h3>
+        <p>Begge ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
+      </div>
+      <div class="feature">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg></span>
+        <h3>Gjenkjenner varer</h3>
+        <p>Listen kommer med en stor katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-        <div class="setrow">
-          <div class="k" style="margin-bottom:10px">Alle brukere</div>
-          <div id="allUsers"></div>
-        </div>
-      </div><!-- /settings-admin -->
-    </section>
-  </main>
+<footer class="site">
+  <div class="wrap">© Panhandle</div>
+</footer>
 
-  <nav>
-    <button id="nav-list" class="active" onclick="switchTab('list')">
-      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg></span>Handleliste</button>
-    <button id="nav-meals" onclick="switchTab('meals')">
-      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>Måltider</button>
-    <button id="nav-settings" onclick="switchTab('settings')">
-      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M4.8 4.8l2.1 2.1M17.1 17.1l2.1 2.1M2.6 12h3M18.4 12h3M4.8 19.2l2.1-2.1M17.1 6.9l2.1-2.1"/></svg></span>Profil</button>
-  </nav>
+<div id="signupModal" class="modal-overlay hidden" onclick="if(event.target===this) closeSignupModal()">
+  <div class="modal-box">
+    <span class="ico">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    </span>
+    <h3>Vi er i en lukket beta</h3>
+    <p>
+      Panhandle er foreløpig kun tilgjengelig for inviterte testere.
+      Ta kontakt med Mohibb for å be om en testkonto.
+    </p>
+    <button class="btn btn-close" onclick="closeSignupModal()">Lukk</button>
+  </div>
 </div>
 
-<div id="modalRoot"></div>
-
-<script src="/itemIcons.js"></script>
-<script src="/uiIcons.js"></script>
 <script>
-// Laget av Mohibb Malik, 2026
-const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
-// Frontend (Pages) version. Bumped together with the Worker's VERSION on each
-// release (see CHANGELOG.md). The Profile page shows this alongside the live
-// API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.8";
-let token = localStorage.getItem("ph_token");
-let currentUser = localStorage.getItem("ph_user");
-let isAdmin = localStorage.getItem("ph_is_admin") === "1";
-let isOwner = localStorage.getItem("ph_is_owner") === "1";
-let listUsers = []; // members of the current list (from /list-users), cached in memory
-let catalogue = [];
-let currentTab = "list";
-let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
-let pollTimer = null;
-let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
-let collapsedCats = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
-let sortMode = localStorage.getItem("ph_sort") === "alpha" ? "alpha" : "default";
-
-// People to assign meals to are the members of the current list, fetched from
-// the server (replaces the old hardcoded two-name list).
-function people() { return listUsers.map(u => u.username); }
-const CATEGORIES = ["Frukt og grønt","Brød og bakevarer","Meieriprodukter","Kjøtt og fisk",
-  "Ingredienser og krydder","Frysevarer og ferdigmåltid","Kornprodukter","Snacks og godteri",
-  "Drikkevarer","Husholdning","Omsorg og helse","Dyreprodukter","Annet"];
-
-// ---------- API wrapper ----------
-async function api(path, opts = {}) {
-  let res;
-  try {
-    res = await fetch(API + path, {
-      ...opts,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token,
-        ...(opts.headers || {})
-      }
-    });
-  } catch (e) {
-    throw new Error("network");
-  }
-  if (res.status === 401) { logout(); throw new Error("unauth"); }
-  // sliding expiry: if the Worker handed back a refreshed token, store it.
-  // Skip for change-password: that response's body carries the authoritative
-  // new-version token, and the header token is on the now-invalid old version.
-  const refreshed = res.headers.get("X-Refresh-Token");
-  if (refreshed && refreshed !== token && path !== "/change-password") {
-    token = refreshed;
-    localStorage.setItem("ph_token", token);
-  }
-  return res.json();
-}
-
-// ---------- auth ----------
-async function doLogin() {
-  const username = document.getElementById("luser").value.trim();
-  const password = document.getElementById("lpass").value;
-  const errEl = document.getElementById("loginErr");
-  errEl.textContent = "";
-  try {
-    const res = await fetch(API + "/login", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || "Innlogging feilet"; return; }
-    token = data.token; currentUser = data.user;
-    isAdmin = !!data.is_admin; isOwner = !!data.is_owner;
-    localStorage.setItem("ph_token", token);
-    localStorage.setItem("ph_user", currentUser);
-    localStorage.setItem("ph_is_admin", isAdmin ? "1" : "0");
-    localStorage.setItem("ph_is_owner", isOwner ? "1" : "0");
-    showApp();
-  } catch { errEl.textContent = "Nettverksfeil"; }
-}
-
-function logout() {
-  localStorage.removeItem("ph_token");
-  localStorage.removeItem("ph_user");
-  localStorage.removeItem("ph_is_admin");
-  localStorage.removeItem("ph_is_owner");
-  token = null; currentUser = null; isAdmin = false; isOwner = false; listUsers = [];
-  clearInterval(pollTimer);
-  document.getElementById("app").classList.add("hidden");
-  document.getElementById("login").classList.remove("hidden");
-}
-
-function showApp() {
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  document.getElementById("setUser").textContent = currentUser;
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  document.getElementById("sortBtn").classList.remove("hidden");
-  applyRoleVisibility();
-  loadListUsers();
-  refreshAll();
-  clearInterval(pollTimer);
-  pollTimer = setInterval(() => {
-    if (document.hidden) return;
-    if (currentTab === "list") loadList();
-    if (currentTab === "meals") loadPlan();
-  }, 7000);
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && token) refreshAll();
-});
-
-// ---------- tabs ----------
-function switchTab(tab) {
-  currentTab = tab;
-  for (const t of ["list","meals","settings"]) {
-    document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
-    document.getElementById("nav-" + t).classList.toggle("active", t === tab);
-  }
-  document.getElementById("title").textContent =
-    tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Profil";
-  document.getElementById("sortBtn").classList.toggle("hidden", tab !== "list");
-  if (tab === "list") loadList();
-  if (tab === "meals") loadPlan();
-  if (tab === "settings") { showSettingsSub("main"); loadSettings(); }
-}
-
-// Settings drill-down: "main" profile view <-> "admin" management subpage.
-function showSettingsSub(view) {
-  document.getElementById("settings-main").classList.toggle("hidden", view !== "main");
-  document.getElementById("settings-admin").classList.toggle("hidden", view !== "admin");
-  document.getElementById("title").textContent = view === "admin" ? "Administrasjon" : "Profil";
-  if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
-}
-
-async function loadAdminCounts() {
-  const cat = await api("/catalogue");
-  const meals = await api("/meals");
-  document.getElementById("setCatCount").textContent = cat.length;
-  document.getElementById("setMealCount").textContent = meals.length;
-}
-
-function toggleSort() {
-  sortMode = sortMode === "alpha" ? "default" : "alpha";
-  localStorage.setItem("ph_sort", sortMode);
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  loadList();
-}
-
-function toggleCat(key) {
-  collapsedCats[key] = !collapsedCats[key];
-  localStorage.setItem("ph_collapsed", JSON.stringify(collapsedCats));
-  loadList();
-}
-
-// ---------- shopping list ----------
-async function refreshAll() {
-  catalogue = await api("/catalogue");
-  loadList();
-}
-
-function setView(mode) {
-  viewMode = mode;
-  localStorage.setItem("ph_view", mode);
-  document.getElementById("viewListBtn").classList.toggle("active", mode === "list");
-  document.getElementById("viewGridBtn").classList.toggle("active", mode === "grid");
-  loadList();
-}
-
-async function loadList() {
-  document.getElementById("viewListBtn").classList.toggle("active", viewMode === "list");
-  document.getElementById("viewGridBtn").classList.toggle("active", viewMode === "grid");
-  let items;
-  try { items = await api("/list"); markOnline(); } catch { markOffline(); return; }
-  lastItems = items;
-  const c = document.getElementById("listContainer");
-  const r = document.getElementById("recentContainer");
-  c.innerHTML = "";
-  r.innerHTML = "";
-  if (!items.length) {
-    c.innerHTML = `<div class="empty-state">Ingen varer på listen.<br>Legg til en vare over for å komme i gang.</div>`;
-    syncTick();
-    return;
-  }
-  const unbought = items.filter(it => !it.bought);
-  const bought = items.filter(it => it.bought)
-    .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
-
-  // unbought, grouped by category
-  const groups = {};
-  for (const it of unbought) {
-    (groups[it.category] = groups[it.category] || []).push(it);
-  }
-  if (sortMode === "alpha") {
-    for (const cat in groups) groups[cat].sort((a, b) => a.name.localeCompare(b.name, "no"));
-  }
-  for (const cat of CATEGORIES) {
-    if (!groups[cat]) continue;
-    c.appendChild(catSection(cat, groups[cat]));
-  }
-
-  // bought, flat, most recently bought first
-  if (bought.length) {
-    r.appendChild(catSection("Nylig kjøpt", bought));
-  }
-  syncTick();
-}
-
-// A collapsible category section: tap the header to expand/collapse its tiles.
-function catSection(key, items) {
-  const collapsed = !!collapsedCats[key];
-  const wrap = document.createElement("div");
-  wrap.className = "cat-section";
-  const label = document.createElement("button");
-  label.className = "cat-label";
-  label.onclick = () => toggleCat(key);
-  label.innerHTML = `<span>${escapeHtml(key)}</span><span class="arrow${collapsed ? " collapsed" : ""}">${uiIcon("chevronDown", 14)}</span>`;
-  wrap.appendChild(label);
-  const content = document.createElement("div");
-  content.className = "cat-content" + (collapsed ? " collapsed" : "");
-  if (viewMode === "grid") {
-    const grid = document.createElement("div");
-    grid.className = "grid-wrap";
-    for (const it of items) grid.appendChild(gridCard(it));
-    content.appendChild(grid);
-  } else {
-    for (const it of items) content.appendChild(card(it));
-  }
-  wrap.appendChild(content);
-  return wrap;
-}
-
-const LONGPRESS_MS = 500;
-const SWIPE_THRESHOLD = 70;
-function card(it) {
-  const wrap = document.createElement("div");
-  wrap.className = "card-wrap";
-  const el = document.createElement("div");
-  el.className = "card" + (it.bought ? " bought" : "");
-  let pressTimer = null;
-  let longPressed = false;
-  let startX = 0, startY = 0, dx = 0, swiping = false;
-
-  const startPress = (e) => {
-    longPressed = false;
-    swiping = false;
-    dx = 0;
-    startX = e.clientX; startY = e.clientY;
-    pressTimer = setTimeout(() => { longPressed = true; openItemModal(it.id); }, LONGPRESS_MS);
-  };
-  const movePress = (e) => {
-    const mdx = e.clientX - startX;
-    const mdy = e.clientY - startY;
-    if (!swiping && Math.abs(mdx) > 10 && Math.abs(mdx) > Math.abs(mdy)) {
-      swiping = true;
-      clearTimeout(pressTimer);
-    }
-    if (swiping) {
-      dx = Math.min(0, mdx);
-      el.style.transition = "none";
-      el.style.transform = `translateX(${dx}px)`;
-    }
-  };
-  const endPress = () => {
-    clearTimeout(pressTimer);
-    if (swiping) {
-      el.style.transition = "transform .15s ease";
-      if (dx <= -SWIPE_THRESHOLD) {
-        el.style.transform = "translateX(0)";
-        toggleItem(it.id);
-      } else {
-        el.style.transform = "translateX(0)";
-      }
-    }
-  };
-  el.onpointerdown = startPress;
-  el.onpointermove = movePress;
-  el.onpointerup = endPress;
-  el.onpointerleave = endPress;
-  el.onpointercancel = endPress;
-  el.oncontextmenu = (e) => e.preventDefault();
-  el.onclick = (e) => {
-    if (longPressed || swiping || e.target.classList.contains("del") || e.target.classList.contains("more")) return;
-    toggleItem(it.id);
-  };
-  const icon = iconForItem(it.name);
-  el.innerHTML = `
-    <div class="item-badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
-    <div class="info">
-      <div class="name">${escapeHtml(it.name)}${it.qty > 1 ? `<span class="qty-badge">x${it.qty}</span>` : ""}</div>
-      <div class="meta" style="font-style:italic">${it.notes ? escapeHtml(it.notes) : ""}</div>
-    </div>
-    <div style="display:flex;align-items:center">
-      <button class="more" onclick="openItemModal(${it.id})">${uiIcon("more", 18)}</button>
-      <button class="del" onclick="delItem(${it.id})">${uiIcon("trash", 18)}</button>
-      <div class="check"></div>
-    </div>`;
-  const bg = document.createElement("div");
-  bg.className = "swipe-bg";
-  bg.innerHTML = uiIcon("check", 20);
-  wrap.appendChild(bg);
-  wrap.appendChild(el);
-  return wrap;
-}
-
-function gridCard(it) {
-  const el = document.createElement("div");
-  el.className = "grid-card" + (it.bought ? " bought" : "");
-  let pressTimer = null;
-  let longPressed = false;
-  let startX = 0, startY = 0;
-  const startPress = (e) => {
-    longPressed = false;
-    startX = e.clientX; startY = e.clientY;
-    pressTimer = setTimeout(() => { longPressed = true; openItemModal(it.id); }, LONGPRESS_MS);
-  };
-  const cancelPress = () => { clearTimeout(pressTimer); };
-  const movePress = (e) => {
-    if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) cancelPress();
-  };
-  el.onpointerdown = startPress;
-  el.onpointerup = cancelPress;
-  el.onpointermove = movePress;
-  el.onpointerleave = cancelPress;
-  el.onpointercancel = cancelPress;
-  el.oncontextmenu = (e) => e.preventDefault();
-  el.onclick = () => { if (!longPressed) toggleItem(it.id); };
-  const meta = [it.qty > 1 ? `x${it.qty}` : "", it.notes || ""].filter(Boolean).join(" · ");
-  const icon = iconForItem(it.name);
-  el.innerHTML = `
-    <div class="badge">${icon ? icon : escapeHtml(it.name.charAt(0).toUpperCase())}</div>
-    <div class="grid-name">${escapeHtml(it.name)}</div>
-    <div class="grid-meta">${meta ? escapeHtml(meta) : ""}</div>`;
-  return el;
-}
-
-// ---------- item detail modal ----------
-function openItemModal(id) {
-  const it = lastItems.find(x => x.id === id);
-  if (!it) return;
-  const root = document.getElementById("modalRoot");
-  root.innerHTML = `
-    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <h3>${escapeHtml(it.name)}</h3>
-        <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
-        <label>Navn</label>
-        <input id="itemName" value="${escapeHtml(it.name)}">
-        <label>Kategori</label>
-        <select id="itemCategory">
-          ${CATEGORIES.map(c => `<option ${c===it.category?"selected":""}>${c}</option>`).join("")}
-        </select>
-        <label>Antall</label>
-        <input id="itemQty" type="number" min="1" value="${it.qty || 1}">
-        <label>Notat (mengde, beskrivelse o.l.)</label>
-        <input id="itemNotes" value="${it.notes ? escapeHtml(it.notes) : ""}" placeholder="F.eks. 2 liter">
-        <div id="itemModalMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--danger)"></div>
-        <div class="actions">
-          <button class="cancel" onclick="closeModal()">Avbryt</button>
-          <button class="save" onclick="saveItemEdit(${it.id})">Lagre</button>
-        </div>
-        <button class="cancel" style="width:100%;margin-top:8px;color:var(--danger)"
-                onclick="deleteFromCatalogue(${it.id})">Slett vare fra katalog</button>
-      </div>
-    </div>`;
-}
-
-async function saveItemEdit(id) {
-  const name = document.getElementById("itemName").value.trim();
-  const msg = document.getElementById("itemModalMsg");
-  if (!name) { msg.textContent = "Tomt navn"; return; }
-  const category = document.getElementById("itemCategory").value;
-  const qty = parseInt(document.getElementById("itemQty").value, 10) || 1;
-  const notes = document.getElementById("itemNotes").value.trim();
-  const res = await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ name, category, qty, notes }) });
-  if (res.error) { msg.textContent = res.error; return; }
-  closeModal();
-  catalogue = await api("/catalogue");
-  loadList();
-}
-
-// Deletes the catalogue entry entirely (not just this list row) — removes the
-// item from every list it appears on, past and present.
-async function deleteFromCatalogue(id) {
-  const it = lastItems.find(x => x.id === id);
-  if (!it) return;
-  if (!confirm(`Slette «${it.name}» permanent fra katalogen? Dette fjerner varen fra hele listen.`)) return;
-  await api(`/list/${id}/catalogue`, { method: "DELETE" });
-  closeModal();
-  catalogue = await api("/catalogue");
-  loadList();
-}
-
-function parseItemInput(raw) {
-  const text = raw.trim();
-  // If the typed text is already a known catalogue item (e.g. a name that
-  // legitimately contains a number, like a "7 Up" the user typed with a
-  // space), don't strip a leading integer thinking it's a quantity.
-  if (catalogue.some(c => c.name.toLowerCase() === text.toLowerCase())) {
-    return { name: text, qty: 1 };
-  }
-  // Only a *leading* "<qty> <name>" is parsed as quantity — that's the
-  // unambiguous typing convention ("2 melk"). A trailing number ("milk 2")
-  // is too often part of the product name itself (sizes, percentages, "7 Up"),
-  // and stripping it silently lost the exact text the user typed.
-  const m = text.match(/^(\d+)\s+(.+)$/);
-  if (m) return { name: m[2].trim(), qty: parseInt(m[1], 10) };
-  return { name: text, qty: 1 };
-}
-
-// Token-based fuzzy match: every word in the query must appear somewhere in
-// the candidate name (any order), so "melk lett" matches "Lettmelk".
-function matchCatalogue(query) {
-  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!tokens.length) return [];
-  return catalogue
-    .filter(c => {
-      const ln = c.name.toLowerCase();
-      return tokens.every(t => ln.includes(t));
-    })
-    .sort((a, b) => a.name.length - b.name.length);
-}
-
-async function addItem() {
-  const input = document.getElementById("addInput");
-  const { name: rawName, qty } = parseItemInput(input.value);
-  if (!rawName) return;
-  const match = matchCatalogue(rawName)[0];
-  const name = match ? match.name : rawName;
-  const category = match ? match.category : "Annet";
-  await api("/list", { method: "POST",
-    body: JSON.stringify({ name, qty, category }) });
-  input.value = "";
-  hideSuggestions();
-  catalogue = await api("/catalogue");
-  loadList();
-}
-
-async function toggleItem(id) { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
-async function delItem(id) { await api(`/list/${id}`, { method: "DELETE" }); loadList(); }
-
-// Adds the raw input exactly as typed, bypassing catalogue matching — the
-// escape hatch for when autocomplete's fuzzy match isn't what's wanted.
-async function addItemExact() {
-  const input = document.getElementById("addInput");
-  const name = input.value.trim();
-  if (!name) return;
-  await api("/list", { method: "POST", body: JSON.stringify({ name, qty: 1, category: "Annet" }) });
-  input.value = "";
-  hideSuggestions();
-  catalogue = await api("/catalogue");
-  loadList();
-}
-
-// autocomplete
-function onAddInput() {
-  const raw = document.getElementById("addInput").value;
-  const box = document.getElementById("suggestions");
-  if (!raw.trim()) { hideSuggestions(); return; }
-  const { name: query } = parseItemInput(raw);
-  const matches = matchCatalogue(query).slice(0, 6);
-  box.innerHTML = "";
-  for (const m of matches) {
-    const d = document.createElement("div");
-    d.textContent = m.name;
-    d.onclick = () => { document.getElementById("addInput").value = m.name; addItem(); };
-    box.appendChild(d);
-  }
-  const exact = document.createElement("div");
-  exact.style.fontStyle = "italic";
-  exact.style.color = "var(--muted)";
-  exact.textContent = `Legg til «${raw.trim()}» nøyaktig som skrevet`;
-  exact.onclick = addItemExact;
-  box.appendChild(exact);
-  box.classList.remove("hidden");
-}
-function hideSuggestions() { document.getElementById("suggestions").classList.add("hidden"); }
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".addbar")) hideSuggestions();
-});
-
-// ---------- meal plan ----------
-let weekOffset = 0; // weeks relative to the current week (Mon-Sun), shifted by shiftWeek()
-
-// Formats a Date as YYYY-MM-DD from its *local* components. Date#toISOString
-// converts to UTC first, which shifts the date backwards by a day between
-// local midnight and the UTC offset (e.g. 00:00-02:00 in UTC+1/+2) — exactly
-// when "today"/the week grid/the saved plan_date need to agree with the
-// browser's local calendar, not UTC's.
-function localIso(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function mondayOf(date) {
-  const d = new Date(date);
-  const dow = d.getDay(); // 0 = Sunday
-  const diff = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-
-// Only last week, this week, and next week are ever navigable — there's no
-// long-term meal-plan history, so weekOffset is clamped to [-1, 1].
-function shiftWeek(delta) {
-  weekOffset = delta === 0 ? 0 : Math.max(-1, Math.min(1, weekOffset + delta));
-  loadPlan();
-}
-
-async function loadPlan() {
-  const monday = mondayOf(new Date());
-  monday.setDate(monday.getDate() + weekOffset * 7);
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
-  const fromIso = localIso(monday);
-  const toIso = localIso(sunday);
-
-  document.getElementById("weekPrevBtn").disabled = weekOffset <= -1;
-  document.getElementById("weekNextBtn").disabled = weekOffset >= 1;
-  document.getElementById("weekLabel").textContent =
-    `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ` +
-    `${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
-
-  let plan;
-  try { plan = await api(`/plan?from=${fromIso}&to=${toIso}`); markOnline(); }
-  catch { markOffline(); return; }
-  const byDate = {};
-  for (const p of plan) byDate[p.plan_date] = p;
-  const c = document.getElementById("planContainer");
-  c.innerHTML = "";
-  const today = localIso(new Date());
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday); d.setDate(d.getDate() + i);
-    const iso = localIso(d);
-    const p = byDate[iso];
-    const el = document.createElement("div");
-    el.className = "day";
-    const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
-    el.innerHTML = `
-      <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
-      <div class="date">${iso === today ? "I dag" : dayName}</div>
-      <div class="meal ${p ? "" : "empty"}">${p ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
-      ${p && p.responsible ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>` : ""}`;
-    c.appendChild(el);
-  }
-  syncTick();
-}
-
-let mealModalCatalogue = []; // meal_catalogue rows (with ingredients), cached while the modal is open
-
-function parseIngredients(raw) {
-  if (!raw) return [];
-  try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr : []; }
-  catch { return []; }
-}
-
-// When the typed meal name matches a known meal, refill the ingredients
-// field with whatever's stored for it (lets picking from the datalist
-// recall a recipe instead of starting blank).
-function onMealNameInput() {
-  const name = document.getElementById("mealName").value.trim().toLowerCase();
-  const match = mealModalCatalogue.find(m => m.name.toLowerCase() === name);
-  document.getElementById("mealIngredients").value =
-    match ? parseIngredients(match.ingredients).join(", ") : "";
-}
-
-async function openMealModal(iso) {
-  if (!listUsers.length) await loadListUsers();
-  const meals = await api("/meals");
-  mealModalCatalogue = meals;
-  const plan = await api(`/plan?from=${iso}&to=${iso}`);
-  const current = plan[0] || {};
-  const ingredients = parseIngredients(current.ingredients);
-  const root = document.getElementById("modalRoot");
-  root.innerHTML = `
-    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <h3>Planlegg måltid</h3>
-        <label>Måltid (velg eller skriv nytt)</label>
-        <input id="mealName" list="mealList" oninput="onMealNameInput()"
-               value="${current.meal_name ? escapeHtml(current.meal_name) : ""}" placeholder="F.eks. Taco">
-        <datalist id="mealList">
-          ${meals.map(m => `<option value="${escapeHtml(m.name)}">`).join("")}
-        </datalist>
-        <label>Ingredienser (kommaseparert)</label>
-        <input id="mealIngredients" value="${escapeHtml(ingredients.join(", "))}" placeholder="F.eks. Kjøttdeig, Tortilla, Ost">
-        <label>Ansvarlig</label>
-        <select id="mealResp">
-          <option value=""${current.responsible ? "" : " selected"}>Ingen</option>
-          ${people().map(p => `<option ${current.responsible===p?"selected":""}>${escapeHtml(p)}</option>`).join("")}
-        </select>
-        <div class="actions">
-          <button class="cancel" onclick="closeModal()">Avbryt</button>
-          ${current.meal_name ? `<button class="cancel" onclick="deletePlan('${iso}')">Slett</button>` : ""}
-          <button class="save" onclick="savePlan('${iso}')">Lagre</button>
-        </div>
-      </div>
-    </div>`;
-}
-function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
-
-async function savePlan(iso) {
-  const meal_name = document.getElementById("mealName").value.trim();
-  const responsible = document.getElementById("mealResp").value;
-  const ingredients = document.getElementById("mealIngredients").value
-    .split(",").map(s => s.trim()).filter(Boolean);
-  if (!meal_name) { closeModal(); return; }
-  await api("/plan", { method: "POST",
-    body: JSON.stringify({ plan_date: iso, meal_name, responsible, ingredients }) });
-  closeModal(); loadPlan();
-}
-async function deletePlan(iso) {
-  await api(`/plan/${iso}`, { method: "DELETE" });
-  closeModal(); loadPlan();
-}
-
-// ---------- settings ----------
-async function loadSettings() {
-  applyRoleVisibility();
-  if (isOwner) loadListUsers();
-  // Admin user list and catalogue/meal counts load when the admin subpage is
-  // opened (showSettingsSub).
-
-  // App (Pages) and API (Worker) deploy independently; show both versions so a
-  // half-finished deploy is obvious. They match in the normal case.
-  let apiVersion = null;
-  try { apiVersion = (await api("/version")).version; } catch { /* offline */ }
-  document.getElementById("setVersion").textContent =
-    !apiVersion || apiVersion === APP_VERSION
-      ? APP_VERSION
-      : `${APP_VERSION} (app) / ${apiVersion} (api)`;
-}
-
-async function loadIconGaps() {
-  if (!isAdmin) return;
-  const cat = await api("/catalogue");
-  const missing = cat.filter(c => !iconForItem(c.name)).map(c => c.name).sort();
-  document.getElementById("setIconGapCount").textContent =
-    `${missing.length} av ${cat.length}`;
-  document.getElementById("iconGapList").innerHTML =
-    missing.map(n => `<span>${escapeHtml(n)}</span>`).join("");
-}
-
-async function changePassword() {
-  const current = document.getElementById("pwCurrent").value;
-  const next = document.getElementById("pwNew").value;
-  const msg = document.getElementById("pwMsg");
-  msg.style.color = "var(--danger)";
-  if (next.length < 6) { msg.textContent = "Nytt passord må være minst 6 tegn"; return; }
-  try {
-    const res = await api("/change-password", {
-      method: "POST",
-      body: JSON.stringify({ current_password: current, new_password: next })
-    });
-    if (res.error) { msg.textContent = res.error; return; }
-    // server returns a fresh token valid on the new version; keep this device logged in
-    if (res.token) { token = res.token; localStorage.setItem("ph_token", token); }
-    msg.style.color = "var(--green)";
-    msg.textContent = "Passord endret. Andre enheter er logget ut.";
-    document.getElementById("pwCurrent").value = "";
-    document.getElementById("pwNew").value = "";
-  } catch {
-    msg.textContent = "Noe gikk galt";
-  }
-}
-
-// ---------- user management (owner + admin) ----------
-function applyRoleVisibility() {
-  document.getElementById("ownerPanel").classList.toggle("hidden", !isOwner);
-  document.getElementById("adminEntry").classList.toggle("hidden", !isAdmin);
-}
-
-// Members of the current list — drives both the meal-responsible dropdown and
-// the owner's "Brukere på listen" panel.
-async function loadListUsers() {
-  try { listUsers = await api("/list-users"); } catch { return; }
-  if (isOwner) renderMembers();
-}
-
-function renderMembers() {
-  const box = document.getElementById("memberList");
-  if (!box) return;
-  document.getElementById("memberCount").textContent = `${listUsers.length} / 10 brukere`;
-  box.innerHTML = listUsers.map(u => {
-    const tags = [u.is_owner ? `<span class="badge-tag">Eier</span>` : "",
-                  u.is_admin ? `<span class="badge-tag admin">Admin</span>` : ""].join(" ");
-    const self = u.username === currentUser;
-    return `<div class="mgmt-row">
-      <div class="who"><div class="uname">${escapeHtml(u.username)} ${tags}</div>
-        ${self ? `<div class="sub">deg</div>` : ""}</div>
-      <div class="acts">
-        <button class="mini danger" onclick="removeMember('${encodeURIComponent(u.username)}')">Fjern</button>
-      </div></div>`;
-  }).join("");
-  const full = listUsers.length >= 10;
-  document.getElementById("addMemberBtn").disabled = full;
-  document.getElementById("addMemberBtn").style.opacity = full ? ".5" : "1";
-}
-
-async function addMember() {
-  const input = document.getElementById("newMemberName");
-  const msg = document.getElementById("memberMsg");
-  const name = input.value.trim();
-  msg.textContent = "";
-  if (!name) { msg.textContent = "Skriv inn et brukernavn"; return; }
-  const res = await api("/list-users", { method: "POST", body: JSON.stringify({ username: name }) });
-  if (res.error) { msg.textContent = res.error; return; }
-  input.value = "";
-  await loadListUsers();
-  showCredentials(res.username, res.password);
-}
-
-async function removeMember(encName) {
-  const name = decodeURIComponent(encName);
-  if (!confirm(`Fjerne ${name} fra listen?`)) return;
-  const res = await api(`/list-users/${encodeURIComponent(name)}`, { method: "DELETE" });
-  if (res.error) { alert(res.error); return; }
-  await loadListUsers();
-  if (isAdmin) loadAllUsers();
-}
-
-async function createOwner() {
-  const input = document.getElementById("newOwnerName");
-  const msg = document.getElementById("ownerMsg");
-  const name = input.value.trim();
-  msg.textContent = "";
-  if (!name) { msg.textContent = "Skriv inn et brukernavn"; return; }
-  const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ username: name }) });
-  if (res.error) { msg.textContent = res.error; return; }
-  input.value = "";
-  loadAllUsers();
-  showCredentials(res.username, res.password);
-}
-
-async function loadAllUsers() {
-  if (!isAdmin) return;
-  let users;
-  try { users = await api("/admin/users"); } catch { return; }
-
-  // Header totals: N users across M distinct lists.
-  const listIds = [...new Set(users.map(u => u.list_id))];
-  document.getElementById("adminTotals").textContent =
-    `${users.length} ${users.length === 1 ? "bruker" : "brukere"} · ` +
-    `${listIds.length} ${listIds.length === 1 ? "liste" : "lister"}`;
-
-  // Group users by list_id (the API already orders by list_id, username).
-  const groups = {};
-  for (const u of users) (groups[u.list_id] = groups[u.list_id] || []).push(u);
-
-  const userRow = (u) => {
-    const en = encodeURIComponent(u.username);
-    const self = u.username === currentUser;
-    return `<div class="mgmt-row">
-      <div class="who"><div class="uname">${escapeHtml(u.username)}</div>
-        <div class="sub">${self ? "deg" : (u.created_by ? "av " + escapeHtml(u.created_by) : "&nbsp;")}</div></div>
-      <div class="acts">
-        <label class="flag"><input type="checkbox" ${u.is_admin ? "checked" : ""}
-          onchange="setFlag('${en}','is_admin',this.checked)">Admin</label>
-        <label class="flag"><input type="checkbox" ${u.is_owner ? "checked" : ""}
-          onchange="setFlag('${en}','is_owner',this.checked)">Eier</label>
-        <button class="mini" onclick="resetUserPassword('${en}')">Nullstill pw</button>
-      </div></div>`;
-  };
-
-  document.getElementById("allUsers").innerHTML = listIds.map(id => {
-    const members = groups[id];
-    return `<div class="admin-group">Liste ${id ?? "-"} · ${members.length} ` +
-           `${members.length === 1 ? "bruker" : "brukere"}</div>` +
-           members.map(userRow).join("");
-  }).join("");
-}
-
-async function setFlag(encName, flag, value) {
-  const name = decodeURIComponent(encName);
-  const res = await api(`/admin/users/${encodeURIComponent(name)}/flags`, {
-    method: "PATCH", body: JSON.stringify({ [flag]: value })
-  });
-  if (res.error) { alert(res.error); }
-  loadAllUsers();
-  loadListUsers();
-}
-
-async function resetUserPassword(encName) {
-  const name = decodeURIComponent(encName);
-  if (!confirm(`Nullstille passordet til ${name}? Alle deres aktive økter logges ut.`)) return;
-  const res = await api(`/admin/users/${encodeURIComponent(name)}/reset-password`, { method: "POST" });
-  if (res.error) { alert(res.error); return; }
-  showCredentials(res.username, res.password);
-}
-
-// One-time credential dialog with a "copy invite text" button. The password is
-// never recoverable after this — the server only stores its hash.
-function showCredentials(username, password) {
-  const invite =
-`Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com
-Brukernavn: ${username}
-Passord: ${password}
-(Bytt passord etter at du har logget inn.)`;
-  window._lastInvite = invite;
-  const root = document.getElementById("modalRoot");
-  root.innerHTML = `
-    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-      <div class="modal">
-        <h3>Konto opprettet</h3>
-        <p class="cred-note">Dette passordet vises bare nå. Kopier og send det til brukeren.</p>
-        <div class="cred-box">${escapeHtml(invite)}</div>
-        <div class="actions">
-          <button class="cancel" onclick="closeModal()">Lukk</button>
-          <button class="save" onclick="copyInvite()">Kopier invitasjon</button>
-        </div>
-      </div>
-    </div>`;
-}
-
-async function copyInvite() {
-  try { await navigator.clipboard.writeText(window._lastInvite || ""); }
-  catch { /* clipboard may be blocked; user can still select the text */ }
-  closeModal();
-}
-
-// ---------- misc ----------
-function syncTick() {
-  const t = new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
-  const el = document.getElementById("syncStatus");
-  el.classList.remove("offline");
-  el.textContent = "Oppdatert " + t;
-}
-function markOnline() { document.getElementById("syncStatus").classList.remove("offline"); }
-function markOffline() {
-  const el = document.getElementById("syncStatus");
-  el.classList.add("offline");
-  el.textContent = navigator.onLine === false ? "Offline" : "Kunne ikke oppdatere";
-}
-window.addEventListener("offline", markOffline);
-window.addEventListener("online", () => {
-  if (currentTab === "list") loadList();
-  if (currentTab === "meals") loadPlan();
-});
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-}
-
-// ---------- install prompt ----------
-let deferredInstallEvent = null;
-
-function isStandalone() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-}
-function isIos() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-}
-function installDismissed() {
-  return localStorage.getItem("ph_install_dismissed") === "1";
-}
-function dismissInstallBanner() {
-  localStorage.setItem("ph_install_dismissed", "1");
-  document.getElementById("installBanner").classList.add("hidden");
-}
-function showInstallBanner() {
-  if (isStandalone() || installDismissed()) return;
-  const banner = document.getElementById("installBanner");
-  if (deferredInstallEvent) {
-    banner.innerHTML = `
-      <span class="ico">${uiIcon("download", 22)}</span>
-      <span class="txt">Installer Panhandle på hjemskjermen for raskere tilgang.</span>
-      <button class="install" onclick="doInstall()">Installer</button>
-      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
-    banner.classList.remove("hidden");
-  } else if (isIos()) {
-    banner.innerHTML = `
-      <span class="ico">${uiIcon("download", 22)}</span>
-      <span class="txt">Legg til Panhandle på hjemskjermen: trykk del-ikonet
-        <span style="font-weight:600">⎋</span> og velg "Legg til på Hjemskjerm".</span>
-      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
-    banner.classList.remove("hidden");
-  }
-}
-async function doInstall() {
-  if (!deferredInstallEvent) return;
-  document.getElementById("installBanner").classList.add("hidden");
-  deferredInstallEvent.prompt();
-  await deferredInstallEvent.userChoice;
-  deferredInstallEvent = null;
-}
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredInstallEvent = e;
-  if (token) showInstallBanner();
-});
-window.addEventListener("appinstalled", () => {
-  localStorage.setItem("ph_install_dismissed", "1");
-  document.getElementById("installBanner").classList.add("hidden");
-});
-
-// boot
-if (token) { showApp(); showInstallBanner(); }
+function openSignupModal() { document.getElementById('signupModal').classList.remove('hidden'); }
+function closeSignupModal() { document.getElementById('signupModal').classList.add('hidden'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSignupModal(); });
 </script>
 </body>
 </html>
