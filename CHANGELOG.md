@@ -13,6 +13,24 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.6] — 2026-06-19
+
+### Added
+- TODO #6: Item modal now allows renaming the catalogue entry itself
+  (`PATCH /list/:id` accepts `name`) and deleting it from the catalogue
+  entirely (new `DELETE /list/:id/catalogue`, cascades to every
+  `list_items` row referencing it).
+- TODO #7: Autocomplete suggestions now include an explicit "Legg til
+  «...» nøyaktig som skrevet" option that adds the raw input as-is,
+  bypassing catalogue matching and quantity parsing entirely.
+
+### Fixed
+- TODO #5: Autocomplete suggestions dropdown is now dismissed on any
+  click outside the add bar, instead of lingering over other UI.
+- TODO #7: `parseItemInput` no longer treats a *trailing* number as a
+  quantity (e.g. "milk 2" no longer gets split into "milk" x2) — only the
+  unambiguous leading "<qty> <name>" form is parsed that way.
+
 ## [1.0.5] — 2026-06-18
 
 ### Added

@@ -499,7 +499,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -825,6 +825,8 @@ function openItemModal(id) {
       <div class="modal">
         <h3>${escapeHtml(it.name)}</h3>
         <div class="meta">Lagt til av ${escapeHtml(it.added_by)}</div>
+        <label>Navn</label>
+        <input id="itemName" value="${escapeHtml(it.name)}">
         <label>Kategori</label>
         <select id="itemCategory">
           ${CATEGORIES.map(c => `<option ${c===it.category?"selected":""}>${c}</option>`).join("")}
@@ -833,19 +835,38 @@ function openItemModal(id) {
         <input id="itemQty" type="number" min="1" value="${it.qty || 1}">
         <label>Notat (mengde, beskrivelse o.l.)</label>
         <input id="itemNotes" value="${it.notes ? escapeHtml(it.notes) : ""}" placeholder="F.eks. 2 liter">
+        <div id="itemModalMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--danger)"></div>
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Avbryt</button>
           <button class="save" onclick="saveItemEdit(${it.id})">Lagre</button>
         </div>
+        <button class="cancel" style="width:100%;margin-top:8px;color:var(--danger)"
+                onclick="deleteFromCatalogue(${it.id})">Slett vare fra katalog</button>
       </div>
     </div>`;
 }
 
 async function saveItemEdit(id) {
+  const name = document.getElementById("itemName").value.trim();
+  const msg = document.getElementById("itemModalMsg");
+  if (!name) { msg.textContent = "Tomt navn"; return; }
   const category = document.getElementById("itemCategory").value;
   const qty = parseInt(document.getElementById("itemQty").value, 10) || 1;
   const notes = document.getElementById("itemNotes").value.trim();
-  await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ category, qty, notes }) });
+  const res = await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ name, category, qty, notes }) });
+  if (res.error) { msg.textContent = res.error; return; }
+  closeModal();
+  catalogue = await api("/catalogue");
+  loadList();
+}
+
+// Deletes the catalogue entry entirely (not just this list row) — removes the
+// item from every list it appears on, past and present.
+async function deleteFromCatalogue(id) {
+  const it = lastItems.find(x => x.id === id);
+  if (!it) return;
+  if (!confirm(`Slette «${it.name}» permanent fra katalogen? Dette fjerner varen fra hele listen.`)) return;
+  await api(`/list/${id}/catalogue`, { method: "DELETE" });
   closeModal();
   catalogue = await api("/catalogue");
   loadList();
@@ -855,14 +876,16 @@ function parseItemInput(raw) {
   const text = raw.trim();
   // If the typed text is already a known catalogue item (e.g. a name that
   // legitimately contains a number, like a "7 Up" the user typed with a
-  // space), don't strip a leading/trailing integer thinking it's a quantity.
+  // space), don't strip a leading integer thinking it's a quantity.
   if (catalogue.some(c => c.name.toLowerCase() === text.toLowerCase())) {
     return { name: text, qty: 1 };
   }
-  let m = text.match(/^(\d+)\s+(.+)$/);
+  // Only a *leading* "<qty> <name>" is parsed as quantity — that's the
+  // unambiguous typing convention ("2 melk"). A trailing number ("milk 2")
+  // is too often part of the product name itself (sizes, percentages, "7 Up"),
+  // and stripping it silently lost the exact text the user typed.
+  const m = text.match(/^(\d+)\s+(.+)$/);
   if (m) return { name: m[2].trim(), qty: parseInt(m[1], 10) };
-  m = text.match(/^(.+)\s+(\d+)$/);
-  if (m) return { name: m[1].trim(), qty: parseInt(m[2], 10) };
   return { name: text, qty: 1 };
 }
 
@@ -897,14 +920,26 @@ async function addItem() {
 async function toggleItem(id) { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
 async function delItem(id) { await api(`/list/${id}`, { method: "DELETE" }); loadList(); }
 
+// Adds the raw input exactly as typed, bypassing catalogue matching — the
+// escape hatch for when autocomplete's fuzzy match isn't what's wanted.
+async function addItemExact() {
+  const input = document.getElementById("addInput");
+  const name = input.value.trim();
+  if (!name) return;
+  await api("/list", { method: "POST", body: JSON.stringify({ name, qty: 1, category: "Annet" }) });
+  input.value = "";
+  hideSuggestions();
+  catalogue = await api("/catalogue");
+  loadList();
+}
+
 // autocomplete
 function onAddInput() {
   const raw = document.getElementById("addInput").value;
-  const { name: query } = parseItemInput(raw);
   const box = document.getElementById("suggestions");
-  if (!query.trim()) { hideSuggestions(); return; }
+  if (!raw.trim()) { hideSuggestions(); return; }
+  const { name: query } = parseItemInput(raw);
   const matches = matchCatalogue(query).slice(0, 6);
-  if (!matches.length) { hideSuggestions(); return; }
   box.innerHTML = "";
   for (const m of matches) {
     const d = document.createElement("div");
@@ -912,9 +947,18 @@ function onAddInput() {
     d.onclick = () => { document.getElementById("addInput").value = m.name; addItem(); };
     box.appendChild(d);
   }
+  const exact = document.createElement("div");
+  exact.style.fontStyle = "italic";
+  exact.style.color = "var(--muted)";
+  exact.textContent = `Legg til «${raw.trim()}» nøyaktig som skrevet`;
+  exact.onclick = addItemExact;
+  box.appendChild(exact);
   box.classList.remove("hidden");
 }
 function hideSuggestions() { document.getElementById("suggestions").classList.add("hidden"); }
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".addbar")) hideSuggestions();
+});
 
 // ---------- meal plan ----------
 let weekOffset = 0; // weeks relative to the current week (Mon-Sun), shifted by shiftWeek()
