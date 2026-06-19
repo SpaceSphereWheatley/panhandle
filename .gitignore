@@ -5,6 +5,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.dev.vars
+.wrangler/
 
 # Secrets (never commit these)
 # Keep secrets in GitHub Actions secrets instead

@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.19";
+const VERSION = "1.1.0";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -774,8 +774,24 @@ export default {
     // ===== MEALS =====
     if (path === "/meals" && method === "GET") {
       const { results } = await env.DB.prepare(
-        "SELECT id, name, ingredients FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
+        "SELECT id, name, ingredients, times_planned, last_planned FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
       ).bind(user.list_id).all();
+      return authedJson(results);
+    }
+
+    // Meals worth suggesting when planning a day: ones eaten often but not
+    // recently (a 10-day cooldown), ranked by frequency first and staleness
+    // second. Lifetime stats live on meal_catalogue (see 0004_meal_usage_stats.sql)
+    // since meal_plan itself is pruned after 14 days.
+    if (path === "/meals/suggestions" && method === "GET") {
+      const { results } = await env.DB.prepare(`
+        SELECT id, name, ingredients, times_planned, last_planned
+        FROM meal_catalogue
+        WHERE list_id = ?1
+          AND (last_planned IS NULL OR last_planned <= date('now', '-10 days'))
+        ORDER BY times_planned DESC, last_planned ASC
+        LIMIT 5
+      `).bind(user.list_id).all();
       return authedJson(results);
     }
 
@@ -828,6 +844,12 @@ export default {
         await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
           .bind(ingredientsJson, meal.id).run();
       }
+      // Only bump usage stats when this date's meal is actually new/changed —
+      // re-saving the same date with the same meal (e.g. just changing who's
+      // responsible) shouldn't inflate times_planned.
+      const prevPlan = await env.DB.prepare(
+        "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
+      ).bind(user.list_id, plan_date).first();
       await env.DB.prepare(`
         INSERT INTO meal_plan (plan_date, meal_id, responsible, list_id)
         VALUES (?1, ?2, ?3, ?4)
@@ -836,6 +858,14 @@ export default {
           responsible = excluded.responsible,
           updated_at = datetime('now')
       `).bind(plan_date, meal.id, responsible || "", user.list_id).run();
+      if (!prevPlan || prevPlan.meal_id !== meal.id) {
+        await env.DB.prepare(`
+          UPDATE meal_catalogue
+          SET times_planned = times_planned + 1,
+              last_planned = CASE WHEN last_planned IS NULL OR last_planned < ?1 THEN ?1 ELSE last_planned END
+          WHERE id = ?2
+        `).bind(plan_date, meal.id).run();
+      }
       return authedJson({ ok: true });
     }
 
