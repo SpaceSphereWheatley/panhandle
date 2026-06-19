@@ -13,6 +13,33 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.10] — 2026-06-19
+
+Phase 1 of the UX improvement plan (`docs/ux-improvement-plan.md`): shopping
+list reliability. Added a toast/snackbar mechanism and split list fetching from
+rendering (`loadList` → `renderList`) so updates can apply instantly.
+
+### Added
+- T2: Optimistic UI — checking off and deleting items update the screen
+  immediately and reconcile with the server in the background (with revert on
+  failure). View/sort/collapse changes now re-render from cache without a
+  round-trip.
+- T4: Undo on delete — items are removed instantly with a 5-second "Angre"
+  toast; the server delete only commits after the grace window, and polling
+  can't resurrect a row mid-undo.
+- T5: Adding an item that's already on the list now shows a toast explaining
+  the quantity was increased (the API already merged it).
+- T3: Failed adds/toggles/deletes now surface a toast and keep the typed text,
+  instead of silently appearing to succeed.
+
+### Changed
+- T6: An expired/invalidated session now explains itself on the login screen
+  ("Økten utløp …") instead of silently bouncing to login.
+
+### Fixed
+- Tapping the icon inside a card's edit/delete button no longer also toggles
+  the item's bought-state (`closest()` guard).
+
 ## [1.0.9] — 2026-06-19
 
 Phase 0 of the UX improvement plan (`docs/ux-improvement-plan.md`): quick,
