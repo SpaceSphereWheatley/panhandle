@@ -6,26 +6,18 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. `migrations/0004_seed_catalogue.sql` references the `lists` table and
-   `list_id` column that don't exist until `0005_multi_tenant.sql` runs
-   after it. Applying migrations in numbered order on a fresh D1 instance
-   (disaster recovery, a new environment) fails outright at 0004; CI's
-   `sql-migrations` job only checks numbering, not applicability, so this
-   has no test coverage. Re-pin the seed data after 0005, or fold its
-   per-list CROSS JOIN logic into a migration numbered after multi-tenant.
-   _Value: High · Importance: High · Type: Bug (migrations/ops)_
-2. No service worker despite the PWA manifest — the app is installable but
+1. No service worker despite the PWA manifest — the app is installable but
    has zero offline capability. Add a minimal app-shell service worker, or
    drop the offline expectation.
    _Value: Medium · Importance: Medium · Type: Feature (PWA)_
-3. No `Escape` key handler on any of the four modals (item detail, meal,
+2. No `Escape` key handler on any of the four modals (item detail, meal,
    admin, etc.) — only clicking the dimmed backdrop or an explicit
    Avbryt/close button dismisses them. Verified live: an open modal
    silently swallows clicks on the bottom nav until dismissed the "right"
    way, which reads as the app being stuck. Add one `keydown` listener
    that calls `closeModal()` on Escape.
    _Value: Medium · Importance: Medium · Type: UX (accessibility/affordance)_
-4. Grid view: a category with a single item leaves the other 1-2 cells in
+3. Grid view: a category with a single item leaves the other 1-2 cells in
    its row visibly empty (the per-category `.grid-wrap` is its own 3-col
    grid, so a lone item doesn't reflow into the next category's row).
    Looks unfinished, especially with several single-item categories in a
@@ -33,10 +25,10 @@ details live in `CHANGELOG.md`, not here.
    boundaries, or only show the category header inline without a hard grid
    break per group.
    _Value: Low · Importance: Low · Type: UX (visual polish)_
-5. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
+4. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
    release tag or commit SHA.
    _Value: Medium · Importance: Low · Type: CI / supply chain_
-6. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
@@ -45,6 +37,17 @@ details live in `CHANGELOG.md`, not here.
    _Value: Low · Importance: Low · Type: Performance_
 
 ## Done
+
+- [x] `migrations/0004_seed_catalogue.sql` referenced the `lists` table and
+      `list_id` column that didn't exist until `0005_multi_tenant.sql` ran
+      after it — applying migrations in numbered order on a fresh D1
+      instance failed outright at 0004. Fixed by squashing all of
+      0001-0007 into one consolidated `migrations/0001_init.sql` (this
+      project has exactly one deployment, so there's no cross-environment
+      migration history to preserve); the two remaining files
+      (`0002_seed_catalogue.sql`, `0003_expand_catalogue.sql`) are pure,
+      order-independent data seeds that now correctly depend on schema
+      that already exists from `0001_init.sql`.
 
 - [x] Grid view long-press to open the item modal didn't work reliably on
       touch (jitter canceled the timer); also fixed via a button/tap-target
@@ -65,7 +68,8 @@ details live in `CHANGELOG.md`, not here.
 - [x] Autocomplete dropdown now dismissed on outside click instead of
       lingering over other UI. (1.0.6)
 - [x] Multi-owner lists, admin-created accounts, per-list isolation — see
-      `docs/multi-tenant-plan.md`. Migration `0005_multi_tenant.sql`.
+      `docs/multi-tenant-plan.md`. Originally migration `0005_multi_tenant.sql`,
+      now folded into the consolidated `migrations/0001_init.sql`.
 - [x] Login rate-limiting — `login_attempts` D1 table, 429 after 10 failures
       per IP in a 15-minute window. (1.0.4)
 - [x] Meal-plan date off-by-one — local date components instead of
@@ -89,7 +93,8 @@ details live in `CHANGELOG.md`, not here.
       content width (e.g. `max-width: 480px`, centered) instead of a
       separate desktop layout.
 - [x] Add a `notes` (free text — quantity, description, etc.) column to
-      `list_items`. Migration `0003_list_items_qty_notes.sql`.
+      `list_items`. Originally migration `0003_list_items_qty_notes.sql`,
+      now folded into the consolidated `migrations/0001_init.sql`.
 - [x] Quantity-aware "merge" when adding an item that's already on the
       list unbought (previously created duplicate rows against the same
       catalogue entry).

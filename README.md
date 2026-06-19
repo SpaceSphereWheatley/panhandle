@@ -50,13 +50,11 @@ Both halves deploy automatically on push to `main`:
   - `manifest.json` — PWA metadata
   - `icon-*.png` — app icons
 - `migrations/` — D1 schema
-  - `0001_init.sql` — shopping list and meal plan tables
-  - `0002_users.sql` — user accounts with password hashing
-  - `0003_list_items_qty_notes.sql` — qty + notes columns
-  - `0004_seed_catalogue.sql` — ~500 common Norwegian items (non-destructive upsert)
-  - `0005_multi_tenant.sql` — per-list isolation + owner/admin flags
-    (see `docs/multi-tenant-setup.md` for the rollout steps)
-  - `0006_expand_catalogue.sql` — +200 more catalogue items (~706 total)
+  - `0001_init.sql` — consolidated schema: shopping list, meal plan, users,
+    multi-tenant isolation (`lists`, owner/admin flags), login rate-limiting
+    (see `docs/multi-tenant-setup.md` for the multi-tenant rollout history)
+  - `0002_seed_catalogue.sql` — ~500 common Norwegian items (non-destructive upsert)
+  - `0003_expand_catalogue.sql` — +200 more catalogue items (~706 total)
 - `CHANGELOG.md` — released versions and what changed
 
 ## Known Limitations

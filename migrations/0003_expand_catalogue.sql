@@ -1,6 +1,6 @@
--- 0006_expand_catalogue.sql
+-- 0003_expand_catalogue.sql
 -- Adds 200 additional common grocery/household items to every list's
--- item_catalogue. Same pattern as 0004: non-destructive, re-runnable
+-- item_catalogue. Same pattern as 0002: non-destructive, re-runnable
 -- upsert via CROSS JOIN lists; overwrites category on conflict but never
 -- deletes existing rows.
 -- Run manually in the D1 console (there is no migration runner).
