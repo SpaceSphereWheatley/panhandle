@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.4";
+const VERSION = "1.0.5";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -325,80 +325,11 @@ export default {
     const url = new URL(request.url);
     const method = request.method;
 
-    // ===== SEED.HTML FORM (GET) =====
-    if (url.pathname === "/seed.html" && method === "GET") {
-      return new Response(`<!DOCTYPE html>
-<html lang="no">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panhandle - oppsett av kontoer</title>
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; max-width: 460px;
-    margin: 40px auto; padding: 0 16px; color: #1a1a1a; }
-  h1 { color: #2d8a4e; font-size: 22px; }
-  .warn { background: #fff4e5; border: 1px solid #ffd9a0; border-radius: 10px;
-    padding: 12px 14px; font-size: 14px; margin: 16px 0; }
-  label { display: block; font-size: 13px; color: #555; margin: 14px 0 4px; }
-  input { width: 100%; padding: 12px; font-size: 16px; border-radius: 10px;
-    border: 1px solid #ddd; box-sizing: border-box; }
-  button { width: 100%; padding: 14px; margin-top: 20px; background: #2d8a4e;
-    color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; }
-  #out { margin-top: 16px; font-size: 14px; white-space: pre-wrap; }
-  hr { border: none; border-top: 1px solid #eee; margin: 24px 0; }
-</style>
-</head>
-<body>
-<h1>Panhandle - opprett kontoer</h1>
-<div class="warn">Denne siden kjøres <b>én gang</b> for å opprette den første admin-/eierkontoen. Etterpå fjern SEED_SECRET. Senere kontoer opprettes inne i appen (admin oppretter eiere, eiere legger til medlemmer).</div>
-<label>SEED_SECRET</label>
-<input id="secret" type="password" placeholder="seed-hemmelighet">
-<hr>
-<label>Bruker 1 - brukernavn (blir admin + eier)</label>
-<input id="u1" value="Mohibb">
-<label>Bruker 1 - passord</label>
-<input id="p1" type="password" placeholder="passord">
-<label>Bruker 2 - brukernavn (medlem, valgfritt)</label>
-<input id="u2" value="Saffa">
-<label>Bruker 2 - passord</label>
-<input id="p2" type="password" placeholder="passord">
-<button onclick="seed()">Opprett kontoer</button>
-<div id="out"></div>
-<script>
-async function seed() {
-  const out = document.getElementById("out");
-  out.style.color = "#333";
-  out.textContent = "Sender...";
-  try {
-    const accounts = [
-      { username: document.getElementById("u1").value.trim(), password: document.getElementById("p1").value }
-    ];
-    const u2 = document.getElementById("u2").value.trim(), p2 = document.getElementById("p2").value;
-    if (u2 && p2) accounts.push({ username: u2, password: p2 });
-    const res = await fetch("/seed", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: document.getElementById("secret").value, accounts })
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      out.style.color = "#2d8a4e";
-      out.textContent = "Kontoer opprettet. Fjern SEED_SECRET nå, gå til shopping.mohibb.com og logg inn.";
-    } else {
-      out.style.color = "#d64545";
-      out.textContent = "Feil: " + (data.error || res.status);
-    }
-  } catch (e) {
-    out.style.color = "#d64545";
-    out.textContent = "Nettverksfeil: " + e.message;
-  }
-}
-</script>
-</body>
-</html>`, { headers: { "Content-Type": "text/html" } });
-    }
-
     // ===== ROUTING =====
+    // /seed.html itself is a static asset (public/seed.html) and falls
+    // through to the Pages proxy below like any other non-API path — no
+    // need for a second copy here (TODO #24: this used to inline a stale
+    // duplicate that had drifted from public/seed.html).
     const isApi = url.pathname === "/seed" || url.pathname.startsWith("/api");
     if (!isApi) {
       const pagesUrl = new URL(request.url);
@@ -796,7 +727,8 @@ async function seed() {
       ).bind(user.list_id).run();
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
-      let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id
+      let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id,
+        m.ingredients AS ingredients
         FROM meal_plan p JOIN meal_catalogue m ON m.id = p.meal_id
         WHERE p.list_id = ?1`;
       const binds = [user.list_id];
@@ -809,19 +741,26 @@ async function seed() {
     if (path === "/plan" && method === "POST") {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const { plan_date, meal_name, responsible } = body;
+      const { plan_date, meal_name, responsible, ingredients } = body;
       if (!plan_date || !meal_name) return authedJson({ error: "Mangler dato eller måltid" }, 400);
       const clean = meal_name.trim();
+      // ingredients (TODO #9) is a JSON-encoded array, stored once per meal
+      // name in meal_catalogue and shared across every occurrence of that
+      // meal — undefined means "leave whatever's stored alone".
+      const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
       let meal = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
       ).bind(clean, user.list_id).first();
       if (!meal) {
         // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
         meal = await env.DB.prepare(`
-          INSERT INTO meal_catalogue (name, list_id) VALUES (?1, ?2)
+          INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
           ON CONFLICT(list_id, name) DO UPDATE SET name = name
           RETURNING id
-        `).bind(clean, user.list_id).first();
+        `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
+      } else if (ingredientsJson !== undefined) {
+        await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
+          .bind(ingredientsJson, meal.id).run();
       }
       await env.DB.prepare(`
         INSERT INTO meal_plan (plan_date, meal_id, responsible, list_id)
