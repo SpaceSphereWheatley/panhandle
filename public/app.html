@@ -1106,7 +1106,7 @@ async function addItem() {
   const match = matchCatalogue(baseName)[0];
   const name = match ? match.name : baseName;
   const category = match ? match.category : "Annet";
-  const notes = gf ? "GF" : undefined;
+  const notes = gf ? "Glutenfri" : undefined;
   input.value = ""; // optimistic: clear the field immediately so adding feels instant
   hideSuggestions();
   let res;

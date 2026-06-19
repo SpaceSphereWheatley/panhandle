@@ -648,11 +648,14 @@ export default {
       const { name: clean, gf } = extractGlutenFree(name);
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
-      // A "GF" marker pulled out of the name is folded into the notes (without
-      // duplicating one the caller already passed), so the gluten-free variant
-      // is tracked as a note rather than a separate catalogue name.
+      // A gluten-free marker pulled out of the name is recorded as a "Glutenfri"
+      // note (regardless of how it was typed — "gf", "GF", "glutenfri"), without
+      // duplicating one the caller already passed, so the gluten-free variant is
+      // tracked as a note rather than a separate catalogue name.
       let noteVal = (notes || "").trim();
-      if (gf && !/\bgf\b/i.test(noteVal)) noteVal = noteVal ? `${noteVal} GF` : "GF";
+      if (gf && !/\b(gf|glutenfri|glutenfritt)\b/i.test(noteVal)) {
+        noteVal = noteVal ? `${noteVal} Glutenfri` : "Glutenfri";
+      }
       noteVal = noteVal || null;
       let cat = await env.DB.prepare(
         "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
