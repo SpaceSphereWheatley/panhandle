@@ -342,6 +342,14 @@
   .modal .actions button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
   .modal .save { background: var(--tile); color: #fff; }
   .modal .cancel { background: var(--bg-sunken); color: var(--text); }
+
+  /* Button variants */
+  .btn-primary {
+    width: 100%; padding: 12px; border-radius: 10px; border: none;
+    background: var(--tile); color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-primary.mt-8 { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -420,8 +428,7 @@
         <div id="addMemberRow" style="margin-top:12px">
           <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
                  style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="addMember()" id="addMemberBtn"
-                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+          <button onclick="addMember()" id="addMemberBtn" class="btn-primary mt-8">
             + Legg til bruker</button>
           <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
         </div>
@@ -439,8 +446,7 @@
                style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
         <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
                style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
-        <button onclick="changePassword()"
-                style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600">
+        <button onclick="changePassword()" class="btn-primary">
           Lagre nytt passord</button>
         <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
       </div>
@@ -465,8 +471,7 @@
           <div class="k" style="margin-bottom:10px">Opprett eier (ny liste)</div>
           <input id="newOwnerName" placeholder="Brukernavn for ny eier"
                  style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="createOwner()" id="createOwnerBtn"
-                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+          <button onclick="createOwner()" id="createOwnerBtn" class="btn-primary mt-8">
             + Opprett eier</button>
           <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
         </div>
