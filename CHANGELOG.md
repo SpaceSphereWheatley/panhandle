@@ -13,6 +13,15 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.7] — 2026-06-19
+
+### Fixed
+- Long-press to open the item modal in grid view didn't work on touch
+  devices: the timer was canceled on any `pointermove`, and touch input
+  always reports a few pixels of jitter even when held still. Grid view
+  now tolerates movement up to a 10px threshold before canceling, matching
+  list view's existing behavior.
+
 ## [1.0.6] — 2026-06-19
 
 ### Added
