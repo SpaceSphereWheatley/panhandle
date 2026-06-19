@@ -2,7 +2,7 @@
   "name": "Panhandle",
   "short_name": "Panhandle",
   "description": "Delt handleliste og måltidsplanlegger",
-  "start_url": "/",
+  "start_url": "/app.html",
   "display": "standalone",
   "background_color": "#F5F1ED",
   "theme_color": "#9CAF88",
