@@ -13,6 +13,17 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.16] — 2026-06-19
+
+### Added
+- Gluten-free shorthand: adding an item with a `GF`, `gf` or `glutenfri` marker
+  in its name (e.g. "Pasta GF") now files it under the normal catalogue name
+  ("Pasta") with "GF" in the notes instead of creating a separate "Pasta GF"
+  catalogue entry. The plain item and its GF variant coexist as two distinct
+  lines — the add-merge check is now notes-aware, so one no longer bumps the
+  other's quantity. Handled authoritatively in the Worker, with the frontend
+  mirroring it for catalogue matching, suggestions and toasts.
+
 ## [1.0.15] — 2026-06-19
 
 ### Changed

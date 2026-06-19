@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.15";
+const VERSION = "1.0.16";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -273,6 +273,23 @@ function cleanUsername(u) {
   if (!s || s.length > 32) return null;
   if (!/^[\p{L}\p{N}._-]+$/u.test(s)) return null;
   return s;
+}
+
+// Recognises a gluten-free marker (GF / gf / glutenfri / glutenfritt) typed as
+// part of an item name and reports it so the caller can lift it into the notes:
+// "Pasta GF" becomes name "Pasta" + note "GF". The cleaned name still resolves
+// to the normal catalogue entry, so a plain "Pasta" and a "Pasta" + "GF" note
+// share the same catalogue row but stay distinct list lines (the add path's
+// merge check is notes-aware). If the marker is the entire input (e.g. just
+// "GF"), it's left untouched — there's no item name to attach it to.
+function extractGlutenFree(name) {
+  let gf = false;
+  const cleaned = (name || "")
+    .replace(/\b(gf|glutenfri|glutenfritt)\b/gi, () => { gf = true; return " "; })
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!gf || !cleaned) return { name: (name || "").trim(), gf: false };
+  return { name: cleaned, gf: true };
 }
 
 // ---------- response helpers ----------
@@ -628,9 +645,15 @@ export default {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { name, category, notes, qty } = body;
-      const clean = (name || "").trim();
+      const { name: clean, gf } = extractGlutenFree(name);
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
+      // A "GF" marker pulled out of the name is folded into the notes (without
+      // duplicating one the caller already passed), so the gluten-free variant
+      // is tracked as a note rather than a separate catalogue name.
+      let noteVal = (notes || "").trim();
+      if (gf && !/\bgf\b/i.test(noteVal)) noteVal = noteVal ? `${noteVal} GF` : "GF";
+      noteVal = noteVal || null;
       let cat = await env.DB.prepare(
         "SELECT id, category FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
       ).bind(clean, user.list_id).first();
@@ -644,9 +667,12 @@ export default {
           RETURNING id, category
         `).bind(clean, chosenCat, user.list_id).first();
       }
+      // Merge only into an unbought line whose notes match, so e.g. a plain
+      // "Pasta" and a "Pasta" + "GF" note coexist as two separate lines instead
+      // of one bumping the other's quantity.
       const existing = await env.DB.prepare(
-        "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0 AND list_id = ?2"
-      ).bind(cat.id, user.list_id).first();
+        "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 0 AND list_id = ?2 AND IFNULL(notes, '') = IFNULL(?3, '')"
+      ).bind(cat.id, user.list_id, noteVal).first();
       if (existing) {
         const updated = await env.DB.prepare(
           "UPDATE list_items SET qty = qty + ?2 WHERE id = ?1 RETURNING qty"
@@ -655,7 +681,7 @@ export default {
       }
       await env.DB.prepare(
         "INSERT INTO list_items (catalogue_id, added_by, notes, qty, list_id) VALUES (?1, ?2, ?3, ?4, ?5)"
-      ).bind(cat.id, user.username, (notes || "").trim() || null, addQty, user.list_id).run();
+      ).bind(cat.id, user.username, noteVal, addQty, user.list_id).run();
       return authedJson({ ok: true, qty: addQty });
     }
 
