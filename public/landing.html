@@ -59,7 +59,7 @@
   .btn-login:hover { background: var(--bg-sunken); }
   .btn-primary { background: var(--tile); color: #fff; }
   .btn-primary:hover { background: var(--tile-dark); }
-  .btn-primary.lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
+  .btn.lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
 
   /* Hero */
   .hero { padding: 64px 0 48px; text-align: center; }
@@ -87,15 +87,19 @@
   .mock-card {
     background: var(--bg-elevated); border-radius: 20px; padding: 18px;
     border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(61,40,20,0.08);
+    display: flex; justify-content: center;
   }
   .mock-screen {
-    background: var(--bg); border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+    background: var(--bg); border-radius: 22px; overflow: hidden; border: 1px solid var(--border);
+    width: 100%; max-width: 280px; aspect-ratio: 9 / 18.5;
+    display: flex; flex-direction: column;
   }
   .mock-screen .mock-head {
     background: var(--bg-sunken); padding: 12px 16px; font-weight: 700; font-size: 15px;
     display: flex; justify-content: space-between; align-items: center; color: var(--text);
+    flex-shrink: 0;
   }
-  .mock-screen .mock-body { padding: 14px; }
+  .mock-screen .mock-body { padding: 14px; overflow-y: auto; flex: 1 1 auto; }
 
   /* shopping list mock */
   .mock-row {
@@ -141,8 +145,6 @@
   .mock-day .meal { font-size: 14px; font-weight: 600; margin: 3px 0 2px; color: var(--text); }
   .mock-day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
   .mock-day .resp { font-size: 11px; color: var(--tile); font-weight: 600; }
-
-  .mock-screen.split { display: grid; gap: 10px; }
 
   .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
@@ -226,7 +228,7 @@
             <div class="mock-day">
               <div class="d">I dag <span class="edit">Endre</span></div>
               <div class="meal">Laks i form</div>
-              <div class="resp">Ansvarlig: Mohibb</div>
+              <div class="resp">Ansvarlig: Person 1</div>
             </div>
             <div class="mock-day">
               <div class="d">Torsdag 12. jun <span class="edit">Legg til</span></div>
@@ -235,13 +237,13 @@
             <div class="mock-day">
               <div class="d">Fredag 13. jun <span class="edit">Endre</span></div>
               <div class="meal">Taco</div>
-              <div class="resp">Ansvarlig: Saffa</div>
+              <div class="resp">Ansvarlig: Person 2</div>
             </div>
           </div>
         </div>
       </div>
       <div class="mock-card">
-        <div class="mock-screen split">
+        <div class="mock-screen">
           <div class="mock-head">Handleliste</div>
           <div class="mock-body">
             <div class="mock-subhead">Listevisning</div>
@@ -277,7 +279,7 @@
       <div class="feature">
         <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg></span>
         <h3>Gjenkjenner varer</h3>
-        <p>Listen kommer med et stort katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
+        <p>Listen kommer med en stor katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
       </div>
     </div>
   </div>
