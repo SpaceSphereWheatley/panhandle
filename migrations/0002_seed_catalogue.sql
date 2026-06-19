@@ -1,4 +1,4 @@
--- 0004_seed_catalogue.sql
+-- 0002_seed_catalogue.sql
 -- Catalogue of common Norwegian household items. Re-runnable and
 -- NON-destructive: it adds each item to EVERY list (CROSS JOIN lists) and
 -- overwrites the category if that item already exists in the list (upsert).

@@ -10,35 +10,56 @@ details live in `CHANGELOG.md`, not here.
    has zero offline capability. Add a minimal app-shell service worker, or
    drop the offline expectation.
    _Value: Medium · Importance: Medium · Type: Feature (PWA)_
-2. Polling runs every 7s regardless of `document.hidden`, and a second
-   `showApp()` could stack timers. Guard the interval on visibility and
-   clear before re-arming.
-   _Value: Medium · Importance: Low · Type: Performance_
-3. `viewport` sets `maximum-scale=1.0, user-scalable=no`, disabling
-   pinch-zoom — an accessibility regression.
-   _Value: Medium · Importance: Low · Type: Accessibility_
+2. No `Escape` key handler on any of the four modals (item detail, meal,
+   admin, etc.) — only clicking the dimmed backdrop or an explicit
+   Avbryt/close button dismisses them. Verified live: an open modal
+   silently swallows clicks on the bottom nav until dismissed the "right"
+   way, which reads as the app being stuck. Add one `keydown` listener
+   that calls `closeModal()` on Escape.
+   _Value: Medium · Importance: Medium · Type: UX (accessibility/affordance)_
+3. Grid view: a category with a single item leaves the other 1-2 cells in
+   its row visibly empty (the per-category `.grid-wrap` is its own 3-col
+   grid, so a lone item doesn't reflow into the next category's row).
+   Looks unfinished, especially with several single-item categories in a
+   row. Either flow items into one continuous grid across category
+   boundaries, or only show the category header inline without a hard grid
+   break per group.
+   _Value: Low · Importance: Low · Type: UX (visual polish)_
 4. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
    release tag or commit SHA.
    _Value: Medium · Importance: Low · Type: CI / supply chain_
-8. Grid view on mobile has no way to open the item modal — dragging and
-   long-press gestures don't reliably work. Need a button, tap zone, or context
-   menu to access item details and edit/delete from grid.
-   _Value: Medium · Importance: High · Type: UX (mobile)_
-9. When a user assigns a meal, there's no way to auto-populate the shopping
-   list with that meal's ingredients. Currently ingredients are stored on
-   `meal_catalogue.ingredients` but not exposed as a "add to list" action. Should
-   be able to select which of a meal's ingredients to add when viewing a plan.
-   _Value: Medium · Importance: Low · Type: Feature (workflow)_
-10. Poll interval is a fixed 7s with no backoff when the tab is idle (no
-    interaction for a while) but visible. At 2 users on D1 this costs
-    nothing today — only worth doing once user count or request volume
-    actually grows, and it trades off responsiveness (stale data right
-    after returning from idle) for load savings, so don't add it
-    speculatively.
-    _Value: Low · Importance: Low · Type: Performance_
+5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+   interaction for a while) but visible. At 2 users on D1 this costs
+   nothing today — only worth doing once user count or request volume
+   actually grows, and it trades off responsiveness (stale data right
+   after returning from idle) for load savings, so don't add it
+   speculatively.
+   _Value: Low · Importance: Low · Type: Performance_
 
 ## Done
 
+- [x] `migrations/0004_seed_catalogue.sql` referenced the `lists` table and
+      `list_id` column that didn't exist until `0005_multi_tenant.sql` ran
+      after it — applying migrations in numbered order on a fresh D1
+      instance failed outright at 0004. Fixed by squashing all of
+      0001-0007 into one consolidated `migrations/0001_init.sql` (this
+      project has exactly one deployment, so there's no cross-environment
+      migration history to preserve); the two remaining files
+      (`0002_seed_catalogue.sql`, `0003_expand_catalogue.sql`) are pure,
+      order-independent data seeds that now correctly depend on schema
+      that already exists from `0001_init.sql`.
+
+- [x] Grid view long-press to open the item modal didn't work reliably on
+      touch (jitter canceled the timer); also fixed via a button/tap-target
+      affordance. (1.0.7)
+- [x] Polling ran every 7s regardless of `document.hidden`, and a second
+      `showApp()` could stack timers — interval now guarded on visibility
+      and cleared before re-arming. (1.0.8)
+- [x] `viewport` disabled pinch-zoom via `maximum-scale=1.0,
+      user-scalable=no` — removed for accessibility (T12). (1.0.9)
+- [x] Meal ingredients → shopping list: a "+ Legg ingredienser på
+      handlelisten" button on the meal modal lets you pick which of a
+      meal's stored ingredients to add (T1). (1.0.11)
 - [x] Item detail modal: rename the catalogue entry itself, or delete it
       entirely (cascades to every list it appears on). (1.0.6)
 - [x] Autocomplete: explicit "add exactly as typed" bypass option, plus
@@ -47,7 +68,8 @@ details live in `CHANGELOG.md`, not here.
 - [x] Autocomplete dropdown now dismissed on outside click instead of
       lingering over other UI. (1.0.6)
 - [x] Multi-owner lists, admin-created accounts, per-list isolation — see
-      `docs/multi-tenant-plan.md`. Migration `0005_multi_tenant.sql`.
+      `docs/multi-tenant-plan.md`. Originally migration `0005_multi_tenant.sql`,
+      now folded into the consolidated `migrations/0001_init.sql`.
 - [x] Login rate-limiting — `login_attempts` D1 table, 429 after 10 failures
       per IP in a 15-minute window. (1.0.4)
 - [x] Meal-plan date off-by-one — local date components instead of
@@ -71,7 +93,8 @@ details live in `CHANGELOG.md`, not here.
       content width (e.g. `max-width: 480px`, centered) instead of a
       separate desktop layout.
 - [x] Add a `notes` (free text — quantity, description, etc.) column to
-      `list_items`. Migration `0003_list_items_qty_notes.sql`.
+      `list_items`. Originally migration `0003_list_items_qty_notes.sql`,
+      now folded into the consolidated `migrations/0001_init.sql`.
 - [x] Quantity-aware "merge" when adding an item that's already on the
       list unbought (previously created duplicate rows against the same
       catalogue entry).

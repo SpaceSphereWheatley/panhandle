@@ -18,7 +18,7 @@ const VERSION = "1.0.19";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
-// migrations/0007_login_attempts.sql). Keyed by IP rather than username so a
+// migrations/0001_init.sql, the login_attempts table). Keyed by IP rather than username so a
 // flood of failed attempts against one account can't be used to lock out its
 // real owner.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
