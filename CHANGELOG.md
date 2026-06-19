@@ -14,6 +14,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.2.0] — 2026-06-19
+
+### Added
+- A meal editor: "+ Nytt måltid" (header of the Måltider tab, and inside
+  "Alle måltider") adds a meal to `meal_catalogue` with its ingredients
+  without assigning it to a day. Clicking any row in "Alle måltider" opens
+  the same editor to rename a meal, edit its ingredients, or delete it from
+  the catalogue entirely (`POST /api/meals`, `PATCH /api/meals/:id`,
+  `DELETE /api/meals/:id`) — previously meals could only be created/edited
+  implicitly by planning a day.
+
 ## [1.1.0] — 2026-06-19
 
 ### Added
