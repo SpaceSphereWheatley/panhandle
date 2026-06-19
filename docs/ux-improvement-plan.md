@@ -31,7 +31,7 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
 ## Backlog (grouped & sorted by priority)
 
 ### P0 — Core promise
-- [ ] **T1** — Deliberate "add ingredients to list" action on a planned meal:
+- [x] **T1** — Deliberate "add ingredients to list" action on a planned meal:
   a picker listing the meal's stored ingredients with checkboxes (pre-filtered
   to exclude ones already on the active list), adding only the selected ones.
   *Ingredients are already stored on `meal_catalogue`; nothing surfaces them today.*
@@ -68,7 +68,7 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   (the `weekOffset` clamp `[-1, 1]` and `/plan` 14-day delete).
 - [ ] **T15** — Support multiple meals per day (e.g. lunch/dinner slots).
   *Needs schema: `meal_plan` is one-row-per-date today (`UNIQUE(list_id, plan_date)`).*
-- [ ] **T16** — Warn that editing a meal's ingredients rewrites them for every
+- [x] **T16** — Warn that editing a meal's ingredients rewrites them for every
   date that meal appears on (they're keyed to the meal name, shared).
 - [ ] **T17** — "X varer igjen" summary on the shopping list.
 - [ ] **T18** — Make the "2 melk" leading-quantity shorthand discoverable.

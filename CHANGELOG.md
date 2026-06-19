@@ -13,6 +13,21 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.11] — 2026-06-19
+
+Phase 2 of the UX improvement plan (`docs/ux-improvement-plan.md`): the core
+meal → shopping list connection — the app's headline promise, finally wired up.
+
+### Added
+- T1: From the meal modal, a "+ Legg ingredienser på handlelisten" button opens
+  a picker of the meal's ingredients. The user chooses which to add; ingredients
+  already on the active list are shown but left unchecked, the rest are
+  pre-checked. Selected items are added (resolved to their catalogue name +
+  category) and a toast confirms how many landed. The meal is saved first so its
+  ingredients are remembered.
+- T16: A note in the meal modal clarifies that ingredients are stored per meal
+  name and shared across every date that meal appears on.
+
 ## [1.0.10] — 2026-06-19
 
 Phase 1 of the UX improvement plan (`docs/ux-improvement-plan.md`): shopping
