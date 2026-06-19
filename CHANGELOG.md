@@ -14,6 +14,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.1.0] — 2026-06-19
+
+### Added
+- Meal suggestions: `meal_catalogue` now tracks `times_planned`/`last_planned`
+  per meal (migration `0004_meal_usage_stats.sql`), and the meal-planning
+  modal shows quick-pick chips (`GET /api/meals/suggestions`) for meals eaten
+  often but not in the last 10 days.
+- "Alle måltider" — a read-only, filterable browse view of every saved meal
+  with its usage stats, opened from the Måltider tab.
+
 ## [1.0.19] — 2026-06-19
 
 ### Added

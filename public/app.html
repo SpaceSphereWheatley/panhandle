@@ -287,6 +287,26 @@
   .day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
   .day .resp { font-size: 13px; color: var(--tile); font-weight: 600; }
   .day .edit { float: right; background: none; border: none; color: var(--tile); font-size: 14px; font-family: inherit; }
+  .browse-link {
+    display: block; background: none; border: none; color: var(--tile); font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer; padding: 0;
+  }
+
+  /* Meal suggestion chips (meal modal) */
+  .meal-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+  .meal-chip {
+    background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 999px;
+    padding: 7px 12px; font-size: 13px; color: var(--text); cursor: pointer; font-family: inherit;
+  }
+  .meal-chip:active { background: var(--tile); color: #fff; }
+
+  /* "Alle måltider" browse modal */
+  .meal-browse-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--bg-sunken); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+  }
+  .meal-browse-row .name { font-size: 14px; font-weight: 600; min-width: 0; word-break: break-word; }
+  .meal-browse-row .stats { font-size: 11px; color: var(--muted); text-align: right; flex-shrink: 0; }
 
   /* Settings */
   .setrow {
@@ -501,6 +521,7 @@
         <button onclick="shiftWeek(0)">Denne uken</button>
         <button id="weekNextBtn" onclick="shiftWeek(1)">Neste ›</button>
       </div>
+      <button class="browse-link" style="margin-bottom:10px" onclick="openMealCatalogueModal()">Alle måltider ›</button>
       <div id="planContainer"></div>
     </section>
 
@@ -619,7 +640,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.19";
+const APP_VERSION = "1.1.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1314,9 +1335,11 @@ function onMealNameInput() {
 
 async function openMealModal(iso) {
   if (!listUsers.length) await loadListUsers();
-  const meals = await api("/meals");
+  const [meals, plan, suggestions] = await Promise.all([
+    api("/meals"), api(`/plan?from=${iso}&to=${iso}`),
+    api("/meals/suggestions").catch(() => [])
+  ]);
   mealModalCatalogue = meals;
-  const plan = await api(`/plan?from=${iso}&to=${iso}`);
   const current = plan[0] || {};
   const ingredients = parseIngredients(current.ingredients);
   const root = document.getElementById("modalRoot");
@@ -1324,6 +1347,11 @@ async function openMealModal(iso) {
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
       <div class="modal">
         <h3>Planlegg måltid</h3>
+        ${suggestions.length ? `
+        <label>Forslag (lenge siden, ofte brukt)</label>
+        <div class="meal-suggestions">
+          ${suggestions.map(m => `<button type="button" class="meal-chip" onclick="pickSuggestedMeal('${m.id}')">${escapeHtml(m.name)}</button>`).join("")}
+        </div>` : ""}
         <label>Måltid (velg eller skriv nytt)</label>
         <input id="mealName" list="mealList" oninput="onMealNameInput()"
                value="${current.meal_name ? escapeHtml(current.meal_name) : ""}" placeholder="F.eks. Taco">
@@ -1350,6 +1378,55 @@ async function openMealModal(iso) {
     </div>`;
 }
 function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
+
+// Fill the meal modal's name/ingredients from a clicked suggestion chip,
+// same effect as picking the same name from the datalist.
+function pickSuggestedMeal(id) {
+  const match = mealModalCatalogue.find(m => String(m.id) === String(id));
+  if (!match) return;
+  document.getElementById("mealName").value = match.name;
+  document.getElementById("mealIngredients").value = parseIngredients(match.ingredients).join(", ");
+}
+
+let mealBrowseCatalogue = []; // sorted meal_catalogue rows, cached while the "Alle måltider" modal is open
+
+function renderMealBrowseRows(filter) {
+  const f = filter.trim().toLowerCase();
+  const rows = f ? mealBrowseCatalogue.filter(m => m.name.toLowerCase().includes(f)) : mealBrowseCatalogue;
+  if (!rows.length) return `<p class="cred-note">Ingen lagrede måltider${f ? " som matcher søket" : " ennå"}.</p>`;
+  return rows.map(m => {
+    const count = parseIngredients(m.ingredients).length;
+    const last = m.last_planned ? new Date(m.last_planned).toLocaleDateString("no-NO", { day: "numeric", month: "short", year: "numeric" }) : "Aldri";
+    return `<div class="meal-browse-row">
+      <span class="name">${escapeHtml(m.name)}</span>
+      <span class="stats">${m.times_planned}× planlagt · sist ${last} · ${count} ingredienser</span>
+    </div>`;
+  }).join("");
+}
+
+function filterMealBrowse(value) {
+  document.getElementById("mealBrowseList").innerHTML = renderMealBrowseRows(value);
+}
+
+// Read-only browse of every saved meal (meal_catalogue), with usage stats and
+// a client-side name filter — there's no server-side search endpoint since the
+// whole catalogue is already fetched by GET /meals for the planner's datalist.
+async function openMealCatalogueModal() {
+  const meals = await api("/meals");
+  mealBrowseCatalogue = [...meals].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name));
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Alle måltider</h3>
+        <input id="mealBrowseFilter" placeholder="Søk..." oninput="filterMealBrowse(this.value)">
+        <div id="mealBrowseList" style="margin-top:10px;max-height:50vh;overflow-y:auto">${renderMealBrowseRows("")}</div>
+        <div class="actions">
+          <button class="cancel" onclick="closeModal()">Lukk</button>
+        </div>
+      </div>
+    </div>`;
+}
 
 async function savePlan(iso) {
   const meal_name = document.getElementById("mealName").value.trim();
