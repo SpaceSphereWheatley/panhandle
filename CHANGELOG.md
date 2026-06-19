@@ -13,7 +13,7 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
-## [1.0.18] — 2026-06-19
+## [1.0.19] — 2026-06-19
 
 ### Added
 - A manual "Installer app" row on the Profile page that works even when the
@@ -22,6 +22,16 @@ project uses simple `MAJOR.MINOR.PATCH` numbers.
   an uninstall — previously this left no way to install). Shows an install
   button when the browser-native prompt is available, otherwise shows
   platform-specific manual instructions (iOS Safari vs. other browsers).
+  Placed next to the theme toggle so account info, preferences, owner/admin
+  actions, security and logout stay in clean logical groups.
+
+## [1.0.18] — 2026-06-19
+
+### Changed
+- Meal names typed into the meal planner are now capitalised on save too, using
+  the same `capitalizeName` helper as item names (1.0.17 covered items but not
+  meals). A meal entered as "taco" is stored "Taco". Lookups stay
+  case-insensitive, so existing meal names are unaffected.
 
 ## [1.0.17] — 2026-06-19
 
