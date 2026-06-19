@@ -13,6 +13,16 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.18] — 2026-06-19
+
+### Added
+- A manual "Installer app" row on the Profile page that works even when the
+  browser's `beforeinstallprompt` event never fires (it only fires under
+  browser-specific heuristics, and stops firing after repeated dismissals or
+  an uninstall — previously this left no way to install). Shows an install
+  button when the browser-native prompt is available, otherwise shows
+  platform-specific manual instructions (iOS Safari vs. other browsers).
+
 ## [1.0.17] — 2026-06-19
 
 ### Changed

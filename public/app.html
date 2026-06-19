@@ -511,6 +511,12 @@
       <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
       <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
+      <div class="setrow hidden" id="installRow">
+        <div class="k" style="margin-bottom:8px">Installer app</div>
+        <div class="v" id="installRowText" style="margin-bottom:8px"></div>
+        <button id="installRowBtn" class="btn-primary hidden" onclick="doInstall()">Installer</button>
+      </div>
+
       <div class="setrow">
         <div class="k" style="margin-bottom:8px">Tema</div>
         <div class="theme-toggle" id="themeToggle">
@@ -613,7 +619,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.17";
+const APP_VERSION = "1.0.18";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -687,6 +693,8 @@ async function doLogin() {
     localStorage.setItem("ph_is_admin", isAdmin ? "1" : "0");
     localStorage.setItem("ph_is_owner", isOwner ? "1" : "0");
     showApp();
+    showInstallBanner();
+    updateInstallRow();
   } catch { errEl.textContent = "Nettverksfeil"; }
   finally { btn.disabled = false; btn.textContent = "Logg inn"; }
 }
@@ -1766,19 +1774,45 @@ async function doInstall() {
   deferredInstallEvent.prompt();
   await deferredInstallEvent.userChoice;
   deferredInstallEvent = null;
+  updateInstallRow();
+}
+// Manual fallback in the Profile tab: beforeinstallprompt only fires under
+// browser-specific heuristics (and stops firing after repeated dismissals or
+// an uninstall), so this row is the only reliable way back into installing.
+function updateInstallRow() {
+  const row = document.getElementById("installRow");
+  const text = document.getElementById("installRowText");
+  const btn = document.getElementById("installRowBtn");
+  if (!row) return;
+  if (isStandalone()) {
+    row.classList.add("hidden");
+    return;
+  }
+  row.classList.remove("hidden");
+  if (deferredInstallEvent) {
+    text.textContent = "";
+    btn.classList.remove("hidden");
+  } else if (isIos()) {
+    text.textContent = 'Trykk del-ikonet ⎋ i Safari og velg "Legg til på Hjemskjerm".';
+    btn.classList.add("hidden");
+  } else {
+    text.textContent = 'Bruk nettleserens meny (⋮) og velg "Installer app" eller "Legg til på Hjemskjerm".';
+    btn.classList.add("hidden");
+  }
 }
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredInstallEvent = e;
-  if (token) showInstallBanner();
+  if (token) { showInstallBanner(); updateInstallRow(); }
 });
 window.addEventListener("appinstalled", () => {
   localStorage.setItem("ph_install_dismissed", "1");
   document.getElementById("installBanner").classList.add("hidden");
+  updateInstallRow();
 });
 
 // boot
-if (token) { showApp(); showInstallBanner(); }
+if (token) { showApp(); showInstallBanner(); updateInstallRow(); }
 </script>
 </body>
 </html>
