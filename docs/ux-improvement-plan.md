@@ -50,15 +50,15 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   dumping to the login screen on a 401 (handle in the `api()` wrapper).
 
 ### P2 — Cheap, high-impact wins
-- [ ] **T7** — Enter-to-submit on login (wrap fields in a `<form>` or add a
+- [x] **T7** — Enter-to-submit on login (wrap fields in a `<form>` or add a
   keydown handler).
-- [ ] **T8** — Loading / disabled state on the login button to prevent
+- [x] **T8** — Loading / disabled state on the login button to prevent
   double-submit and the "frozen" feel.
-- [ ] **T9** — Show-password toggle (login + change-password fields).
-- [ ] **T11** — Make the destructive "Slett vare fra katalog" clearly
+- [x] **T9** — Show-password toggle (login + change-password fields).
+- [x] **T11** — Make the destructive "Slett vare fra katalog" clearly
   global/cross-list in both wording and styling (it removes the catalogue entry
   from every list, past and future).
-- [ ] **T12** — Re-enable pinch-zoom: drop `maximum-scale=1.0, user-scalable=no`
+- [x] **T12** — Re-enable pinch-zoom: drop `maximum-scale=1.0, user-scalable=no`
   from the viewport meta in `app.html`.
 - [ ] **T13** — Default-collapse "Nylig kjøpt" and auto-trim it (recent N or
   last 14 days, mirroring the `meal_plan` cleanup).
@@ -74,7 +74,7 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
 - [ ] **T18** — Make the "2 melk" leading-quantity shorthand discoverable.
 - [ ] **T19** — Contrast pass on muted (`#8B7D6E`) and struck-through "bought"
   text.
-- [ ] **T20** — `aria-label`s on icon-only buttons (list/grid view toggle, card
+- [x] **T20** — `aria-label`s on icon-only buttons (list/grid view toggle, card
   actions).
 - [ ] **T21** — Dark mode.
 - [ ] **T22** — Move version / api-mismatch plumbing out of the user-facing
