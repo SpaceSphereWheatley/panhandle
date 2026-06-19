@@ -4,26 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="author" content="Mohibb Malik">
-<meta name="theme-color" content="#1F3137">
+<meta name="theme-color" content="#F5F1ED">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <title>Panhandle</title>
 <style>
   :root {
-    --bg: #1F3137;
-    --bg-elevated: #28424A;
-    --bg-sunken: #182629;
-    --tile: #5BB2A7;
-    --tile-dark: #468D85;
-    --accent: #ED6A6A;
-    --accent-dark: #C8504F;
-    --text: #F3F8F7;
-    --muted: #9FB6B3;
-    --border: rgba(255,255,255,0.09);
-    --bought-bg: #324A4C;
-    --green: #4CAF7D;
-    --danger: #ED6A6A;
+    --bg: #F5F1ED;
+    --bg-elevated: #E3DDD4;
+    --bg-sunken: #C9C2B8;
+    --tile: #9CAF88;
+    --tile-dark: #7A956F;
+    --accent: #556B2F;
+    --accent-dark: #3D4C1F;
+    --text: #3D3D3D;
+    --muted: #8B7D6E;
+    --border: rgba(61,61,61,0.08);
+    --bought-bg: #D9D0C3;
+    --green: #C89B7B;
+    --danger: #A85C3D;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -342,6 +342,14 @@
   .modal .actions button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
   .modal .save { background: var(--tile); color: #fff; }
   .modal .cancel { background: var(--bg-sunken); color: var(--text); }
+
+  /* Button variants */
+  .btn-primary {
+    width: 100%; padding: 12px; border-radius: 10px; border: none;
+    background: var(--tile); color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-primary.mt-8 { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -420,8 +428,7 @@
         <div id="addMemberRow" style="margin-top:12px">
           <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
                  style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="addMember()" id="addMemberBtn"
-                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+          <button onclick="addMember()" id="addMemberBtn" class="btn-primary mt-8">
             + Legg til bruker</button>
           <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
         </div>
@@ -439,8 +446,7 @@
                style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
         <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
                style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
-        <button onclick="changePassword()"
-                style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600">
+        <button onclick="changePassword()" class="btn-primary">
           Lagre nytt passord</button>
         <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
       </div>
@@ -465,8 +471,7 @@
           <div class="k" style="margin-bottom:10px">Opprett eier (ny liste)</div>
           <input id="newOwnerName" placeholder="Brukernavn for ny eier"
                  style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="createOwner()" id="createOwnerBtn"
-                  style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:none;background:var(--tile);color:#fff;font-size:15px;font-weight:600">
+          <button onclick="createOwner()" id="createOwnerBtn" class="btn-primary mt-8">
             + Opprett eier</button>
           <div id="ownerMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
         </div>
