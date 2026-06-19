@@ -201,7 +201,8 @@
   .card-wrap .card { margin-bottom: 0; touch-action: pan-y; }
 
   /* View toggle */
-  .view-toggle { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
+  .list-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .view-toggle { display: flex; justify-content: flex-end; gap: 6px; }
   .view-toggle button {
     border: 1px solid var(--border); background: var(--bg-elevated); color: var(--muted);
     border-radius: 10px; font-size: 16px; padding: 6px 10px; cursor: pointer;
@@ -244,7 +245,7 @@
   .empty-state {
     text-align: center; color: var(--muted); padding: 48px 16px; font-size: 15px;
   }
-  .list-summary { font-size: 13px; color: var(--muted); margin-bottom: 10px; min-height: 16px; }
+  .list-summary { font-size: 13px; color: var(--muted); min-height: 16px; }
 
   .sync.offline { color: var(--accent); }
 
@@ -481,11 +482,13 @@
         <button onclick="addItem()" aria-label="Legg til vare">+</button>
         <div id="suggestions" class="suggestions hidden"></div>
       </div>
-      <div class="view-toggle">
-        <button id="viewListBtn" onclick="setView('list')" aria-label="Listevisning" title="Listevisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
-        <button id="viewGridBtn" onclick="setView('grid')" aria-label="Rutenettvisning" title="Rutenettvisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
+      <div class="list-controls">
+        <div id="listSummary" class="list-summary"></div>
+        <div class="view-toggle">
+          <button id="viewListBtn" onclick="setView('list')" aria-label="Listevisning" title="Listevisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
+          <button id="viewGridBtn" onclick="setView('grid')" aria-label="Rutenettvisning" title="Rutenettvisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
+        </div>
       </div>
-      <div id="listSummary" class="list-summary"></div>
       <div id="listContainer"></div>
       <div id="recentContainer"></div>
     </section>
@@ -610,7 +613,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.14";
+const APP_VERSION = "1.0.15";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";

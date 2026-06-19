@@ -13,6 +13,13 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.15] — 2026-06-19
+
+### Changed
+- Shopping list: the "N varer igjen" count now shares a row with the list/grid
+  view-toggle buttons (count on the left, toggle on the right) instead of
+  sitting on its own line below them.
+
 ## [1.0.14] — 2026-06-19
 
 Completes Phase 4 / the UX improvement plan. (T15, multiple meals per day, was
