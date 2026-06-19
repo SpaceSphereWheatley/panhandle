@@ -37,16 +37,16 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   *Ingredients are already stored on `meal_catalogue`; nothing surfaces them today.*
 
 ### P1 — Reliability & data safety (every-session friction)
-- [ ] **T2** — Optimistic UI for toggle / add / delete: update the DOM
+- [x] **T2** — Optimistic UI for toggle / add / delete: update the DOM
   immediately, reconcile with the server in the background.
-- [ ] **T3** — Surface offline / failed actions instead of clearing the input as
+- [x] **T3** — Surface offline / failed actions instead of clearing the input as
   if the action succeeded (`addItem`/`toggleItem`/`delItem` currently swallow
   errors).
-- [ ] **T4** — Undo (or at minimum a confirm) on item delete; de-crowd the
+- [x] **T4** — Undo (or at minimum a confirm) on item delete; de-crowd the
   trash / more / check cluster on the card.
-- [ ] **T5** — Feedback when an add merges into an existing line (the API already
+- [x] **T5** — Feedback when an add merges into an existing line (the API already
   returns `duplicate: true` + new `qty`; the UI ignores it).
-- [ ] **T6** — Graceful session-expiry: explain the logout instead of silently
+- [x] **T6** — Graceful session-expiry: explain the logout instead of silently
   dumping to the login screen on a 401 (handle in the `api()` wrapper).
 
 ### P2 — Cheap, high-impact wins
