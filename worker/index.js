@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.17";
+const VERSION = "1.0.18";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -806,7 +806,10 @@ export default {
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { plan_date, meal_name, responsible, ingredients } = body;
       if (!plan_date || !meal_name) return authedJson({ error: "Mangler dato eller måltid" }, 400);
-      const clean = meal_name.trim();
+      // Capitalise new meal names the same way item names are (capitalizeName),
+      // so a meal typed in the planner is stored "Taco", not "taco". Lookups are
+      // COLLATE NOCASE, so this only affects how a genuinely new name is stored.
+      const clean = capitalizeName(meal_name);
       // ingredients (TODO #9) is a JSON-encoded array, stored once per meal
       // name in meal_catalogue and shared across every occurrence of that
       // meal — undefined means "leave whatever's stored alone".
