@@ -119,15 +119,19 @@
     letter-spacing: 0.4px; margin: 4px 0 6px; }
   .mock-head .mock-subhead { color: var(--text); opacity: .65; }
   .mock-grid-tiles {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;
-    background: var(--bg-sunken); border-radius: 8px; overflow: hidden;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+    background: var(--bg-sunken); border-radius: 10px; overflow: hidden;
   }
   .mock-tile {
-    background: var(--tile); color: #fff; padding: 8px 4px; text-align: center;
-    font-size: 10px; font-weight: 500; min-height: 44px;
-    display: flex; align-items: center; justify-content: center;
+    background: var(--tile); color: #fff; padding: 8px 6px; text-align: center;
+    height: 76px; box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   }
-  .mock-tile.bought { background: var(--bought-bg); color: var(--muted); text-decoration: line-through; }
+  .mock-tile .badge { font-size: 22px; font-weight: 700; line-height: 1; }
+  .mock-tile .name { font-size: 11px; font-weight: 500; line-height: 1.2; }
+  .mock-tile.bought { background: var(--bought-bg); color: var(--muted); }
+  .mock-tile.bought .badge { opacity: .45; }
+  .mock-tile.bought .name { text-decoration: line-through; }
 
   /* meal plan mock — vertical day cards, matching the real app */
   .mock-week-nav {
@@ -264,12 +268,12 @@
           <div class="mock-head">Handleliste<span class="mock-subhead" style="margin:0">Rutenettvisning</span></div>
           <div class="mock-body">
             <div class="mock-grid-tiles">
-              <div class="mock-tile">Laksefilet</div>
-              <div class="mock-tile">Tacolefse</div>
-              <div class="mock-tile">Kremost</div>
-              <div class="mock-tile">Salat</div>
-              <div class="mock-tile bought">Pasta</div>
-              <div class="mock-tile bought">Parmesan</div>
+              <div class="mock-tile"><span class="badge">L</span><span class="name">Laksefilet</span></div>
+              <div class="mock-tile"><span class="badge">T</span><span class="name">Tacolefse</span></div>
+              <div class="mock-tile"><span class="badge">K</span><span class="name">Kremost</span></div>
+              <div class="mock-tile"><span class="badge">S</span><span class="name">Salat</span></div>
+              <div class="mock-tile bought"><span class="badge">P</span><span class="name">Pasta</span></div>
+              <div class="mock-tile bought"><span class="badge">P</span><span class="name">Parmesan</span></div>
             </div>
           </div>
         </div>
