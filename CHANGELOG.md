@@ -13,6 +13,25 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.12] — 2026-06-19
+
+Phase 3 (partial) of the UX improvement plan (`docs/ux-improvement-plan.md`):
+recent-list and meal-planner polish. (T15, multiple meals per day, is deferred —
+it needs a schema migration.)
+
+### Added
+- T17: A "N varer igjen" summary above the shopping list (and "Alt er handlet 🎉"
+  when nothing's left).
+
+### Changed
+- T13: "Nylig kjøpt" now starts collapsed (still toggleable, choice remembered)
+  and renders at most the 30 most-recent bought items, so the history can't grow
+  unbounded.
+- T14: The meal planner can now look up to 4 weeks ahead (still 1 week back) for
+  planning further out.
+- T18: The add-item field now hints the quantity shorthand in its placeholder
+  ("Legg til vare – f.eks. «2 melk»").
+
 ## [1.0.11] — 2026-06-19
 
 Phase 2 of the UX improvement plan (`docs/ux-improvement-plan.md`): the core

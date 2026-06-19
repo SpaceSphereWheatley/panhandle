@@ -60,18 +60,18 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   from every list, past and future).
 - [x] **T12** — Re-enable pinch-zoom: drop `maximum-scale=1.0, user-scalable=no`
   from the viewport meta in `app.html`.
-- [ ] **T13** — Default-collapse "Nylig kjøpt" and auto-trim it (recent N or
+- [x] **T13** — Default-collapse "Nylig kjøpt" and auto-trim it (recent N or
   last 14 days, mirroring the `meal_plan` cleanup).
 
 ### P3 — Enhancements
-- [ ] **T14** — Extend the meal-planning horizon beyond last/this/next week
+- [x] **T14** — Extend the meal-planning horizon beyond last/this/next week
   (the `weekOffset` clamp `[-1, 1]` and `/plan` 14-day delete).
 - [ ] **T15** — Support multiple meals per day (e.g. lunch/dinner slots).
   *Needs schema: `meal_plan` is one-row-per-date today (`UNIQUE(list_id, plan_date)`).*
 - [x] **T16** — Warn that editing a meal's ingredients rewrites them for every
   date that meal appears on (they're keyed to the meal name, shared).
-- [ ] **T17** — "X varer igjen" summary on the shopping list.
-- [ ] **T18** — Make the "2 melk" leading-quantity shorthand discoverable.
+- [x] **T17** — "X varer igjen" summary on the shopping list.
+- [x] **T18** — Make the "2 melk" leading-quantity shorthand discoverable.
 - [ ] **T19** — Contrast pass on muted (`#8B7D6E`) and struck-through "bought"
   text.
 - [x] **T20** — `aria-label`s on icon-only buttons (list/grid view toggle, card
