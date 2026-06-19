@@ -13,6 +13,19 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.13] — 2026-06-19
+
+Phase 4 (partial) of the UX improvement plan (`docs/ux-improvement-plan.md`):
+look & feel. (T21, dark mode, is deferred — the palette has variables doing
+double duty as both background and text, so it needs careful per-usage
+decoupling and visual QA rather than a blind variable swap.)
+
+### Changed
+- T19: Darkened `--muted` (#8B7D6E → #6E6253) so secondary labels and the
+  struck-through "bought" text meet AA contrast.
+- T22: The Profile now shows a plain version number; the app-vs-API mismatch
+  detail (deploy debugging) moved to the Admin subpage.
+
 ## [1.0.12] — 2026-06-19
 
 Phase 3 (partial) of the UX improvement plan (`docs/ux-improvement-plan.md`):

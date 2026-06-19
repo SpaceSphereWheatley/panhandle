@@ -72,12 +72,12 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   date that meal appears on (they're keyed to the meal name, shared).
 - [x] **T17** — "X varer igjen" summary on the shopping list.
 - [x] **T18** — Make the "2 melk" leading-quantity shorthand discoverable.
-- [ ] **T19** — Contrast pass on muted (`#8B7D6E`) and struck-through "bought"
+- [x] **T19** — Contrast pass on muted (`#8B7D6E`) and struck-through "bought"
   text.
 - [x] **T20** — `aria-label`s on icon-only buttons (list/grid view toggle, card
   actions).
 - [ ] **T21** — Dark mode.
-- [ ] **T22** — Move version / api-mismatch plumbing out of the user-facing
+- [x] **T22** — Move version / api-mismatch plumbing out of the user-facing
   Profile into the admin subpage (or a debug-only view).
 
 ### Decided against
