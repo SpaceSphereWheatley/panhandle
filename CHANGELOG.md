@@ -5,13 +5,34 @@ in two places (there is no build step to inject it) and bumped together on each
 release:
 
 - `worker/index.js` → `const VERSION`
-- `public/index.html` → `const APP_VERSION`
+- `public/app.html` → `const APP_VERSION`
 
 The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 (Worker) versions, so a deploy where only one half landed is visible at a glance.
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
+
+## [1.0.9] — 2026-06-19
+
+Phase 0 of the UX improvement plan (`docs/ux-improvement-plan.md`): quick,
+low-risk frontend wins.
+
+### Added
+- T9: Show/hide password toggle on the login screen and both change-password
+  fields.
+- T8: Login button now shows a "Logger inn..." state and is disabled while the
+  request is in flight, preventing double-submit.
+- T20: `aria-label`s on icon-only buttons (add, list/grid view toggle, card
+  edit/delete, install-banner dismiss).
+
+### Changed
+- T12: Re-enabled pinch-to-zoom (removed `maximum-scale=1.0, user-scalable=no`
+  from the viewport meta) for accessibility.
+- T7: Pressing Enter in the username or password field now submits the login.
+- T11: Clarified the "Slett vare fra katalog" confirmation — it removes the
+  item from this list's saved items (no longer suggested) and only affects this
+  list. Also corrected a stale code comment that claimed the delete was global.
 
 ## [1.0.8] — 2026-06-19
 

@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="author" content="Mohibb Malik">
 <meta name="theme-color" content="#F5F1ED">
 <link rel="manifest" href="/manifest.json">
@@ -45,7 +45,21 @@
   #login input { background: var(--bg-elevated); color: var(--text); }
   #login input::placeholder { color: var(--muted); }
   #login button { background: var(--tile); color: #fff; border: none; font-weight: 700; cursor: pointer; }
+  #login button:disabled { opacity: .6; cursor: default; }
   #loginErr { color: var(--accent); font-size: 14px; min-height: 18px; }
+
+  /* Show/hide password toggle (login + change-password fields) */
+  .pw-wrap { position: relative; width: 100%; }
+  #login .pw-wrap { max-width: 320px; }
+  /* Listed twice so the id-scoped selector outranks `#login button`
+     (width:100%, green bg, etc.) for the toggle inside the login screen. */
+  .pw-wrap > .pw-toggle,
+  #login .pw-wrap > .pw-toggle {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: auto; max-width: none; background: none; border: none;
+    color: var(--muted); font-size: 13px; font-weight: 600; padding: 8px 10px;
+    cursor: pointer; font-family: inherit;
+  }
 
   header {
     background: var(--bg-sunken); color: var(--text); padding: 16px 20px;
@@ -369,9 +383,15 @@
 <!-- LOGIN -->
 <div id="login">
   <h1>Panhandle</h1>
-  <input id="luser" placeholder="Brukernavn" autocomplete="username">
-  <input id="lpass" type="password" placeholder="Passord" autocomplete="current-password">
-  <button onclick="doLogin()">Logg inn</button>
+  <input id="luser" placeholder="Brukernavn" autocomplete="username"
+         onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="pw-wrap">
+    <input id="lpass" type="password" placeholder="Passord" autocomplete="current-password"
+           style="padding-right:64px" onkeydown="if(event.key==='Enter')doLogin()">
+    <button type="button" class="pw-toggle" onclick="togglePw('lpass',this)"
+            aria-label="Vis eller skjul passord">Vis</button>
+  </div>
+  <button id="loginBtn" onclick="doLogin()">Logg inn</button>
   <div id="loginErr"></div>
 </div>
 
@@ -391,12 +411,12 @@
       <div class="addbar">
         <input id="addInput" placeholder="Legg til vare..." autocomplete="off"
                oninput="onAddInput()" onkeydown="if(event.key==='Enter')addItem()">
-        <button onclick="addItem()">+</button>
+        <button onclick="addItem()" aria-label="Legg til vare">+</button>
         <div id="suggestions" class="suggestions hidden"></div>
       </div>
       <div class="view-toggle">
-        <button id="viewListBtn" onclick="setView('list')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
-        <button id="viewGridBtn" onclick="setView('grid')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
+        <button id="viewListBtn" onclick="setView('list')" aria-label="Listevisning" title="Listevisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/></svg></button>
+        <button id="viewGridBtn" onclick="setView('grid')" aria-label="Rutenettvisning" title="Rutenettvisning"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></button>
       </div>
       <div id="listContainer"></div>
       <div id="recentContainer"></div>
@@ -442,10 +462,18 @@
 
       <div class="setrow">
         <div class="k" style="margin-bottom:10px">Bytt passord</div>
-        <input id="pwCurrent" type="password" placeholder="Nåværende passord"
-               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
-        <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
-               style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
+        <div class="pw-wrap" style="margin-bottom:8px">
+          <input id="pwCurrent" type="password" placeholder="Nåværende passord"
+                 style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
+          <button type="button" class="pw-toggle" onclick="togglePw('pwCurrent',this)"
+                  aria-label="Vis eller skjul passord">Vis</button>
+        </div>
+        <div class="pw-wrap" style="margin-bottom:8px">
+          <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
+                 style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
+          <button type="button" class="pw-toggle" onclick="togglePw('pwNew',this)"
+                  aria-label="Vis eller skjul passord">Vis</button>
+        </div>
         <button onclick="changePassword()" class="btn-primary">
           Lagre nytt passord</button>
         <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
@@ -504,7 +532,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.8";
+const APP_VERSION = "1.0.9";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -557,7 +585,9 @@ async function doLogin() {
   const username = document.getElementById("luser").value.trim();
   const password = document.getElementById("lpass").value;
   const errEl = document.getElementById("loginErr");
+  const btn = document.getElementById("loginBtn");
   errEl.textContent = "";
+  btn.disabled = true; btn.textContent = "Logger inn...";
   try {
     const res = await fetch(API + "/login", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -573,6 +603,15 @@ async function doLogin() {
     localStorage.setItem("ph_is_owner", isOwner ? "1" : "0");
     showApp();
   } catch { errEl.textContent = "Nettverksfeil"; }
+  finally { btn.disabled = false; btn.textContent = "Logg inn"; }
+}
+
+// Show/hide a password field, flipping the toggle button's label.
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  const reveal = el.type === "password";
+  el.type = reveal ? "text" : "password";
+  btn.textContent = reveal ? "Skjul" : "Vis";
 }
 
 function logout() {
@@ -788,8 +827,8 @@ function card(it) {
       <div class="meta" style="font-style:italic">${it.notes ? escapeHtml(it.notes) : ""}</div>
     </div>
     <div style="display:flex;align-items:center">
-      <button class="more" onclick="openItemModal(${it.id})">${uiIcon("more", 18)}</button>
-      <button class="del" onclick="delItem(${it.id})">${uiIcon("trash", 18)}</button>
+      <button class="more" onclick="openItemModal(${it.id})" aria-label="Rediger vare">${uiIcon("more", 18)}</button>
+      <button class="del" onclick="delItem(${it.id})" aria-label="Slett vare">${uiIcon("trash", 18)}</button>
       <div class="check"></div>
     </div>`;
   const bg = document.createElement("div");
@@ -876,12 +915,14 @@ async function saveItemEdit(id) {
   loadList();
 }
 
-// Deletes the catalogue entry entirely (not just this list row) — removes the
-// item from every list it appears on, past and present.
+// Deletes this list's catalogue entry for the item (scoped to the user's
+// list_id server-side) — the name is forgotten for this list, so it stops
+// being suggested by autocomplete and its current row is removed. Other
+// lists' catalogues are unaffected.
 async function deleteFromCatalogue(id) {
   const it = lastItems.find(x => x.id === id);
   if (!it) return;
-  if (!confirm(`Slette «${it.name}» permanent fra katalogen? Dette fjerner varen fra hele listen.`)) return;
+  if (!confirm(`Fjerne «${it.name}» helt fra listens lagrede varer? Den slettes fra handlelisten og blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`)) return;
   await api(`/list/${id}/catalogue`, { method: "DELETE" });
   closeModal();
   catalogue = await api("/catalogue");
@@ -1364,14 +1405,14 @@ function showInstallBanner() {
       <span class="ico">${uiIcon("download", 22)}</span>
       <span class="txt">Installer Panhandle på hjemskjermen for raskere tilgang.</span>
       <button class="install" onclick="doInstall()">Installer</button>
-      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
+      <button class="dismiss" onclick="dismissInstallBanner()" aria-label="Lukk">${uiIcon("close", 16)}</button>`;
     banner.classList.remove("hidden");
   } else if (isIos()) {
     banner.innerHTML = `
       <span class="ico">${uiIcon("download", 22)}</span>
       <span class="txt">Legg til Panhandle på hjemskjermen: trykk del-ikonet
         <span style="font-weight:600">⎋</span> og velg "Legg til på Hjemskjerm".</span>
-      <button class="dismiss" onclick="dismissInstallBanner()">${uiIcon("close", 16)}</button>`;
+      <button class="dismiss" onclick="dismissInstallBanner()" aria-label="Lukk">${uiIcon("close", 16)}</button>`;
     banner.classList.remove("hidden");
   }
 }
