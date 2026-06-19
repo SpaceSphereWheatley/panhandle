@@ -13,6 +13,14 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.18] — 2026-06-19
+
+### Changed
+- Meal names typed into the meal planner are now capitalised on save too, using
+  the same `capitalizeName` helper as item names (1.0.17 covered items but not
+  meals). A meal entered as "taco" is stored "Taco". Lookups stay
+  case-insensitive, so existing meal names are unaffected.
+
 ## [1.0.17] — 2026-06-19
 
 ### Changed
