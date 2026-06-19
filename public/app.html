@@ -354,6 +354,25 @@
     font-family: inherit; flex-shrink: 0;
   }
 
+  /* Ingredient -> shopping list picker (meal modal) */
+  .ing-add-btn {
+    width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--tile); background: var(--bg-sunken); color: var(--accent-dark);
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .ing-list { max-height: 50vh; overflow-y: auto; margin: 6px 0 4px; }
+  .ing-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 4px;
+    border-bottom: 1px solid var(--border); cursor: pointer; font-size: 16px;
+  }
+  .ing-row:last-child { border-bottom: none; }
+  .ing-row input[type="checkbox"] {
+    width: 20px; height: 20px; padding: 0; margin: 0; flex-shrink: 0;
+    accent-color: var(--tile); background: none; border: none;
+  }
+  .ing-row .ing-name { flex: 1; min-width: 0; word-break: break-word; }
+  .ing-row .ing-tag { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
   /* Modal */
   .modal-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
@@ -550,7 +569,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.10";
+const APP_VERSION = "1.0.11";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1217,6 +1236,10 @@ async function openMealModal(iso) {
         </datalist>
         <label>Ingredienser (kommaseparert)</label>
         <input id="mealIngredients" value="${escapeHtml(ingredients.join(", "))}" placeholder="F.eks. Kjøttdeig, Tortilla, Ost">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          Ingredienser huskes per måltid og deles for alle dager med samme navn.</div>
+        <button type="button" class="ing-add-btn" onclick="pickIngredients('${iso}')">
+          + Legg ingredienser på handlelisten</button>
         <label>Ansvarlig</label>
         <select id="mealResp">
           <option value=""${current.responsible ? "" : " selected"}>Ingen</option>
@@ -1245,6 +1268,90 @@ async function savePlan(iso) {
 async function deletePlan(iso) {
   await api(`/plan/${iso}`, { method: "DELETE" });
   closeModal(); loadPlan();
+}
+
+// ---------- meal ingredients -> shopping list (T1) ----------
+// Deliberate flow: from the meal modal, the user opens a picker of this meal's
+// ingredients and chooses which to add. Ingredients already on the active list
+// are shown but left unchecked (the user may already have the rest).
+async function pickIngredients(iso) {
+  const meal_name = document.getElementById("mealName").value.trim();
+  const rawIng = document.getElementById("mealIngredients").value
+    .split(",").map(s => s.trim()).filter(Boolean);
+  if (!rawIng.length) { toast("Legg inn ingredienser først"); return; }
+  // Persist the meal first so the typed ingredients are remembered and the day
+  // is saved — then we can safely swap the modal over to the picker.
+  if (meal_name) {
+    const responsible = document.getElementById("mealResp").value;
+    try {
+      await api("/plan", { method: "POST",
+        body: JSON.stringify({ plan_date: iso, meal_name, responsible, ingredients: rawIng }) });
+    } catch { toast("Kunne ikke lagre måltidet – sjekk nettforbindelsen", true); return; }
+  }
+  await openIngredientPicker(rawIng, iso);
+}
+
+async function openIngredientPicker(rawIngredients, iso) {
+  // Snapshot what's currently on the list (unbought) so we can pre-check only
+  // the ingredients that are missing. Offline: treat nothing as on-list.
+  let onList = new Set();
+  try {
+    const items = await api("/list");
+    onList = new Set(items.filter(it => !it.bought).map(it => it.name.toLowerCase()));
+  } catch { /* offline — show everything checked */ }
+
+  // Resolve each ingredient to its catalogue form (right name + category), and
+  // drop duplicates within the list itself.
+  const seen = new Set();
+  const rows = [];
+  for (const raw of rawIngredients) {
+    const match = matchCatalogue(raw)[0];
+    const name = match ? match.name : raw;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ name, category: match ? match.category : "Annet", already: onList.has(key) });
+  }
+
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this){closeModal();loadPlan();}">
+      <div class="modal" id="ingPicker">
+        <h3>Legg til på handlelisten</h3>
+        <p class="cred-note">Velg hvilke ingredienser som skal på listen.</p>
+        <div class="ing-list">
+          ${rows.map(r => `
+            <label class="ing-row">
+              <input type="checkbox" data-name="${escapeHtml(r.name)}"
+                     data-category="${escapeHtml(r.category)}" ${r.already ? "" : "checked"}>
+              <span class="ing-name">${escapeHtml(r.name)}</span>
+              ${r.already ? `<span class="ing-tag">allerede på listen</span>` : ""}
+            </label>`).join("")}
+        </div>
+        <div class="actions">
+          <button class="cancel" onclick="closeModal();loadPlan()">Avbryt</button>
+          <button class="save" onclick="confirmAddIngredients()">Legg til valgte</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function confirmAddIngredients() {
+  const checked = [...document.querySelectorAll('#ingPicker input[type="checkbox"]:checked')];
+  if (!checked.length) { closeModal(); loadPlan(); return; }
+  let added = 0, failed = 0;
+  for (const box of checked) {
+    try {
+      await api("/list", { method: "POST", body: JSON.stringify({
+        name: box.dataset.name, qty: 1, category: box.dataset.category }) });
+      added++;
+    } catch { failed++; }
+  }
+  catalogue = await api("/catalogue");
+  closeModal();
+  loadPlan();
+  if (failed) toast(`${added} lagt til, ${failed} feilet – sjekk nettforbindelsen`, true);
+  else toast(`${added} ${added === 1 ? "ingrediens" : "ingredienser"} lagt til på handlelisten`);
 }
 
 // ---------- settings ----------
