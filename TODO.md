@@ -20,18 +20,6 @@ details live in `CHANGELOG.md`, not here.
 4. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
    release tag or commit SHA.
    _Value: Medium · Importance: Low · Type: CI / supply chain_
-5. Autocomplete suggestions are never hidden on blur/outside-click, so the
-   dropdown can linger over other UI.
-   _Value: Low · Importance: Low · Type: UX_
-6. Item modal should allow editing the catalogue entry itself — rename the
-   item, change category, select icon, or delete from catalogue entirely. Currently
-   only edits the list entry (bought/qty/notes).
-   _Value: High · Importance: Medium · Type: Feature (UX)_
-7. Autocomplete aggressively hijacks new items that resemble existing ones —
-   if you type "milk 2" or similar, it matches "milk" from the catalogue and
-   forces qty+name parsing, losing the exact text you typed. Need a way to
-   bypass autocomplete and add items exactly as typed.
-   _Value: High · Importance: Medium · Type: UX_
 8. Grid view on mobile has no way to open the item modal — dragging and
    long-press gestures don't reliably work. Need a button, tap zone, or context
    menu to access item details and edit/delete from grid.
@@ -44,6 +32,13 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Item detail modal: rename the catalogue entry itself, or delete it
+      entirely (cascades to every list it appears on). (1.0.6)
+- [x] Autocomplete: explicit "add exactly as typed" bypass option, plus
+      `parseItemInput` no longer treats a trailing number as quantity
+      (e.g. "milk 2" no longer hijacked into "milk" x2). (1.0.6)
+- [x] Autocomplete dropdown now dismissed on outside click instead of
+      lingering over other UI. (1.0.6)
 - [x] Multi-owner lists, admin-created accounts, per-list isolation — see
       `docs/multi-tenant-plan.md`. Migration `0005_multi_tenant.sql`.
 - [x] Login rate-limiting — `login_attempts` D1 table, 429 after 10 failures

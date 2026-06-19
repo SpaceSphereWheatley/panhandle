@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.0.5";
+const VERSION = "1.0.6";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -663,7 +663,7 @@ export default {
     if (patchMatch && method === "PATCH") {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const { qty, notes, category } = body;
+      const { qty, notes, category, name } = body;
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(patchMatch[1], user.list_id).first();
@@ -681,6 +681,30 @@ export default {
         await env.DB.prepare("UPDATE item_catalogue SET category = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(category, row.catalogue_id, user.list_id).run();
       }
+      if (name !== undefined) {
+        const cleanName = (name || "").trim();
+        if (!cleanName) return authedJson({ error: "Tomt navn" }, 400);
+        const clash = await env.DB.prepare(
+          "SELECT id FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
+        ).bind(cleanName, user.list_id, row.catalogue_id).first();
+        if (clash) return authedJson({ error: "En vare med dette navnet finnes allerede" }, 400);
+        await env.DB.prepare("UPDATE item_catalogue SET name = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(cleanName, row.catalogue_id, user.list_id).run();
+      }
+      return authedJson({ ok: true });
+    }
+
+    // Deletes the catalogue entry entirely (not just this list_items row) —
+    // cascades to every list_items row referencing it via the FK, removing the
+    // item from past/present lists, not just hiding this one occurrence.
+    const delCatMatch = path.match(/^\/list\/(\d+)\/catalogue$/);
+    if (delCatMatch && method === "DELETE") {
+      const row = await env.DB.prepare(
+        "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
+      ).bind(delCatMatch[1], user.list_id).first();
+      if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
+      await env.DB.prepare("DELETE FROM item_catalogue WHERE id = ?1 AND list_id = ?2")
+        .bind(row.catalogue_id, user.list_id).run();
       return authedJson({ ok: true });
     }
 
