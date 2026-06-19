@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="author" content="Mohibb Malik">
 <meta name="theme-color" content="#F5F1ED">
+<!-- Set the theme attribute before the stylesheet applies, to avoid a flash of
+     the wrong palette. Values: "light" | "dark" | "system" (default). -->
+<script>document.documentElement.dataset.theme = localStorage.getItem("ph_theme") || "system";</script>
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -18,12 +21,30 @@
     --tile-dark: #7A956F;
     --accent: #556B2F;
     --accent-dark: #3D4C1F;
+    --accent-text: #556B2F; /* readable accent for text on surfaces (decoupled from --accent, which is a white-text background colour) */
     --text: #3D3D3D;
     --muted: #6E6253;
     --border: rgba(61,61,61,0.08);
     --bought-bg: #D9D0C3;
     --green: #C89B7B;
     --danger: #A85C3D;
+  }
+
+  /* Dark palette. The greens (--tile/--accent) carry white text on any
+     background, so they're kept; only the neutral surfaces/text flip, plus
+     --accent-text becomes a light sage so accent-coloured text stays readable.
+     Applied when the user forces dark, or follows the OS and the OS is dark. */
+  :root[data-theme="dark"] {
+    --bg: #1B1A17; --bg-elevated: #262420; --bg-sunken: #322F29;
+    --text: #ECE7DE; --muted: #A99C8B; --border: rgba(255,255,255,0.10);
+    --bought-bg: #2B2823; --accent-text: #A6C285;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="system"] {
+      --bg: #1B1A17; --bg-elevated: #262420; --bg-sunken: #322F29;
+      --text: #ECE7DE; --muted: #A99C8B; --border: rgba(255,255,255,0.10);
+      --bought-bg: #2B2823; --accent-text: #A6C285;
+    }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -46,7 +67,7 @@
   #login input::placeholder { color: var(--muted); }
   #login button { background: var(--tile); color: #fff; border: none; font-weight: 700; cursor: pointer; }
   #login button:disabled { opacity: .6; cursor: default; }
-  #loginErr { color: var(--accent); font-size: 14px; min-height: 18px; }
+  #loginErr { color: var(--accent-text); font-size: 14px; min-height: 18px; }
 
   /* Show/hide password toggle (login + change-password fields) */
   .pw-wrap { position: relative; width: 100%; }
@@ -285,6 +306,14 @@
     border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; cursor: pointer;
     font-family: inherit; }
 
+  /* Theme (light / dark / follow system) segmented control */
+  .theme-toggle { display: flex; gap: 6px; }
+  .theme-toggle button {
+    flex: 1; border: 1px solid var(--border); background: var(--bg-sunken); color: var(--text);
+    border-radius: 10px; padding: 10px 6px; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .theme-toggle button.active { background: var(--tile); color: #fff; border-color: var(--tile); }
+
   /* Settings drill-down: clickable nav row + subpage back button */
   .nav-row {
     width: 100%; font-family: inherit; font-size: 16px; color: var(--text);
@@ -321,7 +350,7 @@
     border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
     border-radius: 8px; font-size: 12px; padding: 6px 8px; cursor: pointer; font-family: inherit;
   }
-  .mgmt-row button.mini.danger { color: var(--accent); border-color: var(--accent); }
+  .mgmt-row button.mini.danger { color: var(--accent-text); border-color: var(--accent-text); }
   .mgmt-row label.flag {
     display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted);
   }
@@ -358,7 +387,7 @@
   /* Ingredient -> shopping list picker (meal modal) */
   .ing-add-btn {
     width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px;
-    border: 1px solid var(--tile); background: var(--bg-sunken); color: var(--accent-dark);
+    border: 1px solid var(--tile); background: var(--bg-sunken); color: var(--accent-text);
     font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
   }
   .ing-list { max-height: 50vh; overflow-y: auto; margin: 6px 0 4px; }
@@ -479,6 +508,15 @@
       <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
       <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
+      <div class="setrow">
+        <div class="k" style="margin-bottom:8px">Tema</div>
+        <div class="theme-toggle" id="themeToggle">
+          <button data-theme-val="light" onclick="setTheme('light')">Lys</button>
+          <button data-theme-val="dark" onclick="setTheme('dark')">Mørk</button>
+          <button data-theme-val="system" onclick="setTheme('system')">Følg systemet</button>
+        </div>
+      </div>
+
       <!-- Owner: manage members of this list -->
       <div class="setrow hidden" id="ownerPanel">
         <div class="k" style="margin-bottom:4px">Brukere på listen</div>
@@ -572,7 +610,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.0.13";
+const APP_VERSION = "1.0.14";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1384,6 +1422,7 @@ async function confirmAddIngredients() {
 // ---------- settings ----------
 async function loadSettings() {
   applyRoleVisibility();
+  renderThemeToggle();
   if (isOwner) loadListUsers();
   // Admin user list and catalogue/meal counts load when the admin subpage is
   // opened (showSettingsSub).
@@ -1603,6 +1642,33 @@ function showToast(message, { error = false, undoFn = null } = {}) {
 }
 function toast(message, error = false) { showToast(message, { error }); }
 function hideToast() { const el = document.getElementById("toast"); if (el) el.classList.remove("show"); }
+
+// ---------- theme (light / dark / follow system) ----------
+function currentTheme() { return localStorage.getItem("ph_theme") || "system"; }
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  // Keep the PWA status-bar colour in step with the *effective* theme.
+  const dark = t === "dark" ||
+    (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", dark ? "#1B1A17" : "#F5F1ED");
+}
+function setTheme(t) {
+  localStorage.setItem("ph_theme", t);
+  applyTheme(t);
+  renderThemeToggle();
+}
+function renderThemeToggle() {
+  const t = currentTheme();
+  document.querySelectorAll("#themeToggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.themeVal === t));
+}
+// When following the OS and it switches, the CSS updates automatically; nudge
+// applyTheme so the status-bar colour follows too.
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (currentTheme() === "system") applyTheme("system");
+});
+applyTheme(currentTheme());
 
 // ---------- misc ----------
 function syncTick() {

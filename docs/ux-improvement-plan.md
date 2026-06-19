@@ -66,8 +66,7 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
 ### P3 — Enhancements
 - [x] **T14** — Extend the meal-planning horizon beyond last/this/next week
   (the `weekOffset` clamp `[-1, 1]` and `/plan` 14-day delete).
-- [ ] **T15** — Support multiple meals per day (e.g. lunch/dinner slots).
-  *Needs schema: `meal_plan` is one-row-per-date today (`UNIQUE(list_id, plan_date)`).*
+- [ ] ~~**T15** — Support multiple meals per day~~ — **skipped** (decided to keep one meal/day; would need a schema migration + manual `wrangler d1 migrations apply`).
 - [x] **T16** — Warn that editing a meal's ingredients rewrites them for every
   date that meal appears on (they're keyed to the meal name, shared).
 - [x] **T17** — "X varer igjen" summary on the shopping list.
@@ -76,7 +75,7 @@ is manual (deploy / open in a browser). Keep `VERSION` (worker) and
   text.
 - [x] **T20** — `aria-label`s on icon-only buttons (list/grid view toggle, card
   actions).
-- [ ] **T21** — Dark mode.
+- [x] **T21** — Dark mode.
 - [x] **T22** — Move version / api-mismatch plumbing out of the user-facing
   Profile into the admin subpage (or a debug-only view).
 

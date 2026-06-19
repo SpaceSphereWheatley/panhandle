@@ -13,6 +13,20 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers.
 
+## [1.0.14] — 2026-06-19
+
+Completes Phase 4 / the UX improvement plan. (T15, multiple meals per day, was
+intentionally skipped — keeping one meal per day; it would have needed a schema
+migration.)
+
+### Added
+- T21: Dark mode, with a Lys / Mørk / Følg systemet control in the Profile
+  (defaults to following the OS). The theme is applied before the stylesheet to
+  avoid a flash, and the PWA status-bar colour tracks the effective theme. The
+  dark palette keeps the greens (which carry white text on any background) and
+  flips only the neutral surfaces/text; `--accent-text` was decoupled from
+  `--accent` so accent-coloured text stays readable on dark surfaces.
+
 ## [1.0.13] — 2026-06-19
 
 Phase 4 (partial) of the UX improvement plan (`docs/ux-improvement-plan.md`):
