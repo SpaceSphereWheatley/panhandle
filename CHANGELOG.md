@@ -11,7 +11,8 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 (Worker) versions, so a deploy where only one half landed is visible at a glance.
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
-project uses simple `MAJOR.MINOR.PATCH` numbers.
+project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
+section for the bump convention).
 
 ## [1.0.19] — 2026-06-19
 

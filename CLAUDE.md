@@ -49,6 +49,8 @@ There is no build step and no Node toolchain in this repo. Both the Pages projec
 
 There's a single version number, duplicated (no build step to inject it): `VERSION` in `worker/index.js` and `APP_VERSION` in `public/index.html` — bump both together on a release and add a `CHANGELOG.md` entry. The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
 
+Version bump convention (`MAJOR.MINOR.PATCH`): every release so far has only bumped PATCH, even for substantial changes (dark mode, multi-tenant support). Going forward — bump MINOR for a release that adds a new user-facing capability or completes a planned phase/epic; bump PATCH for fixes, tweaks, and small additions; MAJOR is reserved for breaking changes (e.g. an incompatible API/schema change requiring coordinated migration).
+
 ## Deployment
 
 There is no local dev server or test suite. Changes are validated by deploying:
