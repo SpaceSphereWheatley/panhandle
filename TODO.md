@@ -6,14 +6,37 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. No service worker despite the PWA manifest — the app is installable but
+1. `migrations/0004_seed_catalogue.sql` references the `lists` table and
+   `list_id` column that don't exist until `0005_multi_tenant.sql` runs
+   after it. Applying migrations in numbered order on a fresh D1 instance
+   (disaster recovery, a new environment) fails outright at 0004; CI's
+   `sql-migrations` job only checks numbering, not applicability, so this
+   has no test coverage. Re-pin the seed data after 0005, or fold its
+   per-list CROSS JOIN logic into a migration numbered after multi-tenant.
+   _Value: High · Importance: High · Type: Bug (migrations/ops)_
+2. No service worker despite the PWA manifest — the app is installable but
    has zero offline capability. Add a minimal app-shell service worker, or
    drop the offline expectation.
    _Value: Medium · Importance: Medium · Type: Feature (PWA)_
-2. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
+3. No `Escape` key handler on any of the four modals (item detail, meal,
+   admin, etc.) — only clicking the dimmed backdrop or an explicit
+   Avbryt/close button dismisses them. Verified live: an open modal
+   silently swallows clicks on the bottom nav until dismissed the "right"
+   way, which reads as the app being stuck. Add one `keydown` listener
+   that calls `closeModal()` on Escape.
+   _Value: Medium · Importance: Medium · Type: UX (accessibility/affordance)_
+4. Grid view: a category with a single item leaves the other 1-2 cells in
+   its row visibly empty (the per-category `.grid-wrap` is its own 3-col
+   grid, so a lone item doesn't reflow into the next category's row).
+   Looks unfinished, especially with several single-item categories in a
+   row. Either flow items into one continuous grid across category
+   boundaries, or only show the category header inline without a hard grid
+   break per group.
+   _Value: Low · Importance: Low · Type: UX (visual polish)_
+5. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
    release tag or commit SHA.
    _Value: Medium · Importance: Low · Type: CI / supply chain_
-3. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+6. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
