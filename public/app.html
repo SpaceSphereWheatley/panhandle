@@ -511,12 +511,6 @@
       <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
       <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
 
-      <div class="setrow hidden" id="installRow">
-        <div class="k" style="margin-bottom:8px">Installer app</div>
-        <div class="v" id="installRowText" style="margin-bottom:8px"></div>
-        <button id="installRowBtn" class="btn-primary hidden" onclick="doInstall()">Installer</button>
-      </div>
-
       <div class="setrow">
         <div class="k" style="margin-bottom:8px">Tema</div>
         <div class="theme-toggle" id="themeToggle">
@@ -524,6 +518,12 @@
           <button data-theme-val="dark" onclick="setTheme('dark')">Mørk</button>
           <button data-theme-val="system" onclick="setTheme('system')">Følg systemet</button>
         </div>
+      </div>
+
+      <div class="setrow hidden" id="installRow">
+        <div class="k" style="margin-bottom:8px">Installer app</div>
+        <div class="v" id="installRowText" style="margin-bottom:8px"></div>
+        <button id="installRowBtn" class="btn-primary hidden" onclick="doInstall()">Installer</button>
       </div>
 
       <!-- Owner: manage members of this list -->
