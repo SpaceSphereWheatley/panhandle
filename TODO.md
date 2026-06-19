@@ -23,6 +23,24 @@ details live in `CHANGELOG.md`, not here.
 5. Autocomplete suggestions are never hidden on blur/outside-click, so the
    dropdown can linger over other UI.
    _Value: Low · Importance: Low · Type: UX_
+6. Item modal should allow editing the catalogue entry itself — rename the
+   item, change category, select icon, or delete from catalogue entirely. Currently
+   only edits the list entry (bought/qty/notes).
+   _Value: High · Importance: Medium · Type: Feature (UX)_
+7. Autocomplete aggressively hijacks new items that resemble existing ones —
+   if you type "milk 2" or similar, it matches "milk" from the catalogue and
+   forces qty+name parsing, losing the exact text you typed. Need a way to
+   bypass autocomplete and add items exactly as typed.
+   _Value: High · Importance: Medium · Type: UX_
+8. Grid view on mobile has no way to open the item modal — dragging and
+   long-press gestures don't reliably work. Need a button, tap zone, or context
+   menu to access item details and edit/delete from grid.
+   _Value: Medium · Importance: High · Type: UX (mobile)_
+9. When a user assigns a meal, there's no way to auto-populate the shopping
+   list with that meal's ingredients. Currently ingredients are stored on
+   `meal_catalogue.ingredients` but not exposed as a "add to list" action. Should
+   be able to select which of a meal's ingredients to add when viewing a plan.
+   _Value: Medium · Importance: Low · Type: Feature (workflow)_
 
 ## Done
 
