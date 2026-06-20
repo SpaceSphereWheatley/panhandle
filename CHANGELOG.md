@@ -14,6 +14,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.3.0] — 2026-06-20
+
+### Added
+- The Måltider tab's FAB now opens a small chooser ("Nytt måltid" / "Rediger
+  måltider") instead of going straight to the new-meal editor — editing an
+  existing meal is just as common a reason to tap it.
+- The new-meal/edit-meal modal now flags name collisions as you type: an
+  exact (case-insensitive) match against another meal shows an error and
+  blocks saving early (mirroring the server's own duplicate check), and a
+  substring match against another meal's name shows a "Ligner på: …" hint
+  so near-duplicates are caught before they're saved.
+- A FAB on the Handleliste tab — for now it just jumps focus to the add bar;
+  a fuller quick-add flow may follow.
+
 ## [1.2.1] — 2026-06-20
 
 ### Changed
