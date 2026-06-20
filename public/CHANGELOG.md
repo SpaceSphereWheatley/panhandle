@@ -14,6 +14,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.6.0] — 2026-06-20
+
+### Added
+- Purchase-frequency tracking on `item_catalogue` (`times_bought`,
+  `first_bought`, `last_bought`, bumped on the toggle-to-bought transition) and
+  a `GET /catalogue/suggestions` endpoint that recommends items you're
+  probably out of, ranked by how overdue they are against their own average
+  purchase interval. Surfaced via a badge on the shopping tab's FAB — tapping
+  it opens a "Sannsynligvis tom for" sheet to add suggested items with one tap,
+  falling back to the regular add-input shortcut when there's nothing to
+  suggest.
+
 ## [1.5.0] — 2026-06-20
 
 ### Added
