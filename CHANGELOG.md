@@ -14,6 +14,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.5.0] — 2026-06-20
+
+### Added
+- Free-form labels on meals (e.g. "Middag", "Vegetar") — add them in the meal
+  editor with autocomplete from labels already used in the catalogue, shown as
+  chips in "Alle måltider", and filterable there via a label dropdown.
+
 ## [1.4.2] — 2026-06-20
 
 ### Removed
