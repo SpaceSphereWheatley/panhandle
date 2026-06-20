@@ -14,7 +14,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
-## [1.3.0] — 2026-06-20
+## [1.4.0] — 2026-06-20
 
 ### Changed
 - Renamed the "Profil" tab to "Innstillinger" (Settings) and restructured it
@@ -24,6 +24,29 @@ section for the bump convention).
   info/theme/password/logout live under Profil, list-member management moved
   from an inline panel to its own Medlemmer subpage, and the version number
   moved to a new Om subpage.
+
+## [1.3.0] — 2026-06-20
+
+### Added
+- The Måltider tab's FAB now opens a small chooser ("Nytt måltid" / "Rediger
+  måltider") instead of going straight to the new-meal editor — editing an
+  existing meal is just as common a reason to tap it.
+- The new-meal/edit-meal modal now flags name collisions as you type: an
+  exact (case-insensitive) match against another meal shows an error and
+  blocks saving early (mirroring the server's own duplicate check), and a
+  substring match against another meal's name shows a "Ligner på: …" hint
+  so near-duplicates are caught before they're saved.
+- A FAB on the Handleliste tab — for now it just jumps focus to the add bar;
+  a fuller quick-add flow may follow.
+
+## [1.2.1] — 2026-06-20
+
+### Changed
+- "+ Nytt måltid" moved off the Måltider tab's header (where it was a small,
+  easy-to-miss text link) onto a floating action button anchored bottom-right
+  of the tab, above the nav bar — matching the prominence a primary "add" action
+  warrants. The header now only has the "Alle måltider ›" link; its own
+  "+ Nytt måltid" button (inside that browse modal) is unchanged.
 
 ## [1.2.0] — 2026-06-19
 

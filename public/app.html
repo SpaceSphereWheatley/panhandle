@@ -291,6 +291,13 @@
     display: block; background: none; border: none; color: var(--tile); font-size: 13px; font-weight: 600;
     font-family: inherit; cursor: pointer; padding: 0;
   }
+  .fab {
+    position: fixed; bottom: 84px; right: max(16px, calc(50vw - 224px));
+    width: 56px; height: 56px; border-radius: 50%; background: var(--tile); color: #fff;
+    border: none; font-size: 28px; line-height: 1; font-family: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 11;
+  }
 
   /* Meal suggestion chips (meal modal) */
   .meal-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
@@ -517,6 +524,7 @@
       </div>
       <div id="listContainer"></div>
       <div id="recentContainer"></div>
+      <button class="fab" aria-label="Legg til vare" onclick="focusAddInput()">+</button>
     </section>
 
     <!-- TAB: MEALS -->
@@ -527,11 +535,11 @@
         <button onclick="shiftWeek(0)">Denne uken</button>
         <button id="weekNextBtn" onclick="shiftWeek(1)">Neste ›</button>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="margin-bottom:10px">
         <button class="browse-link" onclick="openMealCatalogueModal()">Alle måltider ›</button>
-        <button class="browse-link" onclick="openMealEditModal()">+ Nytt måltid</button>
       </div>
       <div id="planContainer"></div>
+      <button class="fab" aria-label="Måltider" onclick="openMealFabMenu()">+</button>
     </section>
 
     <!-- TAB: SETTINGS -->
@@ -673,7 +681,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1253,6 +1261,14 @@ async function addItemExact() {
 }
 
 // autocomplete
+// Shopping tab's FAB — just jumps to the add bar for now (placeholder for a
+// fuller quick-add flow later).
+function focusAddInput() {
+  const el = document.getElementById("addInput");
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  el.focus();
+}
+
 function onAddInput() {
   const raw = document.getElementById("addInput").value;
   const box = document.getElementById("suggestions");
@@ -1471,10 +1487,35 @@ async function openMealCatalogueModal() {
     </div>`;
 }
 
+// The Måltider tab's FAB opens this small chooser rather than going straight
+// to "new meal", since editing an existing meal is just as common a reason to
+// tap it.
+function openMealFabMenu() {
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Måltider</h3>
+        <button class="meal-browse-add" onclick="openMealEditModal()">Nytt måltid</button>
+        <button class="meal-browse-add" style="background:var(--bg-sunken);color:var(--text)"
+                onclick="openMealCatalogueModal()">Rediger måltider</button>
+        <div class="actions">
+          <button class="cancel" onclick="closeModal()">Avbryt</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 // Add (id omitted) or edit (id given) a meal_catalogue entry directly, outside
-// of planning a specific day. Reachable from the Måltider tab header and from
-// each row of "Alle måltider".
-function openMealEditModal(id) {
+// of planning a specific day. Reachable from the Måltider tab's FAB and from
+// each row of "Alle måltider". Loads the catalogue first if it isn't already
+// cached (e.g. opened straight from the FAB without browsing first), since the
+// name-similarity check below needs it.
+async function openMealEditModal(id) {
+  if (!mealBrowseCatalogue.length) {
+    const meals = await api("/meals");
+    mealBrowseCatalogue = [...meals].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name));
+  }
   const meal = id ? mealBrowseCatalogue.find(m => m.id === id) : null;
   const ingredients = meal ? parseIngredients(meal.ingredients) : [];
   const root = document.getElementById("modalRoot");
@@ -1483,7 +1524,9 @@ function openMealEditModal(id) {
       <div class="modal">
         <h3>${meal ? "Rediger måltid" : "Nytt måltid"}</h3>
         <label>Navn</label>
-        <input id="mealEditName" value="${meal ? escapeHtml(meal.name) : ""}" placeholder="F.eks. Taco">
+        <input id="mealEditName" data-editing-id="${meal ? meal.id : ""}"
+               value="${meal ? escapeHtml(meal.name) : ""}" placeholder="F.eks. Taco" oninput="checkMealNameSimilar()">
+        <div id="mealNameSimilar" style="font-size:12px;margin-top:4px;min-height:14px"></div>
         <label>Ingredienser (kommaseparert)</label>
         <input id="mealEditIngredients" value="${escapeHtml(ingredients.join(", "))}" placeholder="F.eks. Kjøttdeig, Tortilla, Ost">
         <div id="mealEditMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--danger)"></div>
@@ -1495,6 +1538,35 @@ function openMealEditModal(id) {
                 onclick="deleteMealEntry(${meal.id})">Slett måltid fra katalog</button>` : ""}
       </div>
     </div>`;
+}
+
+// Live feedback while typing a meal name: an exact (case-insensitive) match
+// against another meal is a hard block (mirrors the server's duplicate check
+// in POST/PATCH /meals), a substring match is just a heads-up since it's
+// probably not literally a duplicate.
+function checkMealNameSimilar() {
+  const input = document.getElementById("mealEditName");
+  const note = document.getElementById("mealNameSimilar");
+  const editingId = input.dataset.editingId ? Number(input.dataset.editingId) : null;
+  const name = input.value.trim().toLowerCase();
+  if (!name) { note.textContent = ""; return; }
+  const others = mealBrowseCatalogue.filter(m => m.id !== editingId);
+  const exact = others.find(m => m.name.toLowerCase() === name);
+  if (exact) {
+    note.style.color = "var(--danger)";
+    note.textContent = `«${exact.name}» finnes allerede – navnet må være forskjellig.`;
+    return;
+  }
+  const similar = others.filter(m => {
+    const n = m.name.toLowerCase();
+    return n.includes(name) || name.includes(n);
+  });
+  if (similar.length) {
+    note.style.color = "var(--muted)";
+    note.textContent = `Ligner på: ${similar.slice(0, 3).map(m => m.name).join(", ")}`;
+  } else {
+    note.textContent = "";
+  }
 }
 
 async function saveMealEdit(id) {
