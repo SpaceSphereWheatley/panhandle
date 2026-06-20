@@ -14,6 +14,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.4.0] — 2026-06-20
+
+### Changed
+- Renamed the "Profil" tab to "Innstillinger" (Settings) and restructured it
+  into a category list — Profil, Medlemmer (owner-only), Administrasjon
+  (admin-only), and Om — each its own drill-down subpage instead of one long
+  scrolling page. No functionality changed, only how it's organized: account
+  info/theme/password/logout live under Profil, list-member management moved
+  from an inline panel to its own Medlemmer subpage, and the version number
+  moved to a new Om subpage.
+
 ## [1.3.0] — 2026-06-20
 
 ### Added

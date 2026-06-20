@@ -544,71 +544,88 @@
 
     <!-- TAB: SETTINGS -->
     <section id="tab-settings" class="hidden">
-      <!-- Main profile view -->
+      <!-- Category list -->
       <div id="settings-main">
-      <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
-      <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
-
-      <div class="setrow">
-        <div class="k" style="margin-bottom:8px">Tema</div>
-        <div class="theme-toggle" id="themeToggle">
-          <button data-theme-val="light" onclick="setTheme('light')">Lys</button>
-          <button data-theme-val="dark" onclick="setTheme('dark')">Mørk</button>
-          <button data-theme-val="system" onclick="setTheme('system')">Følg systemet</button>
-        </div>
-      </div>
-
-      <div class="setrow hidden" id="installRow">
-        <div class="k" style="margin-bottom:8px">Installer app</div>
-        <div class="v" id="installRowText" style="margin-bottom:8px"></div>
-        <button id="installRowBtn" class="btn-primary hidden" onclick="doInstall()">Installer</button>
-      </div>
-
-      <!-- Owner: manage members of this list -->
-      <div class="setrow hidden" id="ownerPanel">
-        <div class="k" style="margin-bottom:4px">Brukere på listen</div>
-        <div class="v" id="memberCount" style="margin-bottom:10px">-</div>
-        <div id="memberList"></div>
-        <div id="addMemberRow" style="margin-top:12px">
-          <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
-                 style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
-          <button onclick="addMember()" id="addMemberBtn" class="btn-primary mt-8">
-            + Legg til bruker</button>
-          <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
-        </div>
-      </div>
-
-      <!-- Admin: entry into the admin-management subpage (admins only) -->
-      <button id="adminEntry" class="setrow nav-row hidden" onclick="showSettingsSub('admin')">
-        <span>Administrasjon</span>
-        <span class="nav-row-arrow"></span>
-      </button>
-
-      <div class="setrow">
-        <div class="k" style="margin-bottom:10px">Bytt passord</div>
-        <div class="pw-wrap" style="margin-bottom:8px">
-          <input id="pwCurrent" type="password" placeholder="Nåværende passord"
-                 style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
-          <button type="button" class="pw-toggle" onclick="togglePw('pwCurrent',this)"
-                  aria-label="Vis eller skjul passord">Vis</button>
-        </div>
-        <div class="pw-wrap" style="margin-bottom:8px">
-          <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
-                 style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
-          <button type="button" class="pw-toggle" onclick="togglePw('pwNew',this)"
-                  aria-label="Vis eller skjul passord">Vis</button>
-        </div>
-        <button onclick="changePassword()" class="btn-primary">
-          Lagre nytt passord</button>
-        <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
-      </div>
-
-      <button class="logout" onclick="logout()">Logg ut</button>
+        <button class="setrow nav-row" onclick="showSettingsSub('profile')">
+          <span>Profil</span>
+          <span class="nav-row-arrow"></span>
+        </button>
+        <button id="membersEntry" class="setrow nav-row hidden" onclick="showSettingsSub('members')">
+          <span>Medlemmer</span>
+          <span class="nav-row-arrow"></span>
+        </button>
+        <button id="adminEntry" class="setrow nav-row hidden" onclick="showSettingsSub('admin')">
+          <span>Administrasjon</span>
+          <span class="nav-row-arrow"></span>
+        </button>
+        <button class="setrow nav-row" onclick="showSettingsSub('about')">
+          <span>Om</span>
+          <span class="nav-row-arrow"></span>
+        </button>
       </div><!-- /settings-main -->
 
-      <!-- Admin management subpage (drill-down from #adminEntry) -->
+      <!-- Profil: account-level settings -->
+      <div id="settings-profile" class="hidden">
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
+        <div class="setrow"><div class="k">Innlogget som</div><div class="v" id="setUser">-</div></div>
+
+        <div class="setrow">
+          <div class="k" style="margin-bottom:8px">Tema</div>
+          <div class="theme-toggle" id="themeToggle">
+            <button data-theme-val="light" onclick="setTheme('light')">Lys</button>
+            <button data-theme-val="dark" onclick="setTheme('dark')">Mørk</button>
+            <button data-theme-val="system" onclick="setTheme('system')">Følg systemet</button>
+          </div>
+        </div>
+
+        <div class="setrow hidden" id="installRow">
+          <div class="k" style="margin-bottom:8px">Installer app</div>
+          <div class="v" id="installRowText" style="margin-bottom:8px"></div>
+          <button id="installRowBtn" class="btn-primary hidden" onclick="doInstall()">Installer</button>
+        </div>
+
+        <div class="setrow">
+          <div class="k" style="margin-bottom:10px">Bytt passord</div>
+          <div class="pw-wrap" style="margin-bottom:8px">
+            <input id="pwCurrent" type="password" placeholder="Nåværende passord"
+                   style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
+            <button type="button" class="pw-toggle" onclick="togglePw('pwCurrent',this)"
+                    aria-label="Vis eller skjul passord">Vis</button>
+          </div>
+          <div class="pw-wrap" style="margin-bottom:8px">
+            <input id="pwNew" type="password" placeholder="Nytt passord (min. 6 tegn)"
+                   style="width:100%;padding:12px;padding-right:64px;font-size:16px;border-radius:10px;border:1px solid var(--border)">
+            <button type="button" class="pw-toggle" onclick="togglePw('pwNew',this)"
+                    aria-label="Vis eller skjul passord">Vis</button>
+          </div>
+          <button onclick="changePassword()" class="btn-primary">
+            Lagre nytt passord</button>
+          <div id="pwMsg" style="font-size:13px;margin-top:8px;min-height:16px"></div>
+        </div>
+
+        <button class="logout" onclick="logout()">Logg ut</button>
+      </div><!-- /settings-profile -->
+
+      <!-- Medlemmer: owner-only management of this list's members -->
+      <div id="settings-members" class="hidden">
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
+        <div class="setrow">
+          <div class="k" style="margin-bottom:4px">Brukere på listen</div>
+          <div class="v" id="memberCount" style="margin-bottom:10px">-</div>
+          <div id="memberList"></div>
+          <div id="addMemberRow" style="margin-top:12px">
+            <input id="newMemberName" placeholder="Brukernavn for nytt medlem"
+                   style="width:100%;padding:12px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
+            <button onclick="addMember()" id="addMemberBtn" class="btn-primary mt-8">
+              + Legg til bruker</button>
+            <div id="memberMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--accent)"></div>
+          </div>
+        </div>
+      </div><!-- /settings-members -->
+
+      <!-- Administrasjon: admin-only platform management -->
       <div id="settings-admin" class="hidden">
-        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Profil</button>
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
         <div class="setrow"><div class="k">Oversikt</div><div class="v" id="adminTotals">-</div></div>
         <div class="setrow"><div class="k">Versjon (app / API)</div><div class="v" id="setVersionDetail">-</div></div>
         <div class="setrow"><div class="k">Varer i katalog</div><div class="v" id="setCatCount">-</div></div>
@@ -634,6 +651,12 @@
           <div id="allUsers"></div>
         </div>
       </div><!-- /settings-admin -->
+
+      <!-- Om: version info -->
+      <div id="settings-about" class="hidden">
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
+        <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
+      </div><!-- /settings-about -->
     </section>
   </main>
 
@@ -643,7 +666,7 @@
     <button id="nav-meals" onclick="switchTab('meals')">
       <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>Måltider</button>
     <button id="nav-settings" onclick="switchTab('settings')">
-      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M4.8 4.8l2.1 2.1M17.1 17.1l2.1 2.1M2.6 12h3M18.4 12h3M4.8 19.2l2.1-2.1M17.1 6.9l2.1-2.1"/></svg></span>Profil</button>
+      <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v3M12 18.4v3M4.8 4.8l2.1 2.1M17.1 17.1l2.1 2.1M2.6 12h3M18.4 12h3M4.8 19.2l2.1-2.1M17.1 6.9l2.1-2.1"/></svg></span>Innstillinger</button>
   </nav>
 </div>
 
@@ -655,9 +678,10 @@
 // Laget av Mohibb Malik, 2026
 const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohibb.com
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
-// release (see CHANGELOG.md). The Profile page shows this alongside the live
-// API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.3.0";
+// release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
+// the live API version from GET /api/version on the Administrasjon subpage
+// so a stale half of a deploy is visible.
+const APP_VERSION = "1.4.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -793,19 +817,25 @@ function switchTab(tab) {
     document.getElementById("nav-" + t).classList.toggle("active", t === tab);
   }
   document.getElementById("title").textContent =
-    tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Profil";
+    tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Innstillinger";
   document.getElementById("sortBtn").classList.toggle("hidden", tab !== "list");
   if (tab === "list") loadList();
   if (tab === "meals") loadPlan();
   if (tab === "settings") { showSettingsSub("main"); loadSettings(); }
 }
 
-// Settings drill-down: "main" profile view <-> "admin" management subpage.
+// Settings drill-down: "main" category list <-> profile/members/admin/about subpages.
+const SETTINGS_TITLES = { main: "Innstillinger", profile: "Profil", members: "Medlemmer",
+  admin: "Administrasjon", about: "Om" };
 function showSettingsSub(view) {
-  document.getElementById("settings-main").classList.toggle("hidden", view !== "main");
-  document.getElementById("settings-admin").classList.toggle("hidden", view !== "admin");
-  document.getElementById("title").textContent = view === "admin" ? "Administrasjon" : "Profil";
+  for (const v of Object.keys(SETTINGS_TITLES)) {
+    document.getElementById("settings-" + v).classList.toggle("hidden", v !== view);
+  }
+  document.getElementById("title").textContent = SETTINGS_TITLES[view];
+  if (view === "profile") renderThemeToggle();
+  if (view === "members") loadListUsers();
   if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
+  if (view === "about") document.getElementById("setVersion").textContent = APP_VERSION;
 }
 
 async function loadAdminCounts() {
@@ -1667,14 +1697,8 @@ async function confirmAddIngredients() {
 // ---------- settings ----------
 async function loadSettings() {
   applyRoleVisibility();
-  renderThemeToggle();
-  if (isOwner) loadListUsers();
-  // Admin user list and catalogue/meal counts load when the admin subpage is
-  // opened (showSettingsSub).
-
-  // The Profile shows a plain version number; the app-vs-API mismatch detail
-  // (deploy-debugging) lives in the admin subpage instead (loadAdminCounts).
-  document.getElementById("setVersion").textContent = APP_VERSION;
+  // Profile/members/admin/about subpages each load their own data when opened
+  // (showSettingsSub) — nothing else to prefetch for the category list itself.
 }
 
 async function loadIconGaps() {
@@ -1712,7 +1736,7 @@ async function changePassword() {
 
 // ---------- user management (owner + admin) ----------
 function applyRoleVisibility() {
-  document.getElementById("ownerPanel").classList.toggle("hidden", !isOwner);
+  document.getElementById("membersEntry").classList.toggle("hidden", !isOwner);
   document.getElementById("adminEntry").classList.toggle("hidden", !isAdmin);
 }
 
