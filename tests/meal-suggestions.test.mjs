@@ -123,6 +123,42 @@ async function runTests() {
   console.log("  - times_planned/last_planned tracked correctly");
   console.log("  - no double-count on same-date/same-meal re-save");
   console.log("  - suggestions surface stale-but-popular meals and exclude recent ones");
+
+  // ---- meal editor: add a meal directly (no day assignment) ----
+  let addRes = await fetch(`${BASE}/meals`, {
+    method: "POST", headers: auth, body: JSON.stringify({ name: "Lasagne", ingredients: ["Kjøttdeig", "Pasta"] })
+  });
+  assert.equal(addRes.status, 200, "adding a new meal should succeed");
+  const { id: lasagneId } = await addRes.json();
+
+  meals = await (await fetch(`${BASE}/meals`, { headers: auth })).json();
+  let lasagne = meals.find(m => m.id === lasagneId);
+  assert.ok(lasagne, "Lasagne should exist in meal_catalogue after POST /meals");
+  assert.deepEqual(JSON.parse(lasagne.ingredients), ["Kjøttdeig", "Pasta"]);
+
+  // ---- adding a duplicate name (case-insensitive) should fail ----
+  addRes = await fetch(`${BASE}/meals`, {
+    method: "POST", headers: auth, body: JSON.stringify({ name: "lasagne" })
+  });
+  assert.equal(addRes.status, 400, "adding a duplicate meal name should be rejected");
+
+  // ---- editing: rename and update ingredients ----
+  const patchRes = await fetch(`${BASE}/meals/${lasagneId}`, {
+    method: "PATCH", headers: auth, body: JSON.stringify({ name: "Lasagna", ingredients: ["Kjøttdeig"] })
+  });
+  assert.equal(patchRes.status, 200, "editing a meal should succeed");
+  meals = await (await fetch(`${BASE}/meals`, { headers: auth })).json();
+  lasagne = meals.find(m => m.id === lasagneId);
+  assert.equal(lasagne.name, "Lasagna", "rename should take effect");
+  assert.deepEqual(JSON.parse(lasagne.ingredients), ["Kjøttdeig"], "ingredient edit should take effect");
+
+  // ---- deleting removes it from the catalogue ----
+  const delRes = await fetch(`${BASE}/meals/${lasagneId}`, { method: "DELETE", headers: auth });
+  assert.equal(delRes.status, 200, "deleting a meal should succeed");
+  meals = await (await fetch(`${BASE}/meals`, { headers: auth })).json();
+  assert.ok(!meals.some(m => m.id === lasagneId), "deleted meal should no longer appear in meal_catalogue");
+
+  console.log("  - meal editor: add/rename/edit-ingredients/delete all work, duplicate names rejected");
 }
 
 main().catch(err => { console.error(err); process.exitCode = 1; });

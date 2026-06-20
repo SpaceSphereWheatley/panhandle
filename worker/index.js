@@ -14,7 +14,7 @@
 // with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -793,6 +793,62 @@ export default {
         LIMIT 5
       `).bind(user.list_id).all();
       return authedJson(results);
+    }
+
+    // Adds a brand-new meal to the catalogue directly (no day assignment) —
+    // the editor view's "+ Nytt måltid", as opposed to /plan's implicit
+    // create-on-first-use. Rejects a name that already exists so the editor
+    // doesn't silently merge into an existing meal's row.
+    if (path === "/meals" && method === "POST") {
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const clean = capitalizeName(body.name);
+      if (!clean) return authedJson({ error: "Tomt navn" }, 400);
+      const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
+      const clash = await env.DB.prepare(
+        "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+      ).bind(clean, user.list_id).first();
+      if (clash) return authedJson({ error: "Et måltid med dette navnet finnes allerede" }, 400);
+      const meal = await env.DB.prepare(
+        "INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3) RETURNING id"
+      ).bind(clean, user.list_id, ingredientsJson).first();
+      return authedJson({ ok: true, id: meal.id });
+    }
+
+    const mealPatchMatch = path.match(/^\/meals\/(\d+)$/);
+    if (mealPatchMatch && method === "PATCH") {
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const meal = await env.DB.prepare(
+        "SELECT id FROM meal_catalogue WHERE id = ?1 AND list_id = ?2"
+      ).bind(mealPatchMatch[1], user.list_id).first();
+      if (!meal) return authedJson({ error: "Fant ikke måltid" }, 404);
+      if (body.name !== undefined) {
+        const clean = capitalizeName(body.name);
+        if (!clean) return authedJson({ error: "Tomt navn" }, 400);
+        const clash = await env.DB.prepare(
+          "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
+        ).bind(clean, user.list_id, meal.id).first();
+        if (clash) return authedJson({ error: "Et måltid med dette navnet finnes allerede" }, 400);
+        await env.DB.prepare("UPDATE meal_catalogue SET name = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(clean, meal.id, user.list_id).run();
+      }
+      if (body.ingredients !== undefined) {
+        const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
+        await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(ingredientsJson, meal.id, user.list_id).run();
+      }
+      return authedJson({ ok: true });
+    }
+
+    // Deletes the meal entirely from the catalogue — cascades to meal_plan
+    // (ON DELETE CASCADE), so any day currently assigned this meal reverts to
+    // unplanned, same trade-off as deleting an item from item_catalogue.
+    const mealDelMatch = path.match(/^\/meals\/(\d+)$/);
+    if (mealDelMatch && method === "DELETE") {
+      await env.DB.prepare("DELETE FROM meal_catalogue WHERE id = ?1 AND list_id = ?2")
+        .bind(mealDelMatch[1], user.list_id).run();
+      return authedJson({ ok: true });
     }
 
     if (path === "/plan" && method === "GET") {
