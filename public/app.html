@@ -321,6 +321,12 @@
   .meal-browse-row .info { flex: 1; min-width: 0; }
   .meal-browse-row .name { font-size: 14px; font-weight: 600; word-break: break-word; color: var(--text); }
   .meal-browse-row .stats { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .meal-browse-row .labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .label-chip {
+    background: var(--tile); color: #fff; border-radius: 999px;
+    padding: 2px 8px; font-size: 11px; font-weight: 600;
+  }
+  #mealBrowseLabelSelect { margin-top: 8px; }
   .meal-browse-add {
     display: block; width: 100%; background: var(--tile); color: #fff; border: none; border-radius: 10px;
     padding: 10px 12px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; margin-bottom: 10px;
@@ -691,7 +697,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.6.1";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1571,34 +1577,58 @@ function pickSuggestedMeal(id) {
 }
 
 let mealBrowseCatalogue = []; // sorted meal_catalogue rows, cached while the "Alle måltider" modal is open
+let mealBrowseLabelFilter = ""; // currently selected label filter in the "Alle måltider" modal
 
-function renderMealBrowseRows(filter) {
+// Distinct labels used across every meal in the catalogue, for the browse
+// modal's filter dropdown and the editor's autocomplete datalist.
+function allKnownLabels() {
+  const set = new Set();
+  for (const m of mealBrowseCatalogue) for (const l of parseIngredients(m.labels)) set.add(l);
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function renderMealBrowseRows(filter, labelFilter) {
   const f = filter.trim().toLowerCase();
-  const rows = f ? mealBrowseCatalogue.filter(m => m.name.toLowerCase().includes(f)) : mealBrowseCatalogue;
-  if (!rows.length) return `<p class="cred-note">Ingen lagrede måltider${f ? " som matcher søket" : " ennå"}.</p>`;
+  const lf = (labelFilter || "").toLowerCase();
+  const rows = mealBrowseCatalogue.filter(m => {
+    const nameMatch = !f || m.name.toLowerCase().includes(f);
+    const labelMatch = !lf || parseIngredients(m.labels).some(l => l.toLowerCase() === lf);
+    return nameMatch && labelMatch;
+  });
+  if (!rows.length) return `<p class="cred-note">Ingen lagrede måltider${f || lf ? " som matcher søket" : " ennå"}.</p>`;
   return rows.map(m => {
     const count = parseIngredients(m.ingredients).length;
+    const labels = parseIngredients(m.labels);
     const last = m.last_planned ? new Date(m.last_planned).toLocaleDateString("no-NO", { day: "numeric", month: "short", year: "numeric" }) : "Aldri";
     return `<button type="button" class="meal-browse-row" onclick="openMealEditModal(${m.id})">
       <span class="info">
         <span class="name">${escapeHtml(m.name)}</span>
         <span class="stats">${m.times_planned}× planlagt · sist ${last} · ${count} ingredienser</span>
+        ${labels.length ? `<span class="labels">${labels.map(l => `<span class="label-chip">${escapeHtml(l)}</span>`).join("")}</span>` : ""}
       </span>
     </button>`;
   }).join("");
 }
 
 function filterMealBrowse(value) {
-  document.getElementById("mealBrowseList").innerHTML = renderMealBrowseRows(value);
+  document.getElementById("mealBrowseList").innerHTML = renderMealBrowseRows(value, mealBrowseLabelFilter);
+}
+
+function filterMealBrowseByLabel(value) {
+  mealBrowseLabelFilter = value;
+  document.getElementById("mealBrowseList").innerHTML =
+    renderMealBrowseRows(document.getElementById("mealBrowseFilter").value, mealBrowseLabelFilter);
 }
 
 // Browse of every saved meal (meal_catalogue), with usage stats and a
-// client-side name filter — there's no server-side search endpoint since the
-// whole catalogue is already fetched by GET /meals for the planner's datalist.
-// Clicking a row opens it in the editor (openMealEditModal).
+// client-side name + label filter — there's no server-side search endpoint
+// since the whole catalogue is already fetched by GET /meals for the
+// planner's datalist. Clicking a row opens it in the editor (openMealEditModal).
 async function openMealCatalogueModal() {
   const meals = await api("/meals");
   mealBrowseCatalogue = [...meals].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name));
+  mealBrowseLabelFilter = "";
+  const labels = allKnownLabels();
   const root = document.getElementById("modalRoot");
   root.innerHTML = `
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
@@ -1606,7 +1636,12 @@ async function openMealCatalogueModal() {
         <h3>Alle måltider</h3>
         <button class="meal-browse-add" onclick="openMealEditModal()">+ Nytt måltid</button>
         <input id="mealBrowseFilter" placeholder="Søk..." oninput="filterMealBrowse(this.value)">
-        <div id="mealBrowseList" style="margin-top:10px;max-height:50vh;overflow-y:auto">${renderMealBrowseRows("")}</div>
+        ${labels.length ? `
+        <select id="mealBrowseLabelSelect" onchange="filterMealBrowseByLabel(this.value)">
+          <option value="">Alle etiketter</option>
+          ${labels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join("")}
+        </select>` : ""}
+        <div id="mealBrowseList" style="margin-top:10px;max-height:50vh;overflow-y:auto">${renderMealBrowseRows("", "")}</div>
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Lukk</button>
         </div>
@@ -1647,6 +1682,8 @@ async function openMealEditModal(id) {
   }
   const meal = id ? mealBrowseCatalogue.find(m => m.id === id) : null;
   const ingredients = meal ? parseIngredients(meal.ingredients) : [];
+  const labels = meal ? parseIngredients(meal.labels) : [];
+  const knownLabels = allKnownLabels();
   const root = document.getElementById("modalRoot");
   root.innerHTML = `
     <div class="modal-bg" onclick="if(event.target===this)closeModal()">
@@ -1658,6 +1695,11 @@ async function openMealEditModal(id) {
         <div id="mealNameSimilar" style="font-size:12px;margin-top:4px;min-height:14px"></div>
         <label>Ingredienser (kommaseparert)</label>
         <input id="mealEditIngredients" value="${escapeHtml(ingredients.join(", "))}" placeholder="F.eks. Kjøttdeig, Tortilla, Ost">
+        <label>Etiketter (kommaseparert)</label>
+        <input id="mealEditLabels" list="mealLabelOptions" value="${escapeHtml(labels.join(", "))}" placeholder="F.eks. Middag, Vegetar">
+        <datalist id="mealLabelOptions">
+          ${knownLabels.map(l => `<option value="${escapeHtml(l)}">`).join("")}
+        </datalist>
         <div id="mealEditMsg" style="font-size:13px;margin-top:8px;min-height:16px;color:var(--danger)"></div>
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Avbryt</button>
@@ -1705,9 +1747,11 @@ async function saveMealEdit(id) {
   if (!name) { msg.textContent = "Tomt navn"; return; }
   const ingredients = document.getElementById("mealEditIngredients").value
     .split(",").map(s => s.trim()).filter(Boolean);
+  const labels = document.getElementById("mealEditLabels").value
+    .split(",").map(s => s.trim()).filter(Boolean);
   const res = id
-    ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name, ingredients }) })
-    : await api("/meals", { method: "POST", body: JSON.stringify({ name, ingredients }) });
+    ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name, ingredients, labels }) })
+    : await api("/meals", { method: "POST", body: JSON.stringify({ name, ingredients, labels }) });
   if (res.error) { msg.textContent = res.error; return; }
   closeModal();
   await openMealCatalogueModal();

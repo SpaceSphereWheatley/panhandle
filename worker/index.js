@@ -14,7 +14,7 @@
 // with public/app.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.6.0";
+const VERSION = "1.6.1";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -299,6 +299,24 @@ function extractGlutenFree(name) {
 function capitalizeName(name) {
   const s = (name || "").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+// Cleans a free-form labels array for storage on meal_catalogue: trims each,
+// drops blanks, capitalises like capitalizeName, and dedupes case-insensitively
+// (keeping the first-seen casing) so "vegetar" and "Vegetar" don't both stick.
+function sanitizeLabels(labels) {
+  if (!Array.isArray(labels)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of labels) {
+    const clean = capitalizeName(typeof raw === "string" ? raw : "");
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
 }
 
 // ---------- response helpers ----------
@@ -810,7 +828,7 @@ export default {
     // ===== MEALS =====
     if (path === "/meals" && method === "GET") {
       const { results } = await env.DB.prepare(
-        "SELECT id, name, ingredients, times_planned, last_planned FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
+        "SELECT id, name, ingredients, labels, times_planned, last_planned FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
       ).bind(user.list_id).all();
       return authedJson(results);
     }
@@ -821,7 +839,7 @@ export default {
     // since meal_plan itself is pruned after 14 days.
     if (path === "/meals/suggestions" && method === "GET") {
       const { results } = await env.DB.prepare(`
-        SELECT id, name, ingredients, times_planned, last_planned
+        SELECT id, name, ingredients, labels, times_planned, last_planned
         FROM meal_catalogue
         WHERE list_id = ?1
           AND (last_planned IS NULL OR last_planned <= date('now', '-10 days'))
@@ -841,13 +859,14 @@ export default {
       const clean = capitalizeName(body.name);
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
+      const labelsJson = JSON.stringify(sanitizeLabels(body.labels));
       const clash = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
       ).bind(clean, user.list_id).first();
       if (clash) return authedJson({ error: "Et måltid med dette navnet finnes allerede" }, 400);
       const meal = await env.DB.prepare(
-        "INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3) RETURNING id"
-      ).bind(clean, user.list_id, ingredientsJson).first();
+        "INSERT INTO meal_catalogue (name, list_id, ingredients, labels) VALUES (?1, ?2, ?3, ?4) RETURNING id"
+      ).bind(clean, user.list_id, ingredientsJson, labelsJson).first();
       return authedJson({ ok: true, id: meal.id });
     }
 
@@ -874,6 +893,11 @@ export default {
         await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(ingredientsJson, meal.id, user.list_id).run();
       }
+      if (body.labels !== undefined) {
+        const labelsJson = JSON.stringify(sanitizeLabels(body.labels));
+        await env.DB.prepare("UPDATE meal_catalogue SET labels = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(labelsJson, meal.id, user.list_id).run();
+      }
       return authedJson({ ok: true });
     }
 
@@ -899,7 +923,7 @@ export default {
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
       let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id,
-        m.ingredients AS ingredients
+        m.ingredients AS ingredients, m.labels AS labels
         FROM meal_plan p JOIN meal_catalogue m ON m.id = p.meal_id
         WHERE p.list_id = ?1`;
       const binds = [user.list_id];

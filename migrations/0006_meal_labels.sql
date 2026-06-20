@@ -1,0 +1,1 @@
+ALTER TABLE meal_catalogue ADD COLUMN labels TEXT NOT NULL DEFAULT '[]';
