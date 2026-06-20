@@ -53,6 +53,10 @@ There's a single version number, duplicated (no build step to inject it): `VERSI
 
 Version bump convention (`MAJOR.MINOR.PATCH`): every release so far has only bumped PATCH, even for substantial changes (dark mode, multi-tenant support). Going forward — bump MINOR for a release that adds a new user-facing capability or completes a planned phase/epic; bump PATCH for fixes, tweaks, and small additions; MAJOR is reserved for breaking changes (e.g. an incompatible API/schema change requiring coordinated migration).
 
+## Workflow conventions
+
+When the user says "finish up" (or similar) on a branch with work ready to ship, the standard flow is: sync the branch with `main`, push, open a PR, wait for checks/review, then merge — without needing to ask at each step. There's no CI in this repo (see Deployment below), so "waiting" mostly means watching for the Cloudflare deploy-preview bot comment and any review feedback before merging.
+
 ## Deployment
 
 There is no local dev server or test suite. Changes are validated by deploying:
