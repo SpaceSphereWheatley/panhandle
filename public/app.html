@@ -470,6 +470,27 @@
   .modal .save { background: var(--tile); color: #fff; }
   .modal .cancel { background: var(--bg-sunken); color: var(--text); }
 
+  /* Meal name field: text input + clickable arrow that toggles a dropdown of
+     known meal names (replaces a plain <input list> datalist, whose native
+     arrow indicator is inconsistent across browsers and often doesn't open
+     anything when clicked). */
+  .meal-name-field { position: relative; }
+  .meal-name-field input { padding-right: 36px; }
+  .meal-name-arrow {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border: none; background: none; color: var(--muted);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .meal-name-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: 12px; z-index: 20;
+    max-height: 220px; overflow-y: auto; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+  .meal-name-dropdown.hidden { display: none; }
+  .meal-name-option { padding: 12px 14px; cursor: pointer; color: var(--text); }
+  .meal-name-option:active { background: var(--bg-sunken); }
+  .meal-name-option.meal-name-empty { color: var(--muted); cursor: default; font-style: italic; }
+
   /* Button variants */
   .btn-primary {
     width: 100%; padding: 12px; border-radius: 10px; border: none;
@@ -697,7 +718,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.6.1";
+const APP_VERSION = "1.6.2";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1512,14 +1533,51 @@ function parseIngredients(raw) {
 }
 
 // When the typed meal name matches a known meal, refill the ingredients
-// field with whatever's stored for it (lets picking from the datalist
+// field with whatever's stored for it (lets picking from the dropdown
 // recall a recipe instead of starting blank).
 function onMealNameInput() {
   const name = document.getElementById("mealName").value.trim().toLowerCase();
   const match = mealModalCatalogue.find(m => m.name.toLowerCase() === name);
   document.getElementById("mealIngredients").value =
     match ? parseIngredients(match.ingredients).join(", ") : "";
+  showMealNameDropdown();
 }
+
+// Custom dropdown for the meal name field (see .meal-name-field CSS comment
+// for why this replaces a plain <input list> datalist).
+function renderMealNameDropdown() {
+  const dd = document.getElementById("mealNameDropdown");
+  if (!dd) return;
+  const filter = document.getElementById("mealName").value.trim().toLowerCase();
+  const matches = mealModalCatalogue.filter(m => !filter || m.name.toLowerCase().includes(filter));
+  dd.innerHTML = matches.length
+    ? matches.map(m => `<div class="meal-name-option" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)}</div>`).join("")
+    : `<div class="meal-name-option meal-name-empty">Ingen lagrede måltider${filter ? " som matcher" : ""}</div>`;
+}
+function showMealNameDropdown() {
+  renderMealNameDropdown();
+  document.getElementById("mealNameDropdown").classList.remove("hidden");
+}
+function hideMealNameDropdown() {
+  const dd = document.getElementById("mealNameDropdown");
+  if (dd) dd.classList.add("hidden");
+}
+function toggleMealNameDropdown() {
+  const dd = document.getElementById("mealNameDropdown");
+  if (!dd) return;
+  if (dd.classList.contains("hidden")) showMealNameDropdown();
+  else hideMealNameDropdown();
+}
+function onMealNameDropdownClick(e) {
+  const opt = e.target.closest(".meal-name-option");
+  if (!opt || !opt.dataset.name) return;
+  document.getElementById("mealName").value = opt.dataset.name;
+  hideMealNameDropdown();
+  onMealNameInput();
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".meal-name-field")) hideMealNameDropdown();
+});
 
 async function openMealModal(iso) {
   if (!listUsers.length) await loadListUsers();
@@ -1541,11 +1599,12 @@ async function openMealModal(iso) {
           ${suggestions.map(m => `<button type="button" class="meal-chip" onclick="pickSuggestedMeal('${m.id}')">${escapeHtml(m.name)}</button>`).join("")}
         </div>` : ""}
         <label>Måltid (velg eller skriv nytt)</label>
-        <input id="mealName" list="mealList" oninput="onMealNameInput()"
-               value="${current.meal_name ? escapeHtml(current.meal_name) : ""}" placeholder="F.eks. Taco">
-        <datalist id="mealList">
-          ${meals.map(m => `<option value="${escapeHtml(m.name)}">`).join("")}
-        </datalist>
+        <div class="meal-name-field">
+          <input id="mealName" autocomplete="off" oninput="onMealNameInput()" onfocus="showMealNameDropdown()"
+                 value="${current.meal_name ? escapeHtml(current.meal_name) : ""}" placeholder="F.eks. Taco">
+          <button type="button" class="meal-name-arrow" onclick="toggleMealNameDropdown()" aria-label="Vis lagrede måltider">${uiIcon("chevronDown", 14)}</button>
+          <div id="mealNameDropdown" class="meal-name-dropdown hidden" onclick="onMealNameDropdownClick(event)"></div>
+        </div>
         <label>Ingredienser (kommaseparert)</label>
         <input id="mealIngredients" value="${escapeHtml(ingredients.join(", "))}" placeholder="F.eks. Kjøttdeig, Tortilla, Ost">
         <div style="font-size:11px;color:var(--muted);margin-top:4px">

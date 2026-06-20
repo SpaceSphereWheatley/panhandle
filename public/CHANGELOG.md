@@ -14,6 +14,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.6.2] — 2026-06-20
+
+### Fixed
+- The dropdown arrow on the meal-planning "Måltid" field didn't open anything
+  when clicked (an `<input list>` datalist's native arrow indicator is
+  unreliable across browsers). Replaced it with a custom dropdown that
+  reliably opens on click or focus and filters as you type.
+
 ## [1.6.1] — 2026-06-20
 
 ### Added
