@@ -14,6 +14,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.7.0] — 2026-06-20
+
+### Added
+- Auto-refresh prompt for app updates: while a tab stays open, it now polls
+  the live Worker version every 60s (and right when the tab regains focus)
+  and shows a toast with an "Oppdater" button the moment a new deploy lands,
+  instead of only detecting it on the next fresh page load. Never reloads on
+  its own, so an in-progress edit isn't lost.
+
 ## [1.6.2] — 2026-06-20
 
 ### Fixed
