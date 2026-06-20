@@ -11,10 +11,10 @@
 
 // Deployed Worker (API) version. The Worker and the Pages frontend deploy
 // independently via Cloudflare's Git integration, so this is bumped together
-// with public/index.html's APP_VERSION on each release (see CHANGELOG.md) and
+// with public/app.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.5.0";
+const VERSION = "1.6.1";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -767,11 +767,25 @@ export default {
 
     const toggleMatch = path.match(/^\/list\/(\d+)\/toggle$/);
     if (toggleMatch && method === "POST") {
+      const item = await env.DB.prepare(
+        "SELECT bought, catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
+      ).bind(toggleMatch[1], user.list_id).first();
       await env.DB.prepare(`
         UPDATE list_items SET bought = CASE bought WHEN 0 THEN 1 ELSE 0 END,
             bought_at = CASE bought WHEN 0 THEN datetime('now') ELSE NULL END
         WHERE id = ?1 AND list_id = ?2
       `).bind(toggleMatch[1], user.list_id).run();
+      // Only count it as a purchase on the 0->1 transition, not on undo —
+      // these lifetime stats power GET /catalogue/suggestions below.
+      if (item && item.bought === 0) {
+        await env.DB.prepare(`
+          UPDATE item_catalogue SET
+            times_bought = times_bought + 1,
+            first_bought = COALESCE(first_bought, datetime('now')),
+            last_bought = datetime('now')
+          WHERE id = ?1
+        `).bind(item.catalogue_id).run();
+      }
       return authedJson({ ok: true });
     }
 
@@ -786,6 +800,28 @@ export default {
       const { results } = await env.DB.prepare(
         "SELECT name, category FROM item_catalogue WHERE list_id = ?1 ORDER BY name ASC"
       ).bind(user.list_id).all();
+      return authedJson(results);
+    }
+
+    // Items worth nudging the user about: bought often enough (>=2 times) to
+    // have a reliable average gap between purchases, not already sitting
+    // unbought on the list, and at least that average gap overdue. Lifetime
+    // stats live on item_catalogue (see 0005_item_purchase_stats.sql) since
+    // list_items loses bought_at the moment an item is toggled back off.
+    if (path === "/catalogue/suggestions" && method === "GET") {
+      const { results } = await env.DB.prepare(`
+        SELECT c.id, c.name, c.category, c.last_bought,
+          (julianday(c.last_bought) - julianday(c.first_bought)) / (c.times_bought - 1) AS avg_interval_days,
+          julianday('now') - julianday(c.last_bought) AS days_since
+        FROM item_catalogue c
+        WHERE c.list_id = ?1
+          AND c.times_bought >= 2
+          AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
+          AND (julianday('now') - julianday(c.last_bought)) >=
+              (julianday(c.last_bought) - julianday(c.first_bought)) / (c.times_bought - 1)
+        ORDER BY (days_since - avg_interval_days) DESC
+        LIMIT 8
+      `).bind(user.list_id).all();
       return authedJson(results);
     }
 
