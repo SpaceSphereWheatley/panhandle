@@ -392,6 +392,7 @@
     font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-all;
   }
   .cred-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .changelog-box { max-height: 60vh; overflow-y: auto; }
 
   /* Toast / snackbar (action feedback + undo) */
   #toast {
@@ -648,6 +649,9 @@
       <div id="settings-about" class="hidden">
         <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
         <div class="setrow"><div class="k">Versjon</div><div class="v" id="setVersion">-</div></div>
+        <div class="setrow">
+          <button class="btn-primary" onclick="openChangelogModal()">Hva er nytt?</button>
+        </div>
       </div><!-- /settings-about -->
     </section>
   </main>
@@ -673,7 +677,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.4.2";
+const APP_VERSION = "1.5.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -788,6 +792,7 @@ function showApp() {
   applyRoleVisibility();
   loadListUsers();
   refreshAll();
+  checkVersionUpdate();
   clearInterval(pollTimer);
   pollTimer = setInterval(() => {
     if (document.hidden) return;
@@ -1947,26 +1952,59 @@ async function copyInvite() {
 // ---------- toast / snackbar ----------
 let toastTimer = null;
 // Brief feedback at the bottom of the screen. `undoFn` adds an "Angre" button
-// and extends the visible time; otherwise it auto-hides after a few seconds.
-function showToast(message, { error = false, undoFn = null } = {}) {
+// and extends the visible time; `actionFn`/`actionLabel` does the same with a
+// custom label (e.g. the version-update toast's "Hva er nytt?"). Otherwise it
+// auto-hides after a few seconds.
+function showToast(message, { error = false, undoFn = null, actionFn = null, actionLabel = "Angre" } = {}) {
   clearTimeout(toastTimer);
   let el = document.getElementById("toast");
   if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
   el.className = error ? "error" : "";
   el.innerHTML = `<span>${escapeHtml(message)}</span>`;
-  if (undoFn) {
+  const fn = undoFn || actionFn;
+  if (fn) {
     const b = document.createElement("button");
-    b.textContent = "Angre";
-    b.onclick = () => { clearTimeout(toastTimer); hideToast(); undoFn(); };
+    b.textContent = undoFn ? "Angre" : actionLabel;
+    b.onclick = () => { clearTimeout(toastTimer); hideToast(); fn(); };
     el.appendChild(b);
   }
   // force reflow so the transition runs even on rapid successive toasts
   void el.offsetWidth;
   el.classList.add("show");
-  toastTimer = setTimeout(hideToast, undoFn ? 5000 : 3000);
+  toastTimer = setTimeout(hideToast, fn ? 5000 : 3000);
 }
 function toast(message, error = false) { showToast(message, { error }); }
 function hideToast() { const el = document.getElementById("toast"); if (el) el.classList.remove("show"); }
+
+// ---------- version update toast / changelog ----------
+// Compares this browser's last-seen APP_VERSION against the running one.
+// First-ever load just records the version silently; a later mismatch (the
+// Pages deploy moved on since this device last opened the app) shows a toast
+// with a button into the changelog.
+function checkVersionUpdate() {
+  const last = localStorage.getItem("ph_last_version");
+  localStorage.setItem("ph_last_version", APP_VERSION);
+  if (last && last !== APP_VERSION) {
+    showToast(`Oppdatert til v${APP_VERSION}`, { actionLabel: "Hva er nytt?", actionFn: openChangelogModal });
+  }
+}
+
+async function openChangelogModal() {
+  pushModalNav();
+  let body = "Kunne ikke laste endringslogg.";
+  try {
+    const res = await fetch("/CHANGELOG.md");
+    if (res.ok) body = await res.text();
+  } catch { /* offline */ }
+  document.getElementById("modalRoot").innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Hva er nytt</h3>
+        <pre class="cred-box changelog-box">${escapeHtml(body)}</pre>
+        <div class="actions"><button class="cancel" onclick="closeModal()">Lukk</button></div>
+      </div>
+    </div>`;
+}
 
 // ---------- theme (light / dark / follow system) ----------
 function currentTheme() { return localStorage.getItem("ph_theme") || "system"; }

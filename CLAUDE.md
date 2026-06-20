@@ -47,7 +47,9 @@ There is no build step and no Node toolchain in this repo. Both the Pages projec
 
 ### Versioning
 
-There's a single version number, duplicated (no build step to inject it): `VERSION` in `worker/index.js` and `APP_VERSION` in `public/index.html` — bump both together on a release and add a `CHANGELOG.md` entry. The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
+There's a single version number, duplicated (no build step to inject it): `VERSION` in `worker/index.js` and `APP_VERSION` in `public/app.html` — bump both together on a release and add a `CHANGELOG.md` entry. The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
+
+`CHANGELOG.md` is also duplicated into `public/CHANGELOG.md` so Cloudflare Pages serves it as a static asset (the repo-root copy isn't in the Pages build output dir) — the frontend fetches `/CHANGELOG.md` directly to show a changelog modal (triggered from the "Om" settings subpage, and from a one-time toast when a device's last-seen `APP_VERSION` doesn't match the current one). Copy the updated `CHANGELOG.md` into `public/` whenever it changes.
 
 Version bump convention (`MAJOR.MINOR.PATCH`): every release so far has only bumped PATCH, even for substantial changes (dark mode, multi-tenant support). Going forward — bump MINOR for a release that adds a new user-facing capability or completes a planned phase/epic; bump PATCH for fixes, tweaks, and small additions; MAJOR is reserved for breaking changes (e.g. an incompatible API/schema change requiring coordinated migration).
 
