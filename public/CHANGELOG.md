@@ -14,6 +14,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.8.0] — 2026-06-20
+
+### Added
+- A "Vibrasjon ved handling" toggle in Profil settings to turn haptic feedback
+  on/off (default on); short vibration on checking off, adding, or deleting an
+  item.
+
+### Fixed
+- Swiping down at the top of a list no longer triggers the browser's native
+  pull-to-refresh (full page reload) — content scrolling now contains the
+  overscroll instead of bubbling up to the page.
+- The header, bottom tab bar, floating add button, and toast now respect the
+  device's notch/gesture-bar safe areas instead of running underneath them.
+- Added iOS web-app meta tags (`apple-mobile-web-app-capable` etc.) for a
+  cleaner standalone/install experience on iOS.
+
 ## [1.7.0] — 2026-06-20
 
 ### Added

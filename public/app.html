@@ -2,9 +2,12 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="author" content="Mohibb Malik">
 <meta name="theme-color" content="#F5F1ED">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panhandle">
 <!-- Set the theme attribute before the stylesheet applies, to avoid a flash of
      the wrong palette. Values: "light" | "dark" | "system" (default). -->
 <script>document.documentElement.dataset.theme = localStorage.getItem("ph_theme") || "system";</script>
@@ -47,9 +50,12 @@
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { overscroll-behavior-y: contain; }
   body {
     margin: 0; font-family: "Roboto", -apple-system, system-ui, "Segoe UI", Verdana, sans-serif;
-    background: var(--bg); color: var(--text); padding-bottom: 72px;
+    background: var(--bg); color: var(--text);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
   }
   .hidden { display: none !important; }
   .ui-icon { vertical-align: middle; flex-shrink: 0; }
@@ -83,7 +89,8 @@
   }
 
   header {
-    background: var(--bg-sunken); color: var(--text); padding: 16px 20px;
+    background: var(--bg-sunken); color: var(--text);
+    padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
     font-size: 20px; font-weight: 700; position: sticky; top: 0; z-index: 10;
     display: flex; justify-content: space-between; align-items: center;
     max-width: 480px; margin: 0 auto; border-bottom: 1px solid var(--border);
@@ -93,7 +100,9 @@
 
   /* Tabs */
   nav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); height: 64px;
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
     width: 100%; max-width: 480px;
     background: var(--bg-sunken); border-top: 1px solid var(--border);
     display: flex; z-index: 10;
@@ -285,7 +294,7 @@
     font-family: inherit; cursor: pointer; padding: 0;
   }
   .fab {
-    position: fixed; bottom: 84px; right: max(16px, calc(50vw - 224px));
+    position: fixed; bottom: calc(84px + env(safe-area-inset-bottom)); right: max(16px, calc(50vw - 224px));
     width: 56px; height: 56px; border-radius: 50%; background: var(--tile); color: #fff;
     border: none; font-size: 28px; line-height: 1; font-family: inherit; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -414,7 +423,7 @@
 
   /* Toast / snackbar (action feedback + undo) */
   #toast {
-    position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%) translateY(20px);
+    position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
     background: var(--accent-dark); color: #fff; border-radius: 12px;
     padding: 12px 16px; font-size: 14px; max-width: 90%; width: max-content;
     display: flex; align-items: center; gap: 14px; z-index: 200;
@@ -612,6 +621,14 @@
           </div>
         </div>
 
+        <div class="setrow">
+          <div class="k" style="margin-bottom:8px">Vibrasjon ved handling</div>
+          <div class="theme-toggle" id="hapticsToggle">
+            <button data-haptics-val="on" onclick="setHaptics(true)">På</button>
+            <button data-haptics-val="off" onclick="setHaptics(false)">Av</button>
+          </div>
+        </div>
+
         <div class="setrow hidden" id="installRow">
           <div class="k" style="margin-bottom:8px">Installer app</div>
           <div class="v" id="installRowText" style="margin-bottom:8px"></div>
@@ -718,7 +735,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.8.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -886,7 +903,7 @@ function applySettingsSub(view) {
     document.getElementById("settings-" + v).classList.toggle("hidden", v !== view);
   }
   document.getElementById("title").textContent = SETTINGS_TITLES[view];
-  if (view === "profile") renderThemeToggle();
+  if (view === "profile") { renderThemeToggle(); renderHapticsToggle(); }
   if (view === "members") loadListUsers();
   if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
   if (view === "about") document.getElementById("setVersion").textContent = APP_VERSION;
@@ -1293,6 +1310,7 @@ async function addItem() {
   const notes = gf ? "Glutenfri" : undefined;
   input.value = ""; // optimistic: clear the field immediately so adding feels instant
   hideSuggestions();
+  haptic();
   let res;
   try { res = await api("/list", { method: "POST", body: JSON.stringify({ name, qty, category, notes }) }); }
   catch { input.value = typed; toast("Kunne ikke legge til – sjekk nettforbindelsen", true); return; }
@@ -1313,6 +1331,7 @@ async function toggleItem(id) {
   it.bought = wasBought ? 0 : 1;
   it.bought_at = it.bought ? new Date().toISOString().replace("T", " ").slice(0, 19) : it.bought_at;
   renderList();
+  haptic();
   try { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
   catch {
     it.bought = wasBought;
@@ -1331,6 +1350,7 @@ function delItem(id) {
   lastItems.splice(idx, 1);
   pendingDeleteIds.add(id);
   renderList();
+  haptic();
   const timer = setTimeout(() => commitDelete(id), 5000);
   showToast(`«${cap(item.name)}» slettet`, { undoFn: () => {
     clearTimeout(timer);
@@ -2228,6 +2248,20 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
   if (currentTheme() === "system") applyTheme("system");
 });
 applyTheme(currentTheme());
+
+function hapticsEnabled() { return localStorage.getItem("ph_haptics") !== "0"; }
+function haptic(ms = 10) { if (hapticsEnabled() && navigator.vibrate) navigator.vibrate(ms); }
+function setHaptics(on) {
+  localStorage.setItem("ph_haptics", on ? "1" : "0");
+  renderHapticsToggle();
+  if (on) haptic();
+}
+function renderHapticsToggle() {
+  const on = hapticsEnabled();
+  document.querySelectorAll("#hapticsToggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.hapticsVal === (on ? "on" : "off")));
+}
+renderHapticsToggle();
 
 // ---------- misc ----------
 function syncTick() {
