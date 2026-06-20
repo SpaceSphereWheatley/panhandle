@@ -291,6 +291,13 @@
     display: block; background: none; border: none; color: var(--tile); font-size: 13px; font-weight: 600;
     font-family: inherit; cursor: pointer; padding: 0;
   }
+  .fab {
+    position: fixed; bottom: 84px; right: max(16px, calc(50vw - 224px));
+    width: 56px; height: 56px; border-radius: 50%; background: var(--tile); color: #fff;
+    border: none; font-size: 28px; line-height: 1; font-family: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 11;
+  }
 
   /* Meal suggestion chips (meal modal) */
   .meal-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
@@ -527,11 +534,11 @@
         <button onclick="shiftWeek(0)">Denne uken</button>
         <button id="weekNextBtn" onclick="shiftWeek(1)">Neste ›</button>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="margin-bottom:10px">
         <button class="browse-link" onclick="openMealCatalogueModal()">Alle måltider ›</button>
-        <button class="browse-link" onclick="openMealEditModal()">+ Nytt måltid</button>
       </div>
       <div id="planContainer"></div>
+      <button class="fab" aria-label="Nytt måltid" onclick="openMealEditModal()">+</button>
     </section>
 
     <!-- TAB: SETTINGS -->
@@ -649,7 +656,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // Frontend (Pages) version. Bumped together with the Worker's VERSION on each
 // release (see CHANGELOG.md). The Profile page shows this alongside the live
 // API version from GET /api/version so a stale half of a deploy is visible.
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.1";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";

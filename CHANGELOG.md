@@ -14,6 +14,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.2.1] — 2026-06-20
+
+### Changed
+- "+ Nytt måltid" moved off the Måltider tab's header (where it was a small,
+  easy-to-miss text link) onto a floating action button anchored bottom-right
+  of the tab, above the nav bar — matching the prominence a primary "add" action
+  warrants. The header now only has the "Alle måltider ›" link; its own
+  "+ Nytt måltid" button (inside that browse modal) is unchanged.
+
 ## [1.2.0] — 2026-06-19
 
 ### Added
