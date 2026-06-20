@@ -91,13 +91,6 @@
   header .header-actions { display: flex; align-items: center; gap: 10px; }
   header .sync { font-size: 11px; font-weight: 400; color: var(--muted); }
 
-  .pill {
-    background: var(--tile); color: #fff; border: none; border-radius: 999px;
-    padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
-    font-family: inherit; letter-spacing: 0.2px;
-  }
-  .pill.active { background: var(--accent); }
-
   /* Tabs */
   nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); height: 64px;
@@ -501,7 +494,6 @@
   <header>
     <span id="title">Handleliste</span>
     <div class="header-actions">
-      <button id="sortBtn" class="pill hidden" onclick="toggleSort()">Sorter liste</button>
       <span class="sync" id="syncStatus"></span>
     </div>
   </header>
@@ -681,7 +673,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.2";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -689,6 +681,7 @@ let isOwner = localStorage.getItem("ph_is_owner") === "1";
 let listUsers = []; // members of the current list (from /list-users), cached in memory
 let catalogue = [];
 let currentTab = "list";
+let currentSettingsView = "main";
 let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
 let pollTimer = null;
 let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
@@ -697,7 +690,6 @@ let collapsedCats = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
 // "Nylig kjøpt" (bought history) starts collapsed unless the user has chosen
 // otherwise — it's a re-add palette, not something to scroll past every time.
 if (!("Nylig kjøpt" in collapsedCats)) collapsedCats["Nylig kjøpt"] = true;
-let sortMode = localStorage.getItem("ph_sort") === "alpha" ? "alpha" : "default";
 
 // People to assign meals to are the members of the current list, fetched from
 // the server (replaces the old hardcoded two-name list).
@@ -789,11 +781,10 @@ function logout(reason) {
 }
 
 function showApp() {
+  history.replaceState({ tab: currentTab, settingsView: currentSettingsView }, "");
   document.getElementById("login").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("setUser").textContent = currentUser;
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  document.getElementById("sortBtn").classList.remove("hidden");
   applyRoleVisibility();
   loadListUsers();
   refreshAll();
@@ -810,7 +801,9 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // ---------- tabs ----------
-function switchTab(tab) {
+// DOM-only update, no history side effects — used both for user-driven tab
+// switches and to replay a popped history state.
+function applyTab(tab) {
   currentTab = tab;
   for (const t of ["list","meals","settings"]) {
     document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
@@ -818,16 +811,22 @@ function switchTab(tab) {
   }
   document.getElementById("title").textContent =
     tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Innstillinger";
-  document.getElementById("sortBtn").classList.toggle("hidden", tab !== "list");
   if (tab === "list") loadList();
   if (tab === "meals") loadPlan();
-  if (tab === "settings") { showSettingsSub("main"); loadSettings(); }
+  if (tab === "settings") { applySettingsSub("main"); loadSettings(); }
+}
+
+function switchTab(tab) {
+  const changed = tab !== currentTab;
+  applyTab(tab);
+  if (changed) pushNav({ tab: currentTab, settingsView: currentSettingsView });
 }
 
 // Settings drill-down: "main" category list <-> profile/members/admin/about subpages.
 const SETTINGS_TITLES = { main: "Innstillinger", profile: "Profil", members: "Medlemmer",
   admin: "Administrasjon", about: "Om" };
-function showSettingsSub(view) {
+function applySettingsSub(view) {
+  currentSettingsView = view;
   for (const v of Object.keys(SETTINGS_TITLES)) {
     document.getElementById("settings-" + v).classList.toggle("hidden", v !== view);
   }
@@ -837,6 +836,67 @@ function showSettingsSub(view) {
   if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
   if (view === "about") document.getElementById("setVersion").textContent = APP_VERSION;
 }
+
+function showSettingsSub(view) {
+  // The in-page "‹ Innstillinger" buttons mean "go back" — make that an actual
+  // history pop instead of a forward push, so the back button and this button
+  // stay in sync with each other.
+  if (view === "main") {
+    if (currentSettingsView !== "main") { history.back(); return; }
+    applySettingsSub("main");
+    return;
+  }
+  const changed = view !== currentSettingsView;
+  applySettingsSub(view);
+  if (changed) pushNav({ tab: "settings", settingsView: view });
+}
+
+// ---------- back-button / history navigation ----------
+// This is an installed standalone PWA with no other history to fall back to,
+// so without explicit history entries the OS/browser back button just exits
+// the app from wherever it's pressed. Tab switches, settings drill-down, and
+// modals each push a history entry; popstate undoes exactly one of them.
+let applyingPopState = false;
+
+function pushNav(state) {
+  if (applyingPopState) return;
+  history.pushState(state, "");
+}
+
+window.addEventListener("popstate", (e) => {
+  applyingPopState = true;
+  const modalRoot = document.getElementById("modalRoot");
+  if (modalRoot.innerHTML) modalRoot.innerHTML = "";
+  const state = e.state || { tab: "list", settingsView: "main" };
+  if (state.tab !== currentTab) applyTab(state.tab);
+  if (state.tab === "settings" && state.settingsView !== currentSettingsView) {
+    applySettingsSub(state.settingsView);
+  }
+  applyingPopState = false;
+});
+
+// Opening a modal pushes a history entry so the back button closes it instead
+// of leaving the app; if a modal is already open (one modal's content
+// replacing another's, e.g. the meal FAB menu opening the edit form), replace
+// that entry instead of stacking another, so one back press is enough to
+// return to whatever was open before the first modal.
+function pushModalNav() {
+  if (applyingPopState) return;
+  const state = { tab: currentTab, settingsView: currentSettingsView, modal: true };
+  if (history.state && history.state.modal) history.replaceState(state, "");
+  else history.pushState(state, "");
+}
+
+function closeModal() {
+  const root = document.getElementById("modalRoot");
+  if (!root.innerHTML) return;
+  root.innerHTML = "";
+  if (!applyingPopState && history.state && history.state.modal) history.back();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("modalRoot").innerHTML) closeModal();
+});
 
 async function loadAdminCounts() {
   const cat = await api("/catalogue");
@@ -855,13 +915,6 @@ async function loadAdminCounts() {
       : apiVersion === APP_VERSION
         ? `${APP_VERSION} ✓`
         : `${APP_VERSION} (app) / ${apiVersion} (api) — avvik`;
-}
-
-function toggleSort() {
-  sortMode = sortMode === "alpha" ? "default" : "alpha";
-  localStorage.setItem("ph_sort", sortMode);
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  renderList();
 }
 
 function toggleCat(key) {
@@ -922,9 +975,6 @@ function renderList() {
   const groups = {};
   for (const it of unbought) {
     (groups[it.category] = groups[it.category] || []).push(it);
-  }
-  if (sortMode === "alpha") {
-    for (const cat in groups) groups[cat].sort((a, b) => a.name.localeCompare(b.name, "no"));
   }
   for (const cat of CATEGORIES) {
     if (!groups[cat]) continue;
@@ -1098,6 +1148,7 @@ function openItemModal(id) {
                 onclick="deleteFromCatalogue(${it.id})">Slett vare fra katalog</button>
       </div>
     </div>`;
+  pushModalNav();
 }
 
 async function saveItemEdit(id) {
@@ -1431,8 +1482,8 @@ async function openMealModal(iso) {
         </div>
       </div>
     </div>`;
+  pushModalNav();
 }
-function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
 
 // Fill the meal modal's name/ingredients from a clicked suggestion chip,
 // same effect as picking the same name from the datalist.
@@ -1485,6 +1536,7 @@ async function openMealCatalogueModal() {
         </div>
       </div>
     </div>`;
+  pushModalNav();
 }
 
 // The Måltider tab's FAB opens this small chooser rather than going straight
@@ -1504,6 +1556,7 @@ function openMealFabMenu() {
         </div>
       </div>
     </div>`;
+  pushModalNav();
 }
 
 // Add (id omitted) or edit (id given) a meal_catalogue entry directly, outside
@@ -1538,6 +1591,7 @@ async function openMealEditModal(id) {
                 onclick="deleteMealEntry(${meal.id})">Slett måltid fra katalog</button>` : ""}
       </div>
     </div>`;
+  pushModalNav();
 }
 
 // Live feedback while typing a meal name: an exact (case-insensitive) match
@@ -1674,6 +1728,7 @@ async function openIngredientPicker(rawIngredients, iso) {
         </div>
       </div>
     </div>`;
+  pushModalNav();
 }
 
 async function confirmAddIngredients() {
@@ -1880,6 +1935,7 @@ Passord: ${password}
         </div>
       </div>
     </div>`;
+  pushModalNav();
 }
 
 async function copyInvite() {
