@@ -91,13 +91,6 @@
   header .header-actions { display: flex; align-items: center; gap: 10px; }
   header .sync { font-size: 11px; font-weight: 400; color: var(--muted); }
 
-  .pill {
-    background: var(--tile); color: #fff; border: none; border-radius: 999px;
-    padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
-    font-family: inherit; letter-spacing: 0.2px;
-  }
-  .pill.active { background: var(--accent); }
-
   /* Tabs */
   nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); height: 64px;
@@ -501,7 +494,6 @@
   <header>
     <span id="title">Handleliste</span>
     <div class="header-actions">
-      <button id="sortBtn" class="pill hidden" onclick="toggleSort()">Sorter liste</button>
       <span class="sync" id="syncStatus"></span>
     </div>
   </header>
@@ -681,7 +673,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -698,7 +690,6 @@ let collapsedCats = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
 // "Nylig kjøpt" (bought history) starts collapsed unless the user has chosen
 // otherwise — it's a re-add palette, not something to scroll past every time.
 if (!("Nylig kjøpt" in collapsedCats)) collapsedCats["Nylig kjøpt"] = true;
-let sortMode = localStorage.getItem("ph_sort") === "alpha" ? "alpha" : "default";
 
 // People to assign meals to are the members of the current list, fetched from
 // the server (replaces the old hardcoded two-name list).
@@ -794,8 +785,6 @@ function showApp() {
   document.getElementById("login").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("setUser").textContent = currentUser;
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  document.getElementById("sortBtn").classList.remove("hidden");
   applyRoleVisibility();
   loadListUsers();
   refreshAll();
@@ -822,7 +811,6 @@ function applyTab(tab) {
   }
   document.getElementById("title").textContent =
     tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Innstillinger";
-  document.getElementById("sortBtn").classList.toggle("hidden", tab !== "list");
   if (tab === "list") loadList();
   if (tab === "meals") loadPlan();
   if (tab === "settings") { applySettingsSub("main"); loadSettings(); }
@@ -929,13 +917,6 @@ async function loadAdminCounts() {
         : `${APP_VERSION} (app) / ${apiVersion} (api) — avvik`;
 }
 
-function toggleSort() {
-  sortMode = sortMode === "alpha" ? "default" : "alpha";
-  localStorage.setItem("ph_sort", sortMode);
-  document.getElementById("sortBtn").classList.toggle("active", sortMode === "alpha");
-  renderList();
-}
-
 function toggleCat(key) {
   collapsedCats[key] = !collapsedCats[key];
   localStorage.setItem("ph_collapsed", JSON.stringify(collapsedCats));
@@ -994,9 +975,6 @@ function renderList() {
   const groups = {};
   for (const it of unbought) {
     (groups[it.category] = groups[it.category] || []).push(it);
-  }
-  if (sortMode === "alpha") {
-    for (const cat in groups) groups[cat].sort((a, b) => a.name.localeCompare(b.name, "no"));
   }
   for (const cat of CATEGORIES) {
     if (!groups[cat]) continue;

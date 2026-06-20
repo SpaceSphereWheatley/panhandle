@@ -14,6 +14,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.4.2] — 2026-06-20
+
+### Removed
+- The "Sorter liste" pill on the Handleliste tab — it toggled an alphabetical
+  sort within each category, but the toggle's visual state and effect were
+  unreliable enough that it read as broken. Removed the button along with
+  `sortMode`/`toggleSort` and the now-dead `.pill` CSS; the list always
+  renders in default category order.
+
 ## [1.4.1] — 2026-06-20
 
 ### Fixed
