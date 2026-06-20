@@ -291,6 +291,18 @@
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 11;
   }
+  .fab-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; background: var(--accent-dark); color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+
+  /* Purchase-suggestion rows (FAB suggestions modal) */
+  .suggest-row { display: flex; align-items: center; gap: 8px; }
+  .suggest-add {
+    background: var(--tile); color: #fff; border: none; border-radius: 8px;
+    width: 32px; height: 32px; font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
 
   /* Meal suggestion chips (meal modal) */
   .meal-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
@@ -517,7 +529,9 @@
       </div>
       <div id="listContainer"></div>
       <div id="recentContainer"></div>
-      <button class="fab" aria-label="Legg til vare" onclick="focusAddInput()">+</button>
+      <button class="fab" aria-label="Legg til vare" onclick="onShoppingFabClick()">
+        <span id="fabBadge" class="fab-badge hidden">0</span>+
+      </button>
     </section>
 
     <!-- TAB: MEALS -->
@@ -677,7 +691,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -689,6 +703,7 @@ let currentSettingsView = "main";
 let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
 let pollTimer = null;
 let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
+let suggestedItems = []; // most recently loaded /catalogue/suggestions rows, drives the FAB badge
 const pendingDeleteIds = new Set(); // ids removed optimistically, awaiting the undo grace window
 let collapsedCats = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
 // "Nylig kjøpt" (bought history) starts collapsed unless the user has chosen
@@ -949,6 +964,8 @@ async function loadList() {
   // during the grace window before the delete is committed server-side.
   lastItems = pendingDeleteIds.size ? items.filter(it => !pendingDeleteIds.has(it.id)) : items;
   renderList();
+  try { suggestedItems = await api("/catalogue/suggestions"); } catch { suggestedItems = []; }
+  renderFabBadge();
 }
 
 // Renders the shopping list from `lastItems` (already fetched). Split out from
@@ -1317,12 +1334,66 @@ async function addItemExact() {
 }
 
 // autocomplete
-// Shopping tab's FAB — just jumps to the add bar for now (placeholder for a
-// fuller quick-add flow later).
+// Shopping tab's FAB: when there are pending "probably out of X" suggestions,
+// surface those first instead of jumping straight to manual entry.
+function onShoppingFabClick() {
+  if (suggestedItems.length) openSuggestionsModal();
+  else focusAddInput();
+}
+
 function focusAddInput() {
   const el = document.getElementById("addInput");
   el.scrollIntoView({ behavior: "smooth", block: "start" });
   el.focus();
+}
+
+function renderFabBadge() {
+  const badge = document.getElementById("fabBadge");
+  if (!badge) return;
+  badge.textContent = suggestedItems.length;
+  badge.classList.toggle("hidden", suggestedItems.length === 0);
+}
+
+function renderSuggestRows() {
+  if (!suggestedItems.length) return `<p class="cred-note">Ingen forslag akkurat nå.</p>`;
+  return suggestedItems.map(it => `
+    <div class="meal-browse-row suggest-row">
+      <span class="info">
+        <span class="name">${escapeHtml(cap(it.name))}</span>
+        <span class="stats">Sist kjøpt for ${Math.round(it.days_since)} dager siden · vanligvis hver ${Math.round(it.avg_interval_days)}. dag</span>
+      </span>
+      <button type="button" class="suggest-add" aria-label="Legg til ${escapeHtml(cap(it.name))}" onclick="addSuggestedItem(${it.id})">+</button>
+    </div>`).join("");
+}
+
+function openSuggestionsModal() {
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h3>Sannsynligvis tom for</h3>
+        <div id="suggestRows">${renderSuggestRows()}</div>
+        <button class="meal-browse-add" style="background:var(--bg-sunken);color:var(--text)"
+                onclick="closeModal();focusAddInput()">Legg til annen vare</button>
+      </div>
+    </div>`;
+  pushModalNav();
+}
+
+async function addSuggestedItem(id) {
+  const it = suggestedItems.find(s => s.id === id);
+  if (!it) return;
+  suggestedItems = suggestedItems.filter(s => s.id !== id);
+  const rows = document.getElementById("suggestRows");
+  if (rows) rows.innerHTML = renderSuggestRows();
+  renderFabBadge();
+  try {
+    await api("/list", { method: "POST", body: JSON.stringify({ name: it.name, qty: 1, category: it.category }) });
+  } catch {
+    toast("Kunne ikke legge til – sjekk nettforbindelsen", true);
+  }
+  catalogue = await api("/catalogue");
+  loadList();
 }
 
 function onAddInput() {
