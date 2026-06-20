@@ -718,7 +718,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.6.2";
+const APP_VERSION = "1.7.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -729,6 +729,8 @@ let currentTab = "list";
 let currentSettingsView = "main";
 let viewMode = localStorage.getItem("ph_view") === "grid" ? "grid" : "list";
 let pollTimer = null;
+let deployCheckTimer = null;
+let updateAvailable = false; // set once a deploy-drift toast has fired, so we don't re-prompt every tick
 let lastItems = []; // most recently loaded /list rows, keyed lookup for the item modal
 let suggestedItems = []; // most recently loaded /catalogue/suggestions rows, drives the FAB badge
 const pendingDeleteIds = new Set(); // ids removed optimistically, awaiting the undo grace window
@@ -817,6 +819,7 @@ function logout(reason) {
   localStorage.removeItem("ph_is_owner");
   token = null; currentUser = null; isAdmin = false; isOwner = false; listUsers = [];
   clearInterval(pollTimer);
+  clearInterval(deployCheckTimer);
   hideToast();
   document.getElementById("app").classList.add("hidden");
   document.getElementById("login").classList.remove("hidden");
@@ -841,10 +844,15 @@ function showApp() {
     if (currentTab === "list") loadList();
     if (currentTab === "meals") loadPlan();
   }, 7000);
+  clearInterval(deployCheckTimer);
+  deployCheckTimer = setInterval(() => {
+    if (document.hidden) return;
+    checkForNewDeploy();
+  }, 60000);
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && token) refreshAll();
+  if (!document.hidden && token) { refreshAll(); checkForNewDeploy(); }
 });
 
 // ---------- tabs ----------
@@ -2160,6 +2168,20 @@ function checkVersionUpdate() {
   localStorage.setItem("ph_last_version", APP_VERSION);
   if (last && last !== APP_VERSION) {
     showToast(`Oppdatert til v${APP_VERSION}`, { actionLabel: "Hva er nytt?", actionFn: openChangelogModal });
+  }
+}
+
+// Catches a deploy that happened *while this tab has been open* — the case
+// checkVersionUpdate() above can't see, since the browser already served this
+// session the (now stale) app.html. Polls the live Worker version and prompts
+// rather than reloading silently, so an in-progress edit isn't lost.
+async function checkForNewDeploy() {
+  if (updateAvailable) return;
+  let apiVersion = null;
+  try { apiVersion = (await api("/version")).version; } catch { return; }
+  if (apiVersion && apiVersion !== APP_VERSION) {
+    updateAvailable = true;
+    showToast("En ny versjon er tilgjengelig", { actionLabel: "Oppdater", actionFn: () => location.reload() });
   }
 }
 
