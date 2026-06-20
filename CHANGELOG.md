@@ -14,6 +14,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.4.1] — 2026-06-20
+
+### Fixed
+- The Android/browser back button did nothing sensible inside the app (no
+  `history` integration existed at all) — pressing it while a modal was open,
+  mid-drill-down in Innstillinger, or on the Måltider/Innstillinger tab just
+  exited the standalone PWA instead of stepping back one level. Tab switches,
+  settings drill-down (main ↔ profile/medlemmer/administrasjon/om), and every
+  modal now push a `history` entry, so back closes the modal / returns to the
+  previous subpage or tab first, matching what a user expects. Escape now also
+  closes an open modal.
+
 ## [1.4.0] — 2026-06-20
 
 ### Changed
