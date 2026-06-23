@@ -201,6 +201,10 @@
     font-size: 20px;
   }
   .card-wrap .card { margin-bottom: 0; touch-action: pan-y; }
+  .card-wrap.resolving, .grid-card.resolving {
+    transition: transform .2s ease, opacity .2s ease;
+    transform: scale(.92); opacity: 0; pointer-events: none;
+  }
 
   /* View toggle */
   .list-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -735,7 +739,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.8.1";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1092,6 +1096,7 @@ const SWIPE_THRESHOLD = 70;
 function card(it) {
   const wrap = document.createElement("div");
   wrap.className = "card-wrap";
+  wrap.dataset.itemId = it.id;
   const el = document.createElement("div");
   el.className = "card" + (it.bought ? " bought" : "");
   let pressTimer = null;
@@ -1165,6 +1170,7 @@ function card(it) {
 function gridCard(it) {
   const el = document.createElement("div");
   el.className = "grid-card" + (it.bought ? " bought" : "");
+  el.dataset.itemId = it.id;
   let pressTimer = null;
   let longPressed = false;
   let startX = 0, startY = 0;
@@ -1322,22 +1328,38 @@ async function addItem() {
   loadList();
 }
 
+const RESOLVE_MS = 200;
+// Plays a brief shrink/fade on the tapped card in place (signals "resolved",
+// not a literal move — "Nylig kjøpt" starts collapsed so animating a flight
+// to it would usually have nowhere visible to land), then runs `mutate`.
+function withResolveAnimation(id, mutate) {
+  const el = document.querySelector(`[data-item-id="${id}"]`);
+  if (!el || el.classList.contains("resolving")) { mutate(); return; }
+  el.classList.add("resolving");
+  let done = false;
+  const finish = () => { if (done) return; done = true; mutate(); };
+  el.addEventListener("transitionend", finish, { once: true });
+  setTimeout(finish, RESOLVE_MS);
+}
+
 // Optimistic: flip bought-state in the DOM immediately, reconcile with the
 // server in the background, and revert + warn if the request fails.
 async function toggleItem(id) {
   const it = lastItems.find(x => x.id === id);
   if (!it) return;
-  const wasBought = it.bought;
-  it.bought = wasBought ? 0 : 1;
-  it.bought_at = it.bought ? new Date().toISOString().replace("T", " ").slice(0, 19) : it.bought_at;
-  renderList();
   haptic();
-  try { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
-  catch {
-    it.bought = wasBought;
+  withResolveAnimation(id, async () => {
+    const wasBought = it.bought;
+    it.bought = wasBought ? 0 : 1;
+    it.bought_at = it.bought ? new Date().toISOString().replace("T", " ").slice(0, 19) : it.bought_at;
     renderList();
-    toast("Kunne ikke oppdatere – sjekk nettforbindelsen", true);
-  }
+    try { await api(`/list/${id}/toggle`, { method: "POST" }); loadList(); }
+    catch {
+      it.bought = wasBought;
+      renderList();
+      toast("Kunne ikke oppdatere – sjekk nettforbindelsen", true);
+    }
+  });
 }
 
 // Optimistic delete with a 5s undo window: the row disappears at once, but the

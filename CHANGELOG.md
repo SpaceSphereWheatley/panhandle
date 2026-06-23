@@ -14,6 +14,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.8.1] — 2026-06-22
+
+### Added
+- A brief shrink/fade animation on a shopping item when it's marked
+  purchased or un-marked from "Nylig kjøpt", so toggling no longer just
+  teleports the row from one place to another.
+
 ## [1.8.0] — 2026-06-20
 
 ### Added
