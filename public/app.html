@@ -288,7 +288,12 @@
     background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
     padding: 14px 16px; margin-bottom: 10px;
   }
+  .day.today {
+    border: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  }
   .day .date { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+  .day.today .date { color: var(--accent); }
   .day .meal { font-size: 17px; font-weight: 600; margin: 4px 0; color: var(--text); }
   .day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
   .day .resp { font-size: 13px; color: var(--tile); font-weight: 600; }
@@ -1562,7 +1567,7 @@ async function loadPlan() {
     const iso = localIso(d);
     const p = byDate[iso];
     const el = document.createElement("div");
-    el.className = "day";
+    el.className = "day" + (iso === today ? " today" : "");
     const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
     el.innerHTML = `
       <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
