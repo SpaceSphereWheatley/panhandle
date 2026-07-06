@@ -1707,7 +1707,7 @@ async function openMealModal(iso) {
         })()}
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Avbryt</button>
-          ${current.meal_name ? `<button class="cancel" onclick="deletePlan('${iso}')">Slett</button>` : ""}
+          ${(current.meal_name || current.responsible) ? `<button class="cancel" onclick="deletePlan('${iso}')">Slett</button>` : ""}
           <button class="save" onclick="savePlan('${iso}')">Lagre</button>
         </div>
       </div>
@@ -1939,9 +1939,9 @@ async function savePlan(iso) {
   const responsible = getMealResp();
   const ingredients = document.getElementById("mealIngredients").value
     .split(",").map(s => s.trim()).filter(Boolean);
-  if (!meal_name) { closeModal(); return; }
+  if (!meal_name && !responsible) { closeModal(); return; }
   await api("/plan", { method: "POST",
-    body: JSON.stringify({ plan_date: iso, meal_name, responsible, ingredients }) });
+    body: JSON.stringify({ plan_date: iso, meal_name: meal_name || null, responsible, ingredients }) });
   closeModal(); loadPlan();
 }
 async function deletePlan(iso) {
