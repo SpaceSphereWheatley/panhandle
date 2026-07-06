@@ -297,6 +297,7 @@
   .day .meal { font-size: 17px; font-weight: 600; margin: 4px 0; color: var(--text); }
   .day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
   .day .resp { font-size: 13px; color: var(--tile); font-weight: 600; }
+  .day .resp.recurring { opacity: 0.5; font-style: italic; font-weight: 400; }
   .day .edit { float: right; background: none; border: none; color: var(--tile); font-size: 14px; font-family: inherit; }
   .browse-link {
     display: block; background: none; border: none; color: var(--tile); font-size: 13px; font-weight: 600;
@@ -610,6 +611,10 @@
           <span>Administrasjon</span>
           <span class="nav-row-arrow"></span>
         </button>
+        <button class="setrow nav-row" onclick="showSettingsSub('recurring')">
+          <span>Fast ukentlig ansvar</span>
+          <span class="nav-row-arrow"></span>
+        </button>
         <button class="setrow nav-row" onclick="showSettingsSub('about')">
           <span>Om</span>
           <span class="nav-row-arrow"></span>
@@ -712,6 +717,18 @@
         </div>
       </div><!-- /settings-admin -->
 
+      <!-- Fast ukentlig ansvar: per-day-of-week default responsible person -->
+      <div id="settings-recurring" class="hidden">
+        <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
+        <div class="setrow">
+          <div class="k" style="margin-bottom:4px">Fast ansvarlig per ukedag</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
+            Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag
+            når du planlegger, og du kan alltid endre det for en enkelt dag.</div>
+          <div id="recurringRows"></div>
+        </div>
+      </div><!-- /settings-recurring -->
+
       <!-- Om: version info -->
       <div id="settings-about" class="hidden">
         <button class="subpage-back" onclick="showSettingsSub('main')">‹ Innstillinger</button>
@@ -744,12 +761,13 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.8.1";
+const APP_VERSION = "1.9.0";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
 let isOwner = localStorage.getItem("ph_is_owner") === "1";
 let listUsers = []; // members of the current list (from /list-users), cached in memory
+let recurringSchedule = {}; // day_of_week (0=Mon…6=Sun) -> responsible, from /recurring
 let catalogue = [];
 let currentTab = "list";
 let currentSettingsView = "main";
@@ -843,7 +861,7 @@ function logout(reason) {
   localStorage.removeItem("ph_user");
   localStorage.removeItem("ph_is_admin");
   localStorage.removeItem("ph_is_owner");
-  token = null; currentUser = null; isAdmin = false; isOwner = false; listUsers = [];
+  token = null; currentUser = null; isAdmin = false; isOwner = false; listUsers = []; recurringSchedule = {};
   clearInterval(pollTimer);
   clearInterval(deployCheckTimer);
   hideToast();
@@ -893,7 +911,7 @@ function applyTab(tab) {
   document.getElementById("title").textContent =
     tab === "list" ? "Handleliste" : tab === "meals" ? "Måltider" : "Innstillinger";
   if (tab === "list") loadList();
-  if (tab === "meals") loadPlan();
+  if (tab === "meals") { loadRecurringSchedule(); loadPlan(); }
   if (tab === "settings") { applySettingsSub("main"); loadSettings(); }
 }
 
@@ -905,7 +923,7 @@ function switchTab(tab) {
 
 // Settings drill-down: "main" category list <-> profile/members/admin/about subpages.
 const SETTINGS_TITLES = { main: "Innstillinger", profile: "Profil", members: "Medlemmer",
-  admin: "Administrasjon", about: "Om" };
+  admin: "Administrasjon", recurring: "Fast ukentlig ansvar", about: "Om" };
 function applySettingsSub(view) {
   currentSettingsView = view;
   for (const v of Object.keys(SETTINGS_TITLES)) {
@@ -915,6 +933,7 @@ function applySettingsSub(view) {
   if (view === "profile") { renderThemeToggle(); renderHapticsToggle(); }
   if (view === "members") loadListUsers();
   if (view === "admin") { loadAllUsers(); loadIconGaps(); loadAdminCounts(); }
+  if (view === "recurring") loadRecurringSettingsView();
   if (view === "about") document.getElementById("setVersion").textContent = APP_VERSION;
 }
 
@@ -1573,7 +1592,10 @@ async function loadPlan() {
       <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
       <div class="date">${iso === today ? "I dag" : dayName}</div>
       <div class="meal ${p ? "" : "empty"}">${p ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
-      ${p && p.responsible ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>` : ""}`;
+      ${p && p.responsible
+        ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>`
+        : (() => { const dow = (d.getDay() + 6) % 7; const def = recurringSchedule[dow]; return def ? `<div class="resp recurring">Fast ansvarlig: ${escapeHtml(def)}</div>` : ""; })()
+      }`;
     c.appendChild(el);
   }
   syncTick();
@@ -1636,6 +1658,7 @@ document.addEventListener("click", (e) => {
 
 async function openMealModal(iso) {
   if (!listUsers.length) await loadListUsers();
+  if (!Object.keys(recurringSchedule).length) await loadRecurringSchedule();
   const [meals, plan, suggestions] = await Promise.all([
     api("/meals"), api(`/plan?from=${iso}&to=${iso}`),
     api("/meals/suggestions").catch(() => [])
@@ -1667,10 +1690,21 @@ async function openMealModal(iso) {
         <button type="button" class="ing-add-btn" onclick="pickIngredients('${iso}')">
           + Legg ingredienser på handlelisten</button>
         <label>Ansvarlig</label>
-        <select id="mealResp">
-          <option value=""${current.responsible ? "" : " selected"}>Ingen</option>
-          ${people().map(p => `<option ${current.responsible===p?"selected":""}>${escapeHtml(p)}</option>`).join("")}
-        </select>
+        ${(() => {
+          const dow = (new Date(iso).getDay() + 6) % 7;
+          const def = !current.responsible ? (recurringSchedule[dow] || "") : "";
+          const resp = current.responsible || "";
+          const knownPeople = people();
+          const isOther = resp && resp !== "" && !knownPeople.includes(resp);
+          return `<select id="mealResp" onchange="onMealRespChange()">
+            <option value=""${!resp && !def ? " selected" : ""}>Ingen</option>
+            ${knownPeople.map(p => `<option value="${escapeHtml(p)}"${resp===p||(!resp&&def===p)?" selected":""}>${escapeHtml(p)}</option>`).join("")}
+            <option value="__other__"${isOther?" selected":""}>Annet...</option>
+          </select>
+          <input id="mealRespOther" type="text" placeholder="Beskriv (f.eks. Ute og spiser)"
+            style="display:${isOther?"block":"none"};margin-top:8px;width:100%;padding:10px;font-size:16px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)"
+            value="${isOther ? escapeHtml(resp) : ""}">`;
+        })()}
         <div class="actions">
           <button class="cancel" onclick="closeModal()">Avbryt</button>
           ${current.meal_name ? `<button class="cancel" onclick="deletePlan('${iso}')">Slett</button>` : ""}
@@ -1883,9 +1917,26 @@ async function deleteMealEntry(id) {
   await openMealCatalogueModal();
 }
 
+function onMealRespChange() {
+  const sel = document.getElementById("mealResp");
+  const inp = document.getElementById("mealRespOther");
+  if (!inp) return;
+  inp.style.display = sel.value === "__other__" ? "block" : "none";
+  if (sel.value === "__other__") inp.focus();
+}
+
+function getMealResp() {
+  const sel = document.getElementById("mealResp");
+  if (sel.value === "__other__") {
+    const inp = document.getElementById("mealRespOther");
+    return (inp && inp.value.trim()) || "Annet";
+  }
+  return sel.value;
+}
+
 async function savePlan(iso) {
   const meal_name = document.getElementById("mealName").value.trim();
-  const responsible = document.getElementById("mealResp").value;
+  const responsible = getMealResp();
   const ingredients = document.getElementById("mealIngredients").value
     .split(",").map(s => s.trim()).filter(Boolean);
   if (!meal_name) { closeModal(); return; }
@@ -1910,7 +1961,7 @@ async function pickIngredients(iso) {
   // Persist the meal first so the typed ingredients are remembered and the day
   // is saved — then we can safely swap the modal over to the picker.
   if (meal_name) {
-    const responsible = document.getElementById("mealResp").value;
+    const responsible = getMealResp();
     try {
       await api("/plan", { method: "POST",
         body: JSON.stringify({ plan_date: iso, meal_name, responsible, ingredients: rawIng }) });
@@ -2034,6 +2085,69 @@ function applyRoleVisibility() {
 async function loadListUsers() {
   try { listUsers = await api("/list-users"); } catch { return; }
   if (isOwner) renderMembers();
+}
+
+async function loadRecurringSchedule() {
+  try {
+    const rows = await api("/recurring");
+    recurringSchedule = {};
+    for (const r of rows) recurringSchedule[r.day_of_week] = r.responsible;
+  } catch { /* non-critical, ignore */ }
+}
+
+const WEEKDAYS_NO = ["Mandag","Tirsdag","Onsdag","Torsdag","Fredag","Lørdag","Søndag"];
+
+async function loadRecurringSettingsView() {
+  if (!listUsers.length) await loadListUsers();
+  await loadRecurringSchedule();
+  const container = document.getElementById("recurringRows");
+  if (!container) return;
+  const ps = people();
+  container.innerHTML = WEEKDAYS_NO.map((day, dow) => {
+    const current = recurringSchedule[dow] || "";
+    const isOther = current && !ps.includes(current);
+    return `<div class="setrow" style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;margin-bottom:6px">${day}</div>
+      <select onchange="onRecurringChange(${dow}, this)" data-dow="${dow}" style="width:100%;padding:10px;font-size:15px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)">
+        <option value=""${!current?" selected":""}>Ingen</option>
+        ${ps.map(p => `<option value="${escapeHtml(p)}"${current===p?" selected":""}>${escapeHtml(p)}</option>`).join("")}
+        <option value="__other__"${isOther?" selected":""}>Annet...</option>
+      </select>
+      <input type="text" placeholder="Beskriv ansvaret" data-dow-other="${dow}"
+        style="display:${isOther?"block":"none"};margin-top:8px;width:100%;padding:10px;font-size:15px;border-radius:10px;border:1px solid var(--border);background:var(--bg-sunken);color:var(--text)"
+        value="${isOther?escapeHtml(current):""}"
+        onblur="onRecurringOtherBlur(${dow}, this)">
+    </div>`;
+  }).join("");
+}
+
+async function onRecurringChange(dow, sel) {
+  const other = document.querySelector(`[data-dow-other="${dow}"]`);
+  if (sel.value === "__other__") {
+    if (other) { other.style.display = "block"; other.focus(); }
+    return;
+  }
+  if (other) other.style.display = "none";
+  await saveRecurringDay(dow, sel.value);
+}
+
+async function onRecurringOtherBlur(dow, inp) {
+  const val = inp.value.trim();
+  await saveRecurringDay(dow, val || "");
+  if (!val) {
+    // revert select to "Ingen"
+    const sel = document.querySelector(`[data-dow="${dow}"]`);
+    if (sel) sel.value = "";
+    inp.style.display = "none";
+  }
+}
+
+async function saveRecurringDay(dow, responsible) {
+  try {
+    await api("/recurring", { method: "POST", body: JSON.stringify({ day_of_week: dow, responsible }) });
+    if (responsible) recurringSchedule[dow] = responsible;
+    else delete recurringSchedule[dow];
+  } catch { toast("Kunne ikke lagre – sjekk nettforbindelsen", true); }
 }
 
 function renderMembers() {

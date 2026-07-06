@@ -14,7 +14,7 @@
 // with public/app.html's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.8.1";
+const VERSION = "1.9.0";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -989,6 +989,33 @@ export default {
     if (planDelMatch && method === "DELETE") {
       await env.DB.prepare("DELETE FROM meal_plan WHERE plan_date = ?1 AND list_id = ?2")
         .bind(planDelMatch[1], user.list_id).run();
+      return authedJson({ ok: true });
+    }
+
+    if (path === "/recurring" && method === "GET") {
+      const rows = await env.DB.prepare(
+        "SELECT day_of_week, responsible FROM recurring_schedule WHERE list_id = ?1 ORDER BY day_of_week"
+      ).bind(user.list_id).all();
+      return authedJson(rows.results);
+    }
+
+    if (path === "/recurring" && method === "POST") {
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const { day_of_week, responsible } = body;
+      if (typeof day_of_week !== "number" || day_of_week < 0 || day_of_week > 6)
+        return authedJson({ error: "Ugyldig dag" }, 400);
+      if (!responsible) {
+        await env.DB.prepare(
+          "DELETE FROM recurring_schedule WHERE list_id = ?1 AND day_of_week = ?2"
+        ).bind(user.list_id, day_of_week).run();
+      } else {
+        await env.DB.prepare(`
+          INSERT INTO recurring_schedule (list_id, day_of_week, responsible)
+          VALUES (?1, ?2, ?3)
+          ON CONFLICT(list_id, day_of_week) DO UPDATE SET responsible = excluded.responsible
+        `).bind(user.list_id, day_of_week, responsible).run();
+      }
       return authedJson({ ok: true });
     }
 
