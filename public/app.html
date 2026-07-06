@@ -2143,11 +2143,13 @@ async function onRecurringOtherBlur(dow, inp) {
 }
 
 async function saveRecurringDay(dow, responsible) {
+  let res;
   try {
-    await api("/recurring", { method: "POST", body: JSON.stringify({ day_of_week: dow, responsible }) });
-    if (responsible) recurringSchedule[dow] = responsible;
-    else delete recurringSchedule[dow];
-  } catch { toast("Kunne ikke lagre – sjekk nettforbindelsen", true); }
+    res = await api("/recurring", { method: "POST", body: JSON.stringify({ day_of_week: dow, responsible }) });
+  } catch { toast("Kunne ikke lagre – sjekk nettforbindelsen", true); return; }
+  if (res?.error) { toast("Feil: " + res.error, true); return; }
+  if (responsible) recurringSchedule[dow] = responsible;
+  else delete recurringSchedule[dow];
 }
 
 function renderMembers() {

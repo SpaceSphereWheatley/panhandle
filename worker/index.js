@@ -1005,16 +1005,20 @@ export default {
       const { day_of_week, responsible } = body;
       if (typeof day_of_week !== "number" || day_of_week < 0 || day_of_week > 6)
         return authedJson({ error: "Ugyldig dag" }, 400);
-      if (!responsible) {
-        await env.DB.prepare(
-          "DELETE FROM recurring_schedule WHERE list_id = ?1 AND day_of_week = ?2"
-        ).bind(user.list_id, day_of_week).run();
-      } else {
-        await env.DB.prepare(`
-          INSERT INTO recurring_schedule (list_id, day_of_week, responsible)
-          VALUES (?1, ?2, ?3)
-          ON CONFLICT(list_id, day_of_week) DO UPDATE SET responsible = excluded.responsible
-        `).bind(user.list_id, day_of_week, responsible).run();
+      try {
+        if (!responsible) {
+          await env.DB.prepare(
+            "DELETE FROM recurring_schedule WHERE list_id = ?1 AND day_of_week = ?2"
+          ).bind(user.list_id, day_of_week).run();
+        } else {
+          await env.DB.prepare(`
+            INSERT INTO recurring_schedule (list_id, day_of_week, responsible)
+            VALUES (?1, ?2, ?3)
+            ON CONFLICT(list_id, day_of_week) DO UPDATE SET responsible = excluded.responsible
+          `).bind(user.list_id, day_of_week, responsible).run();
+        }
+      } catch (e) {
+        return authedJson({ error: "DB-feil: " + (e?.message ?? String(e)) }, 500);
       }
       return authedJson({ ok: true });
     }
