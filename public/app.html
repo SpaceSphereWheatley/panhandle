@@ -1589,9 +1589,9 @@ async function loadPlan() {
     el.className = "day" + (iso === today ? " today" : "");
     const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
     el.innerHTML = `
-      <button class="edit" onclick="openMealModal('${iso}')">${p ? "Endre" : "Legg til"}</button>
+      <button class="edit" onclick="openMealModal('${iso}')">${p && p.meal_name ? "Endre" : "Legg til"}</button>
       <div class="date">${iso === today ? "I dag" : dayName}</div>
-      <div class="meal ${p ? "" : "empty"}">${p ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
+      <div class="meal ${p && p.meal_name ? "" : "empty"}">${p && p.meal_name ? escapeHtml(p.meal_name) : "Ingen måltid planlagt"}</div>
       ${p && p.responsible
         ? `<div class="resp">Ansvarlig: ${escapeHtml(p.responsible)}</div>`
         : (() => { const dow = (d.getDay() + 6) % 7; const def = recurringSchedule[dow]; return def ? `<div class="resp recurring">Fast ansvarlig: ${escapeHtml(def)}</div>` : ""; })()
