@@ -66,10 +66,12 @@ There is no local dev server or test suite. Changes are validated by deploying:
 
 ### Applying migrations without a local install
 
-The developer doesn't install anything locally — everything goes through Claude Code or the Cloudflare web dashboard. Claude Code sessions (including the sandboxed ones used for most work in this repo) generally have **no** `CLOUDFLARE_API_TOKEN`/`wrangler login` session, so `wrangler d1 migrations apply --remote` can't run from inside them, and Claude Code's permission system correctly blocks an agent from running the equivalent raw SQL through the Cloudflare D1 MCP query tool as a workaround (it bypasses the documented migration process without a real audit trail). This has bitten multiple past sessions (see PR #27's note about being blocked, and the manual fixes described in PR #29's and the 0001_init.sql-consolidation commit's messages).
+The developer doesn't install anything locally — everything goes through Claude Code or the Cloudflare web dashboard. Claude Code sessions (including the sandboxed ones used for most work in this repo) generally have **no** `CLOUDFLARE_API_TOKEN`/`wrangler login` session, so `wrangler d1 migrations apply --remote` can't run from inside them.
 
-The actual way to apply a migration against production, with no local installs:
-1. Open **dash.cloudflare.com → Storage & Databases → D1 → `panhandle` → Console** tab.
-2. Paste in the new migration file's SQL, run it.
-3. Also run `INSERT INTO d1_migrations (name, applied_at) VALUES ('00NN_filename.sql', datetime('now'));` so Wrangler's own tracking table stays in sync and a later `wrangler d1 migrations apply` run doesn't try to re-run (and fail on) the same file.
-4. Ask Claude Code to verify the result via the Cloudflare D1 MCP query tool (read-only schema/data checks are fine through that channel — it's only the schema-mutating workaround that's blocked).
+**The `mcp__Cloudflare_Developer_Platform__d1_database_query` tool is allowed in `.claude/settings.json`**, so Claude can run SQL against production D1 directly without the user going to the Cloudflare dashboard. Use it to apply migrations and verify schema/data.
+
+The preferred way to apply a migration against production:
+1. Write the migration SQL file in `migrations/` as usual.
+2. Run the SQL via `mcp__Cloudflare_Developer_Platform__d1_database_query` (Claude can do this in auto mode without prompting).
+3. Also run `INSERT INTO d1_migrations (name, applied_at) VALUES ('00NN_filename.sql', datetime('now'));` so Wrangler's tracking table stays in sync.
+4. Verify the result with a follow-up query via the same tool.
