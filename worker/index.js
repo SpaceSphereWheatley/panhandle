@@ -924,7 +924,7 @@ export default {
       const to = url.searchParams.get("to");
       let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id,
         m.ingredients AS ingredients, m.labels AS labels
-        FROM meal_plan p JOIN meal_catalogue m ON m.id = p.meal_id
+        FROM meal_plan p LEFT JOIN meal_catalogue m ON m.id = p.meal_id
         WHERE p.list_id = ?1`;
       const binds = [user.list_id];
       if (from && to) { q += " AND p.plan_date BETWEEN ?2 AND ?3"; binds.push(from, to); }
@@ -937,29 +937,37 @@ export default {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { plan_date, meal_name, responsible, ingredients } = body;
-      if (!plan_date || !meal_name) return authedJson({ error: "Mangler dato eller måltid" }, 400);
-      // Capitalise new meal names the same way item names are (capitalizeName),
-      // so a meal typed in the planner is stored "Taco", not "taco". Lookups are
-      // COLLATE NOCASE, so this only affects how a genuinely new name is stored.
-      const clean = capitalizeName(meal_name);
-      // ingredients (TODO #9) is a JSON-encoded array, stored once per meal
-      // name in meal_catalogue and shared across every occurrence of that
-      // meal — undefined means "leave whatever's stored alone".
-      const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
-      let meal = await env.DB.prepare(
-        "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
-      ).bind(clean, user.list_id).first();
-      if (!meal) {
-        // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
-        meal = await env.DB.prepare(`
-          INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
-          ON CONFLICT(list_id, name) DO UPDATE SET name = name
-          RETURNING id
-        `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
-      } else if (ingredientsJson !== undefined) {
-        await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
-          .bind(ingredientsJson, meal.id).run();
+      if (!plan_date) return authedJson({ error: "Mangler dato" }, 400);
+      // Require at least one of meal_name or responsible to be set.
+      if (!meal_name && !responsible) return authedJson({ error: "Mangler måltid eller ansvarlig" }, 400);
+
+      let mealId = null;
+      if (meal_name) {
+        // Capitalise new meal names the same way item names are (capitalizeName),
+        // so a meal typed in the planner is stored "Taco", not "taco". Lookups are
+        // COLLATE NOCASE, so this only affects how a genuinely new name is stored.
+        const clean = capitalizeName(meal_name);
+        // ingredients is a JSON-encoded array, stored once per meal name in
+        // meal_catalogue and shared across every occurrence of that meal —
+        // undefined means "leave whatever's stored alone".
+        const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
+        let meal = await env.DB.prepare(
+          "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+        ).bind(clean, user.list_id).first();
+        if (!meal) {
+          // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
+          meal = await env.DB.prepare(`
+            INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
+            ON CONFLICT(list_id, name) DO UPDATE SET name = name
+            RETURNING id
+          `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
+        } else if (ingredientsJson !== undefined) {
+          await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
+            .bind(ingredientsJson, meal.id).run();
+        }
+        mealId = meal.id;
       }
+
       // Only bump usage stats when this date's meal is actually new/changed —
       // re-saving the same date with the same meal (e.g. just changing who's
       // responsible) shouldn't inflate times_planned.
@@ -973,14 +981,14 @@ export default {
           meal_id = excluded.meal_id,
           responsible = excluded.responsible,
           updated_at = datetime('now')
-      `).bind(plan_date, meal.id, responsible || "", user.list_id).run();
-      if (!prevPlan || prevPlan.meal_id !== meal.id) {
+      `).bind(plan_date, mealId, responsible || "", user.list_id).run();
+      if (mealId !== null && (!prevPlan || prevPlan.meal_id !== mealId)) {
         await env.DB.prepare(`
           UPDATE meal_catalogue
           SET times_planned = times_planned + 1,
               last_planned = CASE WHEN last_planned IS NULL OR last_planned < ?1 THEN ?1 ELSE last_planned END
           WHERE id = ?2
-        `).bind(plan_date, meal.id).run();
+        `).bind(plan_date, mealId).run();
       }
       return authedJson({ ok: true });
     }
