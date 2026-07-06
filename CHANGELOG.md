@@ -14,6 +14,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.9.0] — 2026-07-06
+
+### Added
+- **Fast ukentlig ansvar**: set a default responsible person per day of the week
+  (Settings → "Fast ukentlig ansvar"). The default is shown in muted italics on
+  unplanned days in the meal plan, and pre-fills the responsible dropdown when
+  adding a new meal. It's always overridable for any individual day.
+- **Annet** option in the responsible dropdown (meal modal): select "Annet..."
+  to type a custom label such as "Ute og spiser" or "Gjester lager mat". If
+  left blank, the value is saved as "Annet".
+
 ## [1.8.1] — 2026-06-22
 
 ### Added
