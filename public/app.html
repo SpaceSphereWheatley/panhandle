@@ -180,7 +180,7 @@
   }
   .card .meta {
     font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .card.bought { background: var(--bought-bg); color: var(--muted); }
   .card.bought .name { text-decoration: line-through; }
@@ -761,7 +761,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.9.1";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
