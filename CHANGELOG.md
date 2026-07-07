@@ -14,6 +14,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.9.2] — 2026-07-07
+
+### Fixed
+- Item-marking animation: toggling one item while another item's mark-as-bought
+  animation was still playing could interrupt the in-progress animation with a
+  visual flicker (a full list re-render on the first toggle's completion would
+  wipe the second item's in-flight animation state). The list is now aware of
+  which items are still mid-animation and preserves that state across re-renders.
+
 ## [1.9.1] — 2026-07-07
 
 ### Fixed
