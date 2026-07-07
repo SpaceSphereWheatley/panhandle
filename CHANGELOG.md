@@ -14,6 +14,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.9.1] — 2026-07-07
+
+### Fixed
+- List view: item name text now lines up vertically with its icon/badge for
+  items with no quantity or notes (the common case) — a reserved-but-empty
+  notes line was pushing the name text above the badge's center.
+
 ## [1.9.0] — 2026-07-06
 
 ### Added
