@@ -761,7 +761,7 @@ const API = "/api"; // same-origin: this Worker handles /api/* on shopping.mohib
 // release (see CHANGELOG.md). Shown plainly on the Om subpage, and alongside
 // the live API version from GET /api/version on the Administrasjon subpage
 // so a stale half of a deploy is visible.
-const APP_VERSION = "1.9.1";
+const APP_VERSION = "1.9.2";
 let token = localStorage.getItem("ph_token");
 let currentUser = localStorage.getItem("ph_user");
 let isAdmin = localStorage.getItem("ph_is_admin") === "1";
@@ -1088,6 +1088,9 @@ function renderList() {
   if (bought.length) {
     r.appendChild(catSection("Nylig kjøpt", bought.slice(0, 30)));
   }
+  for (const id of resolvingIds) {
+    document.querySelector(`[data-item-id="${id}"]`)?.classList.add("resolving");
+  }
   syncTick();
 }
 
@@ -1353,15 +1356,27 @@ async function addItem() {
 }
 
 const RESOLVE_MS = 200;
+// Items currently mid-resolve-animation. renderList() rebuilds the whole DOM
+// tree on every call (including for unrelated items and the 7s poll), so a
+// freshly created card would otherwise lose its "resolving" class and flicker
+// back to normal mid-animation; renderList() re-applies the class from this
+// set after rebuilding.
+const resolvingIds = new Set();
 // Plays a brief shrink/fade on the tapped card in place (signals "resolved",
 // not a literal move — "Nylig kjøpt" starts collapsed so animating a flight
 // to it would usually have nowhere visible to land), then runs `mutate`.
 function withResolveAnimation(id, mutate) {
   const el = document.querySelector(`[data-item-id="${id}"]`);
   if (!el || el.classList.contains("resolving")) { mutate(); return; }
+  resolvingIds.add(id);
   el.classList.add("resolving");
   let done = false;
-  const finish = () => { if (done) return; done = true; mutate(); };
+  const finish = () => {
+    if (done) return;
+    done = true;
+    resolvingIds.delete(id);
+    mutate();
+  };
   el.addEventListener("transitionend", finish, { once: true });
   setTimeout(finish, RESOLVE_MS);
 }
