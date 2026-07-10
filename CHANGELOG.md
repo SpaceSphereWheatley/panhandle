@@ -36,6 +36,11 @@ section for the bump convention).
 - **Touch press feedback**: buttons give a light physical "shrink" on tap
   (pointer-based, so touch taps get it too, without sticky hover afterwards).
 - Honors `prefers-reduced-motion`.
+- **Installable as an app again on Android.** Added a minimal service worker
+  (`public/sw.js`, registered from `main.jsx`) so Chrome offers the real
+  "Install app" (standalone WebAPK) path instead of only "Add to home screen".
+  It's a no-cache network passthrough — no offline shell yet (that's a separate
+  follow-up), and no risk of serving a stale app after a deploy.
 
 ### Changed
 - The Settings menu rows are rebuilt on design-system tokens with a real
