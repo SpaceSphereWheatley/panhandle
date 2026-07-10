@@ -1,8 +1,12 @@
+import { useEffect } from "react";
 import "./index.css";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
+import { ListUsersProvider } from "./context/ListUsersContext.jsx";
+import { RecurringProvider } from "./context/RecurringContext.jsx";
 import { LoginScreen } from "./components/LoginScreen.jsx";
 import { AppShell } from "./components/AppShell.jsx";
+import { applyTheme, currentTheme } from "./lib/theme.js";
 
 // Hand-drawn wobble filter for item icons (see lib/itemIcons.js). Defined
 // once; every icon's <g> references it via filter="url(#sketchy)".
@@ -21,10 +25,21 @@ function SketchyFilterDefs() {
 
 function Root() {
   const { token } = useAuth();
-  return token ? <AppShell /> : <LoginScreen />;
+  if (!token) return <LoginScreen />;
+  return (
+    <ListUsersProvider>
+      <RecurringProvider>
+        <AppShell />
+      </RecurringProvider>
+    </ListUsersProvider>
+  );
 }
 
 export default function App() {
+  useEffect(() => {
+    applyTheme(currentTheme());
+  }, []);
+
   return (
     <AuthProvider>
       <ToastProvider>
