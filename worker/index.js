@@ -11,10 +11,10 @@
 
 // Deployed Worker (API) version. The Worker and the Pages frontend deploy
 // independently via Cloudflare's Git integration, so this is bumped together
-// with public/app.html's APP_VERSION on each release (see CHANGELOG.md) and
+// with src/lib/version.js's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.9.2";
+const VERSION = "1.10.0";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see

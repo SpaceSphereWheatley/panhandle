@@ -1,11 +1,14 @@
 # Changelog
 
 All notable changes to Panhandle are recorded here. The version is duplicated
-in two places (there is no build step to inject it) and bumped together on each
-release:
+and bumped together on each release:
 
 - `worker/index.js` → `const VERSION`
-- `public/app.html` → `const APP_VERSION`
+- `src/lib/version.js` → `APP_VERSION` (the live frontend, as of 1.10.0 — see below)
+
+`public/app.html`'s own `APP_VERSION` constant is no longer live (superseded by
+the React app built from `src/`) but is left in place for now; it isn't served
+by Cloudflare Pages anymore, so it's not part of the bump going forward.
 
 The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 (Worker) versions, so a deploy where only one half landed is visible at a glance.
@@ -13,6 +16,25 @@ The Profile page reads `GET /api/version` and shows both the app (Pages) and API
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
+
+## [1.10.0] — 2026-07-10
+
+### Changed
+- **Frontend rewritten in React**, built with Vite. Replaces the hand-rolled
+  vanilla JS/HTML single-file app (`public/app.html`) with a component-based
+  app under `src/`, built to `dist/` and deployed by Cloudflare Pages via
+  `npm run build`. All three tabs (Handleliste, Måltider, Innstillinger) are
+  fully ported, plus the deploy-version-drift toast, PWA install prompt, and
+  browser back-button navigation for tabs/settings. No user-facing behavior
+  changes are intended — this is an internal rewrite of the same app.
+- The hand-drawn item icon library and flat UI icon library
+  (`itemIcons.js`/`uiIcons.js`) are now plain ES modules under `src/lib/`
+  instead of scripts attached to `window`.
+
+### Known gaps vs. the previous frontend
+  Swipe-to-toggle and long-press-to-edit gestures, the per-card resolve
+  animation, and back-button support *within* modals aren't ported yet —
+  see the React port PRs (#76, #77) for details.
 
 ## [1.9.2] — 2026-07-07
 
