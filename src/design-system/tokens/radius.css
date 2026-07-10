@@ -1,0 +1,9 @@
+/* Panhandle — Corner radii. Soft and homey: cards/sheets are generously
+   rounded, controls trend toward full pill shapes. */
+:root {
+  --radius-sm: 10px;   /* chips, small inputs */
+  --radius-md: 16px;   /* list rows, small cards */
+  --radius-lg: 20px;   /* cards */
+  --radius-xl: 28px;   /* sheets, hero cards */
+  --radius-pill: 999px; /* buttons, tags, avatars */
+}

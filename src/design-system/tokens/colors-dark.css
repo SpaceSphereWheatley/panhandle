@@ -1,0 +1,140 @@
+/* Panhandle — Dark color tokens.
+   The design project (ad507229-d666-40ec-854b-087397bc37cb) is light-only;
+   this file is an original addition that mirrors its semantic-alias
+   structure for a dark page, following the same approach the app used
+   before this redesign (flip the neutral scale, keep the accent hues but
+   nudge them lighter for contrast against a dark background). Applied
+   when the user forces dark, or follows the OS and the OS is dark — see
+   src/lib/theme.js. */
+
+:root[data-theme="dark"] {
+  --warm-50:  #1B1A17; /* page */
+  --warm-100: #262420; /* card */
+  --warm-200: #322F29; /* sunken / borders */
+  --warm-300: #443F37;
+  --warm-400: #6E6255;
+  --warm-500: #A99C8B;
+  --warm-600: #C7BBAA;
+  --warm-700: #DCD2C4;
+  --warm-800: #ECE7DE;
+  --warm-900: #F6F2EA;
+
+  --terracotta-100: #4A2A1B;
+  --terracotta-300: #8C4A28;
+  --terracotta-500: #D97A48;
+  --terracotta-600: #E89463;
+  --terracotta-700: #F2AC80;
+
+  --sage-100: #2A3327;
+  --sage-300: #4C5C46;
+  --sage-500: #8CA684;
+  --sage-600: #A3BC9A;
+  --sage-700: #BBD0B3;
+
+  --mustard-100: #3D3213;
+  --mustard-500: #E8BB5C;
+  --mustard-600: #E8BB5C80;
+
+  --red-500: #D9736A;
+  --red-100: #3D211E;
+
+  --surface-page:    var(--warm-50);
+  --surface-card:    var(--warm-100);
+  --surface-sunken:  var(--warm-200);
+  --surface-inverse: var(--warm-900);
+
+  --text-primary:    var(--warm-900);
+  --text-secondary:  var(--warm-600);
+  --text-tertiary:   var(--warm-500);
+  --text-on-accent:  #1B1A17;
+  --text-link:       var(--terracotta-600);
+  --text-link-hover: var(--terracotta-700);
+
+  --border-default:  var(--warm-300);
+  --border-strong:   var(--warm-500);
+
+  --accent-primary:        var(--terracotta-500);
+  --accent-primary-hover:  var(--terracotta-600);
+  --accent-primary-press:  var(--terracotta-700);
+  --accent-primary-subtle: var(--terracotta-100);
+
+  --accent-secondary:        var(--sage-500);
+  --accent-secondary-hover:  var(--sage-600);
+  --accent-secondary-subtle: var(--sage-100);
+
+  --accent-tertiary:        var(--mustard-500);
+  --accent-tertiary-subtle: var(--mustard-100);
+
+  --status-success: var(--sage-600);
+  --status-danger:  var(--red-500);
+  --status-danger-subtle: var(--red-100);
+
+  --focus-ring: var(--terracotta-500);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --warm-50:  #1B1A17;
+    --warm-100: #262420;
+    --warm-200: #322F29;
+    --warm-300: #443F37;
+    --warm-400: #6E6255;
+    --warm-500: #A99C8B;
+    --warm-600: #C7BBAA;
+    --warm-700: #DCD2C4;
+    --warm-800: #ECE7DE;
+    --warm-900: #F6F2EA;
+
+    --terracotta-100: #4A2A1B;
+    --terracotta-300: #8C4A28;
+    --terracotta-500: #D97A48;
+    --terracotta-600: #E89463;
+    --terracotta-700: #F2AC80;
+
+    --sage-100: #2A3327;
+    --sage-300: #4C5C46;
+    --sage-500: #8CA684;
+    --sage-600: #A3BC9A;
+    --sage-700: #BBD0B3;
+
+    --mustard-100: #3D3213;
+    --mustard-500: #E8BB5C;
+    --mustard-600: #E8BB5C80;
+
+    --red-500: #D9736A;
+    --red-100: #3D211E;
+
+    --surface-page:    var(--warm-50);
+    --surface-card:    var(--warm-100);
+    --surface-sunken:  var(--warm-200);
+    --surface-inverse: var(--warm-900);
+
+    --text-primary:    var(--warm-900);
+    --text-secondary:  var(--warm-600);
+    --text-tertiary:   var(--warm-500);
+    --text-on-accent:  #1B1A17;
+    --text-link:       var(--terracotta-600);
+    --text-link-hover: var(--terracotta-700);
+
+    --border-default:  var(--warm-300);
+    --border-strong:   var(--warm-500);
+
+    --accent-primary:        var(--terracotta-500);
+    --accent-primary-hover:  var(--terracotta-600);
+    --accent-primary-press:  var(--terracotta-700);
+    --accent-primary-subtle: var(--terracotta-100);
+
+    --accent-secondary:        var(--sage-500);
+    --accent-secondary-hover:  var(--sage-600);
+    --accent-secondary-subtle: var(--sage-100);
+
+    --accent-tertiary:        var(--mustard-500);
+    --accent-tertiary-subtle: var(--mustard-100);
+
+    --status-success: var(--sage-600);
+    --status-danger:  var(--red-500);
+    --status-danger-subtle: var(--red-100);
+
+    --focus-ring: var(--terracotta-500);
+  }
+}

@@ -32,7 +32,7 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
       </div>
       <button
         className="meal-browse-add"
-        style={{ background: "var(--bg-sunken)", color: "var(--text)" }}
+        style={{ background: "var(--surface-sunken)", color: "var(--text-primary)" }}
         onClick={() => {
           onClose();
           onFocusAdd();

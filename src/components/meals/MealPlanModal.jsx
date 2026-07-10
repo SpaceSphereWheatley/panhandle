@@ -195,7 +195,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
         onChange={(e) => setIngredients(e.target.value)}
         placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
       />
-      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
         Ingredienser huskes per måltid og deles for alle dager med samme navn.
       </div>
       <button type="button" className="ing-add-btn" onClick={pickIngredients}>
@@ -213,7 +213,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
         <input
           type="text"
           placeholder="Beskriv (f.eks. Ute og spiser)"
-          style={{ marginTop: 8, width: "100%", padding: 10, fontSize: 16, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-sunken)", color: "var(--text)" }}
+          style={{ marginTop: 8, width: "100%", padding: 10, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={respOther}
           onChange={(e) => setRespOther(e.target.value)}
         />

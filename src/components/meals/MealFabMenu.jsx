@@ -10,7 +10,7 @@ export function MealFabMenu({ onClose, onNewMeal, onBrowse }) {
       <button className="meal-browse-add" onClick={onNewMeal}>Nytt måltid</button>
       <button
         className="meal-browse-add"
-        style={{ background: "var(--bg-sunken)", color: "var(--text)" }}
+        style={{ background: "var(--surface-sunken)", color: "var(--text-primary)" }}
         onClick={onBrowse}
       >
         Rediger måltider

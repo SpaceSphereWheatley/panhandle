@@ -65,14 +65,14 @@ export function MembersSettings() {
         <div style={{ marginTop: 12 }}>
           <input
             placeholder="Brukernavn for nytt medlem"
-            style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-sunken)", color: "var(--text)" }}
+            style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
           <button onClick={addMember} disabled={full} className="btn-primary mt-8" style={{ opacity: full ? 0.5 : 1 }}>
             + Legg til bruker
           </button>
-          <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent)" }}>{msg}</div>
+          <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent-primary)" }}>{msg}</div>
         </div>
       </div>
 

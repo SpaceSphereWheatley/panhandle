@@ -1,0 +1,77 @@
+/* Panhandle — Color tokens
+   Warm, homey neutrals (paper, cast-iron ink) with a terracotta primary
+   and sage produce-green secondary. Kept restrained: 2 accent colors max
+   on any single screen. Source: Claude Design project
+   "Panhandle Design System" (ad507229-d666-40ec-854b-087397bc37cb). */
+
+:root {
+  /* ---- Base palette ---- */
+  /* Warm neutrals (paper → cast iron) */
+  --warm-50:  #FAF6EF;
+  --warm-100: #F3ECDD;
+  --warm-200: #E7DCC5;
+  --warm-300: #DCCFAF;
+  --warm-400: #C3B393;
+  --warm-500: #A5936F;
+  --warm-600: #7D6D50;
+  --warm-700: #5B4E39;
+  --warm-800: #3D3425;
+  --warm-900: #2B2621;
+
+  /* Terracotta — primary accent (skillet / clay) */
+  --terracotta-100: #F6DDCC;
+  --terracotta-300: #E4A57C;
+  --terracotta-500: #C1592A;
+  --terracotta-600: #A2461F;
+  --terracotta-700: #7E3618;
+
+  /* Sage — secondary accent (produce / fresh herbs) */
+  --sage-100: #E4EBDD;
+  --sage-300: #B3C4A4;
+  --sage-500: #5B7156;
+  --sage-600: #465943;
+  --sage-700: #354332;
+
+  /* Mustard — tertiary accent, used sparingly (tags, highlights) */
+  --mustard-100: #F6E7C1;
+  --mustard-500: #E0A537;
+  --mustard-600: #B9822880;
+
+  /* Utility */
+  --red-500: #B23B3B;
+  --red-100: #F4DEDA;
+
+  /* ---- Semantic aliases ---- */
+  --surface-page:    var(--warm-50);
+  --surface-card:    #FFFDF9;
+  --surface-sunken:  var(--warm-100);
+  --surface-inverse: var(--warm-900);
+
+  --text-primary:    var(--warm-900);
+  --text-secondary:  var(--warm-600);
+  --text-tertiary:   var(--warm-500);
+  --text-on-accent:  #FFFDF9;
+  --text-link:       var(--terracotta-600);
+  --text-link-hover: var(--terracotta-700);
+
+  --border-default:  var(--warm-200);
+  --border-strong:   var(--warm-400);
+
+  --accent-primary:        var(--terracotta-500);
+  --accent-primary-hover:  var(--terracotta-600);
+  --accent-primary-press:  var(--terracotta-700);
+  --accent-primary-subtle: var(--terracotta-100);
+
+  --accent-secondary:        var(--sage-500);
+  --accent-secondary-hover:  var(--sage-600);
+  --accent-secondary-subtle: var(--sage-100);
+
+  --accent-tertiary:        var(--mustard-500);
+  --accent-tertiary-subtle: var(--mustard-100);
+
+  --status-success: var(--sage-600);
+  --status-danger:  var(--red-500);
+  --status-danger-subtle: var(--red-100);
+
+  --focus-ring: var(--terracotta-500);
+}

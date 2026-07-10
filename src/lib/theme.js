@@ -10,7 +10,7 @@ export function applyTheme(t) {
   // Keep the PWA status-bar colour in step with the *effective* theme.
   const dark = t === "dark" || (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", dark ? "#1B1A17" : "#F5F1ED");
+  if (meta) meta.setAttribute("content", dark ? "#1B1A17" : "#C1592A");
 }
 
 export function setTheme(t) {

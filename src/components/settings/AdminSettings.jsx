@@ -123,12 +123,12 @@ export function AdminSettings() {
         <div className="k" style={{ marginBottom: 10 }}>Opprett eier (ny liste)</div>
         <input
           placeholder="Brukernavn for ny eier"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-sunken)", color: "var(--text)" }}
+          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={newOwnerName}
           onChange={(e) => setNewOwnerName(e.target.value)}
         />
         <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
-        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent)" }}>{ownerMsg}</div>
+        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent-primary)" }}>{ownerMsg}</div>
       </div>
 
       <div className="setrow">

@@ -97,19 +97,19 @@ export function ProfileSettings() {
         <input
           type="password"
           placeholder="Nåværende passord"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border)", marginBottom: 8 }}
+          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
           value={pwCurrent}
           onChange={(e) => setPwCurrent(e.target.value)}
         />
         <input
           type="password"
           placeholder="Nytt passord (min. 6 tegn)"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border)", marginBottom: 8 }}
+          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
           value={pwNew}
           onChange={(e) => setPwNew(e.target.value)}
         />
         <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
-        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: pwMsg.ok ? "var(--green)" : "var(--danger)" }}>
+        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: pwMsg.ok ? "var(--status-success)" : "var(--status-danger)" }}>
           {pwMsg.text}
         </div>
       </div>

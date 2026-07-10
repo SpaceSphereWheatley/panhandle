@@ -1,7 +1,7 @@
-import { uiIcon } from "../lib/uiIcons.js";
+import { uiIconSlug } from "../lib/uiIcons.js";
 
 export function UiIcon({ name, size = 22 }) {
-  const html = uiIcon(name, size);
-  if (!html) return null;
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  const slug = uiIconSlug(name);
+  if (!slug) return null;
+  return <i className={`ph ph-${slug} ui-icon`} style={{ fontSize: size, lineHeight: 1 }} aria-hidden="true" />;
 }

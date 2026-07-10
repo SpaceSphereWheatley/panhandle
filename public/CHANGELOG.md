@@ -17,6 +17,24 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.11.0] — 2026-07-10
+
+### Changed
+- **New visual design**, built from the "Panhandle Design System" Claude
+  Design project: warm-paper/terracotta/sage palette, Instrument Sans +
+  Caveat type, Phosphor icons, and generously-rounded pill-shaped
+  components. The design system's tokens and component library
+  (Button, Card, ListItem, Header, TabBar, Sheet, Input, Checkbox, Switch,
+  Tag, Avatar, Badge, IconButton) are imported into the repo under
+  `src/design-system/` and used to rebuild the shopping list, meal plan,
+  navigation, login screen, and modals. A dark-mode palette (not part of
+  the source design, which is light-only) was authored to extend the
+  app's existing light/dark/system theme toggle. New PWA icons and
+  manifest colors adopt the same brand. The hand-drawn per-grocery-item
+  icon set and the flat nav icon set's *mapping* stay — nav/chrome icons
+  now render via Phosphor instead of bundled inline SVG. No functional
+  changes: same features, same data, same API.
+
 ## [1.10.0] — 2026-07-10
 
 ### Changed
