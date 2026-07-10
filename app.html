@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="author" content="Mohibb Malik" />
+    <meta name="theme-color" content="#F5F1ED" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Panhandle" />
+    <!-- Set the theme attribute before the stylesheet applies, to avoid a flash
+         of the wrong palette. Values: "light" | "dark" | "system" (default). -->
+    <script>document.documentElement.dataset.theme = localStorage.getItem("ph_theme") || "system";</script>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <title>Panhandle</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
