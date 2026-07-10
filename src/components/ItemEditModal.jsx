@@ -57,14 +57,14 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
       <label>Notat (mengde, beskrivelse o.l.)</label>
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="F.eks. 2 liter" />
-      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--danger)" }}>{msg}</div>
+      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>
         <button className="save" onClick={save}>Lagre</button>
       </div>
       <button
         className="cancel"
-        style={{ width: "100%", marginTop: 8, color: "var(--danger)" }}
+        style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }}
         onClick={deleteFromCatalogue}
       >
         Slett vare fra katalog

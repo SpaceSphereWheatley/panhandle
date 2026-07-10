@@ -1,12 +1,9 @@
+import { Sheet } from "../design-system/index.js";
+
 export function Modal({ onClose, children }) {
   return (
-    <div
-      className="modal-bg"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="modal">{children}</div>
-    </div>
+    <Sheet open onClose={onClose} className="modal">
+      {children}
+    </Sheet>
   );
 }

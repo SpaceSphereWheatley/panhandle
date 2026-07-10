@@ -7,8 +7,19 @@ import { MealFabMenu } from "../components/meals/MealFabMenu.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
+import { Card, Avatar, Tag, Button } from "../design-system/index.js";
 
 const POLL_MS = 7000;
+
+// Deterministic-but-varied avatar color per person, since the real data
+// model (unlike the design project's toy fake cooks) has no fixed
+// per-person color assigned.
+const AVATAR_COLORS = ["var(--accent-primary)", "var(--accent-secondary)", "var(--accent-tertiary)", "var(--sage-600)", "var(--terracotta-600)"];
+function avatarColorFor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 export function MealsTab({ onSyncTick, onOffline }) {
   const { schedule, ensureLoaded } = useRecurring();
@@ -66,20 +77,25 @@ export function MealsTab({ onSyncTick, onOffline }) {
 
   return (
     <section>
-      <div className="week-nav">
-        <button disabled={weekOffset <= WEEK_MIN} onClick={() => shiftWeek(-1)}>‹ Forrige</button>
-        <span className="label">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
+        <button disabled={weekOffset <= WEEK_MIN} style={{ ...weekNavBtnStyle, opacity: weekOffset <= WEEK_MIN ? 0.4 : 1 }} onClick={() => shiftWeek(-1)}>‹ Forrige</button>
+        <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-tertiary)", textAlign: "center", flex: 1 }}>
           {monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – {" "}
           {sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}
         </span>
-        <button onClick={() => shiftWeek(0)}>Denne uken</button>
-        <button disabled={weekOffset >= WEEK_MAX} onClick={() => shiftWeek(1)}>Neste ›</button>
+        <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>Denne uken</button>
+        <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>Neste ›</button>
       </div>
       <div style={{ marginBottom: 10 }}>
-        <button className="browse-link" onClick={() => setModal({ type: "browse" })}>Alle måltider ›</button>
+        <button
+          onClick={() => setModal({ type: "browse" })}
+          style={{ background: "none", border: "none", color: "var(--accent-primary)", fontSize: "var(--text-sm)", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer", padding: 0 }}
+        >
+          Alle måltider ›
+        </button>
       </div>
 
-      <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {days.map((d) => {
           const iso = localIso(d);
           const p = plan[iso];
@@ -88,25 +104,62 @@ export function MealsTab({ onSyncTick, onOffline }) {
           const dow = (d.getDay() + 6) % 7;
           const recurring = !p?.responsible ? schedule[dow] : null;
           return (
-            <div className={`day${isToday ? " today" : ""}`} key={iso}>
-              <button className="edit" onClick={() => setModal({ type: "plan", iso })}>
-                {p?.meal_name ? "Endre" : "Legg til"}
-              </button>
-              <div className="date">{isToday ? "I dag" : dayName}</div>
-              <div className={`meal${p?.meal_name ? "" : " empty"}`}>
-                {p?.meal_name || "Ingen måltid planlagt"}
+            <Card
+              key={iso}
+              style={isToday ? { border: "2px solid var(--accent-primary)", background: "color-mix(in srgb, var(--accent-primary) 8%, var(--surface-card))" } : undefined}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: isToday ? "var(--accent-primary)" : "var(--text-tertiary)" }}>
+                    {isToday ? "I dag" : dayName}
+                  </div>
+                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-lg)", fontWeight: 700, color: p?.meal_name ? "var(--text-primary)" : "var(--text-tertiary)", fontStyle: p?.meal_name ? "normal" : "italic", margin: "4px 0" }}>
+                    {p?.meal_name || "Ingen måltid planlagt"}
+                  </div>
+                  {p?.responsible ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                      <Avatar name={p.responsible} color={avatarColorFor(p.responsible)} size={24} />
+                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)" }}>{p.responsible}</span>
+                    </div>
+                  ) : recurring ? (
+                    <div style={{ marginTop: 6 }}>
+                      <Tag tone="neutral">Fast: {recurring}</Tag>
+                    </div>
+                  ) : null}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setModal({ type: "plan", iso })}>
+                  {p?.meal_name ? "Endre" : "Legg til"}
+                </Button>
               </div>
-              {p?.responsible ? (
-                <div className="resp">Ansvarlig: {p.responsible}</div>
-              ) : recurring ? (
-                <div className="resp recurring">Fast ansvarlig: {recurring}</div>
-              ) : null}
-            </div>
+            </Card>
           );
         })}
       </div>
 
-      <button className="fab" aria-label="Måltider" onClick={() => setModal({ type: "fabMenu" })}>+</button>
+      <button
+        aria-label="Måltider"
+        onClick={() => setModal({ type: "fabMenu" })}
+        style={{
+          position: "fixed",
+          bottom: "calc(84px + env(safe-area-inset-bottom))",
+          right: "max(16px, calc(50vw - 224px))",
+          width: 56,
+          height: 56,
+          borderRadius: "var(--radius-pill)",
+          background: "var(--accent-primary)",
+          color: "var(--text-on-accent)",
+          border: "none",
+          boxShadow: "var(--shadow-raised)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 26,
+          cursor: "pointer",
+          zIndex: 11,
+        }}
+      >
+        <i className="ph ph-plus" />
+      </button>
 
       {modal?.type === "plan" && (
         <MealPlanModal
@@ -151,3 +204,14 @@ export function MealsTab({ onSyncTick, onOffline }) {
     </section>
   );
 }
+
+const weekNavBtnStyle = {
+  background: "var(--surface-sunken)",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-sm)",
+  padding: "8px 12px",
+  fontSize: "var(--text-xs)",
+  fontFamily: "var(--font-sans)",
+  color: "var(--text-primary)",
+  cursor: "pointer",
+};

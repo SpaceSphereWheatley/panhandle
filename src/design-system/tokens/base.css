@@ -1,0 +1,18 @@
+/* Panhandle — base resets, shared across every surface */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html { overscroll-behavior-y: contain; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+a { color: var(--text-link); text-decoration: none; }
+a:hover { color: var(--text-link-hover); text-decoration: underline; }
+
+button { font-family: inherit; }

@@ -1,55 +1,44 @@
 import { ItemIcon } from "./ItemIcon.jsx";
-import { UiIcon } from "./UiIcon.jsx";
+import { ListItem, IconButton } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 
-// List-view row. The original vanilla app also supports a swipe-left gesture
-// and long-press-to-edit on top of these same buttons; this port keeps the
-// explicit tap-to-toggle / edit / delete buttons and drops the touch gestures
-// as a v1 simplification (see PR description).
+// List-view row, built on the design system's ListItem. The original vanilla
+// app also supports a swipe-left gesture and long-press-to-edit on top of
+// these same buttons; this port keeps the explicit tap-to-toggle / edit /
+// delete buttons and drops the touch gestures as a v1 simplification (see
+// PR description).
 export function ItemCard({ item, resolving, onToggle, onEdit, onDelete }) {
   return (
-    <div className="card-wrap">
-      <div className="swipe-bg">
-        <UiIcon name="check" size={20} />
-      </div>
-      <div
-        className={`card${item.bought ? " bought" : ""}${resolving ? " resolving" : ""}`}
-        onClick={() => onToggle(item.id)}
-      >
-        <div className="item-badge">
-          <ItemIcon name={item.name} />
-        </div>
-        <div className="info">
-          <div className="name">
-            {cap(item.name)}
-            {item.qty > 1 && <span className="qty-badge">x{item.qty}</span>}
+    <div style={resolving ? { transition: "transform .2s ease, opacity .2s ease", transform: "scale(.92)", opacity: 0, pointerEvents: "none" } : undefined}>
+      <ListItem
+        label={cap(item.name) + (item.qty > 1 ? ` ×${item.qty}` : "")}
+        subtitle={item.notes || null}
+        checked={!!item.bought}
+        onChange={() => onToggle(item.id)}
+        leading={
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "var(--surface-sunken)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              opacity: item.bought ? 0.45 : 1,
+            }}
+          >
+            <ItemIcon name={item.name} />
           </div>
-          <div className="meta" style={{ fontStyle: "italic" }}>{item.notes || ""}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <button
-            className="more"
-            aria-label="Rediger vare"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(item.id);
-            }}
-          >
-            <UiIcon name="more" size={18} />
-          </button>
-          <button
-            className="del"
-            aria-label="Slett vare"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-          >
-            <UiIcon name="trash" size={18} />
-          </button>
-          <div className="check" />
-        </div>
-      </div>
+        }
+        trailing={
+          <>
+            <IconButton icon="dots-three-vertical" size="sm" label="Rediger vare" onClick={() => onEdit(item.id)} />
+            <IconButton icon="trash" size="sm" label="Slett vare" onClick={() => onDelete(item.id)} />
+          </>
+        }
+      />
     </div>
   );
 }

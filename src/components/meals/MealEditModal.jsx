@@ -101,7 +101,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
         }}
         placeholder="F.eks. Taco"
       />
-      <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--danger)" : "var(--muted)" }}>
+      <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--status-danger)" : "var(--text-tertiary)" }}>
         {similarNote.text}
       </div>
       <label>Ingredienser (kommaseparert)</label>
@@ -113,13 +113,13 @@ export function MealEditModal({ id, onClose, onSaved }) {
           <option value={l} key={l} />
         ))}
       </datalist>
-      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--danger)" }}>{msg}</div>
+      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>
         <button className="save" onClick={save}>Lagre</button>
       </div>
       {id && (
-        <button className="cancel" style={{ width: "100%", marginTop: 8, color: "var(--danger)" }} onClick={deleteEntry}>
+        <button className="cancel" style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }} onClick={deleteEntry}>
           Slett måltid fra katalog
         </button>
       )}

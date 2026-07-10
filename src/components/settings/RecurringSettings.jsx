@@ -42,7 +42,7 @@ export function RecurringSettings() {
   return (
     <div className="setrow">
       <div className="k" style={{ marginBottom: 4 }}>Fast ansvarlig per ukedag</div>
-      <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+      <div style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 12 }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
         og du kan alltid endre det for en enkelt dag.
       </div>
@@ -52,12 +52,12 @@ export function RecurringSettings() {
           const isOther = dow in otherDrafts || (current && !people.includes(current));
           const selectValue = isOther ? "__other__" : current;
           return (
-            <div className="setrow" style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }} key={day}>
+            <div className="setrow" style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
               <div style={{ fontWeight: 600, marginBottom: 6 }}>{day}</div>
               <select
                 value={selectValue}
                 onChange={(e) => onSelectChange(dow, e.target.value)}
-                style={{ width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-sunken)", color: "var(--text)" }}
+                style={{ width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
               >
                 <option value="">Ingen</option>
                 {people.map((p) => (
@@ -69,7 +69,7 @@ export function RecurringSettings() {
                 <input
                   type="text"
                   placeholder="Beskriv ansvaret"
-                  style={{ display: "block", marginTop: 8, width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-sunken)", color: "var(--text)" }}
+                  style={{ display: "block", marginTop: 8, width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}
                 />

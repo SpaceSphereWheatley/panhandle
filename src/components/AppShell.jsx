@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { UiIcon } from "./UiIcon.jsx";
+import { Header, TabBar } from "../design-system/index.js";
 import { ChangelogModal } from "./ChangelogModal.jsx";
 import { InstallBanner } from "./InstallBanner.jsx";
 import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
@@ -73,32 +73,32 @@ export function AppShell() {
 
   return (
     <div id="app">
-      <header>
-        <span id="title">{title}</span>
-        <div className="header-actions">
-          <span className={`sync${sync.offline ? " offline" : ""}`}>{sync.text}</span>
-        </div>
-      </header>
+      <Header
+        title={title}
+        action={
+          <span
+            className={`sync${sync.offline ? " offline" : ""}`}
+            style={{ fontSize: "var(--text-2xs)", color: sync.offline ? "var(--accent-primary)" : "var(--text-tertiary)" }}
+          >
+            {sync.text}
+          </span>
+        }
+      />
       <InstallBanner />
       <main>
         {tab === "list" && <ShoppingListTab onSyncTick={onSyncTick} onOffline={onOffline} />}
         {tab === "meals" && <MealsTab onSyncTick={onSyncTick} onOffline={onOffline} />}
         {tab === "settings" && <SettingsTab view={settingsView} onViewChange={onSettingsViewChange} />}
       </main>
-      <nav>
-        <button className={tab === "list" ? "active" : ""} onClick={() => switchTab("list")}>
-          <span className="ico"><UiIcon name="cart" size={22} /></span>
-          Handleliste
-        </button>
-        <button className={tab === "meals" ? "active" : ""} onClick={() => switchTab("meals")}>
-          <span className="ico"><UiIcon name="utensils" size={22} /></span>
-          Måltider
-        </button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => switchTab("settings")}>
-          <span className="ico"><UiIcon name="settings" size={22} /></span>
-          Innstillinger
-        </button>
-      </nav>
+      <TabBar
+        tabs={[
+          { key: "list", label: "Handleliste", icon: "shopping-cart-simple" },
+          { key: "meals", label: "Måltider", icon: "cooking-pot" },
+          { key: "settings", label: "Innstillinger", icon: "gear" },
+        ]}
+        active={tab}
+        onChange={switchTab}
+      />
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
     </div>
   );
