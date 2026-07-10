@@ -23,7 +23,8 @@ export function Button({
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    transition: 'background-color 150ms ease-out, transform 100ms ease-out, opacity 150ms ease-out',
+    transition:
+      'background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out)',
     opacity: disabled ? 0.45 : 1,
   };
 
@@ -74,19 +75,22 @@ export function Button({
     ...sizes[size],
     ...variants[variant],
     ...(hover && !disabled ? { background: hoverBg[variant] } : {}),
-    ...(press && !disabled ? { background: pressBg[variant], transform: 'scale(0.97)' } : {}),
+    ...(press && !disabled ? { background: pressBg[variant], transform: 'scale(var(--press-scale))' } : {}),
   };
 
+  // Pointer events (not mouse events) so touch taps get the press "give" too;
+  // hover is gated to mouse pointers to avoid sticky hover after a touch tap.
   return (
     <button
       type={type}
       style={style}
       disabled={disabled}
       onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => { setHover(false); setPress(false); }}
-      onMouseDown={() => setPress(true)}
-      onMouseUp={() => setPress(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
+      onPointerLeave={() => { setHover(false); setPress(false); }}
+      onPointerDown={() => setPress(true)}
+      onPointerUp={() => setPress(false)}
+      onPointerCancel={() => setPress(false)}
     >
       {icon ? <i className={`ph ph-${icon}`} style={{ fontSize: '1.15em' }} /> : null}
       {children}

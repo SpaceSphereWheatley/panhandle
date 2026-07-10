@@ -1,0 +1,28 @@
+/* Panhandle — Motion tokens. Minimal and functional: short ease-out
+   durations for appearance/dismissal, no bounce or spring. Checking off a
+   grocery item gets a quick strike-through + fade, not a celebratory
+   animation. Kept in sync with the Panhandle Design System project. */
+:root {
+  --duration-fast: 150ms;  /* small state changes: checkbox fill, hover */
+  --duration-base: 200ms;  /* appearance/dismissal: row fade, sheet slide */
+  --duration-slow: 300ms;  /* larger surfaces, used sparingly */
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1); /* decelerate — the system default */
+  --ease-standard: ease-out;
+
+  --press-scale: 0.97; /* light physical "give" on press, no bounce */
+}
+
+/* Sheet / scrim entrance — bottom sheets slide up, the scrim fades in. */
+@keyframes ph-sheet-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes ph-scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

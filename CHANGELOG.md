@@ -17,6 +17,38 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.0] — 2026-07-10
+
+### Added
+- **Motion, so the app feels native.** Shared motion tokens
+  (`src/design-system/tokens/motion.css`: durations, ease-out easing, press
+  scale) now back all animation, kept in sync with the Panhandle Design System
+  project.
+- **Checking off an item now animates.** Instead of instantly vanishing, a
+  ticked-off item strikes through and fills its checkbox in place, then briefly
+  fades and shrinks out before re-sorting into "Nylig kjøpt" — the quick
+  strike-through + fade the design language calls for (no celebratory
+  animation, no artificial blocking delay). The reorder is driven locally, so
+  the timing no longer depends on the network round-trip. Applies to both list
+  and grid view.
+- **Bottom sheets now slide up** with a fading scrim when opening, instead of
+  popping in.
+- **Touch press feedback**: buttons give a light physical "shrink" on tap
+  (pointer-based, so touch taps get it too, without sticky hover afterwards).
+- Honors `prefers-reduced-motion`.
+- **Installable as an app again on Android.** Added a minimal service worker
+  (`public/sw.js`, registered from `main.jsx`) so Chrome offers the real
+  "Install app" (standalone WebAPK) path instead of only "Add to home screen".
+  It's a no-cache network passthrough — no offline shell yet (that's a separate
+  follow-up), and no risk of serving a stale app after a deploy.
+
+### Changed
+- The Settings menu rows are rebuilt on design-system tokens with a real
+  Phosphor caret, matching the card look of the other tabs (replacing the
+  hand-drawn CSS chevron).
+- Dropped the stray emoji from the "Alt er handlet" shopping-list summary, per
+  the design system's no-emoji-in-chrome rule.
+
 ## [1.11.0] — 2026-07-10
 
 ### Changed

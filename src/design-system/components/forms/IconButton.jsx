@@ -4,6 +4,7 @@ import React from 'react';
  * Source: Panhandle Design System (components/forms/IconButton.jsx). */
 export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, label }) {
   const [hover, setHover] = React.useState(false);
+  const [press, setPress] = React.useState(false);
   const sizes = { sm: 32, md: 40, lg: 48 };
   const dim = sizes[size];
 
@@ -18,8 +19,11 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
       type="button"
       aria-label={label}
       onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
+      onPointerLeave={() => { setHover(false); setPress(false); }}
+      onPointerDown={() => setPress(true)}
+      onPointerUp={() => setPress(false)}
+      onPointerCancel={() => setPress(false)}
       style={{
         width: dim,
         height: dim,
@@ -29,7 +33,8 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'background-color 150ms ease-out',
+        transition: 'background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out)',
+        transform: press ? 'scale(var(--press-scale))' : 'none',
         fontSize: dim * 0.5,
         flexShrink: 0,
         ...variants[variant],

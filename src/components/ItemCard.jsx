@@ -9,7 +9,21 @@ import { cap } from "../lib/shoppingUtils.js";
 // PR description).
 export function ItemCard({ item, resolving, onToggle, onEdit, onDelete }) {
   return (
-    <div style={resolving ? { transition: "transform .2s ease, opacity .2s ease", transform: "scale(.92)", opacity: 0, pointerEvents: "none" } : undefined}>
+    <div
+      style={
+        resolving
+          ? {
+              // Fade + shrink out after the strike-through has had a beat to
+              // register (delay ≈ --duration-fast), then the row re-sorts away.
+              transition:
+                "transform var(--duration-base) var(--ease-out) var(--duration-fast), opacity var(--duration-base) var(--ease-out) var(--duration-fast)",
+              transform: "scale(.96)",
+              opacity: 0,
+              pointerEvents: "none",
+            }
+          : undefined
+      }
+    >
       <ListItem
         label={cap(item.name) + (item.qty > 1 ? ` ×${item.qty}` : "")}
         subtitle={item.notes || null}
@@ -27,6 +41,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onDelete }) {
               justifyContent: "center",
               flexShrink: 0,
               opacity: item.bought ? 0.45 : 1,
+              transition: "opacity var(--duration-fast) var(--ease-out)",
             }}
           >
             <ItemIcon name={item.name} />
