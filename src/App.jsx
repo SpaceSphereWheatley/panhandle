@@ -1,12 +1,36 @@
+import "./index.css";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { ToastProvider } from "./context/ToastContext.jsx";
+import { LoginScreen } from "./components/LoginScreen.jsx";
+import { AppShell } from "./components/AppShell.jsx";
+
+// Hand-drawn wobble filter for item icons (see lib/itemIcons.js). Defined
+// once; every icon's <g> references it via filter="url(#sketchy)".
+function SketchyFilterDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+      <defs>
+        <filter id="sketchy" x="-30%" y="-30%" width="160%" height="160%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04 0.05" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+  );
+}
+
+function Root() {
+  const { token } = useAuth();
+  return token ? <AppShell /> : <LoginScreen />;
+}
+
 export default function App() {
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 40 }}>
-      <h1>Panhandle — React + Vite pipeline check</h1>
-      <p>
-        This page only exists to prove that a Cloudflare Pages build step
-        (npm install && npm run build) works for this repo. It is not wired
-        into the live Pages project yet.
-      </p>
-    </div>
-  )
+    <AuthProvider>
+      <ToastProvider>
+        <SketchyFilterDefs />
+        <Root />
+      </ToastProvider>
+    </AuthProvider>
+  );
 }
