@@ -6,12 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Panhandle: a shared shopping list + meal planner PWA for two people, deployed entirely on Cloudflare (Pages + Worker + D1). Live at https://shopping.mohibb.com.
 
-There is no build step and no Node toolchain in this repo. Both the Pages project and the Worker are connected directly to this GitHub repo via Cloudflare's native Git integration (not GitHub Actions) — pushing to `main` auto-deploys both. Do not introduce bundlers, package.json, or frameworks unless explicitly asked.
+Both the Pages project and the Worker are connected directly to this GitHub repo via Cloudflare's native Git integration (not GitHub Actions) — pushing to `main` auto-deploys both.
+
+The frontend is mid-migration from a hand-rolled, no-build vanilla JS/HTML app to a Vite + React build. A Vite + React scaffold lives at the repo root (`package.json`, `vite.config.js`, root `index.html`, `src/` — see Architecture below). **This scaffold is not yet wired into the live deploy**: the Cloudflare Pages dashboard still has no build command configured and still deploys `public/` as-is, so `public/index.html`/`public/app.html` remain the actual live frontend until the React port is complete and the dashboard settings are switched over. Until that cutover, keep changing the live frontend in `public/`, not `src/`.
 
 ## Architecture
 
 - **`worker/index.js`** — single-file Cloudflare Worker. Handles all `/api/*` and `/seed` routes, and proxies any non-API request to the Pages project (hostname hardcoded near `pagesUrl.hostname`, currently `panhandle-ecj.pages.dev`). This is the entire backend: routing, auth, and business logic all live in one `fetch` handler with sequential `if (path === ...)` checks.
-- **`public/`** — static frontend served by Cloudflare Pages (no framework, no build): `index.html` (the app, single file with inline `<style>`/`<script>`), `seed.html` (one-time account creation form, posts to `/seed`), `manifest.json`, icons. Pages build output directory is `public/`, no build command.
+- **`public/`** — the **live** frontend served by Cloudflare Pages, no build step: `index.html` (the app, single file with inline `<style>`/`<script>`), `seed.html` (one-time account creation form, posts to `/seed`), `manifest.json`, icons. Pages build output directory is currently `public/`, with no build command configured.
+- **`src/`, `package.json`, `vite.config.js`, root `index.html`** — a Vite + React scaffold for the planned frontend rewrite. Not yet connected to the Pages deploy (no dashboard build command points at it) and not yet a port of the real app — currently just a placeholder `App.jsx`. Known blocker for cutover: Vite's default `publicDir` behavior copies `public/`'s contents into `dist/` verbatim and also emits its own generated `index.html` there, which collides with and overwrites `public/index.html` — the real `public/` will need renaming/restructuring before the dashboard can be pointed at `dist/`.
 - **`migrations/`** — SQL applied via Wrangler's D1 migrations runner (`npx wrangler d1 migrations apply panhandle --remote`), which tracks applied filenames in the `d1_migrations` table inside the DB itself — see `wrangler.toml`. `0001_init.sql` holds the full consolidated schema (lists, users, item_catalogue, list_items, meal_catalogue, meal_plan, login_attempts, and all indexes) — this project has exactly one deployment, so the original incremental migrations (users table, qty/notes columns, multi-tenant cutover, login-rate-limiting table) were squashed into it rather than kept as separate ordered steps. `0002_seed_catalogue.sql` and `0003_expand_catalogue.sql` are pure data seeds (non-destructive, re-runnable upserts that ensure ~706 common Norwegian household items exist in every list's `item_catalogue`, overwriting an item's category on conflict; never wipe data) — both depend on `lists`/`list_id` from `0001_init.sql`, which is why they're numbered after it. New schema/data changes just need a new numbered `.sql` file in `migrations/`; running the command above applies only the ones not yet recorded in `d1_migrations`.
 
 ### Deployment (Cloudflare Git integration)
@@ -59,9 +62,10 @@ When the user says "finish up" (or similar) on a branch with work ready to ship,
 
 ## Deployment
 
-There is no local dev server or test suite. Changes are validated by deploying:
+There is no test suite for the live app, and the live frontend (`public/`) has no local dev server. Changes are validated by deploying:
 - Worker changes: push to `main` — Cloudflare's Git integration runs `npx wrangler deploy` automatically.
-- Frontend changes: push to `main` — Cloudflare Pages rebuilds `public/` automatically.
+- Frontend changes (`public/`): push to `main` — Cloudflare Pages rebuilds `public/` automatically.
+- Vite + React scaffold (`src/`): `npm install && npm run build` can be run wherever Node is available (including inside a Claude Code session) to validate the build pipeline itself; `npm run dev` runs Vite's local dev server. Neither is part of the live deploy yet.
 - Schema changes: add a new numbered file in `migrations/`, then run `npx wrangler d1 migrations apply panhandle --remote` (requires `wrangler login` or `CLOUDFLARE_API_TOKEN`). This is not wired into the Git integration/CI — it's a manual step a developer runs locally after pushing/merging the migration file.
 
 ### Applying migrations without a local install
