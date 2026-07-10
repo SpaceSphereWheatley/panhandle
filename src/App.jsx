@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
 import { ListUsersProvider } from "./context/ListUsersContext.jsx";
 import { RecurringProvider } from "./context/RecurringContext.jsx";
+import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
 import { LoginScreen } from "./components/LoginScreen.jsx";
 import { AppShell } from "./components/AppShell.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
@@ -41,11 +42,13 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <SketchyFilterDefs />
-        <Root />
-      </ToastProvider>
-    </AuthProvider>
+    <InstallPromptProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <SketchyFilterDefs />
+          <Root />
+        </ToastProvider>
+      </AuthProvider>
+    </InstallPromptProvider>
   );
 }

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ProfileSettings } from "../components/settings/ProfileSettings.jsx";
 import { MembersSettings } from "../components/settings/MembersSettings.jsx";
@@ -15,19 +14,15 @@ export const SETTINGS_TITLES = {
   about: "Om",
 };
 
-export function SettingsTab({ onViewChange }) {
+// `view`/`onViewChange` are controlled by AppShell (rather than owned here)
+// so the browser back button can restore a specific subpage via history state.
+export function SettingsTab({ view, onViewChange }) {
   const { isAdmin, isOwner } = useAuth();
-  const [view, setView] = useState("main");
-
-  function go(v) {
-    setView(v);
-    onViewChange?.(v);
-  }
 
   if (view !== "main") {
     return (
       <section>
-        <button className="subpage-back" onClick={() => go("main")}>‹ Innstillinger</button>
+        <button className="subpage-back" onClick={() => onViewChange("main")}>‹ Innstillinger</button>
         {view === "profile" && <ProfileSettings />}
         {view === "members" && <MembersSettings />}
         {view === "admin" && <AdminSettings />}
@@ -39,27 +34,27 @@ export function SettingsTab({ onViewChange }) {
 
   return (
     <section>
-      <button className="setrow nav-row" onClick={() => go("profile")}>
+      <button className="setrow nav-row" onClick={() => onViewChange("profile")}>
         <span>Profil</span>
         <span className="nav-row-arrow" />
       </button>
       {isOwner && (
-        <button className="setrow nav-row" onClick={() => go("members")}>
+        <button className="setrow nav-row" onClick={() => onViewChange("members")}>
           <span>Medlemmer</span>
           <span className="nav-row-arrow" />
         </button>
       )}
       {isAdmin && (
-        <button className="setrow nav-row" onClick={() => go("admin")}>
+        <button className="setrow nav-row" onClick={() => onViewChange("admin")}>
           <span>Administrasjon</span>
           <span className="nav-row-arrow" />
         </button>
       )}
-      <button className="setrow nav-row" onClick={() => go("recurring")}>
+      <button className="setrow nav-row" onClick={() => onViewChange("recurring")}>
         <span>Fast ukentlig ansvar</span>
         <span className="nav-row-arrow" />
       </button>
-      <button className="setrow nav-row" onClick={() => go("about")}>
+      <button className="setrow nav-row" onClick={() => onViewChange("about")}>
         <span>Om</span>
         <span className="nav-row-arrow" />
       </button>
