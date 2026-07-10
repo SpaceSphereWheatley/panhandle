@@ -117,17 +117,8 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .theme-toggle button.active { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 
-/* Settings drill-down: clickable nav row + subpage back button */
-.nav-row {
-  width: 100%; font-family: var(--font-sans); font-size: var(--text-md); color: var(--text-primary);
-  text-align: left; cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.nav-row .nav-row-arrow {
-  width: 9px; height: 9px; flex-shrink: 0;
-  border-right: 2px solid var(--accent-primary); border-top: 2px solid var(--accent-primary);
-  transform: rotate(45deg); /* chevron pointing right */
-}
+/* Settings drill-down: subpage back button (main-menu nav rows are now the
+   design-system-tokened NavRow component in SettingsTab.jsx). */
 .subpage-back {
   background: none; border: none; color: var(--accent-primary); font-family: var(--font-sans);
   font-size: var(--text-sm); font-weight: 600; cursor: pointer; padding: 4px 0; margin-bottom: 8px;

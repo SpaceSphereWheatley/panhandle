@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { ProfileSettings } from "../components/settings/ProfileSettings.jsx";
 import { MembersSettings } from "../components/settings/MembersSettings.jsx";
@@ -34,30 +35,50 @@ export function SettingsTab({ view, onViewChange }) {
 
   return (
     <section>
-      <button className="setrow nav-row" onClick={() => onViewChange("profile")}>
-        <span>Profil</span>
-        <span className="nav-row-arrow" />
-      </button>
-      {isOwner && (
-        <button className="setrow nav-row" onClick={() => onViewChange("members")}>
-          <span>Medlemmer</span>
-          <span className="nav-row-arrow" />
-        </button>
-      )}
-      {isAdmin && (
-        <button className="setrow nav-row" onClick={() => onViewChange("admin")}>
-          <span>Administrasjon</span>
-          <span className="nav-row-arrow" />
-        </button>
-      )}
-      <button className="setrow nav-row" onClick={() => onViewChange("recurring")}>
-        <span>Fast ukentlig ansvar</span>
-        <span className="nav-row-arrow" />
-      </button>
-      <button className="setrow nav-row" onClick={() => onViewChange("about")}>
-        <span>Om</span>
-        <span className="nav-row-arrow" />
-      </button>
+      <NavRow label="Profil" onClick={() => onViewChange("profile")} />
+      {isOwner && <NavRow label="Medlemmer" onClick={() => onViewChange("members")} />}
+      {isAdmin && <NavRow label="Administrasjon" onClick={() => onViewChange("admin")} />}
+      <NavRow label="Fast ukentlig ansvar" onClick={() => onViewChange("recurring")} />
+      <NavRow label="Om" onClick={() => onViewChange("about")} />
     </section>
+  );
+}
+
+// Card-style drill-down row, built on design-system tokens (matches the card
+// look of the shopping/meals tabs) with a real Phosphor caret and a light
+// press "give" on tap, replacing the old hand-drawn CSS chevron.
+function NavRow({ label, onClick }) {
+  const [press, setPress] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onPointerDown={() => setPress(true)}
+      onPointerUp={() => setPress(false)}
+      onPointerLeave={() => setPress(false)}
+      onPointerCancel={() => setPress(false)}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        background: "var(--surface-card)",
+        border: "none",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-card)",
+        padding: 16,
+        marginBottom: 10,
+        cursor: "pointer",
+        fontFamily: "var(--font-sans)",
+        fontSize: "var(--text-md)",
+        color: "var(--text-primary)",
+        textAlign: "left",
+        transition: "transform var(--duration-fast) var(--ease-out)",
+        transform: press ? "scale(var(--press-scale))" : "none",
+      }}
+    >
+      <span>{label}</span>
+      <i className="ph ph-caret-right" style={{ color: "var(--accent-primary)", fontSize: 18, flexShrink: 0 }} />
+    </button>
   );
 }

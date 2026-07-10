@@ -27,8 +27,12 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [showSuggestModal, setShowSuggestModal] = useState(false);
+  // Items mid "checked-off" animation: still rendered in their category, struck
+  // through and fading out, before they re-sort into "Nylig kjøpt".
+  const [resolvingIds, setResolvingIds] = useState(() => new Set());
 
   const pendingDeleteIds = useRef(new Set());
+  const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
 
   async function loadCatalogue() {
@@ -60,7 +64,12 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);
-    return () => clearInterval(timer);
+    const timers = resolveTimers.current;
+    return () => {
+      clearInterval(timer);
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,6 +139,9 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     loadList();
   }
 
+  // Total resolve window ≈ 150ms strike-through delay + 200ms fade + buffer.
+  const RESOLVE_MS = 400;
+
   async function toggleItem(id) {
     const it = items.find((x) => x.id === id);
     if (!it) return;
@@ -138,13 +150,47 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     setItems((prev) =>
       prev.map((x) => (x.id === id ? { ...x, bought: wasBought ? 0 : 1 } : x))
     );
+    // Checking off (not un-checking): hold the row in place so the
+    // strike-through + fade play before it re-sorts into "Nylig kjøpt". The
+    // reorder is driven by this local timer, not by the network round-trip.
+    if (!wasBought) {
+      setResolvingIds((prev) => new Set(prev).add(id));
+      const existing = resolveTimers.current.get(id);
+      if (existing) clearTimeout(existing);
+      resolveTimers.current.set(
+        id,
+        setTimeout(() => {
+          resolveTimers.current.delete(id);
+          setResolvingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }, RESOLVE_MS)
+      );
+    }
     try {
       await api(`/list/${id}/toggle`, { method: "POST" });
       loadList();
     } catch {
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought } : x)));
+      clearResolving(id);
       toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
     }
+  }
+
+  function clearResolving(id) {
+    const t = resolveTimers.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      resolveTimers.current.delete(id);
+    }
+    setResolvingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }
 
   // Optimistic delete with a 5s undo window: the row disappears at once, but
@@ -198,16 +244,21 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     else focusAddInput();
   }
 
-  const unbought = items.filter((it) => !it.bought);
+  // A just-checked item stays in its category (struck through, fading) until
+  // its resolve timer fires — only then does it move to "Nylig kjøpt".
+  const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
   const bought = items
-    .filter((it) => it.bought)
+    .filter((it) => it.bought && !resolvingIds.has(it.id))
     .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
   const groups = {};
   for (const it of unbought) (groups[it.category] = groups[it.category] || []).push(it);
-  const summary = unbought.length
-    ? `${unbought.length} ${unbought.length === 1 ? "vare" : "varer"} igjen`
+  // Count genuinely-remaining items (a resolving item is on its way out, so it
+  // shouldn't hold the counter up even though it's still rendered in place).
+  const remaining = items.filter((it) => !it.bought).length;
+  const summary = remaining
+    ? `${remaining} ${remaining === 1 ? "vare" : "varer"} igjen`
     : items.length
-      ? "Alt er handlet 🎉"
+      ? "Alt er handlet"
       : "";
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
 
@@ -304,6 +355,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
                 collapsed={!!collapsedCats[cat]}
                 viewMode={viewMode}
                 first={i === 0}
+                resolvingIds={resolvingIds}
                 onToggleCat={toggleCat}
                 onToggleItem={toggleItem}
                 onEditItem={setEditingId}
@@ -319,6 +371,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
                 collapsed={!!collapsedCats["Nylig kjøpt"]}
                 viewMode={viewMode}
                 first
+                resolvingIds={resolvingIds}
                 onToggleCat={toggleCat}
                 onToggleItem={toggleItem}
                 onEditItem={setEditingId}
@@ -420,7 +473,7 @@ function viewToggleBtnStyle(active) {
   };
 }
 
-function CatSection({ catKey, items, collapsed, viewMode, first = false, onToggleCat, onToggleItem, onEditItem, onDeleteItem }) {
+function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvingIds, onToggleCat, onToggleItem, onEditItem, onDeleteItem }) {
   return (
     <div style={{ marginBottom: 4 }}>
       <button
@@ -459,7 +512,7 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, onToggl
         viewMode === "grid" ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {items.map((it) => (
-              <ItemGridCard key={it.id} item={it} onToggle={onToggleItem} />
+              <ItemGridCard key={it.id} item={it} resolving={!!resolvingIds?.has(it.id)} onToggle={onToggleItem} />
             ))}
           </div>
         ) : (
@@ -468,6 +521,7 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, onToggl
               <ItemCard
                 key={it.id}
                 item={it}
+                resolving={!!resolvingIds?.has(it.id)}
                 onToggle={onToggleItem}
                 onEdit={onEditItem}
                 onDelete={onDeleteItem}

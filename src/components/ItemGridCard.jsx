@@ -4,7 +4,7 @@ import { cap } from "../lib/shoppingUtils.js";
 
 // Grid-view tile. Tap toggles bought; long-press-to-edit from the original is
 // dropped for v1 (see ItemCard.jsx) — use the list view's edit button instead.
-export function ItemGridCard({ item, onToggle }) {
+export function ItemGridCard({ item, resolving, onToggle }) {
   const meta = [item.qty > 1 ? `x${item.qty}` : "", item.notes || ""].filter(Boolean).join(" · ");
   return (
     <Card
@@ -19,9 +19,18 @@ export function ItemGridCard({ item, onToggle }) {
         gap: 4,
         height: 104,
         overflow: "hidden",
+        ...(resolving
+          ? {
+              transition:
+                "transform var(--duration-base) var(--ease-out) var(--duration-fast), opacity var(--duration-base) var(--ease-out) var(--duration-fast)",
+              transform: "scale(.96)",
+              opacity: 0,
+              pointerEvents: "none",
+            }
+          : null),
       }}
     >
-      <div style={{ opacity: item.bought ? 0.45 : 1, fontSize: 30, lineHeight: 1 }}>
+      <div style={{ opacity: item.bought ? 0.45 : 1, fontSize: 30, lineHeight: 1, transition: "opacity var(--duration-fast) var(--ease-out)" }}>
         <ItemIcon name={item.name} />
       </div>
       <div

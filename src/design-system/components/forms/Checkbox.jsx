@@ -16,7 +16,7 @@ export function Checkbox({ checked, onChange, label }) {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          transition: 'background-color 150ms ease-out',
+          transition: 'background-color var(--duration-fast) var(--ease-out)',
           flexShrink: 0,
         }}
       >
@@ -28,7 +28,7 @@ export function Checkbox({ checked, onChange, label }) {
           fontSize: 'var(--text-md)',
           color: checked ? 'var(--text-tertiary)' : 'var(--text-primary)',
           textDecoration: checked ? 'line-through' : 'none',
-          transition: 'color 150ms ease-out',
+          transition: 'color var(--duration-fast) var(--ease-out)',
           minWidth: 0,
           overflow: 'hidden',
           textOverflow: 'ellipsis',

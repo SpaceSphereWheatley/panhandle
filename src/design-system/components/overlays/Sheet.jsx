@@ -17,7 +17,7 @@ export function Sheet({ open = true, onClose, title, children, className }) {
       alignItems: 'flex-end',
       justifyContent: 'center',
       zIndex: 100,
-      transition: 'opacity 180ms ease-out',
+      animation: 'ph-scrim-in var(--duration-base) var(--ease-out)',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       <div
         className={className}
@@ -32,6 +32,7 @@ export function Sheet({ open = true, onClose, title, children, className }) {
           maxHeight: '88vh',
           overflowY: 'auto',
           padding: '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
+          animation: 'ph-sheet-in var(--duration-base) var(--ease-out)',
         }}
       >
         <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />
