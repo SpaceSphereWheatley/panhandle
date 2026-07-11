@@ -17,6 +17,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.1] — 2026-07-11
+
+### Fixed
+- **Item icons were invisible.** The catalogue icon SVGs are drawn in white
+  stroke (meant to sit on a solid colored tile, as in the old vanilla app),
+  but the React rewrite's badge circle used a pale cream background
+  (`--surface-sunken`), making every icon effectively invisible, and never
+  ported the old app's explicit icon sizing CSS, so icons had no width/height
+  and could overflow their badge. Badges (list and grid view) now use a solid
+  `--accent-secondary` (sage) background with correctly sized icons.
+
 ## [1.12.0] — 2026-07-10
 
 ### Added
