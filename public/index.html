@@ -4,33 +4,77 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="author" content="Mohibb Malik">
-<meta name="theme-color" content="#F5F1ED">
+<meta name="theme-color" content="#C1592A">
 <meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for to.">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <title>Panhandle — Måltidsplanlegging og handleliste, sammen</title>
 <style>
   :root {
-    --bg: #F5F1ED;
-    --bg-elevated: #E3DDD4;
-    --bg-sunken: #C9C2B8;
-    --tile: #9CAF88;
-    --tile-dark: #7A956F;
-    --accent: #556B2F;
-    --accent-dark: #3D4C1F;
-    --text: #3D3D3D;
-    --muted: #8B7D6E;
-    --border: rgba(61,61,61,0.08);
-    --bought-bg: #D9D0C3;
-    --green: #C89B7B;
-    --danger: #A85C3D;
+    /* Manually mirrored from src/design-system/tokens/*.css — public/ has no build
+       step, so nothing keeps these in sync automatically if the design system changes. */
+    --warm-50:#FAF6EF; --warm-100:#F3ECDD; --warm-200:#E7DCC5; --warm-300:#DCCFAF;
+    --warm-400:#C3B393; --warm-500:#A5936F; --warm-600:#7D6D50; --warm-700:#5B4E39;
+    --warm-800:#3D3425; --warm-900:#2B2621;
+    --terracotta-100:#F6DDCC; --terracotta-300:#E4A57C; --terracotta-500:#C1592A;
+    --terracotta-600:#A2461F; --terracotta-700:#7E3618;
+    --sage-100:#E4EBDD; --sage-300:#B3C4A4; --sage-500:#5B7156; --sage-600:#465943; --sage-700:#354332;
+    --mustard-100:#F6E7C1; --mustard-500:#E0A537;
+    --red-500:#B23B3B; --red-100:#F4DEDA;
+
+    --surface-page:var(--warm-50); --surface-card:#FFFDF9; --surface-sunken:var(--warm-100); --surface-inverse:var(--warm-900);
+    --text-primary:var(--warm-900); --text-secondary:var(--warm-600); --text-tertiary:var(--warm-500);
+    --text-on-accent:#FFFDF9; --text-link:var(--terracotta-600); --text-link-hover:var(--terracotta-700);
+    --border-default:var(--warm-200); --border-strong:var(--warm-400);
+    --accent-primary:var(--terracotta-500); --accent-primary-hover:var(--terracotta-600);
+    --accent-primary-press:var(--terracotta-700); --accent-primary-subtle:var(--terracotta-100);
+    --accent-secondary:var(--sage-500); --accent-secondary-hover:var(--sage-600); --accent-secondary-subtle:var(--sage-100);
+    --accent-tertiary:var(--mustard-500); --accent-tertiary-subtle:var(--mustard-100);
+    --status-danger:var(--red-500); --status-danger-subtle:var(--red-100);
+    --focus-ring:var(--terracotta-500);
+
+    --radius-sm:10px; --radius-md:16px; --radius-lg:20px; --radius-xl:28px; --radius-pill:999px;
+    --shadow-sm:0 1px 2px rgba(43,38,33,.06); --shadow-card:0 2px 8px rgba(43,38,33,.08);
+    --shadow-raised:0 8px 24px rgba(43,38,33,.14); --shadow-sheet:0 -8px 32px rgba(43,38,33,.18);
+    --duration-fast:150ms; --ease-out:cubic-bezier(.2,0,0,1); --press-scale:.97;
+
+    --font-sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-hand:'Caveat',cursive;
+    --text-2xl:34px; --text-xl:26px; --text-lg:20px; --text-md:17px; --text-sm:15px; --text-xs:13px; --text-2xs:11px;
+    --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+    --tracking-tight:-0.01em; --tracking-wide:0.04em;
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --warm-50:#1B1A17; --warm-100:#262420; --warm-200:#322F29; --warm-300:#443F37;
+      --warm-400:#6E6255; --warm-500:#A99C8B; --warm-600:#C7BBAA; --warm-700:#DCD2C4;
+      --warm-800:#ECE7DE; --warm-900:#F6F2EA;
+      --terracotta-100:#4A2A1B; --terracotta-300:#8C4A28; --terracotta-500:#D97A48;
+      --terracotta-600:#E89463; --terracotta-700:#F2AC80;
+      --sage-100:#2A3327; --sage-300:#4C5C46; --sage-500:#8CA684; --sage-600:#A3BC9A; --sage-700:#BBD0B3;
+      --mustard-100:#3D3213; --mustard-500:#E8BB5C;
+      --red-500:#D9736A; --red-100:#3D211E;
+      --surface-card:var(--warm-100);
+      --text-on-accent:#1B1A17;
+      --border-default:var(--warm-300); --border-strong:var(--warm-500);
+      --shadow-card:0 2px 8px rgba(0,0,0,.3); --shadow-raised:0 8px 24px rgba(0,0,0,.4); --shadow-sheet:0 -8px 32px rgba(0,0,0,.5);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .001ms !important; }
+  }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { scroll-behavior: smooth; }
   body {
-    margin: 0; font-family: "Roboto", -apple-system, system-ui, "Segoe UI", Verdana, sans-serif;
-    background: var(--bg); color: var(--text);
+    margin: 0; font-family: var(--font-sans);
+    background: var(--surface-page); color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
@@ -38,49 +82,60 @@
 
   /* Header */
   header.site {
-    position: sticky; top: 0; z-index: 30; background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 30; background: var(--surface-page);
+    border-bottom: 1px solid var(--border-default);
   }
   .nav-row {
     max-width: 1080px; margin: 0 auto; padding: 14px 20px;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; color: var(--accent-dark); }
-  .brand .mark {
-    width: 32px; height: 32px; border-radius: 9px; background: var(--tile);
-    display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .word {
+    font-weight: var(--weight-bold); font-size: 20px; letter-spacing: -0.3px; color: var(--text-primary);
   }
+
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    border: none; border-radius: 12px; font-family: inherit; font-weight: 700;
-    font-size: 15px; cursor: pointer; padding: 12px 22px; text-decoration: none;
+    border: none; border-radius: var(--radius-pill); font-family: inherit; font-weight: var(--weight-semibold);
+    font-size: var(--text-sm); cursor: pointer; padding: 12px 22px; text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
   }
-  .btn-login { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; }
-  .btn-login:hover { background: var(--bg-sunken); }
-  .btn-primary { background: var(--tile); color: #fff; }
-  .btn-primary:hover { background: var(--tile-dark); }
-  .btn.lg { padding: 16px 32px; font-size: 17px; border-radius: 14px; }
+  .btn:active { transform: scale(var(--press-scale)); }
+  .btn-outline { background: transparent; color: var(--text-primary); border: 1.5px solid var(--border-strong); padding: 10.5px 20.5px; }
+  .btn-outline:hover { background: var(--surface-sunken); }
+  .btn-primary { background: var(--accent-primary); color: var(--text-on-accent); }
+  .btn-primary:hover { background: var(--accent-primary-hover); }
+  .btn-primary:active { background: var(--accent-primary-press); }
+  .btn.lg { padding: 15px 30px; font-size: var(--text-md); }
+  .btn-outline.lg { padding: 13.5px 28.5px; }
 
   /* Hero */
   .hero { padding: 64px 0 48px; text-align: center; }
-  .hero h1 {
-    font-size: clamp(28px, 5vw, 46px); font-weight: 900; line-height: 1.15;
-    margin: 0 0 18px; color: var(--accent-dark);
+  .eyebrow {
+    display: inline-flex; align-items: center; font-family: var(--font-hand); font-weight: 600;
+    font-size: 19px; padding: 2px 14px 5px; border-radius: var(--radius-pill);
+    background: var(--accent-primary-subtle); color: var(--accent-primary-press); margin-bottom: 18px;
   }
-  .hero h1 span { color: var(--tile); }
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 52px); font-weight: var(--weight-bold); line-height: 1.15;
+    letter-spacing: var(--tracking-tight);
+    margin: 0 0 18px; color: var(--text-primary);
+  }
+  .hero h1 span { color: var(--accent-secondary); }
   .hero p.lead {
-    font-size: 18px; color: var(--muted); max-width: 620px; margin: 0 auto 32px; line-height: 1.55;
+    font-size: var(--text-md); color: var(--text-secondary); max-width: 620px; margin: 0 auto 32px; line-height: 1.55;
   }
   .hero .cta-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-  .hero .secondary-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .hero .secondary-note { margin-top: 14px; font-size: var(--text-xs); color: var(--text-tertiary); }
 
   /* Showcase */
   .showcase { padding: 56px 0 64px; }
   .showcase h2 {
-    text-align: center; font-size: clamp(22px, 3.5vw, 30px); font-weight: 900;
-    color: var(--accent-dark); margin: 0 0 8px;
+    text-align: center; font-size: clamp(22px, 3.5vw, 30px); font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary); margin: 0 0 8px;
   }
-  .showcase p.sub { text-align: center; color: var(--muted); margin: 0 0 40px; font-size: 15px; }
+  .showcase p.sub { text-align: center; color: var(--text-secondary); margin: 0 0 40px; font-size: var(--text-sm); }
   .mock-grid {
     display: flex; gap: 20px; margin-bottom: 48px;
     overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity;
@@ -89,121 +144,151 @@
   @media (max-width: 700px) { .mock-grid .mock-card { flex: 0 0 78%; } }
 
   .mock-card {
-    background: var(--bg-elevated); border-radius: 20px; padding: 18px;
-    border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(61,40,20,0.08);
+    background: var(--surface-sunken); border-radius: var(--radius-xl); padding: 18px;
+    box-shadow: var(--shadow-raised);
     display: flex; justify-content: center;
   }
   .mock-screen {
-    background: var(--bg); border-radius: 22px; overflow: hidden; border: 1px solid var(--border);
+    background: var(--surface-page); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-default);
     width: 100%; max-width: 280px; aspect-ratio: 9 / 18.5;
     display: flex; flex-direction: column;
   }
   .mock-screen .mock-head {
-    background: var(--bg-sunken); padding: 12px 16px; font-weight: 700; font-size: 15px;
-    display: flex; justify-content: space-between; align-items: center; color: var(--text);
+    padding: 14px 16px 8px; font-weight: var(--weight-bold); font-size: var(--text-md); letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
     flex-shrink: 0;
   }
-  .mock-screen .mock-body { padding: 14px; overflow-y: auto; flex: 1 1 auto; }
+  .mock-screen .mock-body { padding: 10px 14px 14px; overflow-y: auto; flex: 1 1 auto; }
+
+  /* shared "card row" look, matching design-system Card */
+  .mock-item-card {
+    background: var(--surface-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  }
 
   /* shopping list mock */
-  .mock-addbar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .mock-addbar { display: flex; gap: 6px; margin-bottom: 12px; }
   .mock-addbar .field {
-    flex: 1; padding: 9px 12px; font-size: 12px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--bg-elevated); color: var(--muted);
+    flex: 1; padding: 9px 12px; font-size: var(--text-2xs); border-radius: var(--radius-md);
+    border: 1.5px solid var(--border-default); background: var(--surface-card); color: var(--text-tertiary);
+    display: flex; align-items: center; gap: 6px;
   }
+  .mock-addbar .field i { color: var(--accent-secondary); font-size: 13px; }
   .mock-addbar .plus {
-    background: var(--tile); color: #fff; border-radius: 10px;
+    background: var(--accent-primary); color: var(--text-on-accent); border-radius: var(--radius-pill);
     width: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 17px; font-weight: 600;
+    font-size: 16px;
   }
+  .mock-view-toggle {
+    display: flex; gap: 2px; background: var(--surface-sunken); border-radius: var(--radius-pill);
+    padding: 3px; width: fit-content; margin-bottom: 12px;
+  }
+  .mock-view-toggle span {
+    width: 26px; height: 22px; border-radius: var(--radius-pill); display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary); font-size: 12px;
+  }
+  .mock-view-toggle span.active { background: var(--accent-primary); color: var(--text-on-accent); }
   .mock-cat-label {
-    font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.5px; margin: 14px 0 7px; padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: var(--text-2xs); font-weight: var(--weight-bold); color: var(--text-tertiary); text-transform: uppercase;
+    letter-spacing: var(--tracking-wide); margin: 12px 0 7px; display: flex; align-items: center; gap: 4px;
   }
-  .mock-body > .mock-cat-label:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .mock-cat-label i { color: var(--accent-primary); font-size: 10px; }
+  .mock-body > .mock-cat-label:first-child { margin-top: 0; }
   .mock-row {
-    background: var(--tile); color: #fff; border-radius: 12px; padding: 11px 14px;
-    display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-size: 14px;
+    background: var(--surface-card); box-shadow: var(--shadow-card); border-radius: var(--radius-md); padding: 9px 12px;
+    display: flex; align-items: center; gap: 9px; margin-bottom: 6px; font-size: var(--text-xs); color: var(--text-primary);
   }
-  .mock-row.bought { background: var(--bought-bg); color: var(--muted); text-decoration: line-through; }
-  .mock-row .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); flex-shrink: 0; }
-  .mock-row.bought .dot { background: var(--tile-dark); border-color: var(--tile-dark); }
+  .mock-row .badge {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--accent-secondary); color: var(--text-on-accent);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: var(--weight-bold);
+  }
+  .mock-row.bought { opacity: .45; text-decoration: line-through; }
 
   /* grid view of the shopping list */
-  .mock-subhead { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.4px; margin: 4px 0 6px; }
-  .mock-head .mock-subhead { color: var(--text); opacity: .65; }
   .mock-grid-tiles {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
-    background: var(--bg-sunken); border-radius: 10px; overflow: hidden;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   }
   .mock-tile {
-    background: var(--tile); color: #fff; padding: 8px 6px; text-align: center;
+    background: var(--surface-card); box-shadow: var(--shadow-card); border-radius: var(--radius-lg);
+    padding: 8px 6px; text-align: center;
     height: 76px; box-sizing: border-box;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
   }
-  .mock-tile .badge { font-size: 22px; font-weight: 700; line-height: 1; }
-  .mock-tile .name { font-size: 11px; font-weight: 500; line-height: 1.2; }
-  .mock-tile.bought { background: var(--bought-bg); color: var(--muted); }
-  .mock-tile.bought .badge { opacity: .45; }
+  .mock-tile .badge {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--accent-secondary); color: var(--text-on-accent);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: var(--weight-bold);
+  }
+  .mock-tile .name { font-size: var(--text-2xs); font-weight: var(--weight-medium); line-height: 1.2; color: var(--text-primary); }
+  .mock-tile.bought { opacity: .45; }
   .mock-tile.bought .name { text-decoration: line-through; }
 
   /* meal plan mock — vertical day cards, matching the real app */
   .mock-week-nav {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px; gap: 6px; font-size: 11px; color: var(--muted);
+    margin-bottom: 10px; gap: 6px; font-size: var(--text-2xs); color: var(--text-tertiary);
   }
   .mock-week-nav span.navbtn {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-sunken); border: 1px solid var(--border-default); border-radius: var(--radius-sm);
     padding: 5px 9px;
   }
   .mock-day {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    padding: 9px 11px; margin-bottom: 6px;
+    background: var(--surface-card); box-shadow: var(--shadow-card); border-radius: var(--radius-lg);
+    padding: 10px 12px; margin-bottom: 8px;
   }
+  .mock-day.today { border: 2px solid var(--accent-primary); }
   .mock-day .d {
-    font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase;
-    display: flex; justify-content: space-between;
+    font-size: var(--text-2xs); color: var(--text-tertiary); font-weight: var(--weight-bold); text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    display: flex; justify-content: space-between; align-items: center;
   }
-  .mock-day .d .edit { color: var(--tile); font-weight: 700; text-transform: none; }
-  .mock-day .meal { font-size: 14px; font-weight: 600; margin: 3px 0 2px; color: var(--text); }
-  .mock-day .meal.empty { color: var(--muted); font-weight: 400; font-style: italic; }
-  .mock-day .resp { font-size: 11px; color: var(--tile); font-weight: 600; }
+  .mock-day.today .d { color: var(--accent-primary); }
+  .mock-day .edit {
+    text-transform: none; font-weight: var(--weight-semibold); letter-spacing: normal;
+    border: 1.5px solid var(--border-strong); border-radius: var(--radius-pill); padding: 3px 10px; color: var(--text-primary);
+  }
+  .mock-day .meal { font-size: var(--text-sm); font-weight: var(--weight-bold); margin: 4px 0 6px; color: var(--text-primary); }
+  .mock-day .meal.empty { color: var(--text-tertiary); font-weight: var(--weight-regular); font-style: italic; margin-bottom: 0; }
+  .mock-day .who { display: flex; align-items: center; gap: 6px; }
+  .mock-day .avatar {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--accent-secondary); color: var(--text-on-accent);
+    display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: var(--weight-bold); flex-shrink: 0;
+  }
+  .mock-day .who span.name { font-size: var(--text-2xs); font-weight: var(--weight-semibold); color: var(--text-secondary); }
 
   .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
   @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
   .feature {
-    background: var(--bg-elevated); border-radius: 16px; padding: 22px;
-    border: 1px solid var(--border);
+    background: var(--surface-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 24px;
   }
   .feature .ico {
-    width: 40px; height: 40px; border-radius: 10px; background: var(--tile);
-    color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 20px;
   }
-  .feature h3 { font-size: 16px; margin: 0 0 6px; color: var(--accent-dark); }
-  .feature p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.5; }
+  .feature .ico.terracotta { background: var(--accent-primary-subtle); color: var(--accent-primary); }
+  .feature .ico.sage { background: var(--accent-secondary-subtle); color: var(--accent-secondary); }
+  .feature h3 { font-size: var(--text-lg); font-weight: var(--weight-bold); margin: 0 0 6px; color: var(--text-primary); }
+  .feature p { font-size: var(--text-sm); color: var(--text-secondary); margin: 0; line-height: 1.5; }
 
   footer.site {
-    border-top: 1px solid var(--border); padding: 28px 0; text-align: center;
-    color: var(--muted); font-size: 13px;
+    border-top: 1px solid var(--border-default); padding: 28px 0; text-align: center;
+    color: var(--text-tertiary); font-size: var(--text-xs);
   }
 
   /* Modal */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(61,40,20,0.45);
+    position: fixed; inset: 0; background: rgba(43,38,33,0.45);
     display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
   }
   .modal-box {
-    background: var(--bg); border-radius: 18px; padding: 28px; max-width: 420px; width: 100%;
-    text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    background: var(--surface-card); border-radius: var(--radius-xl); padding: 28px; max-width: 420px; width: 100%;
+    text-align: center; box-shadow: var(--shadow-raised);
   }
   .modal-box .ico {
-    width: 52px; height: 52px; border-radius: 50%; background: var(--tile); color: #fff;
-    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+    width: 52px; height: 52px; border-radius: 50%; background: var(--accent-primary-subtle); color: var(--accent-primary);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px;
   }
-  .modal-box h3 { margin: 0 0 10px; color: var(--accent-dark); font-size: 19px; }
-  .modal-box p { color: var(--text); font-size: 15px; line-height: 1.55; margin: 0 0 20px; }
-  .modal-box .btn-close { background: var(--bg-elevated); color: var(--text); width: 100%; border: 1px solid var(--border); }
+  .modal-box h3 { margin: 0 0 10px; color: var(--text-primary); font-size: var(--text-lg); font-weight: var(--weight-bold); }
+  .modal-box p { color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.55; margin: 0 0 20px; }
+  .modal-box .btn-close { width: 100%; }
 </style>
 </head>
 <body>
@@ -211,17 +296,21 @@
 <header class="site">
   <div class="nav-row">
     <div class="brand">
-      <span class="mark">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg>
-      </span>
-      Panhandle
+      <svg width="36" height="36" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="34" y="28" width="24" height="8" rx="4" fill="#C1592A"/>
+        <circle cx="26" cy="32" r="20" fill="#C1592A"/>
+        <circle cx="26" cy="32" r="20" fill="none" stroke="#7E3618" stroke-width="1.5" opacity="0.35"/>
+        <circle cx="26" cy="32" r="8" fill="none" stroke="#FFFDF9" stroke-width="2" opacity="0.55"/>
+      </svg>
+      <span class="word">panhandle</span>
     </div>
-    <a class="btn btn-login" href="/app.html">Logg inn</a>
+    <a class="btn btn-outline" href="/app.html">Logg inn</a>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
+    <span class="eyebrow">for dere to</span>
     <h1>Planlegg middager.<br>Hold handlelisten <span>i synk.</span></h1>
     <p class="lead">
       Panhandle kobler ukeplanen for middager til en delt handleliste —
@@ -230,7 +319,7 @@
     </p>
     <div class="cta-row">
       <button class="btn btn-primary lg" onclick="openSignupModal()">Registrer deg</button>
-      <a class="btn btn-login lg" href="/app.html">Logg inn</a>
+      <a class="btn btn-outline lg" href="/app.html">Logg inn</a>
     </div>
     <div class="secondary-note">Fungerer på mobil og desktop.</div>
   </div>
@@ -249,10 +338,10 @@
             <div class="mock-week-nav">
               <span class="navbtn">‹ Forrige</span><span>9. – 15. jun</span><span class="navbtn">Neste ›</span>
             </div>
-            <div class="mock-day">
+            <div class="mock-day today">
               <div class="d">I dag <span class="edit">Endre</span></div>
               <div class="meal">Laks i form</div>
-              <div class="resp">Ansvarlig: Kristin</div>
+              <div class="who"><span class="avatar">K</span><span class="name">Kristin</span></div>
             </div>
             <div class="mock-day">
               <div class="d">Torsdag 12. jun <span class="edit">Legg til</span></div>
@@ -261,50 +350,52 @@
             <div class="mock-day">
               <div class="d">Fredag 13. jun <span class="edit">Endre</span></div>
               <div class="meal">Taco</div>
-              <div class="resp">Ansvarlig: Anders</div>
+              <div class="who"><span class="avatar">A</span><span class="name">Anders</span></div>
             </div>
           </div>
         </div>
       </div>
       <div class="mock-card">
         <div class="mock-screen">
-          <div class="mock-head">Handleliste<span class="mock-subhead" style="margin:0">Listevisning</span></div>
+          <div class="mock-head">Handleliste</div>
           <div class="mock-body">
-            <div class="mock-addbar"><span class="field">Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-view-toggle"><span class="active"><i class="ph ph-list-bullets"></i></span><span><i class="ph ph-squares-four"></i></span></div>
 
-            <div class="mock-cat-label">Kjøtt og fisk</div>
-            <div class="mock-row"><span>Laksefilet</span><span class="dot"></span></div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Kjøtt og fisk</div>
+            <div class="mock-row"><span class="badge">L</span><span>Laksefilet</span></div>
 
-            <div class="mock-cat-label">Meieri</div>
-            <div class="mock-row"><span>Kremost</span><span class="dot"></span></div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Meieriprodukter</div>
+            <div class="mock-row"><span class="badge">K</span><span>Kremost</span></div>
 
-            <div class="mock-cat-label">Bakevarer</div>
-            <div class="mock-row"><span>Tacolefse</span><span class="dot"></span></div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Brød og bakevarer</div>
+            <div class="mock-row"><span class="badge">T</span><span>Tacolefse</span></div>
 
-            <div class="mock-cat-label">Nylig kjøpt</div>
-            <div class="mock-row bought"><span>Pasta</span><span class="dot"></span></div>
-            <div class="mock-row bought"><span>Parmesan</span><span class="dot"></span></div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Nylig kjøpt</div>
+            <div class="mock-row bought"><span class="badge">P</span><span>Pasta</span></div>
+            <div class="mock-row bought"><span class="badge">P</span><span>Parmesan</span></div>
           </div>
         </div>
       </div>
       <div class="mock-card">
         <div class="mock-screen">
-          <div class="mock-head">Handleliste<span class="mock-subhead" style="margin:0">Rutenettvisning</span></div>
+          <div class="mock-head">Handleliste</div>
           <div class="mock-body">
-            <div class="mock-addbar"><span class="field">Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-view-toggle"><span><i class="ph ph-list-bullets"></i></span><span class="active"><i class="ph ph-squares-four"></i></span></div>
 
-            <div class="mock-cat-label">Kjøtt og fisk</div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Kjøtt og fisk</div>
             <div class="mock-grid-tiles">
               <div class="mock-tile"><span class="badge">L</span><span class="name">Laksefilet</span></div>
             </div>
 
-            <div class="mock-cat-label">Meieri</div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Meieriprodukter</div>
             <div class="mock-grid-tiles">
               <div class="mock-tile"><span class="badge">K</span><span class="name">Kremost</span></div>
               <div class="mock-tile"><span class="badge">S</span><span class="name">Salat</span></div>
             </div>
 
-            <div class="mock-cat-label">Nylig kjøpt</div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Nylig kjøpt</div>
             <div class="mock-grid-tiles">
               <div class="mock-tile bought"><span class="badge">P</span><span class="name">Pasta</span></div>
               <div class="mock-tile bought"><span class="badge">P</span><span class="name">Parmesan</span></div>
@@ -316,17 +407,17 @@
 
     <div class="features">
       <div class="feature">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7.2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2.5"/><path d="M8 11.7V21.5"/><path d="M18.5 2.5c-2 0-3.5 2-3.5 4.6v4.4c0 1 .8 1.8 1.8 1.8h1.7v8.2"/></svg></span>
+        <span class="ico terracotta"><i class="ph ph-cooking-pot"></i></span>
         <h3>Ukeplan for middager</h3>
         <p>Sett opp hvem som lager hva og når, sammen med den andre — ingen flere meldinger om middag.</p>
       </div>
       <div class="feature">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.4l1.9 11.1a2 2 0 0 0 2 1.65h8.86a2 2 0 0 0 1.97-1.62L21.5 8H6.2"/></svg></span>
+        <span class="ico sage"><i class="ph ph-shopping-cart-simple"></i></span>
         <h3>Delt handleliste, live</h3>
         <p>Begge ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
       </div>
       <div class="feature">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/></svg></span>
+        <span class="ico terracotta"><i class="ph ph-magic-wand"></i></span>
         <h3>Gjenkjenner varer</h3>
         <p>Listen kommer med en stor katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
       </div>
@@ -341,14 +432,14 @@
 <div id="signupModal" class="modal-overlay hidden" onclick="if(event.target===this) closeSignupModal()">
   <div class="modal-box">
     <span class="ico">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+      <i class="ph ph-lock-key"></i>
     </span>
     <h3>Vi er i en lukket beta</h3>
     <p>
       Panhandle er foreløpig kun tilgjengelig for inviterte testere.
       Ta kontakt med Mohibb for å be om en testkonto.
     </p>
-    <button class="btn btn-close" onclick="closeSignupModal()">Lukk</button>
+    <button class="btn btn-outline btn-close" onclick="closeSignupModal()">Lukk</button>
   </div>
 </div>
 
