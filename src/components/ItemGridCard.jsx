@@ -30,7 +30,24 @@ export function ItemGridCard({ item, resolving, onToggle }) {
           : null),
       }}
     >
-      <div style={{ opacity: item.bought ? 0.45 : 1, fontSize: 30, lineHeight: 1, transition: "opacity var(--duration-fast) var(--ease-out)" }}>
+      <div
+        className="grid-badge"
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          background: "var(--accent-secondary)",
+          color: "var(--text-on-accent)",
+          fontWeight: "var(--weight-semibold)",
+          fontSize: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          opacity: item.bought ? 0.45 : 1,
+          transition: "opacity var(--duration-fast) var(--ease-out)",
+        }}
+      >
         <ItemIcon name={item.name} />
       </div>
       <div

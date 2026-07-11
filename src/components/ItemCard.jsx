@@ -31,11 +31,15 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onDelete }) {
         onChange={() => onToggle(item.id)}
         leading={
           <div
+            className="item-badge"
             style={{
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "var(--surface-sunken)",
+              background: "var(--accent-secondary)",
+              color: "var(--text-on-accent)",
+              fontWeight: "var(--weight-semibold)",
+              fontSize: 16,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
