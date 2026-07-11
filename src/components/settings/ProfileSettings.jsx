@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useInstallPrompt, isStandalone, isIos } from "../../context/InstallPromptContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
+import { InstallHelpModal } from "./InstallHelpModal.jsx";
 
 function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
@@ -11,6 +12,7 @@ function hapticsEnabled() {
 export function ProfileSettings() {
   const { user, logout } = useAuth();
   const { canInstall, promptInstall, installed } = useInstallPrompt();
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [theme, setThemeState] = useState(currentTheme());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [pwCurrent, setPwCurrent] = useState("");
@@ -80,17 +82,18 @@ export function ProfileSettings() {
       {!isStandalone() && !installed && (
         <div className="setrow">
           <div className="k" style={{ marginBottom: 8 }}>Installer app</div>
-          {canInstall ? (
-            <button className="btn-primary" onClick={promptInstall}>Installer</button>
-          ) : (
+          {isIos() ? (
             <div className="v" style={{ marginBottom: 8, fontWeight: 400, fontSize: 14 }}>
-              {isIos()
-                ? 'Trykk del-ikonet ⎋ i Safari og velg "Legg til på Hjemskjerm".'
-                : 'Bruk nettleserens meny (⋮) og velg "Installer app" eller "Legg til på Hjemskjerm".'}
+              Trykk del-ikonet ⎋ i Safari og velg "Legg til på Hjemskjerm".
             </div>
+          ) : (
+            <button className="btn-primary" onClick={canInstall ? promptInstall : () => setShowInstallHelp(true)}>
+              Installer
+            </button>
           )}
         </div>
       )}
+      {showInstallHelp && <InstallHelpModal onClose={() => setShowInstallHelp(false)} />}
 
       <div className="setrow">
         <div className="k" style={{ marginBottom: 10 }}>Bytt passord</div>
