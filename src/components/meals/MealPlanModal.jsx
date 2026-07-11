@@ -220,11 +220,17 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       )}
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>
-        {(current.meal_name || current.responsible) && (
-          <button className="cancel" onClick={deletePlanDay}>Slett</button>
-        )}
         <button className="save" onClick={savePlan}>Lagre</button>
       </div>
+      {(current.meal_name || current.responsible) && (
+        <button
+          className="cancel"
+          style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }}
+          onClick={deletePlanDay}
+        >
+          Fjern måltid for denne dagen
+        </button>
+      )}
     </Modal>
   );
 }
