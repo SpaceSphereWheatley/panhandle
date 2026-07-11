@@ -17,6 +17,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.4] — 2026-07-11
+
+### Fixed
+- **App icon was off-center with the handle clipped off.** The 1.12.3 crop
+  used `position:absolute; top:50%; transform:translateY(-50%)` to center the
+  mark, which a Chromium rendering quirk resolved ~44px too high on a 512px
+  canvas — invisible on a laptop screen, but glaring once cropped into
+  Android's adaptive-icon shape (the handle got clipped at the mask edge).
+  Recomputed the mark's position with absolute pixel offsets instead of
+  percentage+transform, and pulled `icon-maskable-512.png`'s content in
+  further (~53% of the safe-zone radius) so it sits safely inside Android's
+  circular/squircle crop with margin to spare.
+
 ## [1.12.3] — 2026-07-11
 
 ### Fixed

@@ -1,3 +1,3 @@
 // Live frontend version, kept in sync with the Worker's VERSION on each
 // release (see CHANGELOG.md).
-export const APP_VERSION = "1.12.3";
+export const APP_VERSION = "1.12.4";
