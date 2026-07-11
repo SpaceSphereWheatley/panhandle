@@ -17,6 +17,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.3] — 2026-07-11
+
+### Fixed
+- **App icon had the wrong crop and an unwanted background.** The regenerated
+  icons in 1.12.2 kept the source mark's original margin (sized for sitting
+  next to text on the login screen, not for filling an icon frame) and baked
+  in a solid cream background on the `any`-purpose icons. Recropped
+  `icon-192.png`/`icon-512.png` tightly around just the pan shape and made
+  their background transparent; `icon-maskable-512.png` keeps its opaque
+  background (required for adaptive icons) but now uses the same crop.
+
 ## [1.12.2] — 2026-07-11
 
 ### Fixed
