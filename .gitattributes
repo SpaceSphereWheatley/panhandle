@@ -1,0 +1,9 @@
+# Prevent line-ending normalization from corrupting binary assets (this is
+# how public/icon-*.png got their PNG IDAT chunks silently mangled before).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

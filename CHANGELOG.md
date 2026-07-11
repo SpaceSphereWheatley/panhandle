@@ -17,6 +17,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.2] — 2026-07-11
+
+### Fixed
+- **Android install was still falling back to a plain shortcut.** All three
+  manifest icons (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`)
+  had corrupted PNG data (bad IDAT chunks, likely from a line-ending
+  normalization pass at some point) ever since the React rewrite — a valid
+  manifest and service worker weren't enough, since Chrome's installability
+  check also requires a decodable icon. Regenerated all three from the
+  existing brand mark (`src/design-system/assets/logo/panhandle-mark.svg`,
+  the same one used on the login screen). Added `.gitattributes` marking
+  image/font types as binary so this can't silently recur.
+
 ## [1.12.1] — 2026-07-11
 
 ### Fixed
