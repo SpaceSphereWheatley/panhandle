@@ -17,6 +17,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.7] — 2026-07-12
+
+### Added
+- **App mark on the "Om" (About) settings page.** The redesigned app icon
+  was live everywhere except the one in-app screen where a small brand mark
+  is conventional (an "about" page, alongside the version number) —
+  `AboutSettings.jsx` now shows the same mark used on the login screen,
+  centered above the version row.
+
 ## [1.12.6] — 2026-07-12
 
 ### Changed
