@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { configureApi, rawLogin } from "../lib/api.js";
 
 const AuthContext = createContext(null);
@@ -46,19 +46,22 @@ export function AuthProvider({ children }) {
     }
   }
 
-  useEffect(() => {
-    configureApi({
-      getToken: () => authRef.current.token,
-      onRefresh: (token) => {
-        const next = { ...authRef.current, token };
-        authRef.current = next;
-        setAuth(next);
-        localStorage.setItem("ph_token", token);
-      },
-      onUnauthorized: () => logout("expired"),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Wired synchronously during render, not in a useEffect: child providers
+  // (e.g. ListUsersProvider) fire their own mount-effect API calls, and React
+  // runs child effects before parent effects. An effect here would leave
+  // api.js's getToken pointed at its module-level default (() => null) for
+  // that first wave of requests, turning every fresh mount into a bogus 401
+  // that logs the still-valid session out.
+  configureApi({
+    getToken: () => authRef.current.token,
+    onRefresh: (token) => {
+      const next = { ...authRef.current, token };
+      authRef.current = next;
+      setAuth(next);
+      localStorage.setItem("ph_token", token);
+    },
+    onUnauthorized: () => logout("expired"),
+  });
 
   async function login(username, password) {
     setExpiredReason(null);
