@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
@@ -24,6 +24,8 @@ function avatarColorFor(name) {
 export function MealsTab({ onSyncTick, onOffline }) {
   const { schedule, ensureLoaded } = useRecurring();
   const [weekOffset, setWeekOffset] = useState(0);
+  const weekOffsetRef = useRef(weekOffset);
+  weekOffsetRef.current = weekOffset;
   const [plan, setPlan] = useState({}); // iso -> plan row
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   // Single active modal for the whole tab, mirroring the vanilla app's one
@@ -53,7 +55,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
     ensureLoaded();
     loadPlan(0);
     const timer = setInterval(() => {
-      if (!document.hidden) loadPlan();
+      if (!document.hidden) loadPlan(weekOffsetRef.current);
     }, POLL_MS);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
