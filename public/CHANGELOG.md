@@ -17,6 +17,28 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.13.0] — 2026-07-12
+
+### Added
+- **Android Material tap ripple** on every primary tappable control — the
+  `Button`, `IconButton` and the floating "+" action button (FAB) now show a
+  brief circular ripple spreading from the point you tapped, layered on top of
+  the existing darken-and-scale press "give". This is the design system's
+  signature Android touch feedback (see `src/design-system/lib/useRipple.jsx`),
+  which had been dropped when the components were first ported.
+- **`danger` button variant** — a clear red-outline destructive style used for
+  all "delete/remove" actions.
+
+### Changed
+- **Redesigned the delete buttons.** The "Slett vare fra katalog", "Slett
+  måltid fra katalog" and member "Fjern" actions were previously a plain grey
+  cancel button with red text, which read as disabled rather than destructive.
+  They're now proper `danger`-variant buttons (red outline + trash icon) that
+  fill red on press.
+- The two FABs (shopping list, meal plan) and the meal-plan FAB menu now use
+  the shared design-system `Fab`/`Button` components instead of one-off inline
+  markup, so they share the same press/ripple behaviour as the rest of the app.
+
 ## [1.12.8] — 2026-07-12
 
 ### Fixed

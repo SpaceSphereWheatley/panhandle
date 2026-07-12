@@ -23,6 +23,12 @@
   to   { opacity: 1; }
 }
 
+/* Android Material tap ripple — an expanding circle that fades as it grows.
+   Spawned from the pointer-down point on Button / IconButton / Fab. */
+@keyframes ph-ripple {
+  to { transform: scale(1); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

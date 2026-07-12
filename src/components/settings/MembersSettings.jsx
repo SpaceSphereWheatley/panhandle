@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../../lib/api.js";
+import { Button } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
@@ -57,7 +58,7 @@ export function MembersSettings() {
                 {u.username === currentUser && <div className="sub">deg</div>}
               </div>
               <div className="acts">
-                <button className="mini danger" onClick={() => removeMember(u.username)}>Fjern</button>
+                <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
               </div>
             </div>
           ))}

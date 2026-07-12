@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal } from "./Modal.jsx";
+import { Button } from "../design-system/index.js";
 import { CATEGORIES, cap } from "../lib/shoppingUtils.js";
 import { api } from "../lib/api.js";
 
@@ -62,13 +63,9 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
         <button className="cancel" onClick={onClose}>Avbryt</button>
         <button className="save" onClick={save}>Lagre</button>
       </div>
-      <button
-        className="cancel"
-        style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }}
-        onClick={deleteFromCatalogue}
-      >
+      <Button variant="danger" icon="trash" onClick={deleteFromCatalogue} style={{ width: "100%", marginTop: 8 }}>
         Slett vare fra katalog
-      </button>
+      </Button>
     </Modal>
   );
 }

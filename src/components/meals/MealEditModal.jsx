@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
+import { Button } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 
@@ -119,9 +120,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
         <button className="save" onClick={save}>Lagre</button>
       </div>
       {id && (
-        <button className="cancel" style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }} onClick={deleteEntry}>
+        <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
           Slett måltid fra katalog
-        </button>
+        </Button>
       )}
     </Modal>
   );
