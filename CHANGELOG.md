@@ -17,6 +17,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.8] — 2026-07-12
+
+### Fixed
+- **Fixed being logged out on every fresh app load.** `AuthProvider` wired up
+  `api.js`'s token getter inside a `useEffect`, but child providers (e.g.
+  `ListUsersProvider`) fire their own mount-effect API calls, and React runs
+  child effects before parent effects. That meant the very first request(s)
+  after any fresh mount — including reloading via the "new version available"
+  toast — went out with no token, got a real 401 back, and logged out an
+  otherwise perfectly valid session. The token getter is now wired up
+  synchronously during `AuthProvider`'s render instead, so it's in place
+  before any child component renders or fires effects.
+
 ## [1.12.7] — 2026-07-12
 
 ### Added
