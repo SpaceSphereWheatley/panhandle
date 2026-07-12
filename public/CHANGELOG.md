@@ -17,6 +17,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.6] — 2026-07-12
+
+### Changed
+- **Brought the login screen and landing page in line with the redesigned app
+  icon.** 1.12.5 redesigned the installable app icon into a bold ring-and-
+  handle glyph but left the login screen's mark
+  (`src/design-system/assets/logo/panhandle-mark.svg`, imported by
+  `LoginScreen.jsx`) and the marketing landing page's inline copy
+  (`public/index.html`) on the old thin-ring design, so the app briefly had
+  two different logos live at once. Both now use the same bold ring-and-
+  handle silhouette (terracotta on transparent, sized for a light
+  background instead of the icon's full-bleed tile). Also refreshed the two
+  matching dormant assets (`panhandle-mark-dark.svg`, `panhandle-wordmark.svg`)
+  that aren't currently wired into the app, so they don't sit around
+  contradicting the new design if they get used later.
+
 ## [1.12.5] — 2026-07-12
 
 ### Changed

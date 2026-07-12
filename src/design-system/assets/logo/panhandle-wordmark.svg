@@ -1,6 +1,5 @@
 <svg width="220" height="64" viewBox="0 0 220 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="34" y="28" width="24" height="8" rx="4" fill="#C1592A"></rect>
-  <circle cx="26" cy="32" r="20" fill="#C1592A"></circle>
-  <circle cx="26" cy="32" r="8" fill="none" stroke="#FFFDF9" stroke-width="2" opacity="0.55"></circle>
+  <circle cx="28" cy="32" r="13.4" fill="none" stroke="#C1592A" stroke-width="6.2"></circle>
+  <rect x="39.1" y="28.9" width="12.3" height="6.2" rx="3.1" fill="#C1592A"></rect>
   <text x="68" y="41" font-family="Instrument Sans, sans-serif" font-weight="700" font-size="27" letter-spacing="-0.3" fill="#2B2621">panhandle</text>
 </svg>
