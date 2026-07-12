@@ -17,6 +17,24 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.12.5] — 2026-07-12
+
+### Changed
+- **Redesigned the app icon for Android's adaptive-icon treatment**, inspired
+  by TickTick's bold, high-contrast style. The old icon (a small terracotta
+  pan floating on a cream background, with a thin low-opacity highlight ring)
+  shrank to an illegible smudge once Android's launcher masked and scaled it
+  down. Replaced it with a single new source
+  (`src/design-system/assets/logo/panhandle-icon.svg`): a full-bleed solid
+  terracotta square with a bold cream pan-and-handle glyph sized to fill most
+  of the frame while staying inside the maskable safe zone. All three
+  manifest icons (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`)
+  now render from this one design (opaque background, no transparency) so
+  there's no more separate crop logic to drift out of sync — it reads clearly
+  at both full size and 48px launcher scale, and holds up under a circular,
+  squircle, or square mask alike. The in-app login/nav mark
+  (`panhandle-mark.svg`) is unchanged.
+
 ## [1.12.4] — 2026-07-11
 
 ### Fixed
