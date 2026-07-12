@@ -7,7 +7,7 @@ import { MealFabMenu } from "../components/meals/MealFabMenu.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, Button } from "../design-system/index.js";
+import { Card, Avatar, Tag, Button, Fab } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -138,30 +138,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
         })}
       </div>
 
-      <button
-        aria-label="Måltider"
-        onClick={() => setModal({ type: "fabMenu" })}
-        style={{
-          position: "fixed",
-          bottom: "calc(84px + env(safe-area-inset-bottom))",
-          right: "max(16px, calc(50vw - 224px))",
-          width: 56,
-          height: 56,
-          borderRadius: "var(--radius-pill)",
-          background: "var(--accent-primary)",
-          color: "var(--text-on-accent)",
-          border: "none",
-          boxShadow: "var(--shadow-raised)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 26,
-          cursor: "pointer",
-          zIndex: 11,
-        }}
-      >
-        <i className="ph ph-plus" />
-      </button>
+      <Fab label="Måltider" onClick={() => setModal({ type: "fabMenu" })} />
 
       {modal?.type === "plan" && (
         <MealPlanModal

@@ -3,6 +3,7 @@
 // into this repo. See src/design-system/styles.css for the token layer.
 export { Button } from './components/forms/Button.jsx';
 export { IconButton } from './components/forms/IconButton.jsx';
+export { Fab } from './components/forms/Fab.jsx';
 export { Input } from './components/forms/Input.jsx';
 export { Checkbox } from './components/forms/Checkbox.jsx';
 export { Switch } from './components/forms/Switch.jsx';

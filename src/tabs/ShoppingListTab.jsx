@@ -6,7 +6,7 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
-import { Input, IconButton, Card } from "../design-system/index.js";
+import { Input, IconButton, Card, Fab } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -382,53 +382,36 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
         </>
       )}
 
-      <button
-        aria-label="Legg til vare"
+      <Fab
+        label="Legg til vare"
         onClick={onFabClick}
-        style={{
-          position: "fixed",
-          bottom: "calc(84px + env(safe-area-inset-bottom))",
-          right: "max(16px, calc(50vw - 224px))",
-          width: 56,
-          height: 56,
-          borderRadius: "var(--radius-pill)",
-          background: "var(--accent-primary)",
-          color: "var(--text-on-accent)",
-          border: "none",
-          boxShadow: "var(--shadow-raised)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 26,
-          cursor: "pointer",
-          zIndex: 11,
-        }}
-      >
-        {suggestedItems.length > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -4,
-              right: -4,
-              minWidth: 20,
-              height: 20,
-              padding: "0 5px",
-              borderRadius: "var(--radius-pill)",
-              background: "var(--accent-primary-press)",
-              color: "var(--text-on-accent)",
-              fontSize: 11,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              lineHeight: 1,
-            }}
-          >
-            {suggestedItems.length}
-          </span>
-        )}
-        <i className="ph ph-plus" />
-      </button>
+        badge={
+          suggestedItems.length > 0 ? (
+            <span
+              style={{
+                position: "absolute",
+                top: -4,
+                right: -4,
+                minWidth: 20,
+                height: 20,
+                padding: "0 5px",
+                borderRadius: "var(--radius-pill)",
+                background: "var(--warm-900)",
+                color: "var(--text-on-accent)",
+                fontSize: 11,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              {suggestedItems.length}
+            </span>
+          ) : null
+        }
+      />
 
       {editingItem && (
         <ItemEditModal

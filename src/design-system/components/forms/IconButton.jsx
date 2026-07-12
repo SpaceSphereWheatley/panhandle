@@ -1,10 +1,13 @@
 import React from 'react';
+import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 
 /** Icon-only circular button, for compact toolbar/list actions.
- * Source: Panhandle Design System (components/forms/IconButton.jsx). */
+ * Source: Panhandle Design System (components/forms/IconButton.jsx), with the
+ * app's pointer-based press and the design system's Android Material ripple. */
 export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, label }) {
   const [hover, setHover] = React.useState(false);
   const [press, setPress] = React.useState(false);
+  const { ripples, spawn } = useRipple();
   const sizes = { sm: 32, md: 40, lg: 48 };
   const dim = sizes[size];
 
@@ -12,7 +15,10 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
     ghost: { background: hover ? 'var(--surface-sunken)' : 'transparent', color: 'var(--text-primary)' },
     filled: { background: hover ? 'var(--accent-primary-hover)' : 'var(--accent-primary)', color: 'var(--text-on-accent)' },
     subtle: { background: hover ? 'var(--accent-primary-subtle)' : 'var(--surface-sunken)', color: 'var(--accent-primary)' },
+    danger: { background: hover ? 'var(--status-danger-subtle)' : 'transparent', color: 'var(--status-danger)' },
   };
+
+  const rippleTint = variant === 'filled' ? 'rgba(255,255,255,0.35)' : 'rgba(43,38,33,0.15)';
 
   return (
     <button
@@ -21,7 +27,7 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
       onClick={onClick}
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
       onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerDown={() => setPress(true)}
+      onPointerDown={(e) => { setPress(true); spawn(e); }}
       onPointerUp={() => setPress(false)}
       onPointerCancel={() => setPress(false)}
       style={{
@@ -30,6 +36,8 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
         borderRadius: 'var(--radius-pill)',
         border: 'none',
         cursor: 'pointer',
+        position: 'relative',
+        overflow: 'hidden',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -40,7 +48,8 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
         ...variants[variant],
       }}
     >
-      <i className={`ph ph-${icon}`} />
+      <Ripples ripples={ripples} tint={rippleTint} />
+      <i className={`ph ph-${icon}`} style={{ position: 'relative' }} />
     </button>
   );
 }

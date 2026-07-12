@@ -1,8 +1,11 @@
 import React from 'react';
+import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 
 /**
  * Primary action button. Pill-shaped, terracotta fill by default.
- * Source: Panhandle Design System (components/forms/Button.jsx).
+ * Source: Panhandle Design System (components/forms/Button.jsx), with the
+ * app's pointer-based press/hover (so touch taps get the "give" too) and the
+ * design system's Android Material ripple.
  */
 export function Button({
   children,
@@ -12,6 +15,7 @@ export function Button({
   disabled = false,
   onClick,
   type = 'button',
+  style: styleOverride,
 }) {
   const base = {
     fontFamily: 'var(--font-sans)',
@@ -23,6 +27,8 @@ export function Button({
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
+    position: 'relative',
+    overflow: 'hidden',
     transition:
       'background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out)',
     opacity: disabled ? 0.45 : 1,
@@ -52,23 +58,41 @@ export function Button({
       background: 'transparent',
       color: 'var(--text-primary)',
     },
+    // Destructive actions: a clear red outline that fills on interaction —
+    // reads as unmistakably "delete" without shouting like a solid-red button.
+    danger: {
+      background: 'transparent',
+      color: 'var(--status-danger)',
+      border: '1.5px solid var(--status-danger)',
+    },
   };
 
   const [hover, setHover] = React.useState(false);
   const [press, setPress] = React.useState(false);
+  const { ripples, spawn } = useRipple();
 
   const hoverBg = {
     primary: 'var(--accent-primary-hover)',
     secondary: 'var(--accent-secondary-hover)',
     outline: 'var(--surface-sunken)',
     ghost: 'var(--surface-sunken)',
+    danger: 'var(--status-danger-subtle)',
   };
   const pressBg = {
     primary: 'var(--accent-primary-press)',
     secondary: 'var(--accent-secondary-hover)',
     outline: 'var(--surface-sunken)',
     ghost: 'var(--surface-sunken)',
+    danger: 'var(--status-danger-subtle)',
   };
+
+  // Ink-tinted ripple on light/outline/ghost/danger surfaces, light ripple on solid fills.
+  const rippleTint =
+    variant === 'primary' || variant === 'secondary'
+      ? 'rgba(255,255,255,0.35)'
+      : variant === 'danger'
+        ? 'rgba(178,59,59,0.20)'
+        : 'rgba(43,38,33,0.12)';
 
   const style = {
     ...base,
@@ -76,6 +100,7 @@ export function Button({
     ...variants[variant],
     ...(hover && !disabled ? { background: hoverBg[variant] } : {}),
     ...(press && !disabled ? { background: pressBg[variant], transform: 'scale(var(--press-scale))' } : {}),
+    ...styleOverride,
   };
 
   // Pointer events (not mouse events) so touch taps get the press "give" too;
@@ -88,12 +113,13 @@ export function Button({
       onClick={onClick}
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
       onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerDown={() => setPress(true)}
+      onPointerDown={(e) => { if (!disabled) { setPress(true); spawn(e); } }}
       onPointerUp={() => setPress(false)}
       onPointerCancel={() => setPress(false)}
     >
-      {icon ? <i className={`ph ph-${icon}`} style={{ fontSize: '1.15em' }} /> : null}
-      {children}
+      <Ripples ripples={ripples} tint={rippleTint} />
+      {icon ? <i className={`ph ph-${icon}`} style={{ fontSize: '1.15em', position: 'relative' }} /> : null}
+      <span style={{ position: 'relative' }}>{children}</span>
     </button>
   );
 }
