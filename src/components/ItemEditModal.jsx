@@ -28,13 +28,23 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
     onSaved();
   }
 
-  // Deletes this list's catalogue entry for the item (scoped to the user's
-  // list_id server-side) — the name is forgotten for this list, so it stops
-  // being suggested by autocomplete. Other lists' catalogues are unaffected.
+  // Removes just this line from the shopping list. The catalogue entry
+  // (name/category/purchase-history stats) is untouched, so the item is
+  // still remembered and auto-suggested next time — this is the common
+  // "I don't want this on my list anymore" action.
+  async function removeFromList() {
+    await api(`/list/${item.id}`, { method: "DELETE" });
+    onSaved();
+  }
+
+  // Advanced: forgets this list's catalogue entry for the item entirely
+  // (scoped to the user's list_id server-side) — resets its purchase-history
+  // stats (the "you're probably low on X" suggestions start from zero again)
+  // and it stops being auto-suggested. Other lists' catalogues are unaffected.
   async function deleteFromCatalogue() {
     if (
       !confirm(
-        `Fjerne «${cap(item.name)}» helt fra listens lagrede varer? Den slettes fra handlelisten og blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`
+        `Glemme «${cap(item.name)}» helt fra listens lagrede varer? Kjøpshistorikken nullstilles, og den blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`
       )
     )
       return;
@@ -63,9 +73,26 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
         <button className="cancel" onClick={onClose}>Avbryt</button>
         <button className="save" onClick={save}>Lagre</button>
       </div>
-      <Button variant="danger" icon="trash" onClick={deleteFromCatalogue} style={{ width: "100%", marginTop: 8 }}>
-        Slett vare fra katalog
+      <Button variant="danger" icon="trash" onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
+        Fjern fra listen
       </Button>
+      <button
+        type="button"
+        onClick={deleteFromCatalogue}
+        style={{
+          width: "100%",
+          marginTop: 8,
+          padding: "4px 0",
+          background: "none",
+          border: "none",
+          color: "var(--text-tertiary)",
+          fontSize: 12,
+          textDecoration: "underline",
+          cursor: "pointer",
+        }}
+      >
+        Glem vare og kjøpshistorikk helt
+      </button>
     </Modal>
   );
 }
