@@ -6,19 +6,7 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. `public/sw.js` (registered in `src/main.jsx`) is a network-passthrough
-   stub with no caching — the app is installable but still has zero
-   offline capability. Add real app-shell caching, or drop the offline
-   expectation.
-   _Value: Medium · Importance: Medium · Type: Feature (PWA)_
-2. No `Escape` key handler on any of the four modals (item detail, meal,
-   admin, etc.) — only clicking the dimmed backdrop or an explicit
-   Avbryt/close button dismisses them. Verified live: an open modal
-   silently swallows clicks on the bottom nav until dismissed the "right"
-   way, which reads as the app being stuck. Add one `keydown` listener
-   that calls `closeModal()` on Escape.
-   _Value: Medium · Importance: Medium · Type: UX (accessibility/affordance)_
-3. Grid view: a category with a single item leaves the other 1-2 cells in
+1. Grid view: a category with a single item leaves the other 1-2 cells in
    its row visibly empty (each `CatSection`'s grid in
    `src/tabs/ShoppingListTab.jsx` is its own 3-col grid, so a lone item
    doesn't reflow into the next category's row).
@@ -27,10 +15,7 @@ details live in `CHANGELOG.md`, not here.
    boundaries, or only show the category header inline without a hard grid
    break per group.
    _Value: Low · Importance: Low · Type: UX (visual polish)_
-4. CI pins `trufflesecurity/trufflehog@main` (a moving ref) — pin to a
-   release tag or commit SHA.
-   _Value: Medium · Importance: Low · Type: CI / supply chain_
-5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+2. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
@@ -40,6 +25,15 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] CI pinned `trufflesecurity/trufflehog@main` (a moving ref) — pinned to
+      the `v3.95.9` release commit SHA instead. (1.15.0)
+- [x] No `Escape` key handler on any modal — a `keydown` listener on
+      `Sheet.jsx` (shared by all modals via `Modal.jsx`) now calls `onClose`
+      on Escape. (1.15.0)
+- [x] `public/sw.js` was a network-passthrough stub with no caching, so the
+      app had zero offline capability despite being installable — now does
+      stale-while-revalidate app-shell caching (everything except `/api/*`
+      and `/seed`, which always hit the network). (1.15.0)
 - [x] `migrations/0004_seed_catalogue.sql` referenced the `lists` table and
       `list_id` column that didn't exist until `0005_multi_tenant.sql` ran
       after it — applying migrations in numbered order on a fresh D1

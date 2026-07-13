@@ -17,6 +17,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.15.0] — 2026-07-13
+
+### Added
+- **Real offline app-shell caching.** `public/sw.js` previously registered a
+  service worker that only satisfied the PWA install criteria and passed
+  every request straight to the network. It now caches the app shell
+  (stale-while-revalidate) so the app loads offline; `/api/*` and `/seed`
+  requests are always excluded and still hit the network directly.
+
+### Fixed
+- **Modals now close on Escape.** None of the four modals (item detail,
+  meal, admin, etc.) responded to the Escape key — only the dimmed backdrop
+  or an explicit close button worked, which could read as the app being
+  stuck. A single `keydown` listener in the shared `Sheet` component now
+  closes whichever modal is open.
+
 ## [1.14.0] — 2026-07-13
 
 ### Changed

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 /** Bottom sheet overlay — used for all modal-style flows.
  * Source: Panhandle Design System (components/overlays/Sheet.jsx), extended
@@ -7,6 +7,15 @@ import React from 'react';
  * in src/index.css (labels, inputs, selects, action rows) without every
  * modal's internal markup needing to move onto design-system components. */
 export function Sheet({ open = true, onClose, title, children, className }) {
+  useEffect(() => {
+    if (!open || !onClose) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div style={{

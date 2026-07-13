@@ -10,9 +10,8 @@ createRoot(document.getElementById('root')).render(
 )
 
 // Register the service worker so Android Chrome offers the real "Install app"
-// (WebAPK) path, not just an "Add to home screen" shortcut. The SW itself is a
-// no-cache network passthrough (see public/sw.js); registering it is enough to
-// satisfy the install criteria.
+// (WebAPK) path, not just an "Add to home screen" shortcut, and so the app
+// shell works offline (see public/sw.js).
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {

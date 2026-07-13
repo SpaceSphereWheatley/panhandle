@@ -80,7 +80,7 @@ jobs:
       # Catches accidentally committed JWT_SECRET/SEED_SECRET values etc.
       # Filesystem-only scan, no account/license needed (stays free).
       - name: Scan for committed secrets
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@27b0417c16317ca9a472a9a8092acce143b49c55 # v3.95.9
         with:
           extra_args: --only-verified
 
