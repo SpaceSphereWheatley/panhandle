@@ -10,6 +10,7 @@ import { useRipple, Ripples } from '../../lib/useRipple.jsx';
  */
 export function Fab({ icon = 'plus', label, onClick, badge = null }) {
   const [press, setPress] = React.useState(false);
+  const [hover, setHover] = React.useState(false);
   const { ripples, spawn } = useRipple();
 
   return (
@@ -17,9 +18,10 @@ export function Fab({ icon = 'plus', label, onClick, badge = null }) {
       type="button"
       aria-label={label}
       onClick={onClick}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
       onPointerDown={(e) => { setPress(true); spawn(e); }}
       onPointerUp={() => setPress(false)}
-      onPointerLeave={() => setPress(false)}
+      onPointerLeave={() => { setHover(false); setPress(false); }}
       onPointerCancel={() => setPress(false)}
       style={{
         position: 'fixed',
@@ -53,6 +55,17 @@ export function Fab({ icon = 'plus', label, onClick, badge = null }) {
           overflow: 'hidden',
         }}
       >
+        {hover || press ? (
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'var(--md-on-primary)',
+              opacity: press ? 'var(--state-pressed-opacity)' : 'var(--state-hover-opacity)',
+            }}
+          />
+        ) : null}
         <Ripples ripples={ripples} tint="rgba(255,255,255,0.35)" />
       </span>
       {badge}

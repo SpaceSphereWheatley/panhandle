@@ -6,9 +6,8 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
-import { ShoppingFabMenu } from "../components/ShoppingFabMenu.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, Fab } from "../design-system/index.js";
+import { Input, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -28,8 +27,8 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  // Single active modal for the FAB's chooser and its two destinations:
-  // { type: "fabMenu" | "suggestions" | "weekIngredients" } | null
+  // Single active modal for the FAB menu's two destinations:
+  // { type: "suggestions" | "weekIngredients" } | null
   const [modal, setModal] = useState(null);
   // Items mid "checked-off" animation: still rendered in their category, struck
   // through and fading out, before they re-sort into "Nylig kjøpt".
@@ -210,10 +209,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     addInputRef.current?.focus();
   }
 
-  function onFabClick() {
-    setModal({ type: "fabMenu" });
-  }
-
   // A just-checked item stays in its category (struck through, fading) until
   // its resolve timer fires — only then does it move to "Nylig kjøpt".
   const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
@@ -350,9 +345,21 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
         </>
       )}
 
-      <Fab
+      <FabMenu
         label="Legg til vare"
-        onClick={onFabClick}
+        actions={[
+          {
+            icon: "cooking-pot",
+            label: "Fra middagsplanen",
+            onClick: () => setModal({ type: "weekIngredients" }),
+          },
+          {
+            icon: "sparkle",
+            label: "Forslag",
+            badge: suggestedItems.length || null,
+            onClick: () => setModal({ type: "suggestions" }),
+          },
+        ]}
         badge={
           suggestedItems.length > 0 ? (
             <span
@@ -395,15 +402,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
             await loadCatalogue();
             loadList();
           }}
-        />
-      )}
-
-      {modal?.type === "fabMenu" && (
-        <ShoppingFabMenu
-          onClose={() => setModal(null)}
-          onWeekIngredients={() => setModal({ type: "weekIngredients" })}
-          onSuggestions={() => setModal({ type: "suggestions" })}
-          suggestionCount={suggestedItems.length}
         />
       )}
 

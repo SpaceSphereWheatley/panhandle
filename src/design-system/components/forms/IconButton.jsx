@@ -19,6 +19,8 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
   };
 
   const rippleTint = variant === 'filled' ? 'rgba(255,255,255,0.35)' : 'rgba(43,38,33,0.15)';
+  // M3 state layer — flat tonal wash on hover/press over the fill.
+  const stateLayerColor = variant === 'filled' ? 'var(--md-on-primary)' : 'var(--md-on-surface)';
 
   return (
     <button
@@ -48,6 +50,18 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
         ...variants[variant],
       }}
     >
+      {hover || press ? (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: stateLayerColor,
+            opacity: press ? 'var(--state-pressed-opacity)' : 'var(--state-hover-opacity)',
+          }}
+        />
+      ) : null}
       <Ripples ripples={ripples} tint={rippleTint} />
       <i className={`ph ph-${icon}`} style={{ position: 'relative' }} />
     </button>

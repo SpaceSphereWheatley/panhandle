@@ -1,140 +1,191 @@
-/* Panhandle — Dark color tokens.
-   The design project (ad507229-d666-40ec-854b-087397bc37cb) is light-only;
-   this file is an original addition that mirrors its semantic-alias
-   structure for a dark page, following the same approach the app used
-   before this redesign (flip the neutral scale, keep the accent hues but
-   nudge them lighter for contrast against a dark background). Applied
-   when the user forces dark, or follows the OS and the OS is dark — see
-   src/lib/theme.js. */
+/* Panhandle — Dark color tokens, Material Design 3 dark scheme.
+   The design project (ad507229-…) is light-only; this dark scheme is an
+   app-original build on the same M3 structure as colors.css. Accent roles
+   take proper M3 dark tones from the tonal palettes (primary→tone 80,
+   on-primary→tone 20, container→tone 30, …). The warm-neutral SURFACES use
+   the app's tested cast-iron dark values assigned onto the M3 surface roles,
+   so the page stays warm rather than the cooler default M3 neutral.
+
+   Because every semantic alias (--surface-*, --text-*, --accent-*) resolves
+   through the --md-* roles, redefining the roles here re-skins all of them.
+   We also re-map the semantic aliases (their light values point at fixed
+   tonal stops that would read wrong on a dark page) and flip the legacy
+   brand palette hexes (warm, terracotta, … still referenced directly in a
+   few places). Applied when the user forces dark, or follows the OS and the
+   OS is dark — see src/lib/theme.js. */
 
 :root[data-theme="dark"] {
-  --warm-50:  #1B1A17; /* page */
-  --warm-100: #262420; /* card */
-  --warm-200: #322F29; /* sunken / borders */
-  --warm-300: #443F37;
-  --warm-400: #6E6255;
-  --warm-500: #A99C8B;
-  --warm-600: #C7BBAA;
-  --warm-700: #DCD2C4;
-  --warm-800: #ECE7DE;
-  --warm-900: #F6F2EA;
+  /* ---- M3 role tokens (dark scheme) ---- */
+  --md-primary: var(--p-80);
+  --md-on-primary: var(--p-20);
+  --md-primary-container: var(--p-30);
+  --md-on-primary-container: var(--p-90);
 
-  --terracotta-100: #4A2A1B;
-  --terracotta-300: #8C4A28;
-  --terracotta-500: #D97A48;
-  --terracotta-600: #E89463;
-  --terracotta-700: #F2AC80;
+  --md-secondary: var(--s-80);
+  --md-on-secondary: var(--s-20);
+  --md-secondary-container: var(--s-30);
+  --md-on-secondary-container: var(--s-90);
 
-  --sage-100: #2A3327;
-  --sage-300: #4C5C46;
-  --sage-500: #8CA684;
-  --sage-600: #A3BC9A;
-  --sage-700: #BBD0B3;
+  --md-tertiary: var(--t-80);
+  --md-on-tertiary: var(--t-20);
+  --md-tertiary-container: var(--t-30);
+  --md-on-tertiary-container: var(--t-90);
 
-  --mustard-100: #3D3213;
-  --mustard-500: #E8BB5C;
-  --mustard-600: #E8BB5C80;
+  --md-error: var(--e-80);
+  --md-on-error: var(--e-20);
+  --md-error-container: var(--e-30);
+  --md-on-error-container: var(--e-90);
 
-  --red-500: #D9736A;
-  --red-100: #3D211E;
+  /* Warm cast-iron surfaces (app-authored) mapped onto M3 surface roles */
+  --md-surface-dim: #141310;
+  --md-surface: #1B1A17;
+  --md-surface-bright: #3A362F;
+  --md-surface-container-lowest: #141310;
+  --md-surface-container-low: #23211C;
+  --md-surface-container: #262420;
+  --md-surface-container-high: #322F29;
+  --md-surface-container-highest: #3D3A33;
+  --md-on-surface: #F6F2EA;
+  --md-on-surface-variant: #D8CEC0;
 
-  --surface-page:    var(--warm-50);
-  --surface-card:    var(--warm-100);
-  --surface-sunken:  var(--warm-200);
-  --surface-inverse: var(--warm-900);
+  --md-surface-variant: #4A443B;
+  --md-outline: #9A8E7C;
+  --md-outline-variant: #46413A;
 
-  --text-primary:    var(--warm-900);
-  --text-secondary:  var(--warm-600);
-  --text-tertiary:   var(--warm-500);
-  --text-on-accent:  #1B1A17;
-  --text-link:       var(--terracotta-600);
-  --text-link-hover: var(--terracotta-700);
+  --md-inverse-surface: #F6F2EA;
+  --md-inverse-on-surface: #262420;
+  --md-inverse-primary: var(--p-40);
 
-  --border-default:  var(--warm-300);
-  --border-strong:   var(--warm-500);
+  --md-surface-tint: var(--md-primary);
 
-  --accent-primary:        var(--terracotta-500);
-  --accent-primary-hover:  var(--terracotta-600);
-  --accent-primary-press:  var(--terracotta-700);
-  --accent-primary-subtle: var(--terracotta-100);
+  /* ---- Legacy brand palette, flipped for a dark page ---- */
+  --warm-50:  #1B1A17; --warm-100: #262420; --warm-200: #322F29; --warm-300: #443F37;
+  --warm-400: #6E6255; --warm-500: #A99C8B; --warm-600: #C7BBAA; --warm-700: #DCD2C4;
+  --warm-800: #ECE7DE; --warm-900: #F6F2EA;
+  --terracotta-100: #4A2A1B; --terracotta-300: #8C4A28; --terracotta-500: #D97A48;
+  --terracotta-600: #E89463; --terracotta-700: #F2AC80;
+  --sage-100: #2A3327; --sage-300: #4C5C46; --sage-500: #8CA684; --sage-600: #A3BC9A; --sage-700: #BBD0B3;
+  --mustard-100: #3D3213; --mustard-500: #E8BB5C; --mustard-600: #E8BB5C80;
+  --red-500: #D9736A; --red-100: #3D211E;
 
-  --accent-secondary:        var(--sage-500);
-  --accent-secondary-hover:  var(--sage-600);
-  --accent-secondary-subtle: var(--sage-100);
+  /* ---- Semantic aliases → dark M3 roles / dark-appropriate tones ---- */
+  --surface-page:    var(--md-surface);
+  --surface-card:    var(--md-surface-container-low);
+  --surface-sunken:  var(--md-surface-container);
+  --surface-inverse: var(--md-inverse-surface);
 
-  --accent-tertiary:        var(--mustard-500);
-  --accent-tertiary-subtle: var(--mustard-100);
+  --text-primary:    var(--md-on-surface);
+  --text-secondary:  var(--md-on-surface-variant);
+  --text-tertiary:   var(--nv-60);
+  --text-on-accent:  var(--md-on-primary);
+  --text-link:       var(--md-primary);
+  --text-link-hover: var(--p-90);
 
-  --status-success: var(--sage-600);
-  --status-danger:  var(--red-500);
-  --status-danger-subtle: var(--red-100);
+  --border-default:  var(--md-outline-variant);
+  --border-strong:   var(--md-outline);
 
-  --focus-ring: var(--terracotta-500);
+  --accent-primary:        var(--md-primary);
+  --accent-primary-hover:  var(--p-90);
+  --accent-primary-press:  var(--p-70);
+  --accent-primary-subtle: var(--md-primary-container);
+
+  --accent-secondary:        var(--md-secondary);
+  --accent-secondary-hover:  var(--s-90);
+  --accent-secondary-subtle: var(--md-secondary-container);
+
+  --accent-tertiary:        var(--md-tertiary);
+  --accent-tertiary-subtle: var(--md-tertiary-container);
+
+  --status-success: var(--s-80);
+  --status-danger:  var(--md-error);
+  --status-danger-subtle: var(--md-error-container);
+
+  --focus-ring: var(--md-primary);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
-    --warm-50:  #1B1A17;
-    --warm-100: #262420;
-    --warm-200: #322F29;
-    --warm-300: #443F37;
-    --warm-400: #6E6255;
-    --warm-500: #A99C8B;
-    --warm-600: #C7BBAA;
-    --warm-700: #DCD2C4;
-    --warm-800: #ECE7DE;
-    --warm-900: #F6F2EA;
+    --md-primary: var(--p-80);
+    --md-on-primary: var(--p-20);
+    --md-primary-container: var(--p-30);
+    --md-on-primary-container: var(--p-90);
 
-    --terracotta-100: #4A2A1B;
-    --terracotta-300: #8C4A28;
-    --terracotta-500: #D97A48;
-    --terracotta-600: #E89463;
-    --terracotta-700: #F2AC80;
+    --md-secondary: var(--s-80);
+    --md-on-secondary: var(--s-20);
+    --md-secondary-container: var(--s-30);
+    --md-on-secondary-container: var(--s-90);
 
-    --sage-100: #2A3327;
-    --sage-300: #4C5C46;
-    --sage-500: #8CA684;
-    --sage-600: #A3BC9A;
-    --sage-700: #BBD0B3;
+    --md-tertiary: var(--t-80);
+    --md-on-tertiary: var(--t-20);
+    --md-tertiary-container: var(--t-30);
+    --md-on-tertiary-container: var(--t-90);
 
-    --mustard-100: #3D3213;
-    --mustard-500: #E8BB5C;
-    --mustard-600: #E8BB5C80;
+    --md-error: var(--e-80);
+    --md-on-error: var(--e-20);
+    --md-error-container: var(--e-30);
+    --md-on-error-container: var(--e-90);
 
-    --red-500: #D9736A;
-    --red-100: #3D211E;
+    --md-surface-dim: #141310;
+    --md-surface: #1B1A17;
+    --md-surface-bright: #3A362F;
+    --md-surface-container-lowest: #141310;
+    --md-surface-container-low: #23211C;
+    --md-surface-container: #262420;
+    --md-surface-container-high: #322F29;
+    --md-surface-container-highest: #3D3A33;
+    --md-on-surface: #F6F2EA;
+    --md-on-surface-variant: #D8CEC0;
 
-    --surface-page:    var(--warm-50);
-    --surface-card:    var(--warm-100);
-    --surface-sunken:  var(--warm-200);
-    --surface-inverse: var(--warm-900);
+    --md-surface-variant: #4A443B;
+    --md-outline: #9A8E7C;
+    --md-outline-variant: #46413A;
 
-    --text-primary:    var(--warm-900);
-    --text-secondary:  var(--warm-600);
-    --text-tertiary:   var(--warm-500);
-    --text-on-accent:  #1B1A17;
-    --text-link:       var(--terracotta-600);
-    --text-link-hover: var(--terracotta-700);
+    --md-inverse-surface: #F6F2EA;
+    --md-inverse-on-surface: #262420;
+    --md-inverse-primary: var(--p-40);
 
-    --border-default:  var(--warm-300);
-    --border-strong:   var(--warm-500);
+    --md-surface-tint: var(--md-primary);
 
-    --accent-primary:        var(--terracotta-500);
-    --accent-primary-hover:  var(--terracotta-600);
-    --accent-primary-press:  var(--terracotta-700);
-    --accent-primary-subtle: var(--terracotta-100);
+    --warm-50:  #1B1A17; --warm-100: #262420; --warm-200: #322F29; --warm-300: #443F37;
+    --warm-400: #6E6255; --warm-500: #A99C8B; --warm-600: #C7BBAA; --warm-700: #DCD2C4;
+    --warm-800: #ECE7DE; --warm-900: #F6F2EA;
+    --terracotta-100: #4A2A1B; --terracotta-300: #8C4A28; --terracotta-500: #D97A48;
+    --terracotta-600: #E89463; --terracotta-700: #F2AC80;
+    --sage-100: #2A3327; --sage-300: #4C5C46; --sage-500: #8CA684; --sage-600: #A3BC9A; --sage-700: #BBD0B3;
+    --mustard-100: #3D3213; --mustard-500: #E8BB5C; --mustard-600: #E8BB5C80;
+    --red-500: #D9736A; --red-100: #3D211E;
 
-    --accent-secondary:        var(--sage-500);
-    --accent-secondary-hover:  var(--sage-600);
-    --accent-secondary-subtle: var(--sage-100);
+    --surface-page:    var(--md-surface);
+    --surface-card:    var(--md-surface-container-low);
+    --surface-sunken:  var(--md-surface-container);
+    --surface-inverse: var(--md-inverse-surface);
 
-    --accent-tertiary:        var(--mustard-500);
-    --accent-tertiary-subtle: var(--mustard-100);
+    --text-primary:    var(--md-on-surface);
+    --text-secondary:  var(--md-on-surface-variant);
+    --text-tertiary:   var(--nv-60);
+    --text-on-accent:  var(--md-on-primary);
+    --text-link:       var(--md-primary);
+    --text-link-hover: var(--p-90);
 
-    --status-success: var(--sage-600);
-    --status-danger:  var(--red-500);
-    --status-danger-subtle: var(--red-100);
+    --border-default:  var(--md-outline-variant);
+    --border-strong:   var(--md-outline);
 
-    --focus-ring: var(--terracotta-500);
+    --accent-primary:        var(--md-primary);
+    --accent-primary-hover:  var(--p-90);
+    --accent-primary-press:  var(--p-70);
+    --accent-primary-subtle: var(--md-primary-container);
+
+    --accent-secondary:        var(--md-secondary);
+    --accent-secondary-hover:  var(--s-90);
+    --accent-secondary-subtle: var(--md-secondary-container);
+
+    --accent-tertiary:        var(--md-tertiary);
+    --accent-tertiary-subtle: var(--md-tertiary-container);
+
+    --status-success: var(--s-80);
+    --status-danger:  var(--md-error);
+    --status-danger-subtle: var(--md-error-container);
+
+    --focus-ring: var(--md-primary);
   }
 }

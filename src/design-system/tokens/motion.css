@@ -11,6 +11,13 @@
   --ease-standard: ease-out;
 
   --press-scale: 0.97; /* light physical "give" on press, no bounce */
+
+  /* M3 motion tokens (parity with the design project's emphasized scheme,
+     used where the brand's own durations don't apply). */
+  --md-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-duration-short: 200ms;
+  --md-duration-medium: 300ms;
 }
 
 /* Sheet / scrim entrance — bottom sheets slide up, the scrim fades in. */
@@ -21,6 +28,12 @@
 @keyframes ph-scrim-in {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* FAB menu (speed-dial) items — rise + fade in above the FAB, staggered. */
+@keyframes ph-fab-item-in {
+  from { transform: translateY(8px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0)   scale(1);    opacity: 1; }
 }
 
 /* Android Material tap ripple — an expanding circle that fades as it grows.

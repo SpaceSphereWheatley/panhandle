@@ -94,6 +94,15 @@ export function Button({
         ? 'rgba(178,59,59,0.20)'
         : 'rgba(43,38,33,0.12)';
 
+  // M3 state layer — a flat tonal wash over the fill on hover/press, on top of
+  // the brand's colour-darken. Light ink on solid fills, on-surface elsewhere.
+  const stateLayerColor =
+    variant === 'primary' || variant === 'secondary'
+      ? 'var(--md-on-primary)'
+      : variant === 'danger'
+        ? 'var(--status-danger)'
+        : 'var(--md-on-surface)';
+
   const style = {
     ...base,
     ...sizes[size],
@@ -117,6 +126,18 @@ export function Button({
       onPointerUp={() => setPress(false)}
       onPointerCancel={() => setPress(false)}
     >
+      {!disabled && (hover || press) ? (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: stateLayerColor,
+            opacity: press ? 'var(--state-pressed-opacity)' : 'var(--state-hover-opacity)',
+          }}
+        />
+      ) : null}
       <Ripples ripples={ripples} tint={rippleTint} />
       {icon ? <i className={`ph ph-${icon}`} style={{ fontSize: '1.15em', position: 'relative' }} /> : null}
       <span style={{ position: 'relative' }}>{children}</span>

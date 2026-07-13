@@ -1,77 +1,150 @@
-/* Panhandle — Color tokens
-   Warm, homey neutrals (paper, cast-iron ink) with a terracotta primary
-   and sage produce-green secondary. Kept restrained: 2 accent colors max
-   on any single screen. Source: Claude Design project
-   "Panhandle Design System" (ad507229-d666-40ec-854b-087397bc37cb). */
+/* Panhandle — Color tokens, Material Design 3 color system.
+   Brand hues (terracotta/sage/mustard/warm-neutral) become M3 "source
+   colors" — each expanded into a full 13-stop tonal palette (oklch, hue
+   held constant per family) and mapped to M3's role tokens (primary/
+   secondary/tertiary/neutral/neutral-variant/error, light scheme here).
+   Old --accent-, --surface-, --text- names are kept as aliases onto the
+   new roles so existing components don't need to change.
+   Source: Claude Design project "Panhandle Design System"
+   (ad507229-d666-40ec-854b-087397bc37cb). The dark M3 scheme lives in
+   colors-dark.css (the project itself is light-only; dark is app-authored). */
 
 :root {
-  /* ---- Base palette ---- */
-  /* Warm neutrals (paper → cast iron) */
-  --warm-50:  #FAF6EF;
-  --warm-100: #F3ECDD;
-  --warm-200: #E7DCC5;
-  --warm-300: #DCCFAF;
-  --warm-400: #C3B393;
-  --warm-500: #A5936F;
-  --warm-600: #7D6D50;
-  --warm-700: #5B4E39;
-  --warm-800: #3D3425;
-  --warm-900: #2B2621;
+  /* ---- Tonal palettes (M3 tone 0–100 per family) ---- */
+  /* Primary — terracotta, hue 38 */
+  --p-0: oklch(0% 0 38);     --p-10: oklch(15% 0.045 38);  --p-20: oklch(24% 0.075 38);
+  --p-30: oklch(34% 0.11 38); --p-40: oklch(44% 0.14 38);  --p-50: oklch(53% 0.15 38);
+  --p-60: oklch(62% 0.15 38); --p-70: oklch(72% 0.13 38);  --p-80: oklch(82% 0.10 38);
+  --p-90: oklch(91% 0.055 38); --p-95: oklch(95.5% 0.03 38); --p-98: oklch(98.5% 0.012 38);
+  --p-99: oklch(99.2% 0.006 38); --p-100: oklch(100% 0 38);
 
-  /* Terracotta — primary accent (skillet / clay) */
-  --terracotta-100: #F6DDCC;
-  --terracotta-300: #E4A57C;
-  --terracotta-500: #C1592A;
-  --terracotta-600: #A2461F;
-  --terracotta-700: #7E3618;
+  /* Secondary — sage, hue 135 */
+  --s-0: oklch(0% 0 135);    --s-10: oklch(15% 0.02 135);  --s-20: oklch(24% 0.035 135);
+  --s-30: oklch(34% 0.05 135); --s-40: oklch(44% 0.06 135); --s-50: oklch(53% 0.065 135);
+  --s-60: oklch(62% 0.065 135); --s-70: oklch(72% 0.055 135); --s-80: oklch(82% 0.045 135);
+  --s-90: oklch(91% 0.025 135); --s-95: oklch(95.5% 0.014 135); --s-98: oklch(98.5% 0.006 135);
+  --s-99: oklch(99.2% 0.003 135); --s-100: oklch(100% 0 135);
 
-  /* Sage — secondary accent (produce / fresh herbs) */
-  --sage-100: #E4EBDD;
-  --sage-300: #B3C4A4;
-  --sage-500: #5B7156;
-  --sage-600: #465943;
-  --sage-700: #354332;
+  /* Tertiary — mustard, hue 85 */
+  --t-0: oklch(0% 0 85);     --t-10: oklch(17% 0.035 85);  --t-20: oklch(27% 0.06 85);
+  --t-30: oklch(37% 0.09 85); --t-40: oklch(47% 0.11 85);  --t-50: oklch(57% 0.13 85);
+  --t-60: oklch(67% 0.135 85); --t-70: oklch(76% 0.12 85); --t-80: oklch(84% 0.09 85);
+  --t-90: oklch(92% 0.05 85); --t-95: oklch(96% 0.026 85); --t-98: oklch(98.5% 0.01 85);
+  --t-99: oklch(99.2% 0.005 85); --t-100: oklch(100% 0 85);
 
-  /* Mustard — tertiary accent, used sparingly (tags, highlights) */
-  --mustard-100: #F6E7C1;
-  --mustard-500: #E0A537;
-  --mustard-600: #B9822880;
+  /* Neutral — warm tan, hue 75 (surfaces, on-surface text) */
+  --n-0: oklch(0% 0 75);     --n-10: oklch(16% 0.006 75);  --n-20: oklch(26% 0.008 75);
+  --n-30: oklch(36% 0.009 75); --n-40: oklch(46% 0.01 75); --n-50: oklch(56% 0.011 75);
+  --n-60: oklch(66% 0.011 75); --n-70: oklch(76% 0.01 75); --n-80: oklch(85% 0.009 75);
+  --n-87: oklch(87% 0.0085 75);
+  --n-90: oklch(92% 0.007 75); --n-92: oklch(93.5% 0.006 75); --n-94: oklch(95% 0.005 75);
+  --n-95: oklch(95.8% 0.005 75); --n-96: oklch(96.5% 0.004 75); --n-98: oklch(98.2% 0.003 75);
+  --n-99: oklch(99% 0.0015 75); --n-100: oklch(100% 0 75);
 
-  /* Utility */
-  --red-500: #B23B3B;
-  --red-100: #F4DEDA;
+  /* Neutral-variant — warm tan, more chroma (surface-variant, outline) */
+  --nv-10: oklch(16% 0.012 75); --nv-20: oklch(26% 0.018 75); --nv-30: oklch(36% 0.02 75);
+  --nv-40: oklch(46% 0.022 75); --nv-50: oklch(58% 0.024 75); --nv-60: oklch(66% 0.022 75);
+  --nv-70: oklch(76% 0.02 75); --nv-80: oklch(85% 0.016 75); --nv-90: oklch(92% 0.012 75);
+  --nv-95: oklch(96% 0.007 75); --nv-98: oklch(98.2% 0.004 75); --nv-99: oklch(99% 0.002 75);
 
-  /* ---- Semantic aliases ---- */
-  --surface-page:    var(--warm-50);
-  --surface-card:    #FFFDF9;
-  --surface-sunken:  var(--warm-100);
-  --surface-inverse: var(--warm-900);
+  /* Error — hue 25 */
+  --e-0: oklch(0% 0 25);     --e-10: oklch(15% 0.05 25);   --e-20: oklch(24% 0.09 25);
+  --e-30: oklch(34% 0.13 25); --e-40: oklch(44% 0.17 25);  --e-50: oklch(53% 0.19 25);
+  --e-60: oklch(62% 0.185 25); --e-70: oklch(72% 0.15 25); --e-80: oklch(82% 0.11 25);
+  --e-90: oklch(91% 0.06 25); --e-95: oklch(95.5% 0.03 25); --e-98: oklch(98.5% 0.012 25);
+  --e-99: oklch(99.2% 0.006 25);
 
-  --text-primary:    var(--warm-900);
-  --text-secondary:  var(--warm-600);
-  --text-tertiary:   var(--warm-500);
-  --text-on-accent:  #FFFDF9;
-  --text-link:       var(--terracotta-600);
-  --text-link-hover: var(--terracotta-700);
+  /* ---- M3 role tokens (light scheme) ---- */
+  --md-primary: var(--p-40);
+  --md-on-primary: var(--p-100);
+  --md-primary-container: var(--p-90);
+  --md-on-primary-container: var(--p-10);
 
-  --border-default:  var(--warm-200);
-  --border-strong:   var(--warm-400);
+  --md-secondary: var(--s-40);
+  --md-on-secondary: var(--s-100);
+  --md-secondary-container: var(--s-90);
+  --md-on-secondary-container: var(--s-10);
 
-  --accent-primary:        var(--terracotta-500);
-  --accent-primary-hover:  var(--terracotta-600);
-  --accent-primary-press:  var(--terracotta-700);
-  --accent-primary-subtle: var(--terracotta-100);
+  --md-tertiary: var(--t-60);
+  --md-on-tertiary: var(--t-10);
+  --md-tertiary-container: var(--t-90);
+  --md-on-tertiary-container: var(--t-20);
 
-  --accent-secondary:        var(--sage-500);
-  --accent-secondary-hover:  var(--sage-600);
-  --accent-secondary-subtle: var(--sage-100);
+  --md-error: var(--e-40);
+  --md-on-error: var(--e-100, #fff);
+  --md-error-container: var(--e-90);
+  --md-on-error-container: var(--e-10);
 
-  --accent-tertiary:        var(--mustard-500);
-  --accent-tertiary-subtle: var(--mustard-100);
+  --md-surface-dim: var(--n-87);
+  --md-surface: var(--n-98);
+  --md-surface-bright: var(--n-100);
+  --md-surface-container-lowest: var(--n-100);
+  --md-surface-container-low: var(--n-96);
+  --md-surface-container: var(--n-94);
+  --md-surface-container-high: var(--n-92);
+  --md-surface-container-highest: var(--n-90);
+  --md-on-surface: var(--n-10);
+  --md-on-surface-variant: var(--nv-30);
 
-  --status-success: var(--sage-600);
-  --status-danger:  var(--red-500);
-  --status-danger-subtle: var(--red-100);
+  --md-surface-variant: var(--nv-90);
+  --md-outline: var(--nv-50);
+  --md-outline-variant: var(--nv-80);
 
-  --focus-ring: var(--terracotta-500);
+  --md-inverse-surface: var(--n-20);
+  --md-inverse-on-surface: var(--n-95);
+  --md-inverse-primary: var(--p-80);
+
+  --md-shadow: var(--n-0);
+  --md-scrim: var(--n-0);
+  --md-surface-tint: var(--md-primary);
+
+  /* State-layer opacities (M3 spec) — theme-independent */
+  --state-hover-opacity: 0.08;
+  --state-focus-opacity: 0.12;
+  --state-pressed-opacity: 0.12;
+  --state-dragged-opacity: 0.16;
+
+  /* ---- Legacy brand aliases (source hex kept for docs/specimens) ---- */
+  --warm-50: #FAF6EF; --warm-100: #F3ECDD; --warm-200: #E7DCC5; --warm-300: #DCCFAF;
+  --warm-400: #C3B393; --warm-500: #A5936F; --warm-600: #7D6D50; --warm-700: #5B4E39;
+  --warm-800: #3D3425; --warm-900: #2B2621;
+  --terracotta-100: #F6DDCC; --terracotta-300: #E4A57C; --terracotta-500: #C1592A;
+  --terracotta-600: #A2461F; --terracotta-700: #7E3618;
+  --sage-100: #E4EBDD; --sage-300: #B3C4A4; --sage-500: #5B7156; --sage-600: #465943; --sage-700: #354332;
+  --mustard-100: #F6E7C1; --mustard-500: #E0A537; --mustard-600: #B9822880;
+  --red-500: #B23B3B; --red-100: #F4DEDA;
+
+  /* ---- Semantic aliases → resolve through M3 roles ---- */
+  --surface-page:    var(--md-surface);
+  --surface-card:    var(--md-surface-container-low);
+  --surface-sunken:  var(--md-surface-container);
+  --surface-inverse: var(--md-inverse-surface);
+
+  --text-primary:    var(--md-on-surface);
+  --text-secondary:  var(--md-on-surface-variant);
+  --text-tertiary:   var(--nv-50);
+  --text-on-accent:  var(--md-on-primary);
+  --text-link:       var(--md-primary);
+  --text-link-hover: var(--p-30);
+
+  --border-default:  var(--md-outline-variant);
+  --border-strong:   var(--md-outline);
+
+  --accent-primary:        var(--md-primary);
+  --accent-primary-hover:  var(--p-30);
+  --accent-primary-press:  var(--p-20);
+  --accent-primary-subtle: var(--md-primary-container);
+
+  --accent-secondary:        var(--md-secondary);
+  --accent-secondary-hover:  var(--s-30);
+  --accent-secondary-subtle: var(--md-secondary-container);
+
+  --accent-tertiary:        var(--md-tertiary);
+  --accent-tertiary-subtle: var(--md-tertiary-container);
+
+  --status-success: var(--s-30);
+  --status-danger:  var(--md-error);
+  --status-danger-subtle: var(--md-error-container);
+
+  --focus-ring: var(--md-primary);
 }
