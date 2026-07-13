@@ -9,7 +9,7 @@ export function Card({ children, padding = 'md', onClick, style, ...rest }) {
       onClick={onClick}
       style={{
         background: 'var(--surface-card)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow-card)',
         padding: paddings[padding],
         cursor: onClick ? 'pointer' : 'default',
