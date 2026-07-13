@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
+import { clusterFor } from "../lib/categoryClusters.js";
+import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
@@ -13,6 +17,7 @@ const POLL_MS = 7000;
 
 export function ShoppingListTab({ onSyncTick, onOffline }) {
   const toast = useToast();
+  const intensity = useDesignIntensity();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
@@ -226,6 +231,10 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
       ? "Alt er handlet"
       : "";
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
+  // Classic intensity flattens the density down to a plain linear list,
+  // regardless of the user's stored grid/list preference — ph_view stays
+  // untouched so switching back to muted/expressive restores it exactly.
+  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
 
   return (
     <section>
@@ -288,15 +297,17 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
             onClick={() => setView("list")}
             aria-label="Listevisning"
             title="Listevisning"
-            style={viewToggleBtnStyle(viewMode === "list")}
+            disabled={intensity === "classic"}
+            style={viewToggleBtnStyle(effectiveViewMode === "list", intensity === "classic")}
           >
             <i className="ph ph-list-bullets" />
           </button>
           <button
             onClick={() => setView("grid")}
             aria-label="Rutenettvisning"
-            title="Rutenettvisning"
-            style={viewToggleBtnStyle(viewMode === "grid")}
+            title={intensity === "classic" ? "Rutenettvisning er slått av i klassisk visning" : "Rutenettvisning"}
+            disabled={intensity === "classic"}
+            style={viewToggleBtnStyle(effectiveViewMode === "grid", intensity === "classic")}
           >
             <i className="ph ph-squares-four" />
           </button>
@@ -312,29 +323,29 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
       ) : (
         <>
           <div>
-            {CATEGORIES.filter((c) => groups[c]).map((cat, i) => (
-              <CatSection
-                key={cat}
-                catKey={cat}
-                items={groups[cat]}
-                collapsed={!!collapsedCats[cat]}
-                viewMode={viewMode}
-                first={i === 0}
-                resolvingIds={resolvingIds}
-                onToggleCat={toggleCat}
-                onToggleItem={toggleItem}
-                onEditItem={setEditingId}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {CATEGORIES.filter((c) => groups[c]).map((cat) => (
+                <CatSection
+                  key={cat}
+                  catKey={cat}
+                  items={groups[cat]}
+                  collapsed={!!collapsedCats[cat]}
+                  viewMode={effectiveViewMode}
+                  resolvingIds={resolvingIds}
+                  onToggleCat={toggleCat}
+                  onToggleItem={toggleItem}
+                  onEditItem={setEditingId}
+                />
+              ))}
+            </AnimatePresence>
           </div>
           {bought.length > 0 && (
-            <div style={{ marginTop: 28, paddingTop: 16, borderTop: "2px solid var(--border-default)" }}>
+            <div style={{ marginTop: 28 }}>
               <CatSection
                 catKey="Nylig kjøpt"
                 items={bought.slice(0, 30)}
                 collapsed={!!collapsedCats["Nylig kjøpt"]}
-                viewMode={viewMode}
-                first
+                viewMode={effectiveViewMode}
                 resolvingIds={resolvingIds}
                 onToggleCat={toggleCat}
                 onToggleItem={toggleItem}
@@ -428,7 +439,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   );
 }
 
-function viewToggleBtnStyle(active) {
+function viewToggleBtnStyle(active, disabled) {
   return {
     border: "none",
     background: active ? "var(--accent-primary)" : "transparent",
@@ -436,15 +447,24 @@ function viewToggleBtnStyle(active) {
     borderRadius: "var(--radius-pill)",
     fontSize: 16,
     padding: "6px 10px",
-    cursor: "pointer",
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.4 : 1,
     display: "flex",
     alignItems: "center",
   };
 }
 
-function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
+// Each category renders as a physical "store aisle" cluster: a colored,
+// muted backdrop container (unique per category, see categoryClusters.js)
+// holding that category's items. "Nylig kjøpt" isn't a real category — it
+// falls through to the neutral "other" cluster.
+function CatSection({ catKey, items, collapsed, viewMode, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
+  const { bg, on } = clusterFor(catKey);
+  const { shouldAnimate, transition } = useMotionConfig();
+  const Wrapper = shouldAnimate ? motion.div : "div";
+  const motionProps = shouldAnimate ? { layout: true, transition } : {};
   return (
-    <div style={{ marginBottom: 4 }}>
+    <Wrapper {...motionProps} style={{ marginBottom: 12, background: bg, borderRadius: "var(--radius-card)", padding: 12 }}>
       <button
         onClick={() => onToggleCat(catKey)}
         style={{
@@ -457,13 +477,12 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvi
           fontFamily: "var(--font-sans)",
           cursor: "pointer",
           fontSize: "var(--text-2xs)",
-          fontWeight: 600,
-          color: "var(--text-tertiary)",
+          fontWeight: 700,
+          color: on,
           textTransform: "uppercase",
           letterSpacing: "var(--tracking-wide)",
-          margin: first ? "0 0 8px" : "18px 0 8px",
-          padding: first ? "0 4px 0" : "14px 4px 0",
-          borderTop: first ? "none" : "1px solid var(--border-default)",
+          padding: 0,
+          marginBottom: collapsed ? 0 : 8,
         }}
       >
         <span>{catKey}</span>
@@ -471,39 +490,44 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvi
           className="ph ph-caret-down"
           style={{
             fontSize: 13,
-            color: "var(--accent-primary)",
-            transition: "transform .15s ease",
+            transition: "transform var(--duration-fast) var(--ease-out)",
             transform: collapsed ? "rotate(-90deg)" : "none",
           }}
         />
       </button>
       {!collapsed && (
         viewMode === "grid" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {items.map((it) => (
-              <ItemGridCard
-                key={it.id}
-                item={it}
-                resolving={!!resolvingIds?.has(it.id)}
-                onToggle={onToggleItem}
-                onEdit={onEditItem}
-              />
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+            <AnimatePresence initial={false}>
+              {items.map((it) => (
+                <ItemGridCard
+                  key={it.id}
+                  item={it}
+                  clusterOn={on}
+                  resolving={!!resolvingIds?.has(it.id)}
+                  onToggle={onToggleItem}
+                  onEdit={onEditItem}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {items.map((it) => (
-              <ItemCard
-                key={it.id}
-                item={it}
-                resolving={!!resolvingIds?.has(it.id)}
-                onToggle={onToggleItem}
-                onEdit={onEditItem}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {items.map((it) => (
+                <ItemCard
+                  key={it.id}
+                  item={it}
+                  clusterOn={on}
+                  resolving={!!resolvingIds?.has(it.id)}
+                  onToggle={onToggleItem}
+                  onEdit={onEditItem}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         )
       )}
-    </div>
+    </Wrapper>
   );
 }
