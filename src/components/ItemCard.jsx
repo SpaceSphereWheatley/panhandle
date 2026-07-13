@@ -14,7 +14,6 @@ const MotionCard = motion(Card);
 // are hardcoded white-stroke SVGs, not currentColor, so they need a solid
 // tinted badge behind them rather than a text-color tint.
 export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn }) {
-  const meta = [item.qty > 1 ? `×${item.qty}` : "", item.notes || ""].filter(Boolean).join(" · ");
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
@@ -85,18 +84,43 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn }) {
         >
           {cap(item.name)}
         </div>
-        {meta ? (
+        {(item.qty > 1 || item.notes) ? (
           <div
             style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-xs)",
-              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "baseline",
+              gap: 6,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
           >
-            {meta}
+            {item.qty > 1 ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--weight-display-max)",
+                  color: clusterOn || "var(--accent-primary)",
+                  flexShrink: 0,
+                }}
+              >
+                ×{item.qty}
+              </span>
+            ) : null}
+            {item.notes ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {item.notes}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>
