@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.17.1] — 2026-07-13
+
+### Fixed
+- **Handleliste's grid view could settle on 2 columns instead of 3.** The
+  grid-view item tiles sized their minimum track width at a fixed 140px,
+  which didn't leave room for a 3rd column on narrower phone widths. The
+  minimum now scales down to fit the row (capped at 140px), so it reliably
+  lays out up to 3 columns.
+- **The Android/browser back button no longer closed open modals.** The
+  rewrite to Vite + React dropped the modal/history integration entirely —
+  pressing back while any modal was open just stepped through (or exited)
+  the tab-switch history underneath it, leaving the modal stuck open.
+  Modals now push a history entry while open again, so back closes the
+  modal first and returns to the tab/screen underneath, matching the
+  original 1.4.1 behavior.
+
 ## [1.17.0] — 2026-07-13
 
 ### Added
