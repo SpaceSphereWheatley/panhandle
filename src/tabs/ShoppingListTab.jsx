@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
-import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
@@ -21,13 +20,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
-  const [collapsedCats, setCollapsedCats] = useState(() => {
-    const stored = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
-    // "Nylig kjøpt" starts collapsed unless the user has chosen otherwise —
-    // it's a re-add palette, not something to scroll past every time.
-    if (!("Nylig kjøpt" in stored)) stored["Nylig kjøpt"] = true;
-    return stored;
-  });
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestedItems, setSuggestedItems] = useState([]);
@@ -82,12 +74,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
-
-  function toggleCat(key) {
-    const next = { ...collapsedCats, [key]: !collapsedCats[key] };
-    setCollapsedCats(next);
-    localStorage.setItem("ph_collapsed", JSON.stringify(next));
-  }
 
   function setView(mode) {
     setViewMode(mode);
@@ -228,6 +214,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
   const groups = {};
   for (const it of unbought) (groups[it.category] = groups[it.category] || []).push(it);
+  // One flat, aisle-sorted list: unbought items ordered by CATEGORIES, then a
+  // trailing run of the most recently bought items (capped, re-add palette).
+  // Recently-bought items use the neutral "other" cluster color regardless of
+  // their real category — see clusterFor's "Nylig kjøpt" comment.
+  const displayItems = [
+    ...CATEGORIES.filter((c) => groups[c]).flatMap((c) => groups[c].map((it) => ({ item: it, clusterKey: it.category }))),
+    ...bought.slice(0, 30).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" })),
+  ];
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -327,39 +321,34 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           Legg til en vare over for å komme i gang.
         </div>
       ) : (
-        <>
-          <div>
-            <AnimatePresence initial={false}>
-              {CATEGORIES.filter((c) => groups[c]).map((cat) => (
-                <CatSection
-                  key={cat}
-                  catKey={cat}
-                  items={groups[cat]}
-                  collapsed={!!collapsedCats[cat]}
-                  viewMode={effectiveViewMode}
-                  resolvingIds={resolvingIds}
-                  onToggleCat={toggleCat}
-                  onToggleItem={toggleItem}
-                  onEditItem={setEditingId}
+        <div
+          style={
+            effectiveViewMode === "grid"
+              ? // Cap track width at 1/3 of the row (minus the two 8px gaps) so
+                // auto-fit never lays out more than 3 columns, while still
+                // stretching a short last row to fill the width like before.
+                { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 }
+              : { display: "flex", flexDirection: "column", gap: 8 }
+          }
+        >
+          <AnimatePresence initial={false}>
+            {displayItems.map(({ item, clusterKey }) => {
+              const { bg, on } = clusterFor(clusterKey);
+              const ItemComponent = effectiveViewMode === "grid" ? ItemGridCard : ItemCard;
+              return (
+                <ItemComponent
+                  key={item.id}
+                  item={item}
+                  clusterOn={on}
+                  clusterBg={bg}
+                  resolving={!!resolvingIds?.has(item.id)}
+                  onToggle={toggleItem}
+                  onEdit={setEditingId}
                 />
-              ))}
-            </AnimatePresence>
-          </div>
-          {bought.length > 0 && (
-            <div style={{ marginTop: 28 }}>
-              <CatSection
-                catKey="Nylig kjøpt"
-                items={bought.slice(0, 30)}
-                collapsed={!!collapsedCats["Nylig kjøpt"]}
-                viewMode={effectiveViewMode}
-                resolvingIds={resolvingIds}
-                onToggleCat={toggleCat}
-                onToggleItem={toggleItem}
-                onEditItem={setEditingId}
-              />
-            </div>
-          )}
-        </>
+              );
+            })}
+          </AnimatePresence>
+        </div>
       )}
 
       <FabMenu
@@ -458,91 +447,4 @@ function viewToggleBtnStyle(active, disabled) {
     display: "flex",
     alignItems: "center",
   };
-}
-
-// Each category renders as a "store aisle" cluster: a thin colored left
-// border accent (unique per category, see categoryClusters.js) marking that
-// category's items. "Nylig kjøpt" isn't a real category — it falls through
-// to the neutral "other" cluster.
-function CatSection({ catKey, items, collapsed, viewMode, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
-  const { on } = clusterFor(catKey);
-  const { shouldAnimate, transition } = useMotionConfig();
-  const Wrapper = shouldAnimate ? motion.div : "div";
-  const motionProps = shouldAnimate ? { layout: true, transition } : {};
-  return (
-    <Wrapper {...motionProps} style={{ marginBottom: 12, borderLeft: `3px solid ${on}`, paddingLeft: 10 }}>
-      <button
-        onClick={() => onToggleCat(catKey)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "none",
-          border: "none",
-          fontFamily: "var(--font-sans)",
-          cursor: "pointer",
-          fontSize: "var(--text-2xs)",
-          fontWeight: 700,
-          color: on,
-          textTransform: "uppercase",
-          letterSpacing: "var(--tracking-wide)",
-          padding: 0,
-          marginBottom: collapsed ? 0 : 8,
-        }}
-      >
-        <span>{catKey}</span>
-        <i
-          className="ph ph-caret-down"
-          style={{
-            fontSize: 13,
-            transition: "transform var(--duration-fast) var(--ease-out)",
-            transform: collapsed ? "rotate(-90deg)" : "none",
-          }}
-        />
-      </button>
-      {!collapsed && (
-        viewMode === "grid" ? (
-          <div
-            style={{
-              display: "grid",
-              // Cap track width at 1/3 of the row (minus the two 8px gaps) so
-              // auto-fit never lays out more than 3 columns, while still
-              // stretching a short last row to fill the width like before.
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))",
-              gap: 8,
-            }}
-          >
-            <AnimatePresence initial={false}>
-              {items.map((it) => (
-                <ItemGridCard
-                  key={it.id}
-                  item={it}
-                  clusterOn={on}
-                  resolving={!!resolvingIds?.has(it.id)}
-                  onToggle={onToggleItem}
-                  onEdit={onEditItem}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <AnimatePresence initial={false}>
-              {items.map((it) => (
-                <ItemCard
-                  key={it.id}
-                  item={it}
-                  clusterOn={on}
-                  resolving={!!resolvingIds?.has(it.id)}
-                  onToggle={onToggleItem}
-                  onEdit={onEditItem}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )
-      )}
-    </Wrapper>
-  );
 }

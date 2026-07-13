@@ -9,8 +9,10 @@ const MotionCard = motion(Card);
 
 // Grid-view tile. Tap toggles bought; long-press opens the edit modal.
 // `clusterOn` — see ItemCard.jsx's comment on why the icon badge needs a
-// solid backdrop instead of a text-color tint.
-export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn }) {
+// solid backdrop instead of a text-color tint. `clusterBg` is the pale
+// per-aisle backdrop, now painted on the card itself (sections no longer
+// have their own background — see ShoppingListTab.jsx).
+export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg }) {
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
@@ -39,7 +41,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn }) {
         minHeight: 112,
         padding: "10px 10px",
         overflow: "hidden",
-        background: "var(--surface-card)",
+        background: clusterBg || "var(--surface-card)",
         opacity: item.bought ? 0.55 : 1,
         transition: "opacity var(--duration-fast) var(--ease-out)",
         touchAction: "manipulation",
