@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { api } from "../../lib/api.js";
-import { matchCatalogue, cap } from "../../lib/shoppingUtils.js";
+import { cap } from "../../lib/shoppingUtils.js";
+import { buildIngredientRows } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
 
 // From the meal modal's "+ Legg ingredienser på handlelisten": pick which of
@@ -21,16 +22,7 @@ export function IngredientPickerModal({ ingredients, onClose }) {
         /* offline — show everything checked */
       }
       const catalogue = await api("/catalogue").catch(() => []);
-      const seen = new Set();
-      const built = [];
-      for (const raw of ingredients) {
-        const match = matchCatalogue(raw, catalogue)[0];
-        const name = match ? match.name : raw;
-        const key = name.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        built.push({ name, category: match ? match.category : "Annet", already: onList.has(key), checked: !onList.has(key) });
-      }
+      const built = buildIngredientRows(ingredients, catalogue, onList).map((r) => ({ ...r, checked: !r.already }));
       setRows(built);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
