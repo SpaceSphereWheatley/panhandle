@@ -503,7 +503,16 @@ function CatSection({ catKey, items, collapsed, viewMode, resolvingIds, onToggle
       </button>
       {!collapsed && (
         viewMode === "grid" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+          <div
+            style={{
+              display: "grid",
+              // Cap track width at 1/3 of the row (minus the two 8px gaps) so
+              // auto-fit never lays out more than 3 columns, while still
+              // stretching a short last row to fill the width like before.
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))",
+              gap: 8,
+            }}
+          >
             <AnimatePresence initial={false}>
               {items.map((it) => (
                 <ItemGridCard
