@@ -20,7 +20,7 @@ export const SETTINGS_TITLES = {
 // `view`/`onViewChange` are controlled by AppShell (rather than owned here)
 // so the browser back button can restore a specific subpage via history state.
 export function SettingsTab({ view, onViewChange }) {
-  const { isAdmin, isOwner } = useAuth();
+  const { isAdmin, isOwner, isSuperAdmin } = useAuth();
 
   if (view !== "main") {
     return (
@@ -41,7 +41,7 @@ export function SettingsTab({ view, onViewChange }) {
       <NavRow label="Profil" onClick={() => onViewChange("profile")} />
       {isOwner && <NavRow label="Medlemmer" onClick={() => onViewChange("members")} />}
       {isAdmin && <NavRow label="Administrasjon" onClick={() => onViewChange("admin")} />}
-      {isAdmin && <NavRow label="Statistikk" onClick={() => onViewChange("metrics")} />}
+      {isSuperAdmin && <NavRow label="Statistikk" onClick={() => onViewChange("metrics")} />}
       <NavRow label="Fast ukentlig ansvar" onClick={() => onViewChange("recurring")} />
       <NavRow label="Om" onClick={() => onViewChange("about")} />
     </section>

@@ -9,6 +9,7 @@ function readStoredAuth() {
     user: localStorage.getItem("ph_user"),
     isAdmin: localStorage.getItem("ph_is_admin") === "1",
     isOwner: localStorage.getItem("ph_is_owner") === "1",
+    isSuperAdmin: localStorage.getItem("ph_is_superadmin") === "1",
   };
 }
 
@@ -18,12 +19,14 @@ function persistAuth(auth) {
     localStorage.removeItem("ph_user");
     localStorage.removeItem("ph_is_admin");
     localStorage.removeItem("ph_is_owner");
+    localStorage.removeItem("ph_is_superadmin");
     return;
   }
   localStorage.setItem("ph_token", auth.token);
   localStorage.setItem("ph_user", auth.user);
   localStorage.setItem("ph_is_admin", auth.isAdmin ? "1" : "0");
   localStorage.setItem("ph_is_owner", auth.isOwner ? "1" : "0");
+  localStorage.setItem("ph_is_superadmin", auth.isSuperAdmin ? "1" : "0");
 }
 
 export function AuthProvider({ children }) {
@@ -35,7 +38,7 @@ export function AuthProvider({ children }) {
   authRef.current = auth;
 
   function logout(reason) {
-    const cleared = { token: null, user: null, isAdmin: false, isOwner: false };
+    const cleared = { token: null, user: null, isAdmin: false, isOwner: false, isSuperAdmin: false };
     authRef.current = cleared;
     setAuth(cleared);
     persistAuth(cleared);
@@ -72,6 +75,7 @@ export function AuthProvider({ children }) {
       user: data.user,
       isAdmin: !!data.is_admin,
       isOwner: !!data.is_owner,
+      isSuperAdmin: !!data.is_superadmin,
     };
     authRef.current = next;
     setAuth(next);

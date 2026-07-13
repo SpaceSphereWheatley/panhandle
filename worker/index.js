@@ -482,7 +482,8 @@ export default {
       const token = await mintToken(row, env);
       return json({
         token, user: row.username,
-        is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id
+        is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id,
+        is_superadmin: isSuperAdmin(row.username, env)
       });
     }
 
