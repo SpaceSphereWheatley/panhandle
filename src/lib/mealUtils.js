@@ -1,4 +1,24 @@
+import { matchCatalogue } from "./shoppingUtils.js";
+
 export const WEEKDAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"];
+
+// Turns a flat list of raw ingredient strings (as typed into meal_catalogue)
+// into deduped, catalogue-matched rows ready for a checkable "add to
+// shopping list" UI. `onListNames` is a Set of lowercased names already
+// unbought on the shopping list, used to set the `already` flag.
+export function buildIngredientRows(rawIngredients, catalogue, onListNames) {
+  const seen = new Set();
+  const rows = [];
+  for (const raw of rawIngredients) {
+    const match = matchCatalogue(raw, catalogue)[0];
+    const name = match ? match.name : raw;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ name, category: match ? match.category : "Annet", already: onListNames.has(key) });
+  }
+  return rows;
+}
 
 export function parseIngredients(raw) {
   if (!raw) return [];

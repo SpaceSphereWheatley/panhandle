@@ -6,6 +6,8 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
+import { ShoppingFabMenu } from "../components/ShoppingFabMenu.jsx";
+import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, IconButton, Card, Fab } from "../design-system/index.js";
 
 const POLL_MS = 7000;
@@ -26,7 +28,9 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  // Single active modal for the FAB's chooser and its two destinations:
+  // { type: "fabMenu" | "suggestions" | "weekIngredients" } | null
+  const [modal, setModal] = useState(null);
   // Items mid "checked-off" animation: still rendered in their category, struck
   // through and fading out, before they re-sort into "Nylig kjøpt".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
@@ -240,8 +244,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   }
 
   function onFabClick() {
-    if (suggestedItems.length) setShowSuggestModal(true);
-    else focusAddInput();
+    setModal({ type: "fabMenu" });
   }
 
   // A just-checked item stays in its category (struck through, fading) until
@@ -430,12 +433,31 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
         />
       )}
 
-      {showSuggestModal && (
+      {modal?.type === "fabMenu" && (
+        <ShoppingFabMenu
+          onClose={() => setModal(null)}
+          onWeekIngredients={() => setModal({ type: "weekIngredients" })}
+          onSuggestions={() => setModal({ type: "suggestions" })}
+          suggestionCount={suggestedItems.length}
+        />
+      )}
+
+      {modal?.type === "suggestions" && (
         <SuggestionsModal
           suggestions={suggestedItems}
           onAdd={(it) => addSuggestedItem(it)}
-          onClose={() => setShowSuggestModal(false)}
+          onClose={() => setModal(null)}
           onFocusAdd={focusAddInput}
+        />
+      )}
+
+      {modal?.type === "weekIngredients" && (
+        <WeekIngredientsModal
+          onClose={() => setModal(null)}
+          onAdded={async () => {
+            await loadCatalogue();
+            loadList();
+          }}
         />
       )}
     </section>
