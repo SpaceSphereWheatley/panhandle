@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.16.1] — 2026-07-13
+
+### Fixed
+- **FAB open animation flashed a hard square.** The floating action button's
+  circle→squircle morph animated `border-radius` from the pill value (999px)
+  with the overshooting spring, which drove the interpolated radius negative
+  at the overshoot peak — painting a momentary sharp square before it settled.
+  It now morphs from the true circle radius (28px) with a low-overshoot soft
+  spring, so it stays rounded the whole way.
+
 ## [1.16.0] — 2026-07-13
 
 ### Added

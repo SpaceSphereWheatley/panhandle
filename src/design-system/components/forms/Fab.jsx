@@ -34,7 +34,11 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
         width: 56,
         height: 56,
         // Circle at rest, squircle when active — an M3-Expressive shape morph.
-        borderRadius: active ? 'var(--shape-large)' : 'var(--radius-pill)',
+        // Rest uses 28px (half of 56 = a true circle) rather than the pill
+        // 999px so the radius interpolates smoothly through the 20–28px range;
+        // animating from 999px let the (overshooting) spring drive the value
+        // negative mid-transition, which painted as a momentary hard square.
+        borderRadius: active ? 'var(--shape-large)' : '28px',
         background: press ? 'var(--accent-primary-press)' : 'var(--accent-primary)',
         color: 'var(--text-on-accent)',
         border: 'none',
@@ -49,7 +53,9 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
         transition:
           'background-color var(--duration-fast) var(--ease-out), ' +
           'transform var(--spring-duration-soft) var(--ease-spring-soft), ' +
-          'border-radius var(--spring-duration) var(--ease-spring)',
+          // Soft spring (tiny overshoot) on the radius so the morph stays in
+          // the rounded range and never flashes square.
+          'border-radius var(--spring-duration-soft) var(--ease-spring-soft)',
       }}
     >
       {/* Ripple clip layer — masks ripples + state layer to the FAB's current
