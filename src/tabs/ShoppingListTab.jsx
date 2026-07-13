@@ -14,6 +14,13 @@ import { Input, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
+// Cap track width at 1/3 of the row (minus the two 8px gaps) so auto-fit
+// never lays out more than 3 columns, while still stretching a short last
+// row to fill the width — plain minmax(140px, 1fr) only ever fit 2 columns
+// on typical phone widths.
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 };
+const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
+
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
@@ -214,14 +221,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
   const groups = {};
   for (const it of unbought) (groups[it.category] = groups[it.category] || []).push(it);
-  // One flat, aisle-sorted list: unbought items ordered by CATEGORIES, then a
-  // trailing run of the most recently bought items (capped, re-add palette).
-  // Recently-bought items use the neutral "other" cluster color regardless of
-  // their real category — see clusterFor's "Nylig kjøpt" comment.
-  const displayItems = [
-    ...CATEGORIES.filter((c) => groups[c]).flatMap((c) => groups[c].map((it) => ({ item: it, clusterKey: it.category }))),
-    ...bought.slice(0, 30).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" })),
-  ];
+  // One flat, aisle-sorted list: unbought items ordered by CATEGORIES. Recently
+  // bought items (capped, re-add palette) render as their own section below
+  // instead of being folded into the aisle list — see boughtDisplayItems.
+  const displayItems = CATEGORIES.filter((c) => groups[c]).flatMap((c) =>
+    groups[c].map((it) => ({ item: it, clusterKey: it.category }))
+  );
+  const boughtDisplayItems = bought.slice(0, 30).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -321,34 +327,28 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           Legg til en vare over for å komme i gang.
         </div>
       ) : (
-        <div
-          style={
-            effectiveViewMode === "grid"
-              ? // Cap track width at 1/3 of the row (minus the two 8px gaps) so
-                // auto-fit never lays out more than 3 columns, while still
-                // stretching a short last row to fill the width like before.
-                { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 }
-              : { display: "flex", flexDirection: "column", gap: 8 }
-          }
-        >
-          <AnimatePresence initial={false}>
-            {displayItems.map(({ item, clusterKey }) => {
-              const { bg, on } = clusterFor(clusterKey);
-              const ItemComponent = effectiveViewMode === "grid" ? ItemGridCard : ItemCard;
-              return (
-                <ItemComponent
-                  key={item.id}
-                  item={item}
-                  clusterOn={on}
-                  clusterBg={bg}
-                  resolving={!!resolvingIds?.has(item.id)}
-                  onToggle={toggleItem}
-                  onEdit={setEditingId}
-                />
-              );
-            })}
-          </AnimatePresence>
-        </div>
+        <>
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+
+          {boughtDisplayItems.length > 0 && (
+            <div style={{ marginTop: 28 }}>
+              <div
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-2xs)",
+                  fontWeight: 700,
+                  color: clusterFor("Nylig kjøpt").on,
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                  marginBottom: 8,
+                }}
+              >
+                Nylig kjøpt
+              </div>
+              {renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+            </div>
+          )}
+        </>
       )}
 
       <FabMenu
@@ -431,6 +431,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       )}
     </section>
+  );
+}
+
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
+  return (
+    <div style={viewMode === "grid" ? gridStyle : listStyle}>
+      <AnimatePresence initial={false}>
+        {displayItems.map(({ item, clusterKey }) => {
+          const { bg, on } = clusterFor(clusterKey);
+          const ItemComponent = viewMode === "grid" ? ItemGridCard : ItemCard;
+          return (
+            <ItemComponent
+              key={item.id}
+              item={item}
+              clusterOn={on}
+              clusterBg={bg}
+              resolving={!!resolvingIds?.has(item.id)}
+              onToggle={onToggle}
+              onEdit={onEdit}
+            />
+          );
+        })}
+      </AnimatePresence>
+    </div>
   );
 }
 
