@@ -454,17 +454,17 @@ function viewToggleBtnStyle(active, disabled) {
   };
 }
 
-// Each category renders as a physical "store aisle" cluster: a colored,
-// muted backdrop container (unique per category, see categoryClusters.js)
-// holding that category's items. "Nylig kjøpt" isn't a real category — it
-// falls through to the neutral "other" cluster.
+// Each category renders as a "store aisle" cluster: a thin colored left
+// border accent (unique per category, see categoryClusters.js) marking that
+// category's items. "Nylig kjøpt" isn't a real category — it falls through
+// to the neutral "other" cluster.
 function CatSection({ catKey, items, collapsed, viewMode, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
-  const { bg, on } = clusterFor(catKey);
+  const { on } = clusterFor(catKey);
   const { shouldAnimate, transition } = useMotionConfig();
   const Wrapper = shouldAnimate ? motion.div : "div";
   const motionProps = shouldAnimate ? { layout: true, transition } : {};
   return (
-    <Wrapper {...motionProps} style={{ marginBottom: 12, background: bg, borderRadius: "var(--radius-card)", padding: 12 }}>
+    <Wrapper {...motionProps} style={{ marginBottom: 12, borderLeft: `3px solid ${on}`, paddingLeft: 10 }}>
       <button
         onClick={() => onToggleCat(catKey)}
         style={{
