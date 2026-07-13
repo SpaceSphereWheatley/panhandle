@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { UiIcon } from "../UiIcon.jsx";
+import { Button } from "../../design-system/components/forms/Button.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
@@ -223,13 +224,9 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
         <button className="save" onClick={savePlan}>Lagre</button>
       </div>
       {(current.meal_name || current.responsible) && (
-        <button
-          className="cancel"
-          style={{ width: "100%", marginTop: 8, color: "var(--status-danger)" }}
-          onClick={deletePlanDay}
-        >
+        <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
           Fjern måltid for denne dagen
-        </button>
+        </Button>
       )}
     </Modal>
   );
