@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
+import { haptic } from "../lib/shoppingUtils.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
@@ -139,6 +140,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
 
       <FabMenu
         label="Måltider"
+        haptic={haptic}
         actions={[
           { icon: "plus", label: "Nytt måltid", onClick: () => setModal({ type: "edit", id: null }) },
           { icon: "pencil-simple", label: "Rediger måltider", onClick: () => setModal({ type: "browse" }) },

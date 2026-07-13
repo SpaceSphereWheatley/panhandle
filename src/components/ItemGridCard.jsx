@@ -29,10 +29,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
         userSelect: "none",
         ...(resolving
           ? {
-              transition:
-                "transform var(--duration-base) var(--ease-out) var(--duration-fast), opacity var(--duration-base) var(--ease-out) var(--duration-fast)",
-              transform: "scale(.96)",
-              opacity: 0,
+              animation: "ph-item-resolve 380ms var(--ease-out) forwards",
               pointerEvents: "none",
             }
           : null),

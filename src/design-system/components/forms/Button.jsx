@@ -30,7 +30,7 @@ export function Button({
     position: 'relative',
     overflow: 'hidden',
     transition:
-      'background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out)',
+      'background-color var(--duration-fast) var(--ease-out), transform var(--spring-duration-soft) var(--ease-spring-soft), opacity var(--duration-fast) var(--ease-out)',
     opacity: disabled ? 0.45 : 1,
   };
 

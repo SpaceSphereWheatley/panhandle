@@ -31,6 +31,15 @@
   --md-body-medium-size: 14px;     --md-body-medium-line: 20px;     --md-body-medium-weight: 400; --md-body-medium-tracking: 0.25px;
   --md-body-small-size: 12px;      --md-body-small-line: 16px;      --md-body-small-weight: 400; --md-body-small-tracking: 0.4px;
 
+  /* ---- M3 Expressive emphasized styles ---- */
+  /* Heavier/larger variants, used where type should carry personality —
+     screen titles and section eyebrows — per the Expressive direction. */
+  --md-headline-emphasized-size: 28px;
+  --md-headline-emphasized-line: 34px;
+  --md-headline-emphasized-weight: 700;
+  --md-title-emphasized-weight: 700;
+  --md-label-emphasized-weight: 700;
+
   /* ---- Legacy scale, now aliased onto the nearest M3 style ---- */
   --text-2xl: var(--md-headline-small-size);  /* 24px — screen titles */
   --text-xl:  var(--md-title-large-size);     /* 22px — section headers */

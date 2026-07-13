@@ -347,6 +347,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
 
       <FabMenu
         label="Legg til vare"
+        haptic={haptic}
         actions={[
           {
             icon: "cooking-pot",
