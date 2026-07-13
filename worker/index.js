@@ -14,7 +14,7 @@
 // with src/lib/version.js's APP_VERSION on each release (see CHANGELOG.md) and
 // surfaced at GET /api/version — the Profile page shows both so a half-finished
 // deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.15.0";
+const VERSION = "1.16.0";
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
@@ -363,6 +363,15 @@ async function mintToken(u, env) {
   }, env.JWT_SECRET);
 }
 
+// Site-wide metrics (across every list) are gated beyond ordinary is_admin
+// (which is deliberately per-list) via this env var — a comma-separated
+// allowlist of usernames, set as a Worker dashboard variable alongside
+// JWT_SECRET/SEED_SECRET, never committed.
+function isSuperAdmin(username, env) {
+  const allowed = (env.SUPERADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes((username || "").toLowerCase());
+}
+
 // ---------- main ----------
 export default {
   async fetch(request, env) {
@@ -595,6 +604,77 @@ export default {
         "UPDATE users SET is_admin = ?1, is_owner = ?2, token_version = token_version + 1 WHERE username = ?3 COLLATE NOCASE"
       ).bind(newAdmin, newOwner, row.username).run();
       return authedJson({ ok: true, username: row.username, is_admin: newAdmin, is_owner: newOwner });
+    }
+
+    // Site-wide usage metrics, across all lists (not just the caller's own).
+    // Gated beyond is_admin by isSuperAdmin — see its definition above.
+    if (path === "/admin/metrics" && method === "GET") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+
+      const [
+        listCount, userCount, roleCounts,
+        signupsByWeek, listsByWeek,
+        itemStats, itemsByWeek, topItems,
+        mealPlanFill, topMeals,
+        perList, recentFailedLogins,
+      ] = await Promise.all([
+        env.DB.prepare("SELECT COUNT(*) AS n FROM lists").first(),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM users").first(),
+        env.DB.prepare(
+          "SELECT SUM(is_admin) AS admins, SUM(is_owner) AS owners FROM users"
+        ).first(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', created_at) AS week, COUNT(*) AS n FROM users GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', created_at) AS week, COUNT(*) AS n FROM lists GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS total, SUM(bought) AS bought FROM list_items"
+        ).first(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', added_at) AS week, COUNT(*) AS n FROM list_items GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT name, SUM(times_bought) AS n FROM item_catalogue GROUP BY name ORDER BY n DESC LIMIT 10"
+        ).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS total, SUM(CASE WHEN meal_id IS NOT NULL THEN 1 ELSE 0 END) AS filled FROM meal_plan"
+        ).first(),
+        env.DB.prepare(
+          "SELECT name, SUM(times_planned) AS n FROM meal_catalogue GROUP BY name ORDER BY n DESC LIMIT 10"
+        ).all(),
+        env.DB.prepare(`
+          SELECT l.id AS list_id,
+                 (SELECT COUNT(*) FROM users u WHERE u.list_id = l.id) AS users,
+                 (SELECT COUNT(*) FROM item_catalogue c WHERE c.list_id = l.id) AS items,
+                 (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id AND li.bought = 1) AS bought
+          FROM lists l ORDER BY l.id
+        `).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM login_attempts WHERE created_at >= ?1"
+        ).bind(Date.now() - 24 * 60 * 60 * 1000).first(),
+      ]);
+
+      return authedJson({
+        overview: {
+          lists: listCount.n, users: userCount.n,
+          admins: roleCounts.admins || 0, owners: roleCounts.owners || 0,
+        },
+        signups_by_week: signupsByWeek.results,
+        lists_by_week: listsByWeek.results,
+        shopping: {
+          total_items: itemStats.total || 0, bought_items: itemStats.bought || 0,
+          items_by_week: itemsByWeek.results, top_items: topItems.results,
+        },
+        meals: {
+          plan_total: mealPlanFill.total || 0, plan_filled: mealPlanFill.filled || 0,
+          top_meals: topMeals.results,
+        },
+        per_list: perList.results,
+        failed_logins_24h: recentFailedLogins.n,
+      });
     }
 
     // ===== LIST-USER ENDPOINTS =====

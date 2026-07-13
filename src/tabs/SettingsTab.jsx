@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { ProfileSettings } from "../components/settings/ProfileSettings.jsx";
 import { MembersSettings } from "../components/settings/MembersSettings.jsx";
 import { AdminSettings } from "../components/settings/AdminSettings.jsx";
+import { MetricsSettings } from "../components/settings/MetricsSettings.jsx";
 import { RecurringSettings } from "../components/settings/RecurringSettings.jsx";
 import { AboutSettings } from "../components/settings/AboutSettings.jsx";
 
@@ -11,6 +12,7 @@ export const SETTINGS_TITLES = {
   profile: "Profil",
   members: "Medlemmer",
   admin: "Administrasjon",
+  metrics: "Statistikk",
   recurring: "Fast ukentlig ansvar",
   about: "Om",
 };
@@ -27,6 +29,7 @@ export function SettingsTab({ view, onViewChange }) {
         {view === "profile" && <ProfileSettings />}
         {view === "members" && <MembersSettings />}
         {view === "admin" && <AdminSettings />}
+        {view === "metrics" && <MetricsSettings />}
         {view === "recurring" && <RecurringSettings />}
         {view === "about" && <AboutSettings />}
       </section>
@@ -38,6 +41,7 @@ export function SettingsTab({ view, onViewChange }) {
       <NavRow label="Profil" onClick={() => onViewChange("profile")} />
       {isOwner && <NavRow label="Medlemmer" onClick={() => onViewChange("members")} />}
       {isAdmin && <NavRow label="Administrasjon" onClick={() => onViewChange("admin")} />}
+      {isAdmin && <NavRow label="Statistikk" onClick={() => onViewChange("metrics")} />}
       <NavRow label="Fast ukentlig ansvar" onClick={() => onViewChange("recurring")} />
       <NavRow label="Om" onClick={() => onViewChange("about")} />
     </section>
