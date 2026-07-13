@@ -19,7 +19,7 @@ body {
 .item-badge .item-icon { width: 24px; height: 24px; display: block; }
 .grid-badge .item-icon { width: 36px; height: 36px; display: block; }
 
-main { padding: 16px; max-width: 480px; margin: 0 auto; }
+main { padding: 16px; max-width: 480px; margin: 0 auto; position: relative; }
 
 /* Toast / snackbar (action feedback + undo) */
 #toast {

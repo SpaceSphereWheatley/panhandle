@@ -80,12 +80,12 @@ export function AppShell() {
       <InstallBanner />
       <main>
         {visited.list && (
-          <div style={{ display: tab === "list" ? "block" : "none" }}>
+          <div style={tab === "list" ? undefined : { visibility: "hidden", position: "absolute", inset: 0, pointerEvents: "none" }}>
             <ShoppingListTab active={tab === "list"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
         )}
         {visited.meals && (
-          <div style={{ display: tab === "meals" ? "block" : "none" }}>
+          <div style={tab === "meals" ? undefined : { visibility: "hidden", position: "absolute", inset: 0, pointerEvents: "none" }}>
             <MealsTab active={tab === "meals"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
         )}
