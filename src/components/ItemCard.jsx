@@ -9,11 +9,12 @@ const MotionCard = motion(Card);
 
 // List-view row. Tap toggles bought; long-press opens the edit modal —
 // same interaction model as ItemGridCard.jsx, just laid out horizontally.
-// `clusterOn` is the aisle-cluster accent color (from the enclosing
-// CatSection) used as the icon badge's backdrop — the hand-drawn item icons
-// are hardcoded white-stroke SVGs, not currentColor, so they need a solid
-// tinted badge behind them rather than a text-color tint.
-export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn }) {
+// `clusterOn` is the aisle-cluster accent color used as the icon badge's
+// backdrop — the hand-drawn item icons are hardcoded white-stroke SVGs, not
+// currentColor, so they need a solid tinted badge behind them rather than a
+// text-color tint. `clusterBg` is the pale per-aisle backdrop, painted on
+// the card itself (there's no per-category section container anymore).
+export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg }) {
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
@@ -38,7 +39,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn }) {
         alignItems: "center",
         gap: 12,
         overflow: "hidden",
-        background: "var(--surface-card)",
+        background: clusterBg || "var(--surface-card)",
         opacity: item.bought ? 0.55 : 1,
         transition: "opacity var(--duration-fast) var(--ease-out)",
         touchAction: "manipulation",

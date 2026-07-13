@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
-import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
@@ -15,23 +14,26 @@ import { Input, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
+// Cap track width at 1/3 of the row (minus the two 8px gaps) so auto-fit
+// never lays out more than 3 columns, while still stretching a short last
+// row to fill the width — plain minmax(140px, 1fr) only ever fit 2 columns
+// on typical phone widths.
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 };
+const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
+
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
-  const [collapsedCats, setCollapsedCats] = useState(() => {
-    const stored = JSON.parse(localStorage.getItem("ph_collapsed") || "{}");
-    // "Nylig kjøpt" starts collapsed unless the user has chosen otherwise —
-    // it's a re-add palette, not something to scroll past every time.
-    if (!("Nylig kjøpt" in stored)) stored["Nylig kjøpt"] = true;
-    return stored;
-  });
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  // "Nylig kjøpt" starts collapsed — it's a re-add palette, not something to
+  // scroll past every time.
+  const [boughtCollapsed, setBoughtCollapsed] = useState(() => localStorage.getItem("ph_bought_collapsed") !== "false");
   // Single active modal for the FAB menu's two destinations:
   // { type: "suggestions" | "weekIngredients" } | null
   const [modal, setModal] = useState(null);
@@ -82,12 +84,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
-
-  function toggleCat(key) {
-    const next = { ...collapsedCats, [key]: !collapsedCats[key] };
-    setCollapsedCats(next);
-    localStorage.setItem("ph_collapsed", JSON.stringify(next));
-  }
 
   function setView(mode) {
     setViewMode(mode);
@@ -220,6 +216,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     addInputRef.current?.focus();
   }
 
+  function toggleBoughtCollapsed() {
+    setBoughtCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("ph_bought_collapsed", String(next));
+      return next;
+    });
+  }
+
   // A just-checked item stays in its category (struck through, fading) until
   // its resolve timer fires — only then does it move to "Nylig kjøpt".
   const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
@@ -228,6 +232,19 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
   const groups = {};
   for (const it of unbought) (groups[it.category] = groups[it.category] || []).push(it);
+  // One flat, aisle-sorted list: unbought items ordered by CATEGORIES. Recently
+  // bought items (capped, re-add palette) render as their own section below
+  // instead of being folded into the aisle list — see boughtDisplayItems.
+  const displayItems = CATEGORIES.filter((c) => groups[c]).flatMap((c) =>
+    groups[c].map((it) => ({ item: it, clusterKey: it.category }))
+  );
+  // Classic intensity flattens the density down to a plain linear list,
+  // regardless of the user's stored grid/list preference — ph_view stays
+  // untouched so switching back to muted/expressive restores it exactly.
+  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
+  // Cap at 3 rows' worth: 3 columns × 3 rows in grid view, 3 rows in list view.
+  const boughtRowCap = effectiveViewMode === "grid" ? 9 : 3;
+  const boughtDisplayItems = bought.slice(0, boughtRowCap).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -237,10 +254,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       ? "Alt er handlet"
       : "";
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
-  // Classic intensity flattens the density down to a plain linear list,
-  // regardless of the user's stored grid/list preference — ph_view stays
-  // untouched so switching back to muted/expressive restores it exactly.
-  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
 
   return (
     <section>
@@ -328,35 +341,41 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         </div>
       ) : (
         <>
-          <div>
-            <AnimatePresence initial={false}>
-              {CATEGORIES.filter((c) => groups[c]).map((cat) => (
-                <CatSection
-                  key={cat}
-                  catKey={cat}
-                  items={groups[cat]}
-                  collapsed={!!collapsedCats[cat]}
-                  viewMode={effectiveViewMode}
-                  resolvingIds={resolvingIds}
-                  onToggleCat={toggleCat}
-                  onToggleItem={toggleItem}
-                  onEditItem={setEditingId}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-          {bought.length > 0 && (
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+
+          {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <CatSection
-                catKey="Nylig kjøpt"
-                items={bought.slice(0, 30)}
-                collapsed={!!collapsedCats["Nylig kjøpt"]}
-                viewMode={effectiveViewMode}
-                resolvingIds={resolvingIds}
-                onToggleCat={toggleCat}
-                onToggleItem={toggleItem}
-                onEditItem={setEditingId}
-              />
+              <button
+                onClick={toggleBoughtCollapsed}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "none",
+                  border: "none",
+                  fontFamily: "var(--font-sans)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-2xs)",
+                  fontWeight: 700,
+                  color: clusterFor("Nylig kjøpt").on,
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                  padding: 0,
+                  marginBottom: boughtCollapsed ? 0 : 8,
+                }}
+              >
+                <span>Nylig kjøpt</span>
+                <i
+                  className="ph ph-caret-down"
+                  style={{
+                    fontSize: 13,
+                    transition: "transform var(--duration-fast) var(--ease-out)",
+                    transform: boughtCollapsed ? "rotate(-90deg)" : "none",
+                  }}
+                />
+              </button>
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
             </div>
           )}
         </>
@@ -445,6 +464,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
+  return (
+    <div style={viewMode === "grid" ? gridStyle : listStyle}>
+      <AnimatePresence initial={false}>
+        {displayItems.map(({ item, clusterKey }) => {
+          const { bg, on } = clusterFor(clusterKey);
+          const ItemComponent = viewMode === "grid" ? ItemGridCard : ItemCard;
+          return (
+            <ItemComponent
+              key={item.id}
+              item={item}
+              clusterOn={on}
+              clusterBg={bg}
+              resolving={!!resolvingIds?.has(item.id)}
+              onToggle={onToggle}
+              onEdit={onEdit}
+            />
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function viewToggleBtnStyle(active, disabled) {
   return {
     border: "none",
@@ -458,82 +501,4 @@ function viewToggleBtnStyle(active, disabled) {
     display: "flex",
     alignItems: "center",
   };
-}
-
-// Each category renders as a "store aisle" cluster: a thin colored left
-// border accent (unique per category, see categoryClusters.js) marking that
-// category's items. "Nylig kjøpt" isn't a real category — it falls through
-// to the neutral "other" cluster.
-function CatSection({ catKey, items, collapsed, viewMode, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
-  const { on } = clusterFor(catKey);
-  const { shouldAnimate, transition } = useMotionConfig();
-  const Wrapper = shouldAnimate ? motion.div : "div";
-  const motionProps = shouldAnimate ? { layout: true, transition } : {};
-  return (
-    <Wrapper {...motionProps} style={{ marginBottom: 12, borderLeft: `3px solid ${on}`, paddingLeft: 10 }}>
-      <button
-        onClick={() => onToggleCat(catKey)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "none",
-          border: "none",
-          fontFamily: "var(--font-sans)",
-          cursor: "pointer",
-          fontSize: "var(--text-2xs)",
-          fontWeight: 700,
-          color: on,
-          textTransform: "uppercase",
-          letterSpacing: "var(--tracking-wide)",
-          padding: 0,
-          marginBottom: collapsed ? 0 : 8,
-        }}
-      >
-        <span>{catKey}</span>
-        <i
-          className="ph ph-caret-down"
-          style={{
-            fontSize: 13,
-            transition: "transform var(--duration-fast) var(--ease-out)",
-            transform: collapsed ? "rotate(-90deg)" : "none",
-          }}
-        />
-      </button>
-      {!collapsed && (
-        viewMode === "grid" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
-            <AnimatePresence initial={false}>
-              {items.map((it) => (
-                <ItemGridCard
-                  key={it.id}
-                  item={it}
-                  clusterOn={on}
-                  resolving={!!resolvingIds?.has(it.id)}
-                  onToggle={onToggleItem}
-                  onEdit={onEditItem}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <AnimatePresence initial={false}>
-              {items.map((it) => (
-                <ItemCard
-                  key={it.id}
-                  item={it}
-                  clusterOn={on}
-                  resolving={!!resolvingIds?.has(it.id)}
-                  onToggle={onToggleItem}
-                  onEdit={onEditItem}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )
-      )}
-    </Wrapper>
-  );
 }
