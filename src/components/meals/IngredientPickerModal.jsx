@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { api } from "../../lib/api.js";
-import { cap } from "../../lib/shoppingUtils.js";
 import { buildIngredientRows } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
+import { IngredientChecklist } from "./IngredientChecklist.jsx";
 
 // From the meal modal's "+ Legg ingredienser på handlelisten": pick which of
 // this meal's ingredients to add to the shopping list. Ingredients already on
@@ -57,15 +57,7 @@ export function IngredientPickerModal({ ingredients, onClose }) {
     <Modal onClose={onClose}>
       <h3>Legg til på handlelisten</h3>
       <p className="cred-note">Velg hvilke ingredienser som skal på listen.</p>
-      <div className="ing-list">
-        {(rows || []).map((r, i) => (
-          <label className="ing-row" key={r.name}>
-            <input type="checkbox" checked={r.checked} onChange={() => toggleRow(i)} />
-            <span className="ing-name">{cap(r.name)}</span>
-            {r.already && <span className="ing-tag">allerede på listen</span>}
-          </label>
-        ))}
-      </div>
+      <IngredientChecklist rows={rows || []} onToggle={toggleRow} />
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>
         <button className="save" onClick={confirmAdd}>Legg til valgte</button>

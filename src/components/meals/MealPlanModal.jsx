@@ -202,9 +202,9 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
         Ingredienser huskes per måltid og deles for alle dager med samme navn.
       </div>
-      <button type="button" className="ing-add-btn" onClick={pickIngredients}>
-        + Legg ingredienser på handlelisten
-      </button>
+      <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
+        Legg ingredienser på handlelisten
+      </Button>
       <label>Ansvarlig</label>
       <select value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
         <option value="">Ingen</option>

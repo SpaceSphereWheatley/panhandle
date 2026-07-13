@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { api } from "../../lib/api.js";
-import { cap } from "../../lib/shoppingUtils.js";
 import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
+import { IngredientChecklist } from "./IngredientChecklist.jsx";
 
 // The shopping tab's FAB primary action: pull every ingredient from this (or
 // next) week's planned meals into a checkable "add to shopping list" list.
@@ -82,15 +82,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       {rows && rows.length === 0 ? (
         <p className="cred-note">Ingen ingredienser planlagt denne perioden.</p>
       ) : (
-        <div className="ing-list">
-          {(rows || []).map((r, i) => (
-            <label className="ing-row" key={r.name}>
-              <input type="checkbox" checked={r.checked} onChange={() => toggleRow(i)} />
-              <span className="ing-name">{cap(r.name)}</span>
-              {r.already && <span className="ing-tag">allerede på listen</span>}
-            </label>
-          ))}
-        </div>
+        <IngredientChecklist rows={rows || []} onToggle={toggleRow} />
       )}
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>
