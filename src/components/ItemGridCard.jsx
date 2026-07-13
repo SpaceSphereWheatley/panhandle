@@ -9,7 +9,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
   const longPress = useLongPress(() => onEdit(item.id));
   return (
     <Card
-      padding="sm"
+      padding="none"
       onClick={() => onToggle(item.id)}
       {...longPress}
       style={{
@@ -18,8 +18,9 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
         alignItems: "center",
         justifyContent: "center",
         textAlign: "center",
-        gap: 4,
+        gap: 2,
         height: 104,
+        padding: "8px 10px",
         overflow: "hidden",
         background: "var(--accent-secondary)",
         opacity: item.bought ? 0.55 : 1,
@@ -42,47 +43,59 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
         style={{
           color: "var(--text-on-accent)",
           fontWeight: "var(--weight-semibold)",
-          fontSize: 16,
+          fontSize: 26,
           display: "flex",
+          flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          flexShrink: 0,
+          minHeight: 0,
         }}
       >
         <ItemIcon name={item.name} />
       </div>
       <div
         style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: "var(--text-xs)",
-          fontWeight: "var(--weight-medium)",
-          lineHeight: 1.2,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: 2,
+          flex: 1,
+          minHeight: 0,
           width: "100%",
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical",
-          WebkitLineClamp: 2,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          textDecoration: item.bought ? "line-through" : "none",
-          color: "var(--text-on-accent)",
         }}
       >
-        {cap(item.name)}
-      </div>
-      <div
-        style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: "var(--text-2xs)",
-          color: "var(--text-on-accent)",
-          opacity: 0.75,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          maxWidth: "100%",
-          minHeight: 13,
-        }}
-      >
-        {meta}
+        <div
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-xs)",
+            fontWeight: "var(--weight-medium)",
+            lineHeight: 1.2,
+            width: "100%",
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textDecoration: item.bought ? "line-through" : "none",
+            color: "var(--text-on-accent)",
+          }}
+        >
+          {cap(item.name)}
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-2xs)",
+            color: "var(--text-on-accent)",
+            opacity: 0.75,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: "100%",
+          }}
+        >
+          {meta}
+        </div>
       </div>
     </Card>
   );
