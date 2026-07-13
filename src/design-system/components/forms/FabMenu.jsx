@@ -24,11 +24,19 @@ const FAB_RIGHT = 'max(16px, calc(50vw - 224px))';
  * Source: Panhandle Design System (README "Platform: Android web app" —
  * Material-influenced interaction patterns restyled with the brand tokens).
  */
-export function FabMenu({ icon = 'plus', label, badge = null, actions = [] }) {
+export function FabMenu({ icon = 'plus', label, badge = null, actions = [], haptic }) {
   const [open, setOpen] = React.useState(false);
   const firstItemRef = React.useRef(null);
 
   const close = React.useCallback(() => setOpen(false), []);
+
+  function toggle() {
+    setOpen((v) => {
+      const next = !v;
+      if (next) haptic?.();
+      return next;
+    });
+  }
 
   React.useEffect(() => {
     if (!open) return undefined;
@@ -45,6 +53,7 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [] }) {
   }, [open]);
 
   function runAction(action) {
+    haptic?.();
     setOpen(false);
     action.onClick?.();
   }
@@ -96,10 +105,11 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [] }) {
       </div>
 
       <Fab
-        icon={open ? 'x' : icon}
+        icon={icon}
+        active={open}
         label={open ? 'Lukk meny' : label}
         badge={open ? null : badge}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
       />
     </>
   );
@@ -140,9 +150,9 @@ const FabMenuItem = React.forwardRef(function FabMenuItem({ action, open, delay,
         cursor: 'pointer',
         whiteSpace: 'nowrap',
         opacity: open ? 1 : 0,
-        transform: `${open ? 'translateY(0)' : 'translateY(8px)'} scale(${press ? 'var(--press-scale)' : '1'})`,
+        transform: `${open ? 'translateY(0)' : 'translateY(10px)'} scale(${press ? 'var(--press-scale)' : '1'})`,
         transition:
-          'opacity var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out)',
+          'opacity var(--duration-base) var(--ease-out), transform var(--spring-duration) var(--ease-spring)',
         transitionDelay: `${delay}ms`,
       }}
     >

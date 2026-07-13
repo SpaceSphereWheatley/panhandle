@@ -27,8 +27,9 @@ export function Header({ title, onBack, action }) {
         ) : null}
         <h1 style={{
           fontFamily: 'var(--font-sans)',
-          fontSize: 'var(--text-2xl)',
-          fontWeight: 'var(--weight-bold)',
+          fontSize: 'var(--md-headline-emphasized-size)',
+          lineHeight: 'var(--md-headline-emphasized-line)',
+          fontWeight: 'var(--md-headline-emphasized-weight)',
           letterSpacing: 'var(--tracking-tight)',
           color: 'var(--text-primary)',
           margin: 0,

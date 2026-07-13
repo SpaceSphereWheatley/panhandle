@@ -41,7 +41,7 @@ export function Sheet({ open = true, onClose, title, children, className }) {
           maxHeight: '88vh',
           overflowY: 'auto',
           padding: '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
-          animation: 'ph-sheet-in var(--duration-base) var(--ease-out)',
+          animation: 'ph-sheet-in var(--spring-duration) var(--ease-spring)',
         }}
       >
         <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />

@@ -7,6 +7,7 @@ import { MealsTab } from "../tabs/MealsTab.jsx";
 import { SettingsTab, SETTINGS_TITLES } from "../tabs/SettingsTab.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
+import { haptic } from "../lib/shoppingUtils.js";
 
 const TITLES = { list: "Handleliste", meals: "Måltider", settings: "Innstillinger" };
 
@@ -52,6 +53,7 @@ export function AppShell() {
 
   function switchTab(t) {
     if (t === tab) return;
+    haptic();
     setTab(t);
     setSettingsView("main");
     pushNav(t, "main");

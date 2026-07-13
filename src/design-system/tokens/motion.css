@@ -1,28 +1,38 @@
-/* Panhandle — Motion tokens. Minimal and functional: short ease-out
-   durations for appearance/dismissal, no bounce or spring. Checking off a
-   grocery item gets a quick strike-through + fade, not a celebratory
-   animation. Kept in sync with the Panhandle Design System project. */
+/* Panhandle — Motion tokens. Functional and physical: the app moved from a
+   flat ease-out language to a restrained, one-overshoot spring (Material 3
+   Expressive direction) so interactions feel native rather than mechanical —
+   a hint of settle, never a toy-like bounce. Ease-out is kept for pure
+   fades/colour where a spring would read as jitter. All motion is disabled
+   under prefers-reduced-motion (the reset at the bottom zeroes durations). */
 :root {
-  --duration-fast: 150ms;  /* small state changes: checkbox fill, hover */
-  --duration-base: 200ms;  /* appearance/dismissal: row fade, sheet slide */
+  --duration-fast: 150ms;  /* small state changes: hover, colour, opacity */
+  --duration-base: 200ms;  /* appearance/dismissal fades */
   --duration-slow: 300ms;  /* larger surfaces, used sparingly */
 
-  --ease-out: cubic-bezier(0.2, 0, 0, 1); /* decelerate — the system default */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1); /* decelerate — for fades/colour */
   --ease-standard: ease-out;
 
-  --press-scale: 0.97; /* light physical "give" on press, no bounce */
+  --press-scale: 0.96; /* physical "give" on press */
 
-  /* M3 motion tokens (parity with the design project's emphasized scheme,
-     used where the brand's own durations don't apply). */
+  /* Spring easings — linear() approximations of damped springs, generated
+     from a mass-spring-damper (see the release notes). Pair each with its
+     matching duration; the overshoot lives in the curve, not the duration. */
+  --ease-spring: linear(0.0000 0.0%, 0.0664 4.5%, 0.2215 9.1%, 0.4118 13.6%, 0.6004 18.2%, 0.7647 22.7%, 0.8940 27.3%, 0.9861 31.8%, 1.0441 36.4%, 1.0742 40.9%, 1.0835 45.5%, 1.0789 50.0%, 1.0664 54.5%, 1.0507 59.1%, 1.0348 63.6%, 1.0208 68.2%, 1.0097 72.7%, 1.0018 77.3%, 0.9967 81.8%, 0.9940 86.4%, 0.9930 90.9%, 0.9933 95.5%, 1.0000 100.0%); /* spatial: ~8% overshoot */
+  --ease-spring-soft: linear(0.0000 0.0%, 0.0753 5.0%, 0.2375 10.0%, 0.4210 15.0%, 0.5904 20.0%, 0.7300 25.0%, 0.8358 30.0%, 0.9106 35.0%, 0.9599 40.0%, 0.9898 45.0%, 1.0061 50.0%, 1.0133 55.0%, 1.0152 60.0%, 1.0140 65.0%, 1.0116 70.0%, 1.0088 75.0%, 1.0062 80.0%, 1.0041 85.0%, 1.0025 90.0%, 1.0014 95.0%, 1.0000 100.0%); /* gentler: ~1.5% overshoot */
+  --spring-duration: 500ms;       /* settle time encoded in --ease-spring */
+  --spring-duration-soft: 420ms;  /* settle time encoded in --ease-spring-soft */
+
+  /* M3 motion tokens (parity with the design project's scheme). */
   --md-easing-standard: cubic-bezier(0.2, 0, 0, 1);
-  --md-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-easing-emphasized: var(--ease-spring);
   --md-duration-short: 200ms;
   --md-duration-medium: 300ms;
 }
 
-/* Sheet / scrim entrance — bottom sheets slide up, the scrim fades in. */
+/* Sheet / scrim entrance — bottom sheets spring up, the scrim fades in.
+   Paired with --ease-spring so the sheet overshoots slightly then settles. */
 @keyframes ph-sheet-in {
-  from { transform: translateY(12px); opacity: 0; }
+  from { transform: translateY(28px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 @keyframes ph-scrim-in {
@@ -40,6 +50,15 @@
    Spawned from the pointer-down point on Button / IconButton / Fab. */
 @keyframes ph-ripple {
   to { transform: scale(1); opacity: 0; }
+}
+
+/* Checking off a grocery item — a quick "pop" of acknowledgement, then the
+   row shrinks and fades as it re-sorts into "Nylig kjøpt". A little life on
+   the app's single most-repeated action. */
+@keyframes ph-item-resolve {
+  0%   { transform: scale(1);    opacity: 0.9; }
+  32%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.9);  opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

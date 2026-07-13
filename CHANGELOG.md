@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.16.0] — 2026-07-13
+
+### Added
+- **Expressive motion — the app now feels physical and native.** Motion moved
+  from flat ease-out to a restrained, one-overshoot **spring** (the Material 3
+  Expressive direction), so interactions settle with a little life instead of
+  snapping. Spring easings are built as CSS `linear()` curves (no animation
+  library), and everything still fully honours `prefers-reduced-motion`.
+  - The **FAB menu** items spring up in a stagger, and the button **morphs**:
+    the circle becomes a squircle and the "+" rotates 45° into a close "×".
+  - **Bottom sheets** spring up as they open.
+  - The **bottom nav** now has a single indicator pill that slides between
+    tabs, with the active icon filling and lifting.
+  - **Checking off an item** gives a quick "pop" before it shrinks and re-sorts
+    into "Nylig kjøpt".
+  - Buttons and the icon buttons get a springy press.
+- **More haptics, coupled to motion** (respecting the existing haptics toggle):
+  a light tick on switching tabs, opening the FAB menu, and picking one of its
+  actions — on top of the existing add / check-off / delete feedback.
+- **Emphasized headings** — screen titles use a larger, heavier Material 3
+  Expressive "emphasized" type style so they carry a bit more personality.
+
 ## [1.15.0] — 2026-07-13
 
 ### Added
