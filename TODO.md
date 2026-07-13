@@ -6,9 +6,10 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. No service worker despite the PWA manifest — the app is installable but
-   has zero offline capability. Add a minimal app-shell service worker, or
-   drop the offline expectation.
+1. `public/sw.js` (registered in `src/main.jsx`) is a network-passthrough
+   stub with no caching — the app is installable but still has zero
+   offline capability. Add real app-shell caching, or drop the offline
+   expectation.
    _Value: Medium · Importance: Medium · Type: Feature (PWA)_
 2. No `Escape` key handler on any of the four modals (item detail, meal,
    admin, etc.) — only clicking the dimmed backdrop or an explicit
@@ -18,8 +19,9 @@ details live in `CHANGELOG.md`, not here.
    that calls `closeModal()` on Escape.
    _Value: Medium · Importance: Medium · Type: UX (accessibility/affordance)_
 3. Grid view: a category with a single item leaves the other 1-2 cells in
-   its row visibly empty (the per-category `.grid-wrap` is its own 3-col
-   grid, so a lone item doesn't reflow into the next category's row).
+   its row visibly empty (each `CatSection`'s grid in
+   `src/tabs/ShoppingListTab.jsx` is its own 3-col grid, so a lone item
+   doesn't reflow into the next category's row).
    Looks unfinished, especially with several single-item categories in a
    row. Either flow items into one continuous grid across category
    boundaries, or only show the category header inline without a hard grid
