@@ -17,6 +17,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
 project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
 section for the bump convention).
 
+## [1.14.0] — 2026-07-13
+
+### Changed
+- **Shopping list FAB now leads with the meal plan.** Tapping the "+" opens a
+  chooser: the primary action, **"Fra middagsplanen"**, pulls every
+  ingredient from this week's (Mon–Thu) or next week's (Fri–Sun) planned
+  meals into a checkable list — pick what you need and add it in one go.
+  The date range and which week is shown is labelled at the top. The old
+  "Sannsynligvis tom for" recommendations are still there, now as the
+  secondary option in the same menu.
+
 ## [1.13.0] — 2026-07-12
 
 ### Added
