@@ -36,7 +36,7 @@ function avatarColorFor(name) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export function MealsTab({ onSyncTick, onOffline }) {
+export function MealsTab({ onSyncTick, onOffline, active }) {
   const { schedule, ensureLoaded } = useRecurring();
   const intensity = useDesignIntensity();
   const { shouldAnimate, transition } = useMotionConfig();
@@ -69,14 +69,18 @@ export function MealsTab({ onSyncTick, onOffline }) {
   }
 
   useEffect(() => {
+    if (!active) return;
     ensureLoaded();
-    loadPlan(0);
+    // Reload whatever week was last open, not the current week — the tab
+    // stays mounted (hidden via CSS) across pane switches now, see
+    // AppShell.jsx, so weekOffset persists and shouldn't reset on reactivation.
+    loadPlan(weekOffsetRef.current);
     const timer = setInterval(() => {
       if (!document.hidden) loadPlan(weekOffsetRef.current);
     }, POLL_MS);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [active]);
 
   function shiftWeek(delta) {
     const next = delta === 0 ? 0 : Math.max(WEEK_MIN, Math.min(WEEK_MAX, weekOffset + delta));

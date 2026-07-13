@@ -13,6 +13,10 @@ const TITLES = { list: "Handleliste", meals: "Måltider", settings: "Innstilling
 
 export function AppShell() {
   const [tab, setTab] = useState("list");
+  // Tabs are mounted once (on first visit) and then kept alive, hidden via
+  // CSS, so switching panes never re-fetches from an empty state — see
+  // src/tabs/ShoppingListTab.jsx and MealsTab.jsx's `active`-driven effects.
+  const [visited, setVisited] = useState({ list: true });
   const [sync, setSync] = useState({ text: "", offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
   const toast = useToast();
@@ -30,6 +34,7 @@ export function AppShell() {
       const state = e.state || { tab: "list" };
       applyingPopRef.current = true;
       setTab(state.tab);
+      setVisited((prev) => (prev[state.tab] ? prev : { ...prev, [state.tab]: true }));
       applyingPopRef.current = false;
     }
     window.addEventListener("popstate", onPopState);
@@ -53,6 +58,7 @@ export function AppShell() {
     if (t === tab) return;
     haptic();
     setTab(t);
+    setVisited((prev) => (prev[t] ? prev : { ...prev, [t]: true }));
     pushNav(t);
   }
 
@@ -73,8 +79,16 @@ export function AppShell() {
       />
       <InstallBanner />
       <main>
-        {tab === "list" && <ShoppingListTab onSyncTick={onSyncTick} onOffline={onOffline} />}
-        {tab === "meals" && <MealsTab onSyncTick={onSyncTick} onOffline={onOffline} />}
+        {visited.list && (
+          <div style={{ display: tab === "list" ? "block" : "none" }}>
+            <ShoppingListTab active={tab === "list"} onSyncTick={onSyncTick} onOffline={onOffline} />
+          </div>
+        )}
+        {visited.meals && (
+          <div style={{ display: tab === "meals" ? "block" : "none" }}>
+            <MealsTab active={tab === "meals"} onSyncTick={onSyncTick} onOffline={onOffline} />
+          </div>
+        )}
         {tab === "settings" && <SettingsTab />}
       </main>
       <TabBar
