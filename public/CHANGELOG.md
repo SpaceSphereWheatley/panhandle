@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.17.2] — 2026-07-13
+
+### Fixed
+- **Deleting a meal from Måltider could silently wipe who's responsible for
+  that day.** The day's plan row was tied to its meal with a cascading
+  delete, so removing a meal from the catalogue deleted the whole day's
+  entry — including the responsible person — instead of just unassigning
+  the meal. Deleting a meal now correctly reverts the day to unplanned
+  while keeping who's responsible.
+- **Handleliste's delete button forgot the whole item, not just the line.**
+  Deleting an item from the shopping list cleared its saved category and
+  purchase history and removed every matching line on the list, even ones
+  you didn't mean to touch. Delete now just removes the tapped line; a
+  separate, clearly-labeled "forget this item entirely" option is still
+  available if you actually want to reset its history.
+- **A mistyped date sent from a broken client could get stuck in the meal
+  plan.** `POST /plan` now rejects a malformed date instead of silently
+  accepting it.
+
+### Security
+- Hardened the one-time account-setup endpoint's secret check against
+  timing attacks (it now uses the same constant-time comparison as login).
+- Changing your password is now rate-limited the same way login attempts
+  are, so a stolen device token can't be used to endlessly guess your
+  current password.
+
 ## [1.17.1] — 2026-07-13
 
 ### Fixed
