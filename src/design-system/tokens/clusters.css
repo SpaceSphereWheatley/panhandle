@@ -1,0 +1,61 @@
+/* Panhandle — Shopping category "aisle" cluster colors.
+   Each of the 13 CATEGORIES (src/lib/shoppingUtils.js) gets a pale, muted
+   backdrop color + a richer "on" tone for icon/text accents, built with the
+   same OKLCH construction method as colors.css (hue held constant per
+   family, low chroma + high lightness for backgrounds, more chroma + lower
+   lightness for "on" colors). Produce and spice reuse the existing sage
+   (--s-*) and terracotta (--p-*) palettes, since those hues are already
+   thematically correct; the rest are new hue points. Consumed via
+   src/lib/categoryClusters.js's clusterFor(). Dark-mode pairs mirror
+   colors-dark.css's split (a plain [data-theme="dark"] block plus the
+   prefers-color-scheme mirror for [data-theme="system"]). */
+
+:root {
+  --cluster-produce-bg: var(--s-90);   --cluster-produce-on: var(--s-30);
+  --cluster-bakery-bg: oklch(91% 0.045 55);  --cluster-bakery-on: oklch(35% 0.11 55);
+  --cluster-dairy-bg: oklch(93% 0.035 95);   --cluster-dairy-on: oklch(38% 0.09 95);
+  --cluster-meat-bg: oklch(90% 0.045 15);    --cluster-meat-on: oklch(38% 0.13 15);
+  --cluster-spice-bg: var(--p-90);     --cluster-spice-on: var(--p-30);
+  --cluster-frozen-bg: oklch(92% 0.03 220);  --cluster-frozen-on: oklch(38% 0.09 220);
+  --cluster-grains-bg: var(--nv-90);   --cluster-grains-on: var(--nv-40);
+  --cluster-snacks-bg: oklch(91% 0.045 340); --cluster-snacks-on: oklch(40% 0.13 340);
+  --cluster-drinks-bg: oklch(92% 0.04 195);  --cluster-drinks-on: oklch(37% 0.09 195);
+  --cluster-household-bg: oklch(92% 0.025 265); --cluster-household-on: oklch(40% 0.07 265);
+  --cluster-care-bg: oklch(92% 0.035 165);   --cluster-care-on: oklch(36% 0.08 165);
+  --cluster-pet-bg: oklch(90% 0.03 30);      --cluster-pet-on: oklch(38% 0.08 30);
+  --cluster-other-bg: var(--n-94);     --cluster-other-on: var(--nv-40);
+}
+
+:root[data-theme="dark"] {
+  --cluster-produce-bg: var(--s-30);   --cluster-produce-on: var(--s-90);
+  --cluster-bakery-bg: oklch(26% 0.035 55);  --cluster-bakery-on: oklch(85% 0.05 55);
+  --cluster-dairy-bg: oklch(24% 0.03 95);    --cluster-dairy-on: oklch(88% 0.05 95);
+  --cluster-meat-bg: oklch(25% 0.04 15);     --cluster-meat-on: oklch(84% 0.06 15);
+  --cluster-spice-bg: var(--p-30);     --cluster-spice-on: var(--p-90);
+  --cluster-frozen-bg: oklch(24% 0.03 220);  --cluster-frozen-on: oklch(85% 0.04 220);
+  --cluster-grains-bg: var(--nv-30);   --cluster-grains-on: var(--nv-90);
+  --cluster-snacks-bg: oklch(25% 0.04 340);  --cluster-snacks-on: oklch(85% 0.06 340);
+  --cluster-drinks-bg: oklch(25% 0.035 195); --cluster-drinks-on: oklch(85% 0.05 195);
+  --cluster-household-bg: oklch(25% 0.02 265); --cluster-household-on: oklch(86% 0.04 265);
+  --cluster-care-bg: oklch(25% 0.03 165);    --cluster-care-on: oklch(85% 0.05 165);
+  --cluster-pet-bg: oklch(24% 0.025 30);     --cluster-pet-on: oklch(84% 0.05 30);
+  --cluster-other-bg: var(--md-surface-container); --cluster-other-on: var(--nv-70);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --cluster-produce-bg: var(--s-30);   --cluster-produce-on: var(--s-90);
+    --cluster-bakery-bg: oklch(26% 0.035 55);  --cluster-bakery-on: oklch(85% 0.05 55);
+    --cluster-dairy-bg: oklch(24% 0.03 95);    --cluster-dairy-on: oklch(88% 0.05 95);
+    --cluster-meat-bg: oklch(25% 0.04 15);     --cluster-meat-on: oklch(84% 0.06 15);
+    --cluster-spice-bg: var(--p-30);     --cluster-spice-on: var(--p-90);
+    --cluster-frozen-bg: oklch(24% 0.03 220);  --cluster-frozen-on: oklch(85% 0.04 220);
+    --cluster-grains-bg: var(--nv-30);   --cluster-grains-on: var(--nv-90);
+    --cluster-snacks-bg: oklch(25% 0.04 340);  --cluster-snacks-on: oklch(85% 0.06 340);
+    --cluster-drinks-bg: oklch(25% 0.035 195); --cluster-drinks-on: oklch(85% 0.05 195);
+    --cluster-household-bg: oklch(25% 0.02 265); --cluster-household-on: oklch(86% 0.04 265);
+    --cluster-care-bg: oklch(25% 0.03 165);    --cluster-care-on: oklch(85% 0.05 165);
+    --cluster-pet-bg: oklch(24% 0.025 30);     --cluster-pet-on: oklch(84% 0.05 30);
+    --cluster-other-bg: var(--md-surface-container); --cluster-other-on: var(--nv-70);
+  }
+}

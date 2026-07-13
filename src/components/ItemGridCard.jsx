@@ -1,28 +1,46 @@
+import { motion } from "framer-motion";
 import { ItemIcon } from "./ItemIcon.jsx";
 import { Card } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
+import { useMotionConfig } from "../hooks/useMotionConfig.js";
+
+const MotionCard = motion(Card);
 
 // Grid-view tile. Tap toggles bought; long-press opens the edit modal.
-export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
+// `clusterOn` — see ItemCard.jsx's comment on why the icon badge needs a
+// solid backdrop instead of a text-color tint.
+export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn }) {
   const meta = [item.qty > 1 ? `x${item.qty}` : "", item.notes || ""].filter(Boolean).join(" · ");
   const longPress = useLongPress(() => onEdit(item.id));
+  const { shouldAnimate, transition } = useMotionConfig();
+  const CardComponent = shouldAnimate ? MotionCard : Card;
+  const motionProps = shouldAnimate
+    ? {
+        layout: true,
+        transition,
+        initial: { opacity: 0, y: 8 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.9 },
+      }
+    : {};
   return (
-    <Card
+    <CardComponent
       padding="none"
       onClick={() => onToggle(item.id)}
       {...longPress}
+      {...motionProps}
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         textAlign: "center",
-        gap: 2,
-        height: 104,
-        padding: "8px 10px",
+        gap: 4,
+        minHeight: 112,
+        padding: "10px 10px",
         overflow: "hidden",
-        background: "var(--accent-secondary)",
+        background: "var(--surface-card)",
         opacity: item.bought ? 0.55 : 1,
         transition: "opacity var(--duration-fast) var(--ease-out)",
         touchAction: "manipulation",
@@ -38,14 +56,17 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
       <div
         className="grid-badge"
         style={{
+          width: 48,
+          height: 48,
+          borderRadius: "var(--radius-pill)",
+          background: clusterOn || "var(--accent-secondary)",
           color: "var(--text-on-accent)",
           fontWeight: "var(--weight-semibold)",
-          fontSize: 26,
+          fontSize: 20,
           display: "flex",
-          flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          minHeight: 0,
+          flexShrink: 0,
         }}
       >
         <ItemIcon name={item.name} />
@@ -56,8 +77,6 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
           flexDirection: "column",
           justifyContent: "center",
           gap: 2,
-          flex: 1,
-          minHeight: 0,
           width: "100%",
         }}
       >
@@ -74,7 +93,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
             overflow: "hidden",
             textOverflow: "ellipsis",
             textDecoration: item.bought ? "line-through" : "none",
-            color: "var(--text-on-accent)",
+            color: "var(--text-primary)",
           }}
         >
           {cap(item.name)}
@@ -83,8 +102,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
           style={{
             fontFamily: "var(--font-sans)",
             fontSize: "var(--text-2xs)",
-            color: "var(--text-on-accent)",
-            opacity: 0.75,
+            color: "var(--text-secondary)",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -94,6 +112,6 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
           {meta}
         </div>
       </div>
-    </Card>
+    </CardComponent>
   );
 }

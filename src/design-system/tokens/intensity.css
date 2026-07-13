@@ -1,0 +1,58 @@
+/* Panhandle — Design intensity tokens (Material 3 Expressive dial).
+   A user-selectable "how far into Expressive" setting, applied as
+   [data-design-intensity] on <html> (see src/lib/designIntensity.js).
+   "expressive" is the baseline (and default) — it matches the app's existing
+   visual language, so nothing here changes what shipped before this token
+   existed. "muted" and "classic" then override the SAME token names that
+   Button/Card/TabBar/FabMenu/etc. already consume, so every existing
+   consumer becomes intensity-reactive with zero component edits.
+   Deliberately NOT touched by any level: --radius-pill / --shape-full —
+   circular/pill elements (FAB, Avatar, pill buttons, the TabBar indicator)
+   stay round at every intensity; flattening those would look broken, not
+   "classic". */
+
+:root {
+  /* New, additive shape tokens for the asymmetric "blob" look — only
+     "expressive" gives them real asymmetry; the base :root value here IS the
+     expressive value, since that's the default level. */
+  --radius-card: 28px 12px 16px 12px;
+  --radius-tile: 20px 10px 20px 10px;
+
+  /* Ceiling for hero/display type weight — components read this instead of
+     a literal 900 so the same markup steps down under muted/classic. */
+  --weight-display-max: 900;
+}
+
+:root[data-design-intensity="muted"] {
+  --radius-sm: 12px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --radius-card: 12px;
+  --radius-tile: 12px;
+  --weight-display-max: 700;
+
+  --ease-spring: var(--ease-out);
+  --ease-spring-soft: var(--ease-out);
+  --spring-duration: 180ms;
+  --spring-duration-soft: 150ms;
+  --press-scale: 0.98;
+}
+
+:root[data-design-intensity="classic"] {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-card: 0px;
+  --radius-tile: 0px;
+  --weight-display-max: 700;
+
+  /* 1ms rather than 0ms — visually instant, but sidesteps a Safari quirk
+     where a 0s transition-duration can suppress the *next* transition. */
+  --ease-spring: linear;
+  --ease-spring-soft: linear;
+  --spring-duration: 1ms;
+  --spring-duration-soft: 1ms;
+  --press-scale: 1;
+}

@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.17.0] — 2026-07-13
+
+### Added
+- **Material 3 Expressive redesign, with a new Designintensitet setting.**
+  A new "Designintensitet" segmented control (Innstillinger → Meg & min
+  app) lets you dial the app's visual language between **Ekspressiv**
+  (default — asymmetric "blob" card shapes, heavier display type, full
+  spring physics), **Dempet** (symmetric shapes, shorter linear motion),
+  and **Klassisk** (flat corners, no spring animation, forced list layout
+  — a calmer, more accessible option).
+  - **Handleliste** now groups items into colored "aisle" clusters per
+    category (dairy, produce, bakery, …), with an adaptive grid that
+    reflows with spring physics as you check items off.
+  - **Måltider**'s "I dag" card is now visually prioritized — an inverted,
+    elevated surface with its own shape and larger type — instead of a
+    thin accent border, and responsible-person avatars are bigger and
+    more distinct.
+  - **Innstillinger** is now 4 grouped island containers instead of a
+    drill-down menu, with a big install-app call-to-action and a 2×2
+    admin stats dashboard.
+  - Note: the Settings screen no longer has its own back-button history
+    step, since it's a single screen now rather than a subpage stack —
+    this is intentional, not a regression.
+
 ## [1.16.1] — 2026-07-13
 
 ### Fixed

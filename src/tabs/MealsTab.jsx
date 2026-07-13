@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
+import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
@@ -10,11 +13,23 @@ import { IngredientPickerModal } from "../components/meals/IngredientPickerModal
 import { Card, Avatar, Tag, Button, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
+const MotionCard = motion(Card);
 
 // Deterministic-but-varied avatar color per person, since the real data
 // model (unlike the design project's toy fake cooks) has no fixed
-// per-person color assigned.
-const AVATAR_COLORS = ["var(--accent-primary)", "var(--accent-secondary)", "var(--accent-tertiary)", "var(--sage-600)", "var(--terracotta-600)"];
+// per-person color assigned. Drawn from the shopping-list cluster "on"
+// tones for more distinct, higher-contrast per-person colors than a small
+// hand-picked palette gives.
+const AVATAR_COLORS = [
+  "var(--accent-primary)",
+  "var(--cluster-meat-on)",
+  "var(--cluster-drinks-on)",
+  "var(--cluster-care-on)",
+  "var(--cluster-snacks-on)",
+  "var(--cluster-frozen-on)",
+  "var(--cluster-bakery-on)",
+  "var(--cluster-household-on)",
+];
 function avatarColorFor(name) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
@@ -23,6 +38,8 @@ function avatarColorFor(name) {
 
 export function MealsTab({ onSyncTick, onOffline }) {
   const { schedule, ensureLoaded } = useRecurring();
+  const intensity = useDesignIntensity();
+  const { shouldAnimate, transition } = useMotionConfig();
   const [weekOffset, setWeekOffset] = useState(0);
   const weekOffsetRef = useRef(weekOffset);
   weekOffsetRef.current = weekOffset;
@@ -77,6 +94,14 @@ export function MealsTab({ onSyncTick, onOffline }) {
     days.push(d);
   }
 
+  // Classic intensity is a plain linear list; expressive/muted use an
+  // adaptive grid (same repeat(auto-fit, minmax(...)) mechanism as
+  // Handleliste's clusters, for consistency) so "I dag" can stand apart.
+  const stackStyle =
+    intensity === "classic"
+      ? { display: "flex", flexDirection: "column", gap: 8 }
+      : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
+
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
@@ -97,7 +122,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
         </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={stackStyle}>
         {days.map((d) => {
           const iso = localIso(d);
           const p = plan[iso];
@@ -105,23 +130,67 @@ export function MealsTab({ onSyncTick, onOffline }) {
           const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
           const dow = (d.getDay() + 6) % 7;
           const recurring = !p?.responsible ? schedule[dow] : null;
+          const CardComponent = shouldAnimate ? MotionCard : Card;
+          const motionProps = shouldAnimate ? { layout: true, transition } : {};
           return (
-            <Card
+            <CardComponent
               key={iso}
-              style={isToday ? { border: "2px solid var(--accent-primary)", background: "color-mix(in srgb, var(--accent-primary) 8%, var(--surface-card))" } : undefined}
+              {...motionProps}
+              style={
+                isToday
+                  ? {
+                      background: "var(--md-inverse-surface)",
+                      color: "var(--md-inverse-on-surface)",
+                      borderRadius: "var(--radius-card)",
+                      boxShadow: "var(--elevation-shadow-3)",
+                    }
+                  : { borderRadius: "var(--radius-md)" }
+              }
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", color: isToday ? "var(--accent-primary)" : "var(--text-tertiary)" }}>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: "var(--text-2xs)",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--tracking-wide)",
+                      color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 70%, transparent)" : "var(--text-tertiary)",
+                    }}
+                  >
                     {isToday ? "I dag" : dayName}
                   </div>
-                  <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-lg)", fontWeight: 700, color: p?.meal_name ? "var(--text-primary)" : "var(--text-tertiary)", fontStyle: p?.meal_name ? "normal" : "italic", margin: "4px 0" }}>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
+                      lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
+                      fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
+                      color: p?.meal_name ? (isToday ? "var(--md-inverse-on-surface)" : "var(--text-primary)") : "var(--text-tertiary)",
+                      fontStyle: p?.meal_name ? "normal" : "italic",
+                      margin: "4px 0",
+                    }}
+                  >
                     {p?.meal_name || "Ingen måltid planlagt"}
                   </div>
                   {p?.responsible ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                      <Avatar name={p.responsible} color={avatarColorFor(p.responsible)} size={24} />
-                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)" }}>{p.responsible}</span>
+                      <Avatar
+                        name={p.responsible}
+                        color={isToday ? "var(--md-inverse-primary)" : avatarColorFor(p.responsible)}
+                        size={isToday ? 40 : 32}
+                      />
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--text-xs)",
+                          fontWeight: 600,
+                          color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
+                        }}
+                      >
+                        {p.responsible}
+                      </span>
                     </div>
                   ) : recurring ? (
                     <div style={{ marginTop: 6 }}>
@@ -133,7 +202,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
                   {p?.meal_name ? "Endre" : "Legg til"}
                 </Button>
               </div>
-            </Card>
+            </CardComponent>
           );
         })}
       </div>

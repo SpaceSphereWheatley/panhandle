@@ -119,12 +119,6 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .theme-toggle button.active { background: var(--accent-primary); color: var(--text-on-accent); border-color: var(--accent-primary); }
 
-/* Settings drill-down: subpage back button (main-menu nav rows are now the
-   design-system-tokened NavRow component in SettingsTab.jsx). */
-.subpage-back {
-  background: none; border: none; color: var(--accent-primary); font-family: var(--font-sans);
-  font-size: var(--text-sm); font-weight: 600; cursor: pointer; padding: 4px 0; margin-bottom: 8px;
-}
 /* Per-list group header inside the admin "Alle brukere" list */
 .admin-group {
   font-size: var(--text-2xs); font-weight: 700; color: var(--text-tertiary);

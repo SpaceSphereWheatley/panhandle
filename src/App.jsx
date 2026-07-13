@@ -8,6 +8,7 @@ import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
 import { LoginScreen } from "./components/LoginScreen.jsx";
 import { AppShell } from "./components/AppShell.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
+import { applyIntensity, currentIntensity } from "./lib/designIntensity.js";
 
 // Hand-drawn wobble filter for item icons (see lib/itemIcons.js). Defined
 // once; every icon's <g> references it via filter="url(#sketchy)".
@@ -39,6 +40,7 @@ function Root() {
 export default function App() {
   useEffect(() => {
     applyTheme(currentTheme());
+    applyIntensity(currentIntensity());
   }, []);
 
   return (
