@@ -1,3 +1,3 @@
-// Live frontend version, kept in sync with the Worker's VERSION on each
-// release (see CHANGELOG.md).
-export const APP_VERSION = "1.17.0";
+// Live frontend version, imported from shared/version.js so it can't drift
+// from the Worker's VERSION (worker/index.js) on a release — see CHANGELOG.md.
+export { VERSION as APP_VERSION } from "../../shared/version.js";

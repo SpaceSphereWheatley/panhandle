@@ -9,27 +9,22 @@
 //       independent flags (a user can be both). Admins create owner accounts
 //       (each gets its own list); owners add members to their own list.
 
-// Deployed Worker (API) version. The Worker and the Pages frontend deploy
-// independently via Cloudflare's Git integration, so this is bumped together
-// with src/lib/version.js's APP_VERSION on each release (see CHANGELOG.md) and
-// surfaced at GET /api/version — the Profile page shows both so a half-finished
-// deploy (one side stale) is visible at a glance. Keep in sync with APP_VERSION.
-const VERSION = "1.17.0";
+import { VERSION } from "../shared/version.js";
+import { CATEGORIES } from "../shared/categories.js";
+
+// Deployed Worker (API) version, imported from shared/version.js so it can't
+// drift from src/lib/version.js's APP_VERSION. Surfaced at GET /api/version —
+// the Profile page shows both so a half-finished deploy (one side stale) is
+// visible at a glance.
 
 // Login rate-limiting (TODO #14): max failed attempts per source IP within
 // the sliding window below, backed by the login_attempts table (see
 // migrations/0001_init.sql, the login_attempts table). Keyed by IP rather than username so a
 // flood of failed attempts against one account can't be used to lock out its
-// real owner.
+// real owner. Also reused by /change-password (see below) to throttle
+// current-password brute-forcing on a stolen token.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
-
-const CATEGORIES = [
-  "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
-  "Ingredienser og krydder", "Frysevarer og ferdigmåltid", "Kornprodukter",
-  "Snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og helse",
-  "Dyreprodukter", "Annet"
-];
 
 // Common Norwegian groceries seeded into a new list's catalogue at creation,
 // so a fresh household gets autocomplete/category-matching for everyday items
@@ -393,7 +388,10 @@ export default {
       const body = await readJson(request);
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { secret, accounts } = body;
-      if (!env.SEED_SECRET || secret !== env.SEED_SECRET) {
+      // Constant-time compare, same as the JWT signature check below — a
+      // plain !== would leak the correct secret one byte at a time via
+      // response timing.
+      if (!env.SEED_SECRET || !timingSafeEqual(secret || "", env.SEED_SECRET)) {
         return json({ error: "Feil seed-hemmelighet" }, 403);
       }
       if (!Array.isArray(accounts) || !accounts.length) {
@@ -491,6 +489,17 @@ export default {
 
     // ===== CHANGE PASSWORD =====
     if (path === "/change-password" && method === "POST") {
+      // Same per-IP throttle as /login, sharing the login_attempts table —
+      // a valid JWT (e.g. stolen via a lost device) shouldn't grant unlimited
+      // guesses at current_password.
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const windowStart = Date.now() - LOGIN_WINDOW_MS;
+      const { attempts } = await env.DB.prepare(
+        "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
+      ).bind(ip, windowStart).first();
+      if (attempts >= LOGIN_MAX_ATTEMPTS) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
       const body = await readJson(request);
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { current_password, new_password } = body;
@@ -501,6 +510,8 @@ export default {
         "SELECT pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(user.username).first();
       if (!(await verifyPassword(current_password || "", row.pass_hash))) {
+        await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
+          .bind(ip, Date.now()).run();
         return json({ error: "Feil nåværende passord" }, 401);
       }
       const newHash = await hashPassword(new_password);
@@ -901,9 +912,11 @@ export default {
       return authedJson({ ok: true });
     }
 
-    // Deletes the meal entirely from the catalogue — cascades to meal_plan
-    // (ON DELETE CASCADE), so any day currently assigned this meal reverts to
-    // unplanned, same trade-off as deleting an item from item_catalogue.
+    // Deletes the meal entirely from the catalogue. meal_plan.meal_id is
+    // ON DELETE SET NULL (see migrations/0009_meal_plan_set_null.sql), so any
+    // day currently assigned this meal reverts to unplanned but keeps its
+    // plan_date/responsible — unlike item_catalogue's cascade delete, this
+    // doesn't drop the row itself.
     const mealDelMatch = path.match(/^\/meals\/(\d+)$/);
     if (mealDelMatch && method === "DELETE") {
       await env.DB.prepare("DELETE FROM meal_catalogue WHERE id = ?1 AND list_id = ?2")
@@ -937,7 +950,9 @@ export default {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const { plan_date, meal_name, responsible, ingredients } = body;
-      if (!plan_date) return authedJson({ error: "Mangler dato" }, 400);
+      if (!plan_date || !/^\d{4}-\d{2}-\d{2}$/.test(plan_date)) {
+        return authedJson({ error: "Ugyldig dato" }, 400);
+      }
       // Require at least one of meal_name or responsible to be set.
       if (!meal_name && !responsible) return authedJson({ error: "Mangler måltid eller ansvarlig" }, 400);
 
