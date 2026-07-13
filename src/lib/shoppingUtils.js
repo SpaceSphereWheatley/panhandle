@@ -1,19 +1,5 @@
 // Pure helpers ported from public/app.html's shopping-list script section.
-export const CATEGORIES = [
-  "Frukt og grønt",
-  "Brød og bakevarer",
-  "Meieriprodukter",
-  "Kjøtt og fisk",
-  "Ingredienser og krydder",
-  "Frysevarer og ferdigmåltid",
-  "Kornprodukter",
-  "Snacks og godteri",
-  "Drikkevarer",
-  "Husholdning",
-  "Omsorg og helse",
-  "Dyreprodukter",
-  "Annet",
-];
+export { CATEGORIES } from "../../shared/categories.js";
 
 // Upper-cases the first character of an item/catalogue name for display,
 // leaving the rest as stored. Mirrors the server's capitalizeName.
