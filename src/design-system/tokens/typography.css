@@ -1,22 +1,44 @@
-/* Panhandle — Type tokens
-   Instrument Sans for everything structural (modern-minimal restraint);
-   Caveat as a small handwritten accent for the brand's "kitchen-note"
-   warmth — used only on tiny labels/tags, never for body copy. Fonts are
-   loaded from Google Fonts via a <link> in app.html (not @import here) to
-   avoid a render-blocking CSS import. */
+/* Panhandle — Type tokens, mapped onto Material Design 3's type scale.
+   M3 defines 15 styles (Display/Headline/Title/Body/Label × L/M/S); we keep
+   Instrument Sans (M3 permits any brand typeface, just requires the scale/
+   role structure) and Caveat as the one hand-written accent. Fonts load from
+   Google Fonts via a <link> in app.html (not @import here) to avoid a
+   render-blocking CSS import. Old --text-* names are kept as aliases onto the
+   nearest M3 style so existing components don't need to change. */
 
 :root {
   --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-hand: 'Caveat', cursive;
 
-  /* Type scale (px) */
-  --text-2xl: 34px;  /* screen titles */
-  --text-xl:  26px;  /* section headers */
-  --text-lg:  20px;  /* card titles */
-  --text-md:  17px;  /* body */
-  --text-sm:  15px;  /* secondary body */
-  --text-xs:  13px;  /* captions, meta */
-  --text-2xs: 11px;  /* eyebrow labels */
+  /* ---- M3 type scale ---- */
+  --md-display-large-size: 57px;   --md-display-large-line: 64px;   --md-display-large-weight: 400; --md-display-large-tracking: -0.25px;
+  --md-display-medium-size: 45px;  --md-display-medium-line: 52px;  --md-display-medium-weight: 400; --md-display-medium-tracking: 0px;
+  --md-display-small-size: 36px;   --md-display-small-line: 44px;   --md-display-small-weight: 400; --md-display-small-tracking: 0px;
+
+  --md-headline-large-size: 32px;  --md-headline-large-line: 40px;  --md-headline-large-weight: 400; --md-headline-large-tracking: 0px;
+  --md-headline-medium-size: 28px; --md-headline-medium-line: 36px; --md-headline-medium-weight: 400; --md-headline-medium-tracking: 0px;
+  --md-headline-small-size: 24px;  --md-headline-small-line: 32px;  --md-headline-small-weight: 400; --md-headline-small-tracking: 0px;
+
+  --md-title-large-size: 22px;     --md-title-large-line: 28px;     --md-title-large-weight: 500; --md-title-large-tracking: 0px;
+  --md-title-medium-size: 16px;    --md-title-medium-line: 24px;    --md-title-medium-weight: 600; --md-title-medium-tracking: 0.15px;
+  --md-title-small-size: 14px;     --md-title-small-line: 20px;     --md-title-small-weight: 600; --md-title-small-tracking: 0.1px;
+
+  --md-label-large-size: 14px;     --md-label-large-line: 20px;     --md-label-large-weight: 600; --md-label-large-tracking: 0.1px;
+  --md-label-medium-size: 12px;    --md-label-medium-line: 16px;    --md-label-medium-weight: 600; --md-label-medium-tracking: 0.5px;
+  --md-label-small-size: 11px;     --md-label-small-line: 16px;     --md-label-small-weight: 600; --md-label-small-tracking: 0.5px;
+
+  --md-body-large-size: 16px;      --md-body-large-line: 24px;      --md-body-large-weight: 400; --md-body-large-tracking: 0.15px;
+  --md-body-medium-size: 14px;     --md-body-medium-line: 20px;     --md-body-medium-weight: 400; --md-body-medium-tracking: 0.25px;
+  --md-body-small-size: 12px;      --md-body-small-line: 16px;      --md-body-small-weight: 400; --md-body-small-tracking: 0.4px;
+
+  /* ---- Legacy scale, now aliased onto the nearest M3 style ---- */
+  --text-2xl: var(--md-headline-small-size);  /* 24px — screen titles */
+  --text-xl:  var(--md-title-large-size);     /* 22px — section headers */
+  --text-lg:  var(--md-title-medium-size);    /* 16px — card titles */
+  --text-md:  var(--md-body-large-size);      /* 16px — body */
+  --text-sm:  var(--md-body-medium-size);     /* 14px — secondary body */
+  --text-xs:  var(--md-body-small-size);      /* 12px — captions, meta */
+  --text-2xs: var(--md-label-small-size);     /* 11px — eyebrow labels */
 
   --leading-tight: 1.15;
   --leading-snug:  1.3;

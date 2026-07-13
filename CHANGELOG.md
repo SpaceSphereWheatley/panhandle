@@ -1,21 +1,27 @@
 # Changelog
 
-All notable changes to Panhandle are recorded here. The version is duplicated
-and bumped together on each release:
+## [1.15.0] — 2026-07-13
 
-- `worker/index.js` → `const VERSION`
-- `src/lib/version.js` → `APP_VERSION` (the live frontend, as of 1.10.0 — see below)
+### Added
+- **A real Material FAB menu.** Tapping the "+" on the shopping list and
+  meal-plan tabs no longer opens a pop-up dialog — it now expands a proper
+  Material 3 FAB menu (speed-dial): the button morphs to a close "×", a scrim
+  fades in, and the labelled actions rise in a stack above it. Shopping list:
+  "Fra middagsplanen" and "Forslag"; Måltider: "Nytt måltid" and "Rediger
+  måltider". Tap an action, the scrim, the button again, or press Esc to close.
+- **Material state layers** on the `Button`, `IconButton` and floating action
+  button — a subtle tonal wash on hover/press, layered on top of the existing
+  darken-and-scale press "give" and the Android tap ripple.
 
-`public/app.html`'s own `APP_VERSION` constant is no longer live (superseded by
-the React app built from `src/`) but is left in place for now; it isn't served
-by Cloudflare Pages anymore, so it's not part of the bump going forward.
-
-The Profile page reads `GET /api/version` and shows both the app (Pages) and API
-(Worker) versions, so a deploy where only one half landed is visible at a glance.
-
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
-project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
-section for the bump convention).
+### Changed
+- **Material 3 design refresh.** The design system's tokens were migrated to a
+  full Material Design 3 system: colours are now an M3 tonal-palette + role-token
+  scheme (warm terracotta / sage / mustard / neutral source colours), on the M3
+  type scale, shape scale and elevation levels, with M3 state-layer opacities.
+  Every existing `--text-*` / `--radius-*` / `--shadow-*` / `--accent-*` name is
+  kept as an alias onto the new roles, so the app stays the same warm brand — now
+  built on M3 foundations. Dark mode was rebuilt as a proper M3 dark scheme (the
+  source design project is light-only).
 
 ## [1.14.0] — 2026-07-13
 
@@ -674,3 +680,24 @@ the feature set shipped to date.
 - `GET /api/version` endpoint and a Profile-page version readout.
 
 [1.0.0]: https://github.com/SpaceSphereWheatley/panhandle/releases/tag/v1.0.0
+
+---
+
+## About this file
+
+All notable changes to Panhandle are recorded here. The version is duplicated
+and bumped together on each release:
+
+- `worker/index.js` → `const VERSION`
+- `src/lib/version.js` → `APP_VERSION` (the live frontend, as of 1.10.0 — see above)
+
+`public/app.html`'s own `APP_VERSION` constant is no longer live (superseded by
+the React app built from `src/`) but is left in place for now; it isn't served
+by Cloudflare Pages anymore, so it's not part of the bump going forward.
+
+The Profile page reads `GET /api/version` and shows both the app (Pages) and API
+(Worker) versions, so a deploy where only one half landed is visible at a glance.
+
+Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
+project uses simple `MAJOR.MINOR.PATCH` numbers (see CLAUDE.md's Versioning
+section for the bump convention).

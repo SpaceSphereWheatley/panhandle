@@ -1,9 +1,23 @@
-/* Panhandle — Corner radii. Soft and homey: cards/sheets are generously
-   rounded, controls trend toward full pill shapes. */
+/* Panhandle — Corner radii, on Material Design 3's shape scale.
+   M3's scale is none/extra-small/small/medium/large/extra-large/full and is
+   explicitly a flexible per-brand system — Panhandle's is shifted rounder
+   than the M3 default (large=20 not 16, extra-large=28 matches), still
+   following the same stepped structure and using full pill on the same
+   component types M3 does (buttons, FAB, chips, avatars). Legacy --radius-*
+   names are aliased onto the shape scale. */
 :root {
-  --radius-sm: 10px;   /* chips, small inputs */
-  --radius-md: 16px;   /* list rows, small cards */
-  --radius-lg: 20px;   /* cards */
-  --radius-xl: 28px;   /* sheets, hero cards */
-  --radius-pill: 999px; /* buttons, tags, avatars */
+  --shape-none: 0px;
+  --shape-extra-small: 4px;
+  --shape-small: 8px;
+  --shape-medium: 12px;
+  --shape-large: 20px;       /* brand: 20 vs M3 default 16 */
+  --shape-extra-large: 28px;
+  --shape-full: 999px;
+
+  /* Legacy names, aliased onto the shape scale */
+  --radius-sm: var(--shape-small);        /* 8px — chips, small inputs */
+  --radius-md: 16px;                      /* list rows, small cards (between medium/large) */
+  --radius-lg: var(--shape-large);        /* 20px — cards */
+  --radius-xl: var(--shape-extra-large);  /* 28px — sheets, hero cards */
+  --radius-pill: var(--shape-full);       /* buttons, tags, avatars */
 }

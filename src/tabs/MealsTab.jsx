@@ -3,11 +3,10 @@ import { api } from "../lib/api.js";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
-import { MealFabMenu } from "../components/meals/MealFabMenu.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, Button, Fab } from "../design-system/index.js";
+import { Card, Avatar, Tag, Button, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -29,7 +28,7 @@ export function MealsTab({ onSyncTick, onOffline }) {
   const [plan, setPlan] = useState({}); // iso -> plan row
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   // Single active modal for the whole tab, mirroring the vanilla app's one
-  // #modalRoot swapping content: { type: "plan"|"fabMenu"|"browse"|"edit"|"ingredients", ... } | null
+  // #modalRoot swapping content: { type: "plan"|"browse"|"edit"|"ingredients", ... } | null
   const [modal, setModal] = useState(null);
 
   async function loadPlan(offset = weekOffset) {
@@ -138,7 +137,13 @@ export function MealsTab({ onSyncTick, onOffline }) {
         })}
       </div>
 
-      <Fab label="Måltider" onClick={() => setModal({ type: "fabMenu" })} />
+      <FabMenu
+        label="Måltider"
+        actions={[
+          { icon: "plus", label: "Nytt måltid", onClick: () => setModal({ type: "edit", id: null }) },
+          { icon: "pencil-simple", label: "Rediger måltider", onClick: () => setModal({ type: "browse" }) },
+        ]}
+      />
 
       {modal?.type === "plan" && (
         <MealPlanModal
@@ -149,13 +154,6 @@ export function MealsTab({ onSyncTick, onOffline }) {
             loadPlan();
           }}
           onOpenIngredientPicker={(ingredients, iso) => setModal({ type: "ingredients", ingredients, iso })}
-        />
-      )}
-      {modal?.type === "fabMenu" && (
-        <MealFabMenu
-          onClose={() => setModal(null)}
-          onNewMeal={() => setModal({ type: "edit", id: null })}
-          onBrowse={() => setModal({ type: "browse" })}
         />
       )}
       {modal?.type === "browse" && (

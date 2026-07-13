@@ -1,25 +1,47 @@
-/* Panhandle — Shadows. Warm-tinted (ink, not pure black), soft and low
-   contrast — cards read as "resting on paper" rather than floating glass. */
+/* Panhandle — Elevation, on Material Design 3's 6-level system (0–5).
+   M3 signals elevation with a shadow (and, where used, a tonal surface-tint);
+   kept warm (ink-brown shadow) rather than switching to neutral gray/black.
+   Legacy --shadow-* names are aliased onto elevation levels. */
 :root {
-  --shadow-sm: 0 1px 2px rgba(43, 38, 33, 0.06);
-  --shadow-card: 0 2px 8px rgba(43, 38, 33, 0.08);
-  --shadow-raised: 0 8px 24px rgba(43, 38, 33, 0.14);
-  --shadow-sheet: 0 -8px 32px rgba(43, 38, 33, 0.18);
+  --elevation-shadow-0: none;
+  --elevation-shadow-1: 0 1px 2px rgba(43, 38, 33, 0.06), 0 1px 3px 1px rgba(43, 38, 33, 0.05);
+  --elevation-shadow-2: 0 1px 2px rgba(43, 38, 33, 0.07), 0 2px 6px 2px rgba(43, 38, 33, 0.06);
+  --elevation-shadow-3: 0 1px 3px rgba(43, 38, 33, 0.08), 0 4px 8px 3px rgba(43, 38, 33, 0.08);
+  --elevation-shadow-4: 0 2px 3px rgba(43, 38, 33, 0.09), 0 6px 10px 4px rgba(43, 38, 33, 0.10);
+  --elevation-shadow-5: 0 4px 4px rgba(43, 38, 33, 0.10), 0 8px 12px 6px rgba(43, 38, 33, 0.14);
+
+  --elevation-tint-1: 0.05; /* surface-tint opacity per level */
+  --elevation-tint-2: 0.08;
+  --elevation-tint-3: 0.11;
+  --elevation-tint-4: 0.12;
+  --elevation-tint-5: 0.14;
+
+  /* Legacy names, aliased onto elevation levels */
+  --shadow-sm: var(--elevation-shadow-1);
+  --shadow-card: var(--elevation-shadow-2);
+  --shadow-raised: var(--elevation-shadow-4);       /* FAB */
+  /* Bottom sheets sit at the screen edge, so keep an upward-cast shadow so
+     the sheet's top edge reads as raised (M3 elevation-3 weight, flipped). */
+  --shadow-sheet: 0 -6px 16px rgba(43, 38, 33, 0.14);
 
   --border-focus: 0 0 0 3px rgba(193, 89, 42, 0.25); /* terracotta focus ring */
 }
 
 :root[data-theme="dark"] {
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  --elevation-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.24), 0 1px 3px 1px rgba(0, 0, 0, 0.20);
+  --elevation-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.28), 0 2px 6px 2px rgba(0, 0, 0, 0.24);
+  --elevation-shadow-3: 0 1px 3px rgba(0, 0, 0, 0.30), 0 4px 8px 3px rgba(0, 0, 0, 0.28);
+  --elevation-shadow-4: 0 2px 3px rgba(0, 0, 0, 0.34), 0 6px 10px 4px rgba(0, 0, 0, 0.36);
+  --elevation-shadow-5: 0 4px 4px rgba(0, 0, 0, 0.36), 0 8px 12px 6px rgba(0, 0, 0, 0.44);
+  --shadow-sheet: 0 -6px 20px rgba(0, 0, 0, 0.5);
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.4);
-    --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.5);
+    --elevation-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.24), 0 1px 3px 1px rgba(0, 0, 0, 0.20);
+    --elevation-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.28), 0 2px 6px 2px rgba(0, 0, 0, 0.24);
+    --elevation-shadow-3: 0 1px 3px rgba(0, 0, 0, 0.30), 0 4px 8px 3px rgba(0, 0, 0, 0.28);
+    --elevation-shadow-4: 0 2px 3px rgba(0, 0, 0, 0.34), 0 6px 10px 4px rgba(0, 0, 0, 0.36);
+    --elevation-shadow-5: 0 4px 4px rgba(0, 0, 0, 0.36), 0 8px 12px 6px rgba(0, 0, 0, 0.44);
+    --shadow-sheet: 0 -6px 20px rgba(0, 0, 0, 0.5);
   }
 }
