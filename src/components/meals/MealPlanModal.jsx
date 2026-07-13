@@ -61,8 +61,11 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
     function onDocClick(e) {
       if (!fieldRef.current?.contains(e.target)) setShowDropdown(false);
     }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
+    // Capture phase: the Sheet content wrapper stops click propagation, so a
+    // bubble-phase document listener never fires for clicks inside the modal
+    // and the dropdown would stay open. Capture runs before that stopPropagation.
+    document.addEventListener("click", onDocClick, true);
+    return () => document.removeEventListener("click", onDocClick, true);
   }, []);
 
   function onMealNameChange(v) {
