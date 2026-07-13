@@ -3,17 +3,35 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useInstallPrompt, isStandalone, isIos } from "../../context/InstallPromptContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
+import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
+import { Card, SegmentedControl, Switch, Button } from "../../design-system/index.js";
+import { AccordionRow } from "./AccordionRow.jsx";
 import { InstallHelpModal } from "./InstallHelpModal.jsx";
 
 function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
 }
 
-export function ProfileSettings() {
+const THEME_OPTIONS = [
+  { value: "light", label: "Lys" },
+  { value: "dark", label: "Mørk" },
+  { value: "system", label: "Følg systemet" },
+];
+
+const INTENSITY_OPTIONS = [
+  { value: "expressive", label: "Ekspressiv" },
+  { value: "muted", label: "Dempet" },
+  { value: "classic", label: "Klassisk" },
+];
+
+// Island 1 — "Meg & Min App": identity, Designintensitet + Tema + Vibrasjon,
+// the PWA install highlight, and (accordioned) password change + logout.
+export function ProfileIsland() {
   const { user, logout } = useAuth();
   const { canInstall, promptInstall, installed } = useInstallPrompt();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [theme, setThemeState] = useState(currentTheme());
+  const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
@@ -22,6 +40,11 @@ export function ProfileSettings() {
   function onSetTheme(t) {
     setTheme(t);
     setThemeState(t);
+  }
+
+  function onSetIntensity(v) {
+    setIntensity(v);
+    setIntensityState(v);
   }
 
   function onSetHaptics(on) {
@@ -56,47 +79,54 @@ export function ProfileSettings() {
   }
 
   return (
-    <div>
-      <div className="setrow">
-        <div className="k">Innlogget som</div>
-        <div className="v">{user}</div>
+    <Card padding="lg" style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
+      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, marginBottom: 18, color: "var(--text-primary)" }}>{user}</div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
+        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
       </div>
 
-      <div className="setrow">
-        <div className="k" style={{ marginBottom: 8 }}>Tema</div>
-        <div className="theme-toggle">
-          <button className={theme === "light" ? "active" : ""} onClick={() => onSetTheme("light")}>Lys</button>
-          <button className={theme === "dark" ? "active" : ""} onClick={() => onSetTheme("dark")}>Mørk</button>
-          <button className={theme === "system" ? "active" : ""} onClick={() => onSetTheme("system")}>Følg systemet</button>
-        </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Tema</div>
+        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
       </div>
 
-      <div className="setrow">
-        <div className="k" style={{ marginBottom: 8 }}>Vibrasjon ved handling</div>
-        <div className="theme-toggle">
-          <button className={haptics ? "active" : ""} onClick={() => onSetHaptics(true)}>På</button>
-          <button className={!haptics ? "active" : ""} onClick={() => onSetHaptics(false)}>Av</button>
-        </div>
+      <div style={{ marginBottom: 4 }}>
+        <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
       </div>
 
       {!isStandalone() && !installed && (
-        <div className="setrow">
-          <div className="k" style={{ marginBottom: 8 }}>Installer app</div>
-          {isIos() ? (
-            <div className="v" style={{ marginBottom: 8, fontWeight: 400, fontSize: 14 }}>
-              Trykk del-ikonet ⎋ i Safari og velg "Legg til på Hjemskjerm".
-            </div>
-          ) : (
-            <button className="btn-primary" onClick={canInstall ? promptInstall : () => setShowInstallHelp(true)}>
+        <div
+          style={{
+            marginTop: 18,
+            padding: 20,
+            borderRadius: "var(--radius-card)",
+            background: "var(--accent-primary-subtle)",
+            boxShadow: "var(--elevation-shadow-2)",
+            textAlign: "center",
+          }}
+        >
+          <i className="ph ph-device-mobile" style={{ fontSize: 32, color: "var(--accent-primary)" }} />
+          <div style={{ fontSize: "var(--md-title-large-size)", fontWeight: "var(--weight-bold)", margin: "8px 0 4px", color: "var(--text-primary)" }}>
+            Installer Panhandle
+          </div>
+          <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 14 }}>
+            {isIos()
+              ? 'Trykk del-ikonet ⎋ i Safari og velg «Legg til på Hjemskjerm».'
+              : "Få rask tilgang og full skjerm uten nettleserlinjer."}
+          </div>
+          {!isIos() && (
+            <Button onClick={canInstall ? promptInstall : () => setShowInstallHelp(true)} style={{ width: "100%" }}>
               Installer
-            </button>
+            </Button>
           )}
         </div>
       )}
       {showInstallHelp && <InstallHelpModal onClose={() => setShowInstallHelp(false)} />}
 
-      <div className="setrow">
-        <div className="k" style={{ marginBottom: 10 }}>Bytt passord</div>
+      <AccordionRow label="Bytt passord">
         <input
           type="password"
           placeholder="Nåværende passord"
@@ -115,9 +145,9 @@ export function ProfileSettings() {
         <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: pwMsg.ok ? "var(--status-success)" : "var(--status-danger)" }}>
           {pwMsg.text}
         </div>
-      </div>
+      </AccordionRow>
 
-      <button className="logout" onClick={() => logout()}>Logg ut</button>
-    </div>
+      <button className="logout" style={{ marginTop: 16 }} onClick={() => logout()}>Logg ut</button>
+    </Card>
   );
 }

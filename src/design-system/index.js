@@ -8,6 +8,7 @@ export { FabMenu } from './components/forms/FabMenu.jsx';
 export { Input } from './components/forms/Input.jsx';
 export { Checkbox } from './components/forms/Checkbox.jsx';
 export { Switch } from './components/forms/Switch.jsx';
+export { SegmentedControl } from './components/forms/SegmentedControl.jsx';
 export { Tag } from './components/forms/Tag.jsx';
 export { Card } from './components/data-display/Card.jsx';
 export { ListItem } from './components/data-display/ListItem.jsx';

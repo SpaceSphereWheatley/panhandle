@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
+import { Card } from "../../design-system/index.js";
 
-export function RecurringSettings() {
+// Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility.
+// Short and single-purpose enough to show directly, no accordion.
+export function RecurringIsland() {
   const { people, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
   const [otherDrafts, setOtherDrafts] = useState({});
@@ -40,9 +43,9 @@ export function RecurringSettings() {
   }
 
   return (
-    <div className="setrow">
-      <div className="k" style={{ marginBottom: 4 }}>Fast ansvarlig per ukedag</div>
-      <div style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 12 }}>
+    <Card padding="lg" style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Fast ansvarlig per ukedag</div>
+      <div style={{ fontSize: 13, color: "var(--text-tertiary)", margin: "4px 0 12px" }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
         og du kan alltid endre det for en enkelt dag.
       </div>
@@ -52,8 +55,8 @@ export function RecurringSettings() {
           const isOther = dow in otherDrafts || (current && !people.includes(current));
           const selectValue = isOther ? "__other__" : current;
           return (
-            <div className="setrow" style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>{day}</div>
+            <div style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
               <select
                 value={selectValue}
                 onChange={(e) => onSelectChange(dow, e.target.value)}
@@ -78,6 +81,6 @@ export function RecurringSettings() {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
