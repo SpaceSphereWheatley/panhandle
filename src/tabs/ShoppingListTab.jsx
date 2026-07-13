@@ -15,7 +15,7 @@ import { Input, FabMenu } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
-export function ShoppingListTab({ onSyncTick, onOffline }) {
+export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
   const [catalogue, setCatalogue] = useState([]);
@@ -63,19 +63,25 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     }
   }
 
+  // Only fires on true unmount (logout), not on pane switches — the tab stays
+  // mounted (hidden via CSS) once visited, see AppShell.jsx.
   useEffect(() => {
+    const timers = resolveTimers.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!active) return;
     loadCatalogue().then(loadList);
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);
-    const timers = resolveTimers.current;
-    return () => {
-      clearInterval(timer);
-      timers.forEach((t) => clearTimeout(t));
-      timers.clear();
-    };
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [active]);
 
   function toggleCat(key) {
     const next = { ...collapsedCats, [key]: !collapsedCats[key] };
