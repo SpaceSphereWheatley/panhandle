@@ -6,7 +6,7 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
-import { Input, IconButton, Card, Fab } from "../design-system/index.js";
+import { Input, Fab } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -31,7 +31,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
   // through and fading out, before they re-sort into "Nylig kjøpt".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
 
-  const pendingDeleteIds = useRef(new Set());
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
 
@@ -48,10 +47,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
       onOffline();
       return;
     }
-    const filtered = pendingDeleteIds.current.size
-      ? fetched.filter((it) => !pendingDeleteIds.current.has(it.id))
-      : fetched;
-    setItems(filtered);
+    setItems(fetched);
     try {
       setSuggestedItems(await api("/catalogue/suggestions"));
     } catch {
@@ -105,6 +101,7 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     setAddValue("");
     setSuggestions([]);
     haptic();
+    addInputRef.current?.focus();
     let res;
     try {
       res = await api("/list", {
@@ -193,36 +190,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
     });
   }
 
-  // Optimistic delete with a 5s undo window: the row disappears at once, but
-  // the server DELETE only fires after the grace period unless "Angre" is hit.
-  function deleteItem(id) {
-    const item = items.find((x) => x.id === id);
-    if (!item) return;
-    setItems((prev) => prev.filter((x) => x.id !== id));
-    pendingDeleteIds.current.add(id);
-    haptic();
-    const timer = setTimeout(() => commitDelete(id), 5000);
-    toast(`«${cap(item.name)}» slettet`, {
-      undoFn: () => {
-        clearTimeout(timer);
-        pendingDeleteIds.current.delete(id);
-        setItems((prev) => [...prev, item]);
-      },
-    });
-  }
-
-  async function commitDelete(id) {
-    if (!pendingDeleteIds.current.has(id)) return;
-    try {
-      await api(`/list/${id}`, { method: "DELETE" });
-    } catch {
-      toast("Kunne ikke slette – prøv igjen", { error: true });
-      loadList();
-    } finally {
-      pendingDeleteIds.current.delete(id);
-    }
-  }
-
   function onAddInputChange(v) {
     setAddValue(v);
     if (!v.trim()) {
@@ -264,28 +231,28 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
 
   return (
     <section>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, position: "relative" }}>
-        <div style={{ flex: 1 }}>
-          <Input
-            ref={addInputRef}
-            placeholder="Legg til vare – f.eks. «2 melk»"
-            autoComplete="off"
-            icon="carrot"
-            value={addValue}
-            onChange={(e) => onAddInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addItem(addValue);
-            }}
-          />
-        </div>
-        <IconButton icon="plus" variant="filled" label="Legg til vare" onClick={() => addItem(addValue)} />
+      <div style={{ marginBottom: 16, position: "relative" }}>
+        <Input
+          ref={addInputRef}
+          placeholder="Legg til vare – f.eks. «2 melk»"
+          autoComplete="off"
+          icon="carrot"
+          value={addValue}
+          onChange={(e) => onAddInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addItem(addValue);
+            }
+          }}
+        />
         {suggestions.length > 0 || addValue.trim() ? (
           <div
             style={{
               position: "absolute",
               top: 52,
               left: 0,
-              right: 52,
+              right: 0,
               background: "var(--surface-card)",
               border: "1px solid var(--border-default)",
               borderRadius: "var(--radius-md)",
@@ -359,7 +326,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
                 onToggleCat={toggleCat}
                 onToggleItem={toggleItem}
                 onEditItem={setEditingId}
-                onDeleteItem={deleteItem}
               />
             ))}
           </div>
@@ -375,7 +341,6 @@ export function ShoppingListTab({ onSyncTick, onOffline }) {
                 onToggleCat={toggleCat}
                 onToggleItem={toggleItem}
                 onEditItem={setEditingId}
-                onDeleteItem={deleteItem}
               />
             </div>
           )}
@@ -456,7 +421,7 @@ function viewToggleBtnStyle(active) {
   };
 }
 
-function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvingIds, onToggleCat, onToggleItem, onEditItem, onDeleteItem }) {
+function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvingIds, onToggleCat, onToggleItem, onEditItem }) {
   return (
     <div style={{ marginBottom: 4 }}>
       <button
@@ -495,11 +460,17 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvi
         viewMode === "grid" ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {items.map((it) => (
-              <ItemGridCard key={it.id} item={it} resolving={!!resolvingIds?.has(it.id)} onToggle={onToggleItem} />
+              <ItemGridCard
+                key={it.id}
+                item={it}
+                resolving={!!resolvingIds?.has(it.id)}
+                onToggle={onToggleItem}
+                onEdit={onEditItem}
+              />
             ))}
           </div>
         ) : (
-          <Card padding="sm">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {items.map((it) => (
               <ItemCard
                 key={it.id}
@@ -507,10 +478,9 @@ function CatSection({ catKey, items, collapsed, viewMode, first = false, resolvi
                 resolving={!!resolvingIds?.has(it.id)}
                 onToggle={onToggleItem}
                 onEdit={onEditItem}
-                onDelete={onDeleteItem}
               />
             ))}
-          </Card>
+          </div>
         )
       )}
     </div>

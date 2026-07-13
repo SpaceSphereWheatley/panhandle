@@ -1,15 +1,17 @@
 import { ItemIcon } from "./ItemIcon.jsx";
 import { Card } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
+import { useLongPress } from "../hooks/useLongPress.js";
 
-// Grid-view tile. Tap toggles bought; long-press-to-edit from the original is
-// dropped for v1 (see ItemCard.jsx) — use the list view's edit button instead.
-export function ItemGridCard({ item, resolving, onToggle }) {
+// Grid-view tile. Tap toggles bought; long-press opens the edit modal.
+export function ItemGridCard({ item, resolving, onToggle, onEdit }) {
   const meta = [item.qty > 1 ? `x${item.qty}` : "", item.notes || ""].filter(Boolean).join(" · ");
+  const longPress = useLongPress(() => onEdit(item.id));
   return (
     <Card
       padding="sm"
       onClick={() => onToggle(item.id)}
+      {...longPress}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -19,6 +21,11 @@ export function ItemGridCard({ item, resolving, onToggle }) {
         gap: 4,
         height: 104,
         overflow: "hidden",
+        background: "var(--accent-secondary)",
+        opacity: item.bought ? 0.55 : 1,
+        transition: "opacity var(--duration-fast) var(--ease-out)",
+        touchAction: "manipulation",
+        userSelect: "none",
         ...(resolving
           ? {
               transition:
@@ -33,10 +40,6 @@ export function ItemGridCard({ item, resolving, onToggle }) {
       <div
         className="grid-badge"
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          background: "var(--accent-secondary)",
           color: "var(--text-on-accent)",
           fontWeight: "var(--weight-semibold)",
           fontSize: 16,
@@ -44,8 +47,6 @@ export function ItemGridCard({ item, resolving, onToggle }) {
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
-          opacity: item.bought ? 0.45 : 1,
-          transition: "opacity var(--duration-fast) var(--ease-out)",
         }}
       >
         <ItemIcon name={item.name} />
@@ -63,7 +64,7 @@ export function ItemGridCard({ item, resolving, onToggle }) {
           overflow: "hidden",
           textOverflow: "ellipsis",
           textDecoration: item.bought ? "line-through" : "none",
-          color: item.bought ? "var(--text-tertiary)" : "var(--text-primary)",
+          color: "var(--text-on-accent)",
         }}
       >
         {cap(item.name)}
@@ -72,7 +73,8 @@ export function ItemGridCard({ item, resolving, onToggle }) {
         style={{
           fontFamily: "var(--font-sans)",
           fontSize: "var(--text-2xs)",
-          color: "var(--text-tertiary)",
+          color: "var(--text-on-accent)",
+          opacity: 0.75,
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
