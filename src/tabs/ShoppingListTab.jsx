@@ -31,6 +31,9 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  // "Nylig kjøpt" starts collapsed — it's a re-add palette, not something to
+  // scroll past every time.
+  const [boughtCollapsed, setBoughtCollapsed] = useState(() => localStorage.getItem("ph_bought_collapsed") !== "false");
   // Single active modal for the FAB menu's two destinations:
   // { type: "suggestions" | "weekIngredients" } | null
   const [modal, setModal] = useState(null);
@@ -213,6 +216,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     addInputRef.current?.focus();
   }
 
+  function toggleBoughtCollapsed() {
+    setBoughtCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("ph_bought_collapsed", String(next));
+      return next;
+    });
+  }
+
   // A just-checked item stays in its category (struck through, fading) until
   // its resolve timer fires — only then does it move to "Nylig kjøpt".
   const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
@@ -227,7 +238,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const displayItems = CATEGORIES.filter((c) => groups[c]).flatMap((c) =>
     groups[c].map((it) => ({ item: it, clusterKey: it.category }))
   );
-  const boughtDisplayItems = bought.slice(0, 30).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
+  // Classic intensity flattens the density down to a plain linear list,
+  // regardless of the user's stored grid/list preference — ph_view stays
+  // untouched so switching back to muted/expressive restores it exactly.
+  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
+  // Cap at 3 rows' worth: 3 columns × 3 rows in grid view, 3 rows in list view.
+  const boughtRowCap = effectiveViewMode === "grid" ? 9 : 3;
+  const boughtDisplayItems = bought.slice(0, boughtRowCap).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -237,10 +254,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       ? "Alt er handlet"
       : "";
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
-  // Classic intensity flattens the density down to a plain linear list,
-  // regardless of the user's stored grid/list preference — ph_view stays
-  // untouched so switching back to muted/expressive restores it exactly.
-  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
 
   return (
     <section>
@@ -332,20 +345,37 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <div
+              <button
+                onClick={toggleBoughtCollapsed}
                 style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "none",
+                  border: "none",
                   fontFamily: "var(--font-sans)",
+                  cursor: "pointer",
                   fontSize: "var(--text-2xs)",
                   fontWeight: 700,
                   color: clusterFor("Nylig kjøpt").on,
                   textTransform: "uppercase",
                   letterSpacing: "var(--tracking-wide)",
-                  marginBottom: 8,
+                  padding: 0,
+                  marginBottom: boughtCollapsed ? 0 : 8,
                 }}
               >
-                Nylig kjøpt
-              </div>
-              {renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+                <span>Nylig kjøpt</span>
+                <i
+                  className="ph ph-caret-down"
+                  style={{
+                    fontSize: 13,
+                    transition: "transform var(--duration-fast) var(--ease-out)",
+                    transform: boughtCollapsed ? "rotate(-90deg)" : "none",
+                  }}
+                />
+              </button>
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
             </div>
           )}
         </>
