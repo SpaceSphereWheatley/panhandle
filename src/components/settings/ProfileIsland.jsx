@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { useInstallPrompt, isStandalone, isIos } from "../../context/InstallPromptContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Card, SegmentedControl, Switch, Button } from "../../design-system/index.js";
+import { Card, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
-import { InstallHelpModal } from "./InstallHelpModal.jsx";
 
 function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
@@ -25,11 +23,11 @@ const INTENSITY_OPTIONS = [
 ];
 
 // Island 1 — "Meg & Min App": identity, Designintensitet + Tema + Vibrasjon,
-// the PWA install highlight, and (accordioned) password change + logout.
+// and (accordioned) password change + logout. The PWA install highlight is
+// its own standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling
+// after this card rather than a row nested inside it.
 export function ProfileIsland() {
   const { user, logout } = useAuth();
-  const { canInstall, promptInstall, installed } = useInstallPrompt();
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
@@ -96,35 +94,6 @@ export function ProfileIsland() {
       <div style={{ marginBottom: 4 }}>
         <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
       </div>
-
-      {!isStandalone() && !installed && (
-        <div
-          style={{
-            marginTop: 18,
-            padding: 20,
-            borderRadius: "var(--radius-card)",
-            background: "var(--accent-primary-subtle)",
-            boxShadow: "var(--elevation-shadow-2)",
-            textAlign: "center",
-          }}
-        >
-          <i className="ph ph-device-mobile" style={{ fontSize: 32, color: "var(--accent-primary)" }} />
-          <div style={{ fontSize: "var(--md-title-large-size)", fontWeight: "var(--weight-bold)", margin: "8px 0 4px", color: "var(--text-primary)" }}>
-            Installer Panhandle
-          </div>
-          <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 14 }}>
-            {isIos()
-              ? 'Trykk del-ikonet ⎋ i Safari og velg «Legg til på Hjemskjerm».'
-              : "Få rask tilgang og full skjerm uten nettleserlinjer."}
-          </div>
-          {!isIos() && (
-            <Button onClick={canInstall ? promptInstall : () => setShowInstallHelp(true)} style={{ width: "100%" }}>
-              Installer
-            </Button>
-          )}
-        </div>
-      )}
-      {showInstallHelp && <InstallHelpModal onClose={() => setShowInstallHelp(false)} />}
 
       <AccordionRow label="Bytt passord">
         <input

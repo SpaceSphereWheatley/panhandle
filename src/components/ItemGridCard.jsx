@@ -11,7 +11,6 @@ const MotionCard = motion(Card);
 // `clusterOn` — see ItemCard.jsx's comment on why the icon badge needs a
 // solid backdrop instead of a text-color tint.
 export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn }) {
-  const meta = [item.qty > 1 ? `x${item.qty}` : "", item.notes || ""].filter(Boolean).join(" · ");
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
@@ -98,19 +97,46 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn }) {
         >
           {cap(item.name)}
         </div>
-        <div
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--text-2xs)",
-            color: "var(--text-secondary)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            maxWidth: "100%",
-          }}
-        >
-          {meta}
-        </div>
+        {(item.qty > 1 || item.notes) ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "center",
+              gap: 5,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              maxWidth: "100%",
+            }}
+          >
+            {item.qty > 1 ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-2xs)",
+                  fontWeight: "var(--weight-display-max)",
+                  color: clusterOn || "var(--accent-primary)",
+                  flexShrink: 0,
+                }}
+              >
+                x{item.qty}
+              </span>
+            ) : null}
+            {item.notes ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-2xs)",
+                  color: "var(--text-secondary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {item.notes}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </CardComponent>
   );

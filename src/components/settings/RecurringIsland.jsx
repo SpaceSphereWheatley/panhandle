@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
-import { Card } from "../../design-system/index.js";
 
 // Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility.
-// Short and single-purpose enough to show directly, no accordion.
+// Short and single-purpose enough to show directly, no accordion. Content-
+// only — no own Card wrapper, see MembersIsland.jsx / HomeIsland.jsx.
 export function RecurringIsland() {
   const { people, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
@@ -43,7 +43,7 @@ export function RecurringIsland() {
   }
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
+    <>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Fast ansvarlig per ukedag</div>
       <div style={{ fontSize: 13, color: "var(--text-tertiary)", margin: "4px 0 12px" }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
@@ -81,6 +81,6 @@ export function RecurringIsland() {
           );
         })}
       </div>
-    </Card>
+    </>
   );
 }

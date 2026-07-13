@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { api } from "../../lib/api.js";
-import { Card, Button } from "../../design-system/index.js";
+import { Button } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
 import { AccordionRow } from "./AccordionRow.jsx";
 
-// Island 2 (part 1) — "Vårt Hjem": member list + add member, each in its
-// own accordion per the spec ("Se nåværende, legg til").
+// Island 2 (part 1) — "Vårt Hjem": member list + add member, each in its own
+// accordion per the spec ("Se nåværende, legg til"). Content-only — no own
+// Card wrapper, since HomeIsland.jsx merges this with RecurringIsland into
+// one shared container.
 export function MembersIsland() {
   const { user: currentUser } = useAuth();
   const { listUsers, refresh } = useListUsers();
@@ -45,7 +47,7 @@ export function MembersIsland() {
   }
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
+    <>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Medlemmer</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{listUsers.length} / 10 brukere</div>
 
@@ -83,6 +85,6 @@ export function MembersIsland() {
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />
       )}
-    </Card>
+    </>
   );
 }

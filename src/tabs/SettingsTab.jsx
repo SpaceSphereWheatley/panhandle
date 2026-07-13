@@ -1,8 +1,8 @@
 import { useAuth } from "../context/AuthContext.jsx";
 import { ProfileIsland } from "../components/settings/ProfileIsland.jsx";
-import { MembersIsland } from "../components/settings/MembersIsland.jsx";
+import { PwaInstallCTA } from "../components/settings/PwaInstallCTA.jsx";
+import { HomeIsland } from "../components/settings/HomeIsland.jsx";
 import { AdminIsland } from "../components/settings/AdminIsland.jsx";
-import { RecurringIsland } from "../components/settings/RecurringIsland.jsx";
 import { AboutFooter } from "../components/settings/AboutFooter.jsx";
 
 // A single scrolling screen of 4 always-visible island containers, rather
@@ -33,10 +33,10 @@ export function SettingsTab() {
     <section>
       <IslandLabel>Meg &amp; min app</IslandLabel>
       <ProfileIsland />
+      <PwaInstallCTA />
 
       <IslandLabel>Vårt hjem</IslandLabel>
-      {isOwner && <MembersIsland />}
-      <RecurringIsland />
+      <HomeIsland isOwner={isOwner} />
 
       {isAdmin && (
         <>
