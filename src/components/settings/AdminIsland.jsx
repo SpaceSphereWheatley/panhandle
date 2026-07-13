@@ -7,11 +7,12 @@ import { CredentialsModal } from "../CredentialsModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Card } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { MetricsSettings } from "./MetricsSettings.jsx";
 
 // Island 3 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
 // dashboard, then the heavier management tools accordioned.
 export function AdminIsland() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isSuperAdmin } = useAuth();
   const { refresh: refreshListUsers } = useListUsers();
   const [userCount, setUserCount] = useState("–");
   const [listCount, setListCount] = useState("–");
@@ -175,6 +176,12 @@ export function AdminIsland() {
           </div>
         ))}
       </AccordionRow>
+
+      {isSuperAdmin && (
+        <AccordionRow label="Statistikk (alle lister)">
+          <MetricsSettings />
+        </AccordionRow>
+      )}
 
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />

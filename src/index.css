@@ -152,6 +152,19 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .badge-tag.admin { background: var(--accent-primary); }
 
+/* Site-wide metrics table (admin/metrics) */
+.metrics-table { font-size: var(--text-sm); }
+.metrics-table-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-default);
+  font-variant-numeric: tabular-nums;
+}
+.metrics-table-row:last-child { border-bottom: none; }
+.metrics-table-head {
+  font-size: var(--text-2xs); font-weight: 700; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: var(--tracking-wide);
+}
+
 /* Credential / invite dialog + item-edit caption */
 .cred-box {
   background: var(--surface-sunken); border: 1px solid var(--border-default); border-radius: var(--radius-sm);
