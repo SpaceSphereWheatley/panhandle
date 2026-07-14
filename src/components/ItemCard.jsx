@@ -30,7 +30,16 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
   return (
     <CardComponent
       padding="sm"
+      role="button"
+      tabIndex={0}
+      aria-label={`${cap(item.name)}${item.bought ? ", kjøpt" : ""}`}
       onClick={() => onToggle(item.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle(item.id);
+        }
+      }}
       {...longPress}
       {...motionProps}
       style={{

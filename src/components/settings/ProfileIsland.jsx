@@ -96,14 +96,22 @@ export function ProfileIsland() {
       </div>
 
       <AccordionRow label="Bytt passord">
+        <label htmlFor="profile-pw-current" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+          Nåværende passord
+        </label>
         <input
+          id="profile-pw-current"
           type="password"
           placeholder="Nåværende passord"
           style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
           value={pwCurrent}
           onChange={(e) => setPwCurrent(e.target.value)}
         />
+        <label htmlFor="profile-pw-new" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+          Nytt passord (min. 6 tegn)
+        </label>
         <input
+          id="profile-pw-new"
           type="password"
           placeholder="Nytt passord (min. 6 tegn)"
           style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}

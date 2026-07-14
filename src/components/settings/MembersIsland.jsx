@@ -70,7 +70,9 @@ export function MembersIsland() {
       </AccordionRow>
 
       <AccordionRow label="Legg til medlem">
+        <label htmlFor="members-new-username" className="sr-only">Brukernavn for nytt medlem</label>
         <input
+          id="members-new-username"
           placeholder="Brukernavn for nytt medlem"
           style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={newName}

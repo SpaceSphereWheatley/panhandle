@@ -130,7 +130,9 @@ export function AdminIsland() {
       </AccordionRow>
 
       <AccordionRow label="Opprett eier (ny liste)">
+        <label htmlFor="admin-new-owner" className="sr-only">Brukernavn for ny eier</label>
         <input
+          id="admin-new-owner"
           placeholder="Brukernavn for ny eier"
           style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={newOwnerName}

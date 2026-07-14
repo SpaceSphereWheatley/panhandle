@@ -22,40 +22,6 @@ details live in `CHANGELOG.md`, not here.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-3. Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) render as plain
-   `<div>`s with `onClick`/long-press only — no `role="button"`,
-   `tabIndex`, or keyboard handler — so the core toggle-bought/edit
-   interaction is completely unreachable via keyboard or screen reader.
-   `src/components/settings/PwaInstallCTA.jsx` already has the right
-   pattern (`role="button" tabIndex={0}` + Enter/Space `onKeyDown`) for
-   the same div-as-button case; apply it here too.
-   _Value: High · Importance: High · Type: Accessibility_
-4. Modals (`Sheet.jsx`, shared by all ~10 modals via `Modal.jsx`) never
-   move focus in on open, never trap `Tab` (focus can escape to the page
-   behind the scrim), and never restore focus to the trigger on close; no
-   `role="dialog"`/`aria-modal` either. `FabMenu.jsx` already does
-   focus-move + `role="menu"` correctly for its own overlay — port the
-   same approach to `Sheet.jsx`.
-   _Value: High · Importance: High · Type: Accessibility_
-5. No form `<label>` in the app is programmatically associated with its
-   input (zero `htmlFor`/matching `id` anywhere in `src/`) — screen
-   readers get no accessible name from labels next to inputs in
-   `ItemEditModal`, `MealEditModal`, `MealPlanModal`, admin/member forms.
-   `ProfileIsland`'s password fields have no visible label at all, only a
-   placeholder.
-   _Value: High · Importance: High · Type: Accessibility_
-6. `--text-tertiary` in light mode
-   (`src/design-system/tokens/colors.css:125`) computes to ~3.9–4.1:1
-   contrast against card/page surfaces — below the 4.5:1 WCAG AA
-   threshold for normal text — and is used pervasively (form labels via
-   `index.css:190`, empty-state copy, inactive tab labels, sync-status
-   text). Dark mode's equivalent token is fine (~5.16:1); only the
-   light-mode value needs adjusting.
-   _Value: High · Importance: Medium · Type: Accessibility_
-7. `Header.jsx`'s back-caret button has no `aria-label` (currently dead
-   since `AppShell` never wires an `onBack`, but would ship unlabeled the
-   moment it is).
-   _Value: Low · Importance: Medium · Type: Accessibility_
 8. `design-system/components/forms/IconButton.jsx` enforces an
    `aria-label` via its required `label` prop, but has zero real usages —
    every actual icon-only button in the app is hand-rolled instead
@@ -63,10 +29,6 @@ details live in `CHANGELOG.md`, not here.
    `SuggestionsModal`'s add chip), so labeling is consistent only by
    luck. Migrate icon-only buttons onto `IconButton`.
    _Value: Medium · Importance: Medium · Type: Accessibility_
-9. The toast container (`src/context/ToastContext.jsx`, `#toast`) has no
-   `aria-live`/`role="status"`, so screen reader users are never notified
-   when a toast appears.
-   _Value: Low · Importance: Medium · Type: Accessibility_
 10. Three styling systems coexist permanently rather than mid-migration
     (`src/index.css`'s own header comment admits it): the token-driven
     `src/design-system/`, legacy `index.css` classnames (`.cancel`,
@@ -189,6 +151,24 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) are now
+      keyboard/screen-reader reachable (`role="button" tabIndex={0}` +
+      Enter/Space toggles bought), matching `PwaInstallCTA.jsx`'s pattern.
+      (1.18.1)
+- [x] Modals (`Sheet.jsx`) now move focus in on open, trap `Tab`, restore
+      focus to the trigger on close, and expose `role="dialog"`/
+      `aria-modal`, matching `FabMenu.jsx`'s focus-move approach. (1.18.1)
+- [x] Form labels in `ItemEditModal`, `MealEditModal`, `MealPlanModal`, and
+      the admin/member/recurring settings forms are now programmatically
+      associated with their inputs (`htmlFor`/`id`, or `aria-label`/
+      `aria-labelledby`); `ProfileIsland`'s password fields gained visible
+      labels. (1.18.1)
+- [x] `--text-tertiary` in light mode moved from `--nv-50` to `--nv-40`
+      (~6.5:1 contrast against card/page surfaces, up from ~3.9–4.1:1) to
+      meet WCAG AA. (1.18.1)
+- [x] `Header.jsx`'s back-caret button now has an `aria-label`. (1.18.1)
+- [x] The toast container now has `role="status"`/`aria-live="polite"`.
+      (1.18.1)
 - [x] CI pinned `trufflesecurity/trufflehog@main` (a moving ref) — pinned to
       the `v3.95.9` release commit SHA instead. (1.15.0)
 - [x] No `Escape` key handler on any modal — a `keydown` listener on

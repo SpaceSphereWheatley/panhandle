@@ -162,9 +162,10 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
           </div>
         </>
       )}
-      <label>Måltid (velg eller skriv nytt)</label>
+      <label htmlFor="meal-plan-name">Måltid (velg eller skriv nytt)</label>
       <div className="meal-name-field" ref={fieldRef}>
         <input
+          id="meal-plan-name"
           autoComplete="off"
           value={mealName}
           onChange={(e) => onMealNameChange(e.target.value)}
@@ -193,8 +194,9 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
           )}
         </div>
       </div>
-      <label>Ingredienser (kommaseparert)</label>
+      <label htmlFor="meal-plan-ingredients">Ingredienser (kommaseparert)</label>
       <input
+        id="meal-plan-ingredients"
         value={ingredients}
         onChange={(e) => setIngredients(e.target.value)}
         placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
@@ -205,8 +207,8 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
         Legg ingredienser på handlelisten
       </Button>
-      <label>Ansvarlig</label>
-      <select value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
+      <label htmlFor="meal-plan-resp">Ansvarlig</label>
+      <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
         <option value="">Ingen</option>
         {people.map((p) => (
           <option value={p} key={p}>{p}</option>
@@ -216,6 +218,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       {respSelect === "__other__" && (
         <input
           type="text"
+          aria-label="Beskriv ansvarlig"
           placeholder="Beskriv (f.eks. Ute og spiser)"
           style={{ marginTop: 8, width: "100%", padding: 10, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={respOther}

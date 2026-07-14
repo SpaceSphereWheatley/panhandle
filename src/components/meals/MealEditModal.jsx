@@ -93,8 +93,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
   return (
     <Modal onClose={onClose}>
       <h3>{id ? "Rediger måltid" : "Nytt måltid"}</h3>
-      <label>Navn</label>
+      <label htmlFor="meal-edit-name">Navn</label>
       <input
+        id="meal-edit-name"
         value={name}
         onChange={(e) => {
           setName(e.target.value);
@@ -105,10 +106,10 @@ export function MealEditModal({ id, onClose, onSaved }) {
       <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--status-danger)" : "var(--text-tertiary)" }}>
         {similarNote.text}
       </div>
-      <label>Ingredienser (kommaseparert)</label>
-      <input value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
-      <label>Etiketter (kommaseparert)</label>
-      <input list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
+      <label htmlFor="meal-edit-ingredients">Ingredienser (kommaseparert)</label>
+      <input id="meal-edit-ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
+      <label htmlFor="meal-edit-labels">Etiketter (kommaseparert)</label>
+      <input id="meal-edit-labels" list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
       <datalist id="mealLabelOptions">
         {knownLabels.map((l) => (
           <option value={l} key={l} />

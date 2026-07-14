@@ -56,18 +56,18 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
     <Modal onClose={onClose}>
       <h3>{cap(item.name)}</h3>
       <div className="meta">Lagt til av {item.added_by}</div>
-      <label>Navn</label>
-      <input value={name} onChange={(e) => setName(e.target.value)} />
-      <label>Kategori</label>
-      <select value={category} onChange={(e) => setCategory(e.target.value)}>
+      <label htmlFor="item-edit-name">Navn</label>
+      <input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
+      <label htmlFor="item-edit-category">Kategori</label>
+      <select id="item-edit-category" value={category} onChange={(e) => setCategory(e.target.value)}>
         {CATEGORIES.map((c) => (
           <option key={c}>{c}</option>
         ))}
       </select>
-      <label>Antall</label>
-      <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
-      <label>Notat (mengde, beskrivelse o.l.)</label>
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="F.eks. 2 liter" />
+      <label htmlFor="item-edit-qty">Antall</label>
+      <input id="item-edit-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
+      <label htmlFor="item-edit-notes">Notat (mengde, beskrivelse o.l.)</label>
+      <input id="item-edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="F.eks. 2 liter" />
       <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
         <button className="cancel" onClick={onClose}>Avbryt</button>

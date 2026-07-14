@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.18.1] — 2026-07-14
+
+### Accessibility
+- Shopping-list item cards (`ItemCard`/`ItemGridCard`) are now reachable and
+  operable by keyboard/screen reader — `role="button"`, `tabIndex`, and an
+  Enter/Space handler for toggling bought, matching the pattern already used
+  by the PWA install CTA.
+- Modals (`Sheet.jsx`, shared by every modal) now move focus in on open,
+  trap `Tab` inside the sheet, restore focus to the trigger on close, and
+  expose `role="dialog"`/`aria-modal`.
+- Every form `<label>` in `ItemEditModal`, `MealEditModal`, `MealPlanModal`,
+  and the admin/member/recurring settings forms is now programmatically
+  associated with its input (`htmlFor`/`id`, or `aria-label`/
+  `aria-labelledby` where a visible label didn't fit); `ProfileIsland`'s
+  password fields gained visible labels instead of relying on placeholder
+  text alone.
+- Fixed `--text-tertiary`'s light-mode contrast (was ~3.9–4.1:1 against
+  card/page surfaces) to meet the 4.5:1 WCAG AA threshold for normal text.
+- `Header`'s back button now has an `aria-label`.
+- The toast container now announces itself to screen readers via
+  `role="status"`/`aria-live="polite"`.
+
 ## [1.18.0] — 2026-07-13
 
 ### Added

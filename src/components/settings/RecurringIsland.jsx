@@ -56,10 +56,11 @@ export function RecurringIsland() {
           const selectValue = isOther ? "__other__" : current;
           return (
             <div style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
+              <div id={`recurring-day-${dow}`} style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
               <select
                 value={selectValue}
                 onChange={(e) => onSelectChange(dow, e.target.value)}
+                aria-labelledby={`recurring-day-${dow}`}
                 style={{ width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
               >
                 <option value="">Ingen</option>
@@ -72,6 +73,7 @@ export function RecurringIsland() {
                 <input
                   type="text"
                   placeholder="Beskriv ansvaret"
+                  aria-label={`Beskriv ansvar for ${day}`}
                   style={{ display: "block", marginTop: 8, width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}
