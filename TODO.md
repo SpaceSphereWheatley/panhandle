@@ -32,6 +32,9 @@ details live in `CHANGELOG.md`, not here.
 10. Let a user delete their own user. If the user is an owner, delete the list as well. 
     A user needs to be able to exist without a list, and anyone should be able to create lists, be members of multiple lists, and choose lists.
 
+11. Go through the whole repo to clean up the code, remove stale/old code and files, and restructure if needed.
+
+
 ## Done
 
 - [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
