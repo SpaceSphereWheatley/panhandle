@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import "./index.css";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
+import { ConfirmProvider } from "./context/ConfirmContext.jsx";
 import { ListUsersProvider } from "./context/ListUsersContext.jsx";
 import { RecurringProvider } from "./context/RecurringContext.jsx";
 import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
@@ -47,8 +48,10 @@ export default function App() {
     <InstallPromptProvider>
       <AuthProvider>
         <ToastProvider>
-          <SketchyFilterDefs />
-          <Root />
+          <ConfirmProvider>
+            <SketchyFilterDefs />
+            <Root />
+          </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
     </InstallPromptProvider>

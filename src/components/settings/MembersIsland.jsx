@@ -5,6 +5,8 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 
 // Island 2 (part 1) — "Vårt Hjem": member list + add member, each in its own
 // accordion per the spec ("Se nåværende, legg til"). Content-only — no own
@@ -13,22 +15,22 @@ import { AccordionRow } from "./AccordionRow.jsx";
 export function MembersIsland() {
   const { user: currentUser } = useAuth();
   const { listUsers, refresh } = useListUsers();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [newName, setNewName] = useState("");
-  const [msg, setMsg] = useState("");
   const [creds, setCreds] = useState(null);
 
   const full = listUsers.length >= 10;
 
   async function addMember() {
     const name = newName.trim();
-    setMsg("");
     if (!name) {
-      setMsg("Skriv inn et brukernavn");
+      toast("Skriv inn et brukernavn", { error: true });
       return;
     }
     const res = await api("/list-users", { method: "POST", body: JSON.stringify({ username: name }) });
     if (res.error) {
-      setMsg(res.error);
+      toast(res.error, { error: true });
       return;
     }
     setNewName("");
@@ -37,10 +39,10 @@ export function MembersIsland() {
   }
 
   async function removeMember(username) {
-    if (!confirm(`Fjerne ${username} fra listen?`)) return;
+    if (!(await confirm(`Fjerne ${username} fra listen?`, { title: "Fjerne medlem?", confirmLabel: "Fjern" }))) return;
     const res = await api(`/list-users/${encodeURIComponent(username)}`, { method: "DELETE" });
     if (res.error) {
-      alert(res.error);
+      toast(res.error, { error: true });
       return;
     }
     await refresh();
@@ -80,7 +82,6 @@ export function MembersIsland() {
         <button onClick={addMember} disabled={full} className="btn-primary mt-8" style={{ opacity: full ? 0.5 : 1 }}>
           + Legg til bruker
         </button>
-        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent-primary)" }}>{msg}</div>
       </AccordionRow>
 
       {creds && (

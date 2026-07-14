@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.19.0] — 2026-07-14
+
+### Added
+- A custom, app-styled confirmation dialog (`useConfirm`) replaces native
+  `confirm()` everywhere, and now consistently gates every
+  destructive/sensitive action — including two that previously had no
+  confirmation at all: deleting a planned meal day, and changing a user's
+  admin/owner access.
+- Shared loading and empty-state components. The shopping list and meal
+  planner now show a loading indicator on their initial fetch instead of
+  looking indistinguishable from a genuinely empty list/week, and several
+  modals (`MealPlanModal`, `MealCatalogueBrowseModal`,
+  `WeekIngredientsModal`, `IngredientPickerModal`) that used to render
+  blank while loading now show the same indicator.
+
+### Changed
+- Meal-plan save/delete are now optimistic (instant local update,
+  roll back with a toast on failure) instead of blocking the modal open on
+  a full network round trip, matching the shopping list's item-toggle
+  behavior.
+- Error and confirmation feedback across Settings (`AdminIsland`,
+  `MembersIsland`, `ProfileIsland`) and the item/meal edit modals is now
+  consistently a toast, replacing a mix of inline colored text (with two
+  different, inconsistent colors), native `alert()`, and silently dropped
+  failures.
+
 ## [1.18.3] — 2026-07-14
 
 ### Changed

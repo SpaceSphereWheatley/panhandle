@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button } from "../../design-system/index.js";
+import { Button, LoadingState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { buildIngredientRows } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
@@ -58,7 +58,7 @@ export function IngredientPickerModal({ ingredients, onClose }) {
     <Modal onClose={onClose}>
       <h3>Legg til på handlelisten</h3>
       <p className="cred-note">Velg hvilke ingredienser som skal på listen.</p>
-      <IngredientChecklist rows={rows || []} onToggle={toggleRow} />
+      {rows === null ? <LoadingState /> : <IngredientChecklist rows={rows} onToggle={toggleRow} />}
       <div className="actions">
         <Button variant="outline" onClick={onClose}>Avbryt</Button>
         <Button variant="primary" onClick={confirmAdd}>Legg til valgte</Button>

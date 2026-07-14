@@ -22,42 +22,6 @@ details live in `CHANGELOG.md`, not here.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-14. Error/feedback presentation is split across four channels — toast
-    (`ToastContext`), inline colored `<div>` messages (with the error
-    color itself inconsistent: `--status-danger` in some forms,
-    `--accent-primary` in others, e.g. `AdminIsland.jsx`/
-    `MembersIsland.jsx`), native `alert()`/`confirm()`, and silently
-    swallowed catches — sometimes mixed within the same file
-    (`AdminIsland.jsx` uses inline text for one error, `alert()` for
-    another). Standardize on toast with one consistent error color.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-16. Confirmation before destructive actions is inconsistent between
-    near-identical sibling actions: deleting a catalogue meal
-    (`MealEditModal`) confirms via `window.confirm`, deleting a planned
-    day (`MealPlanModal.deletePlanDay`) does not. Toggling a user's
-    admin/owner flag (`AdminIsland.setFlag`) has no confirmation, while
-    removing a member does. Make confirmation consistent for all
-    destructive/sensitive actions, ideally via a custom modal rather than
-    native `confirm()`.
-    _Value: Medium · Importance: Medium · Type: UX_
-17. `ShoppingListTab`/`MealsTab` have no `loading` state at all — the
-    initial fetch is visually indistinguishable from a genuinely empty
-    list/week. Three other ad hoc "loading" conventions exist elsewhere
-    (`AdminIsland`'s `"–"` placeholders, `MealPlanModal`'s bare modal
-    shell, `MealCatalogueBrowseModal`'s blank list). Add one shared
-    loading indicator/state and use it consistently.
-    _Value: Medium · Importance: Medium · Type: UX_
-18. No shared empty-state component exists; each screen has its own
-    copy/styling convention (shopping list's bespoke block vs. three
-    modals sharing a `.cred-note` paragraph class vs. the meals week/
-    members list having no distinct empty treatment at all).
-    _Value: Low · Importance: Low · Type: Consistency_
-19. Shopping-item toggle is optimistic (with rollback-on-failure and a
-    400ms local "resolve" animation), but `MealPlanModal.savePlan`/
-    `deletePlanDay` has no optimistic update at all — it blocks on a full
-    network round trip with the modal staying open. Bring meal editing in
-    line with the shopping-list pattern.
-    _Value: Medium · Importance: Low · Type: UX_
 21. `AppShell.jsx` keeps `ShoppingListTab`/`MealsTab` mounted-but-hidden
     after first visit, but `SettingsTab` is conditionally
     mounted/unmounted on every tab switch, so it re-fetches admin counts,
@@ -96,8 +60,39 @@ details live in `CHANGELOG.md`, not here.
     add ESLint as a devDependency with a matching config, or remove the
     dead comments.
     _Value: Low · Importance: Low · Type: Cleanup_
+
 ## Done
 
+- [x] Added `ConfirmContext`/`useConfirm` — a promise-based, app-styled
+      replacement for native `confirm()` (mirrors `ToastContext`'s shape).
+      Every destructive/sensitive action now confirms through it
+      consistently: catalogue-meal delete, deleting a planned day
+      (previously had no confirmation at all), forgetting a catalogue
+      item, admin/owner flag changes (previously had no confirmation),
+      password reset, and member removal. (1.19.0)
+- [x] Standardized error/feedback presentation on toast with one
+      consistent error color, replacing the mixed inline-`<div>`
+      (inconsistent `--status-danger`/`--accent-primary`)/`alert()`/
+      silent-catch channels across `ItemEditModal`, `MealEditModal`,
+      `AdminIsland`, `MembersIsland`, and `ProfileIsland`. (1.19.0)
+- [x] Added a shared `LoadingState`/`Spinner` (design-system) and used it
+      for `ShoppingListTab`/`MealsTab`'s initial fetch (previously no
+      loading state at all — indistinguishable from a genuinely empty
+      list/week) and to replace the ad hoc blank-list/bare-modal-shell
+      gaps in `MealPlanModal`, `MealCatalogueBrowseModal`,
+      `WeekIngredientsModal`, and `IngredientPickerModal`. (`AdminIsland`'s
+      per-tile `"–"` placeholders were left as-is — a full-screen spinner
+      would block the whole dashboard behind independently-loading
+      stats, which is a worse tradeoff for that layout.) (1.19.0)
+- [x] Added a shared `EmptyState` component (design-system) and used it
+      for the shopping list's empty block and the empty-list cases in
+      `SuggestionsModal`, `WeekIngredientsModal`, and
+      `MealCatalogueBrowseModal`, replacing the shared-but-unrelated
+      `.cred-note` paragraph class those previously borrowed. (1.19.0)
+- [x] `MealPlanModal`'s save/delete are now optimistic (update local plan
+      state immediately, roll back with a toast on failure), matching the
+      shopping-list toggle pattern, instead of blocking the modal open on
+      a full network round trip. (1.19.0)
 - [x] Every modal's Cancel/Save pair now uses the shared
       `design-system/components/forms/Button.jsx` instead of raw
       `<button className="cancel/save">`; the now-dead `.modal .save`/

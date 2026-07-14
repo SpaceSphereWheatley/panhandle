@@ -3,16 +3,19 @@ import { Modal } from "../Modal.jsx";
 import { Button, Input } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 
 // Add (id=null) or edit (id given) a meal_catalogue entry directly, outside
 // of planning a specific day. Reachable from the Måltider tab's FAB and from
 // each row of "Alle måltider".
 export function MealEditModal({ id, onClose, onSaved }) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [catalogue, setCatalogue] = useState([]);
   const [name, setName] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [labels, setLabels] = useState("");
-  const [msg, setMsg] = useState("");
   const [similarNote, setSimilarNote] = useState({ text: "", danger: false });
 
   useEffect(() => {
@@ -65,7 +68,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setMsg("Tomt navn");
+      toast("Tomt navn", { error: true });
       return;
     }
     const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
@@ -74,7 +77,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
       ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) })
       : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) });
     if (res.error) {
-      setMsg(res.error);
+      toast(res.error, { error: true });
       return;
     }
     onSaved();
@@ -85,7 +88,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
   async function deleteEntry() {
     const meal = catalogue.find((m) => m.id === id);
     if (!meal) return;
-    if (!confirm(`Slette «${meal.name}» fra måltidskatalogen? Dager den er planlagt på blir tomme.`)) return;
+    if (!(await confirm(`Slette «${meal.name}» fra måltidskatalogen? Dager den er planlagt på blir tomme.`, { title: "Slette måltid?", confirmLabel: "Slett" })))
+      return;
     await api(`/meals/${id}`, { method: "DELETE" });
     onSaved();
   }
@@ -115,7 +119,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
           <option value={l} key={l} />
         ))}
       </datalist>
-      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
         <Button variant="outline" onClick={onClose}>Avbryt</Button>
         <Button variant="primary" onClick={save}>Lagre</Button>

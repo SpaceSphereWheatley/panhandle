@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button } from "../../design-system/index.js";
+import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 
@@ -52,10 +52,12 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit }) {
         </select>
       )}
       <div style={{ marginTop: 10, maxHeight: "50vh", overflowY: "auto" }}>
-        {meals === null ? null : rows.length === 0 ? (
-          <p className="cred-note">
-            Ingen lagrede måltider{filter.trim() || labelFilter ? " som matcher søket" : " ennå"}.
-          </p>
+        {meals === null ? (
+          <LoadingState />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            description={`Ingen lagrede måltider${filter.trim() || labelFilter ? " som matcher søket" : " ennå"}.`}
+          />
         ) : (
           rows.map((m) => {
             const count = parseIngredients(m.ingredients).length;

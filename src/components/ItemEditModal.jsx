@@ -3,18 +3,21 @@ import { Modal } from "./Modal.jsx";
 import { Button, Input } from "../design-system/index.js";
 import { CATEGORIES, cap } from "../lib/shoppingUtils.js";
 import { api } from "../lib/api.js";
+import { useConfirm } from "../context/ConfirmContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [name, setName] = useState(cap(item.name));
   const [category, setCategory] = useState(item.category);
   const [qty, setQty] = useState(item.qty || 1);
   const [notes, setNotes] = useState(item.notes || "");
-  const [msg, setMsg] = useState("");
 
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setMsg("Tomt navn");
+      toast("Tomt navn", { error: true });
       return;
     }
     const res = await api(`/list/${item.id}`, {
@@ -22,7 +25,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
     });
     if (res.error) {
-      setMsg(res.error);
+      toast(res.error, { error: true });
       return;
     }
     onSaved();
@@ -43,9 +46,10 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   // and it stops being auto-suggested. Other lists' catalogues are unaffected.
   async function deleteFromCatalogue() {
     if (
-      !confirm(
-        `Glemme «${cap(item.name)}» helt fra listens lagrede varer? Kjøpshistorikken nullstilles, og den blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`
-      )
+      !(await confirm(
+        `Glemme «${cap(item.name)}» helt fra listens lagrede varer? Kjøpshistorikken nullstilles, og den blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`,
+        { title: "Glemme vare?", confirmLabel: "Glem" }
+      ))
     )
       return;
     await api(`/list/${item.id}/catalogue`, { method: "DELETE" });
@@ -68,7 +72,6 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       <Input id="item-edit-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
       <label htmlFor="item-edit-notes">Notat (mengde, beskrivelse o.l.)</label>
       <Input id="item-edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="F.eks. 2 liter" />
-      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
         <Button variant="outline" onClick={onClose}>Avbryt</Button>
         <Button variant="primary" onClick={save}>Lagre</Button>

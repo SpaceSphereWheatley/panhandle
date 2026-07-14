@@ -8,12 +8,16 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { MetricsSettings } from "./MetricsSettings.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 
 // Island 3 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
 // dashboard, then the heavier management tools accordioned.
 export function AdminIsland() {
   const { user: currentUser, isSuperAdmin } = useAuth();
   const { refresh: refreshListUsers } = useListUsers();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [userCount, setUserCount] = useState("–");
   const [listCount, setListCount] = useState("–");
   const [versionDetail, setVersionDetail] = useState("–");
@@ -23,7 +27,6 @@ export function AdminIsland() {
   const [iconGaps, setIconGaps] = useState([]);
   const [users, setUsers] = useState([]);
   const [newOwnerName, setNewOwnerName] = useState("");
-  const [ownerMsg, setOwnerMsg] = useState("");
   const [creds, setCreds] = useState(null);
 
   async function loadCounts() {
@@ -68,20 +71,30 @@ export function AdminIsland() {
   }, []);
 
   async function setFlag(username, flag, value) {
+    const flagLabel = flag === "is_admin" ? "admin" : "eier";
+    const verb = value ? `gjøre ${username} til ${flagLabel}` : `fjerne ${flagLabel}-tilgangen til ${username}`;
+    if (!(await confirm(`Er du sikker på at du vil ${verb}?`, { title: "Endre tilgang?", confirmLabel: "Bekreft", danger: !value }))) {
+      // The checkbox's native DOM state already flipped on click, ahead of
+      // this async confirmation — force a render so React's controlled
+      // `checked` prop (unchanged, since we're bailing) resyncs onto it.
+      setUsers((prev) => [...prev]);
+      return;
+    }
     const res = await api(`/admin/users/${encodeURIComponent(username)}/flags`, {
       method: "PATCH",
       body: JSON.stringify({ [flag]: value }),
     });
-    if (res.error) alert(res.error);
+    if (res.error) toast(res.error, { error: true });
     loadAllUsers();
     refreshListUsers();
   }
 
   async function resetPassword(username) {
-    if (!confirm(`Nullstille passordet til ${username}? Alle deres aktive økter logges ut.`)) return;
+    if (!(await confirm(`Nullstille passordet til ${username}? Alle deres aktive økter logges ut.`, { title: "Nullstille passord?", confirmLabel: "Nullstill" })))
+      return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}/reset-password`, { method: "POST" });
     if (res.error) {
-      alert(res.error);
+      toast(res.error, { error: true });
       return;
     }
     setCreds({ username: res.username, password: res.password });
@@ -89,14 +102,13 @@ export function AdminIsland() {
 
   async function createOwner() {
     const name = newOwnerName.trim();
-    setOwnerMsg("");
     if (!name) {
-      setOwnerMsg("Skriv inn et brukernavn");
+      toast("Skriv inn et brukernavn", { error: true });
       return;
     }
     const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ username: name }) });
     if (res.error) {
-      setOwnerMsg(res.error);
+      toast(res.error, { error: true });
       return;
     }
     setNewOwnerName("");
@@ -138,7 +150,6 @@ export function AdminIsland() {
           onChange={(e) => setNewOwnerName(e.target.value)}
         />
         <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
-        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--accent-primary)" }}>{ownerMsg}</div>
       </AccordionRow>
 
       <AccordionRow label="Alle brukere">

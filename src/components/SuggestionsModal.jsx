@@ -1,5 +1,5 @@
 import { Modal } from "./Modal.jsx";
-import { IconButton } from "../design-system/index.js";
+import { IconButton, EmptyState } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 
 export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
@@ -8,7 +8,7 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
       <h3>Sannsynligvis tom for</h3>
       <div>
         {suggestions.length === 0 ? (
-          <p className="cred-note">Ingen forslag akkurat nå.</p>
+          <EmptyState description="Ingen forslag akkurat nå." />
         ) : (
           suggestions.map((it) => (
             <div className="meal-browse-row suggest-row" key={it.id}>

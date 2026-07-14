@@ -3,18 +3,21 @@ import { Modal } from "../Modal.jsx";
 import { Button } from "../../design-system/components/forms/Button.jsx";
 import { Input } from "../../design-system/components/forms/Input.jsx";
 import { IconButton } from "../../design-system/components/forms/IconButton.jsx";
+import { LoadingState } from "../../design-system/components/data-display/Spinner.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
 
 // Plans/edits a single day: meal name (with a dropdown of known meals),
 // ingredients, and a responsible person (list member, or free-text "Annet").
-export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker }) {
+export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpenIngredientPicker }) {
   const { people } = useListUsers();
   const { schedule, ensureLoaded } = useRecurring();
   const toast = useToast();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [mealCatalogue, setMealCatalogue] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -88,7 +91,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
     return respSelect;
   }
 
-  async function savePlan() {
+  function savePlan() {
     const name = mealName.trim();
     const responsible = getResp();
     const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
@@ -96,16 +99,15 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       onClose();
       return;
     }
-    await api("/plan", {
-      method: "POST",
-      body: JSON.stringify({ plan_date: iso, meal_name: name || null, responsible, ingredients: ing }),
-    });
-    onSaved();
+    onClose();
+    onSavePlan(iso, { meal_name: name || null, responsible, ingredients: ing });
   }
 
   async function deletePlanDay() {
-    await api(`/plan/${iso}`, { method: "DELETE" });
-    onSaved();
+    if (!(await confirm("Fjerne måltidet for denne dagen?", { title: "Fjerne måltid?", confirmLabel: "Fjern" })))
+      return;
+    onClose();
+    onDeletePlanDay(iso);
   }
 
   // Persist the meal first so typed ingredients are remembered, then swap to
@@ -135,6 +137,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
     return (
       <Modal onClose={onClose}>
         <h3>Planlegg måltid</h3>
+        <LoadingState />
       </Modal>
     );
   }

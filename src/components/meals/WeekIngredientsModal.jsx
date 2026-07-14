@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button } from "../../design-system/index.js";
+import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
@@ -80,10 +80,12 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       <p className="cred-note">
         {weekLabel} ({dateRange}) · velg hvilke ingredienser som skal på listen.
       </p>
-      {rows && rows.length === 0 ? (
-        <p className="cred-note">Ingen ingredienser planlagt denne perioden.</p>
+      {rows === null ? (
+        <LoadingState />
+      ) : rows.length === 0 ? (
+        <EmptyState description="Ingen ingredienser planlagt denne perioden." />
       ) : (
-        <IngredientChecklist rows={rows || []} onToggle={toggleRow} />
+        <IngredientChecklist rows={rows} onToggle={toggleRow} />
       )}
       <div className="actions">
         <Button variant="outline" onClick={onClose}>Avbryt</Button>

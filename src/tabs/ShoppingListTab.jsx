@@ -11,7 +11,7 @@ import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, FabMenu } from "../design-system/index.js";
+import { Input, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -27,6 +27,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const intensity = useDesignIntensity();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -78,7 +79,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   useEffect(() => {
     if (!active) return;
-    loadCatalogue().then(loadList);
+    loadCatalogue().then(loadList).finally(() => setLoading(false));
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);
@@ -334,12 +335,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <div style={{ textAlign: "center", color: "var(--text-tertiary)", padding: "48px 16px", fontSize: "var(--text-sm)" }}>
-          Ingen varer på listen.
-          <br />
-          Legg til en vare over for å komme i gang.
-        </div>
+      {loading ? (
+        <LoadingState label="Laster handleliste..." />
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon="shopping-cart-simple"
+          title="Ingen varer på listen"
+          description="Legg til en vare over for å komme i gang."
+        />
       ) : (
         <>
           {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
