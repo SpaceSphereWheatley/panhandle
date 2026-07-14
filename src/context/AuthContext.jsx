@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef, useState } from "react";
-import { configureApi, rawLogin } from "../lib/api.js";
+import { configureApi, rawLogin, rawRegister, rawGoogleAuth } from "../lib/api.js";
 
 const AuthContext = createContext(null);
 
@@ -66,10 +66,10 @@ export function AuthProvider({ children }) {
     onUnauthorized: () => logout("expired"),
   });
 
-  async function login(username, password) {
-    setExpiredReason(null);
-    const { ok, data } = await rawLogin(username, password);
-    if (!ok) return { error: data.error || "Innlogging feilet" };
+  // Shared by every path that ends with "the server handed back a fresh
+  // login-shaped response" (login, register, Google sign-in, reset-password's
+  // auto-login) so each doesn't re-derive/store the auth shape separately.
+  function completeAuth(data) {
     const next = {
       token: data.token,
       user: data.user,
@@ -80,11 +80,36 @@ export function AuthProvider({ children }) {
     authRef.current = next;
     setAuth(next);
     persistAuth(next);
+  }
+
+  async function login(username, password) {
+    setExpiredReason(null);
+    const { ok, data } = await rawLogin(username, password);
+    if (!ok) return { error: data.error || "Innlogging feilet" };
+    completeAuth(data);
+    return { error: null };
+  }
+
+  async function register(fields) {
+    setExpiredReason(null);
+    const { ok, data } = await rawRegister(fields);
+    if (!ok) return { error: data.error || "Registrering feilet" };
+    completeAuth(data);
+    return { error: null };
+  }
+
+  async function loginWithGoogle(credential, listName) {
+    setExpiredReason(null);
+    const { ok, data } = await rawGoogleAuth(credential, listName);
+    if (!ok) return { error: data.error || "Google-innlogging feilet" };
+    completeAuth(data);
     return { error: null };
   }
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, logout, expiredReason }}>
+    <AuthContext.Provider
+      value={{ ...auth, login, register, loginWithGoogle, completeAuth, logout, expiredReason }}
+    >
       {children}
     </AuthContext.Provider>
   );

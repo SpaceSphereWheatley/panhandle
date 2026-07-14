@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.20.0] — 2026-07-14
+
+### Added
+- **Self-service signup, "Sign in with Google", and email-based password
+  recovery.** Anyone can now create their own household directly from the
+  login screen ("Opprett ny husstand") — no more asking the developer to
+  create an owner account by hand. New public `POST /register`,
+  `POST /auth/google`, `POST /forgot-password`, and `POST /reset-password`
+  endpoints on the Worker; signup is protected by Cloudflare Turnstile plus
+  an IP rate limit (mirroring the existing `login_attempts` pattern), and a
+  Google sign-in with a matching email links onto an existing password
+  account instead of creating a duplicate. Email delivery uses Resend.
+- **Add/change your email from Settings → Profile.** Existing accounts
+  (created via `/seed`, `/admin/owners`, or `/list-users`) have no email on
+  file, so without this there was no way for them to link a Google sign-in
+  or use `/forgot-password` short of a manual DB edit. New authenticated
+  `GET /account` and `POST /change-email` endpoints (the latter requires
+  the current password, same as `/change-password`, since email is what
+  password recovery trusts).
+
 ## [1.19.3] — 2026-07-14
 
 ### Changed
