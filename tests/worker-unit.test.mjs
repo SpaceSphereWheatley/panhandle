@@ -8,7 +8,7 @@ import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   cleanUsername, extractGlutenFree, capitalizeName, sanitizeLabels,
-  isSuperAdmin,
+  isSuperAdmin, escapeHtml,
 } from "../worker/index.js";
 
 describe("b64url / b64urlStr / b64urlDecode", () => {
@@ -278,5 +278,23 @@ describe("isSuperAdmin", () => {
     const env = { SUPERADMIN_USERNAMES: " alice , bob " };
     assert.equal(isSuperAdmin("alice", env), true);
     assert.equal(isSuperAdmin("bob", env), true);
+  });
+});
+
+describe("escapeHtml", () => {
+  test("escapes all five special characters", () => {
+    assert.equal(escapeHtml(`<script>alert("hi") & 'bye'</script>`),
+      "&lt;script&gt;alert(&quot;hi&quot;) &amp; &#39;bye&#39;&lt;/script&gt;");
+  });
+
+  test("leaves plain text untouched", () => {
+    assert.equal(escapeHtml("Kan vi kjøpe mer melk?"), "Kan vi kjøpe mer melk?");
+  });
+
+  test("neutralizes an HTML-injection attempt so it can't break out of the surrounding markup", () => {
+    const malicious = `</p><img src=x onerror=alert(1)><p>`;
+    const escaped = escapeHtml(malicious);
+    assert.ok(!escaped.includes("<img"), "raw tag must not survive escaping");
+    assert.equal(escaped, "&lt;/p&gt;&lt;img src=x onerror=alert(1)&gt;&lt;p&gt;");
   });
 });
