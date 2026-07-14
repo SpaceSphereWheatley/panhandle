@@ -6,26 +6,72 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+1. Let a user delete their own account. If the user is an owner, delete the
+   list as well. A user needs to be able to exist without a list, and anyone
+   should be able to create lists, be members of multiple lists, and choose
+   between them. Every user today is tied to exactly one `list_id` (see
+   CLAUDE.md's multi-tenant model) with no way to leave or delete an account
+   short of a raw DB edit — a real gap now that self-service signup (1.20.0)
+   lets anyone create one with no matching offboarding path. This is a
+   genuine data-model change (nullable list membership, an N:N
+   user↔list join instead of a single FK, a "choose/create list" UI), not a
+   small addition — worth scoping into phases (e.g. "delete my account" for
+   a single-list user first, multi-list membership after) rather than one
+   big migration.
+   _Value: High · Importance: Low · Type: Data model / Account lifecycle_
+
+2. Let the super-admin delete a user account outright. Today's admin/owner
+   endpoints (`PATCH /admin/users/{u}/flags`, `POST
+   /admin/users/{u}/reset-password`, `DELETE /list-users/{u}`) can demote,
+   reset, or remove someone from *their own* list, but nothing deletes a
+   user row — the only path is a raw SQL delete run by hand. More pressing
+   than it used to be: self-service signup (1.20.0) means abandoned,
+   duplicate, or test accounts can now pile up with no in-app cleanup path.
+   _Value: Medium · Importance: Medium · Type: Admin / Ops_
+
+3. Go through the whole repo to clean up the code, remove stale/old code
+   and files, and restructure if needed. A lot of this already happens
+   incrementally (dead CSS/comments removed across 1.18.x–1.19.x, the old
+   vanilla app deleted), but drift keeps reappearing — e.g. this session
+   found CLAUDE.md's own versioning section describing a two-file version
+   bump that's actually been consolidated into `shared/version.js`, and a
+   manual `public/CHANGELOG.md` copy step that's actually automated via
+   `scripts/sync-changelog.mjs`. Worth a pass over docs (CLAUDE.md itself)
+   as much as code.
+   _Value: Medium · Importance: Low · Type: Tech debt / Docs_
+
+4. Create some way for the user to give feedback. Nothing exists today —
+   no form, no `mailto:`, no feedback endpoint. For a 2-person household
+   app this doesn't need to be elaborate: even a simple "Send
+   tilbakemelding" link/modal in Settings (a `mailto:`, or a tiny `POST
+   /feedback` that emails via the Resend integration already wired up for
+   password recovery) would close the loop without needing a ticketing
+   system.
+   _Value: Medium · Importance: Low · Type: Feature_
+
+5. Update the screenshots on the landing page. `public/index.html`'s
+   "showcase" section isn't real screenshots — it's hand-coded CSS mockups
+   (`.mock-card`/`.mock-screen`/`.mock-row`, etc.) approximating the UI,
+   and they're now stale: they still show the old flat-row shopping list
+   styling, while the real app moved to solid-color tile cards in 1.18.0.
+   Worth deciding whether to keep hand-building the mockup (update it to
+   match) or switch to real captured screenshots of the live app.
+   _Value: Low · Importance: Low · Type: Content / Marketing_
+
+6. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
+   currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
+   identity/theme card, both under the "Meg & min app" island label.
+   Moving it above `ProfileIsland` (or above the island label entirely) is
+   a small JSX reorder, not a redesign.
+   _Value: Low · Importance: Low · Type: UX polish_
+
+7. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-
-2. Create some way for the user to give feedback
-
-4. Update the screenshots on the landing page
-
-7. In Settings, "Install Panhandle" should be on top
-
-9. Let the Super-admin delete users
-
-10. Let a user delete their own user. If the user is an owner, delete the list as well. 
-    A user needs to be able to exist without a list, and anyone should be able to create lists, be members of multiple lists, and choose lists.
-
-11. Go through the whole repo to clean up the code, remove stale/old code and files, and restructure if needed.
 
 
 ## Done
