@@ -155,16 +155,16 @@ const COMMON_ITEMS = [
 ];
 
 // ---------- JWT helpers (HS256, no external deps) ----------
-function b64url(input) {
+export function b64url(input) {
   return btoa(String.fromCharCode(...new Uint8Array(input)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 // Encode via UTF-8 bytes so payloads with non-ASCII characters (e.g. a
 // username with æ/ø/å) don't make btoa throw.
-function b64urlStr(str) {
+export function b64urlStr(str) {
   return b64url(new TextEncoder().encode(str));
 }
-function b64urlDecode(str) {
+export function b64urlDecode(str) {
   str = str.replace(/-/g, "+").replace(/_/g, "/");
   while (str.length % 4) str += "=";
   const bin = atob(str);
@@ -173,13 +173,13 @@ function b64urlDecode(str) {
 }
 // Constant-time string comparison so a JWT signature check can't be probed
 // byte-by-byte via response timing.
-function timingSafeEqual(a, b) {
+export function timingSafeEqual(a, b) {
   if (a.length !== b.length) return false;
   let mismatch = 0;
   for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return mismatch === 0;
 }
-async function hmac(secret, data) {
+export async function hmac(secret, data) {
   const key = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
@@ -187,13 +187,13 @@ async function hmac(secret, data) {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return b64url(sig);
 }
-async function signJwt(payload, secret) {
+export async function signJwt(payload, secret) {
   const header = b64urlStr(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = b64urlStr(JSON.stringify(payload));
   const sig = await hmac(secret, `${header}.${body}`);
   return `${header}.${body}.${sig}`;
 }
-async function verifyJwt(token, secret) {
+export async function verifyJwt(token, secret) {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [header, body, sig] = parts;
@@ -213,7 +213,7 @@ const PBKDF2_ITER = 100000;
 // can't be used to enumerate valid usernames by response latency.
 const DUMMY_PASS_HASH =
   "100000:AAAAAAAAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-async function hashPassword(password, saltBytes) {
+export async function hashPassword(password, saltBytes) {
   const salt = saltBytes || crypto.getRandomValues(new Uint8Array(16));
   const keyMaterial = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
@@ -226,7 +226,7 @@ async function hashPassword(password, saltBytes) {
   const saltB64 = b64url(salt.buffer);
   return `${PBKDF2_ITER}:${saltB64}:${hashB64}`;
 }
-async function verifyPassword(password, stored) {
+export async function verifyPassword(password, stored) {
   try {
     const [iterStr, saltB64, hashB64] = stored.split(":");
     const iterations = parseInt(iterStr, 10);
@@ -246,7 +246,7 @@ async function verifyPassword(password, stored) {
 // accounts. Charset omits visually ambiguous characters (0/O, 1/l/I) since
 // these are read off a screen and retyped by hand. ~12 chars, grouped
 // xxxx-xxxx-xxxx. Rejection sampling avoids modulo bias. No external deps.
-function genPassword() {
+export function genPassword() {
   const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const len = 12;
   const max = Math.floor(256 / charset.length) * charset.length;
@@ -263,7 +263,7 @@ function genPassword() {
 
 // Normalizes/validates a username from request input. Letters (incl. æøå),
 // digits, and . _ - only; 1-32 chars. Returns null if invalid.
-function cleanUsername(u) {
+export function cleanUsername(u) {
   const s = (u || "").trim();
   if (!s || s.length > 32) return null;
   if (!/^[\p{L}\p{N}._-]+$/u.test(s)) return null;
@@ -277,7 +277,7 @@ function cleanUsername(u) {
 // share the same catalogue row but stay distinct list lines (the add path's
 // merge check is notes-aware). If the marker is the entire input (e.g. just
 // "GF"), it's left untouched — there's no item name to attach it to.
-function extractGlutenFree(name) {
+export function extractGlutenFree(name) {
   let gf = false;
   const cleaned = (name || "")
     .replace(/\b(gf|glutenfri|glutenfritt)\b/gi, () => { gf = true; return " "; })
@@ -291,7 +291,7 @@ function extractGlutenFree(name) {
 // always capitalised ("brød" -> "Brød"), leaving the rest as typed (proper
 // nouns, acronyms and casing like "7 Up" survive). Applied wherever a catalogue
 // name is created or renamed; the frontend mirrors it at display time.
-function capitalizeName(name) {
+export function capitalizeName(name) {
   const s = (name || "").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -299,7 +299,7 @@ function capitalizeName(name) {
 // Cleans a free-form labels array for storage on meal_catalogue: trims each,
 // drops blanks, capitalises like capitalizeName, and dedupes case-insensitively
 // (keeping the first-seen casing) so "vegetar" and "Vegetar" don't both stick.
-function sanitizeLabels(labels) {
+export function sanitizeLabels(labels) {
   if (!Array.isArray(labels)) return [];
   const seen = new Set();
   const out = [];
@@ -362,7 +362,7 @@ async function mintToken(u, env) {
 // (which is deliberately per-list) via this env var — a comma-separated
 // allowlist of usernames, set as a Worker dashboard variable alongside
 // JWT_SECRET/SEED_SECRET, never committed.
-function isSuperAdmin(username, env) {
+export function isSuperAdmin(username, env) {
   const allowed = (env.SUPERADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   return allowed.includes((username || "").toLowerCase());
 }

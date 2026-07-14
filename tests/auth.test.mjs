@@ -1,0 +1,257 @@
+// Plain-Node integration test for login, token_version invalidation, and
+// login/change-password rate limiting (see CLAUDE.md's Testing conventions).
+// Spins up the real Worker locally against a local D1 via tests/_helpers.mjs.
+//
+// Run: node tests/auth.test.mjs
+import assert from "node:assert/strict";
+import { startWorker, SEED_SECRET } from "./_helpers.mjs";
+
+const PORT = 8800;
+const RUN_ID = Date.now();
+const PASS = "Test-password-123!";
+
+async function main() {
+  const worker = await startWorker({ port: PORT });
+  try {
+    await runTests(worker.base);
+    console.log("\nAll auth tests passed.");
+  } finally {
+    await worker.teardown();
+  }
+}
+
+function seedAccount(base, username, password) {
+  return fetch(`${base}/seed`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ secret: SEED_SECRET, accounts: [{ username, password }] }),
+  });
+}
+
+function login(base, username, password, extraHeaders = {}) {
+  return fetch(`${base}/login`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...extraHeaders },
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+function authedGet(base, path, token) {
+  return fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+}
+
+async function tokenFor(base, username, password) {
+  const res = await login(base, username, password);
+  assert.equal(res.status, 200, `login for ${username} should succeed`);
+  return (await res.json()).token;
+}
+
+// Adds a plain member to `ownerToken`'s list via POST /list-users, logs them
+// in, and returns their token. Owner-only endpoint, so ownerToken must
+// belong to an owner.
+async function addMemberAndLogin(base, ownerToken, memberUsername) {
+  const res = await fetch(`${base}/list-users`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${ownerToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ username: memberUsername }),
+  });
+  assert.equal(res.status, 200, "adding a member should succeed");
+  const { password } = await res.json();
+  return { password, token: await tokenFor(base, memberUsername, password) };
+}
+
+async function runTests(BASE) {
+  await testLoginSuccessAndFailure(BASE);
+  await testLoginRateLimiting(BASE);
+  await testTokenVersionOnChangePassword(BASE);
+  await testTokenVersionOnAdminResetPassword(BASE);
+  await testTokenVersionOnFlagsPatch(BASE);
+  await testTokenVersionOnSeedRerun(BASE);
+  await testChangePasswordRateLimiting(BASE);
+  await testSlidingRefreshTokenHeader(BASE);
+}
+
+async function testLoginSuccessAndFailure(BASE) {
+  const username = `auth_login_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+
+  let res = await login(BASE, username, PASS);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.user, username);
+  assert.equal(body.is_admin, 1, "the first new account in a fresh /seed call becomes admin");
+  assert.equal(body.is_owner, 1, "the first new account in a fresh /seed call becomes owner");
+  assert.ok(body.token);
+  assert.equal(typeof body.list_id, "number");
+
+  res = await login(BASE, username, "wrong-password");
+  assert.equal(res.status, 401);
+  const wrongPassBody = await res.json();
+
+  res = await login(BASE, `auth_nonexistent_${RUN_ID}`, "whatever");
+  assert.equal(res.status, 401);
+  const unknownUserBody = await res.json();
+  assert.equal(
+    unknownUserBody.error, wrongPassBody.error,
+    "wrong-password and unknown-username must return an identical generic error (no username enumeration)"
+  );
+
+  console.log("  - login: success returns correct fields; wrong password and unknown username are both 401 with an identical generic error");
+}
+
+async function testLoginRateLimiting(BASE) {
+  // A synthetic, unique-to-this-run IP so this test's lockout doesn't pollute
+  // the shared "unknown" bucket used by every other unheadered request in
+  // this file/other test files sharing the same local D1.
+  const ip = `10.42.${RUN_ID % 250}.1`;
+  const username = `auth_ratelimit_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+
+  for (let i = 0; i < 10; i++) {
+    const res = await login(BASE, username, "wrong", { "CF-Connecting-IP": ip });
+    assert.equal(res.status, 401, `attempt ${i + 1} should be a normal failed login, not yet rate-limited`);
+  }
+
+  // The 11th attempt, even with the correct password, must be blocked.
+  const res = await login(BASE, username, PASS, { "CF-Connecting-IP": ip });
+  assert.equal(res.status, 429);
+  const body = await res.json();
+  assert.match(body.error, /mange innloggingsforsøk/i);
+
+  console.log("  - login rate limiting: the 11th attempt within the window is blocked (429), even with the correct password");
+}
+
+async function testTokenVersionOnChangePassword(BASE) {
+  const username = `auth_tv_pw_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  const token = await tokenFor(BASE, username, PASS);
+
+  const changeRes = await fetch(`${BASE}/change-password`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ current_password: PASS, new_password: "New-password-456!" }),
+  });
+  assert.equal(changeRes.status, 200);
+  const changeBody = await changeRes.json();
+  assert.ok(changeBody.token, "change-password should return a fresh token in the response body");
+  assert.equal(
+    changeRes.headers.get("X-Refresh-Token"), null,
+    "change-password must not also carry X-Refresh-Token; the body token is authoritative"
+  );
+
+  assert.equal(
+    (await authedGet(BASE, "/list-users", token)).status, 401,
+    "the pre-change-password token should be invalidated"
+  );
+  assert.equal(
+    (await authedGet(BASE, "/list-users", changeBody.token)).status, 200,
+    "the fresh token from change-password's response body should work"
+  );
+
+  console.log("  - token_version bump: changing your own password invalidates the old token");
+}
+
+async function testTokenVersionOnAdminResetPassword(BASE) {
+  const adminUsername = `auth_tv_admin_${RUN_ID}`;
+  const memberUsername = `auth_tv_member_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, adminUsername, PASS)).status, 200);
+  const adminToken = await tokenFor(BASE, adminUsername, PASS);
+  const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
+
+  const resetRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(memberUsername)}/reset-password`, {
+    method: "POST", headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" },
+  });
+  assert.equal(resetRes.status, 200);
+  const { password: newPassword } = await resetRes.json();
+
+  assert.equal(
+    (await authedGet(BASE, "/list-users", memberTokenBefore)).status, 401,
+    "the member's pre-reset token should be invalidated once an admin resets their password"
+  );
+  assert.equal((await login(BASE, memberUsername, newPassword)).status, 200, "the new password should work");
+
+  console.log("  - token_version bump: an admin resetting a target's password invalidates the target's old token");
+}
+
+async function testTokenVersionOnFlagsPatch(BASE) {
+  const adminUsername = `auth_tv_flagsadmin_${RUN_ID}`;
+  const memberUsername = `auth_tv_flagsmember_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, adminUsername, PASS)).status, 200);
+  const adminToken = await tokenFor(BASE, adminUsername, PASS);
+  const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
+
+  const patchRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(memberUsername)}/flags`, {
+    method: "PATCH", headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ is_owner: true }),
+  });
+  assert.equal(patchRes.status, 200);
+
+  assert.equal(
+    (await authedGet(BASE, "/list-users", memberTokenBefore)).status, 401,
+    "the target's pre-PATCH token should be invalidated after any flag change"
+  );
+
+  console.log("  - token_version bump: an admin flags PATCH invalidates the target's old token");
+}
+
+async function testTokenVersionOnSeedRerun(BASE) {
+  const username = `auth_tv_seedrerun_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  const tokenBefore = await tokenFor(BASE, username, PASS);
+
+  const newPassword = "Another-password-789!";
+  const rerunRes = await seedAccount(BASE, username, newPassword);
+  assert.equal(rerunRes.status, 200, "re-running /seed for an existing username should succeed (password-reset path)");
+
+  assert.equal(
+    (await authedGet(BASE, "/list-users", tokenBefore)).status, 401,
+    "the pre-rerun token should be invalidated after re-running /seed for an existing username"
+  );
+  assert.equal((await login(BASE, username, newPassword)).status, 200, "the new password from the seed rerun should work");
+
+  console.log("  - token_version bump: re-running /seed for an existing username invalidates the old token");
+}
+
+async function testChangePasswordRateLimiting(BASE) {
+  // Distinct synthetic IP from testLoginRateLimiting's, so the two lockouts
+  // don't interfere with each other.
+  const ip = `10.43.${RUN_ID % 250}.1`;
+  const username = `auth_cp_ratelimit_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  const token = await tokenFor(BASE, username, PASS);
+
+  for (let i = 0; i < 10; i++) {
+    const res = await fetch(`${BASE}/change-password`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+      body: JSON.stringify({ current_password: "wrong-current-password", new_password: "New-password-999!" }),
+    });
+    assert.equal(res.status, 401, `attempt ${i + 1} should be a normal wrong-current-password failure`);
+  }
+
+  const res = await fetch(`${BASE}/change-password`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+    body: JSON.stringify({ current_password: PASS, new_password: "New-password-999!" }),
+  });
+  assert.equal(
+    res.status, 429,
+    "change-password shares /login's per-IP throttle: the 11th attempt is blocked even with the correct current password"
+  );
+
+  console.log("  - change-password rate limiting: shares the same per-IP throttle as /login");
+}
+
+async function testSlidingRefreshTokenHeader(BASE) {
+  const username = `auth_refresh_${RUN_ID}`;
+  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  const token = await tokenFor(BASE, username, PASS);
+
+  const res = await authedGet(BASE, "/list-users", token);
+  assert.equal(res.status, 200);
+  const refreshed = res.headers.get("X-Refresh-Token");
+  assert.ok(refreshed, "authenticated responses should carry a fresh X-Refresh-Token header");
+  assert.equal((await authedGet(BASE, "/list-users", refreshed)).status, 200, "the refreshed token should itself be usable");
+
+  console.log("  - sliding expiry: authenticated responses carry a usable X-Refresh-Token header");
+}
+
+main().catch((err) => { console.error(err); process.exitCode = 1; });
