@@ -1037,6 +1037,38 @@ export default {
       return authedJson({ ok: true, username: row.username, is_admin: newAdmin, is_owner: newOwner });
     }
 
+    // Delete any user account outright — gated beyond ordinary is_admin by
+    // isSuperAdmin (same double-gate as /admin/metrics), since this is a much
+    // more consequential operation than the other admin endpoints, which only
+    // ever demote/reset/remove-from-one-list rather than deleting a row.
+    // Refuses (doesn't cascade) if the target is the last admin or the last
+    // owner of their list, mirroring PATCH .../flags's guards exactly — the
+    // superadmin promotes/reassigns someone else first, same as any other
+    // admin already has to when demoting the last admin/owner.
+    const adminDelMatch = path.match(/^\/admin\/users\/([^/]+)$/);
+    if (adminDelMatch && method === "DELETE") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+      const target = decodeURIComponent(adminDelMatch[1]);
+      const row = await env.DB.prepare(
+        "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(target).first();
+      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      if (row.is_admin === 1) {
+        const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").first();
+        if (c.n <= 1) return authedJson({ error: "Kan ikke slette siste admin" }, 400);
+      }
+      if (row.is_owner === 1) {
+        const c = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
+        ).bind(row.list_id).first();
+        if (c.n <= 1) return authedJson({ error: "Listen ville miste sin eneste eier" }, 400);
+      }
+      await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
+        .bind(row.username).run();
+      return authedJson({ ok: true });
+    }
+
     // Site-wide usage metrics, across all lists (not just the caller's own).
     // Gated beyond is_admin by isSuperAdmin — see its definition above.
     if (path === "/admin/metrics" && method === "GET") {

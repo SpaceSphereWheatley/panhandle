@@ -16,15 +16,6 @@ details live in `CHANGELOG.md`, not here.
    deliberately deferred.
    _Value: High · Importance: Low · Type: Data model / Account lifecycle_
 
-2. Let the super-admin delete a user account outright. Today's admin/owner
-   endpoints (`PATCH /admin/users/{u}/flags`, `POST
-   /admin/users/{u}/reset-password`, `DELETE /list-users/{u}`) can demote,
-   reset, or remove someone from *their own* list, but nothing deletes a
-   user row — the only path is a raw SQL delete run by hand. More pressing
-   than it used to be: self-service signup (1.20.0) means abandoned,
-   duplicate, or test accounts can now pile up with no in-app cleanup path.
-   _Value: Medium · Importance: Medium · Type: Admin / Ops_
-
 3. Go through the whole repo to clean up the code, remove stale/old code
    and files, and restructure if needed. A lot of this already happens
    incrementally (dead CSS/comments removed across 1.18.x–1.19.x, the old
@@ -72,6 +63,12 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Let the super-admin delete a user account outright (Settings →
+      Administrasjon → "Alle brukere" → "Slett", superadmin-only). New
+      `DELETE /admin/users/{u}`, gated by `is_admin` + `isSuperAdmin` (same
+      double-gate as `GET /admin/metrics`). Refuses (doesn't cascade) if the
+      target is the last admin site-wide or the last owner of their list,
+      mirroring `PATCH /admin/users/{u}/flags`'s existing guards. (1.21.1)
 - [x] Let a user delete their own account (Settings → Profile → "Slett
       konto"), phase 1 of the account-lifecycle item — still one list per
       user. A non-owner (or an owner with a co-owner) just leaves; the
