@@ -8,17 +8,14 @@ import { RecurringIsland } from "./RecurringIsland.jsx";
 // islands." Owners see both sections divided inside one card; non-owner
 // members (no Medlemmer access) just get Recurring's content in the card.
 // Reads isOwner itself via useAuth() (rather than taking it as a prop),
-// matching AdminIsland's self-contained permission check.
+// matching AdminIsland's self-contained permission check. No manual divider
+// needed between the two — RecurringIsland's AccordionRow supplies its own
+// top border, same as it does between MembersIsland's two accordions.
 export function HomeIsland() {
   const { isOwner } = useAuth();
   return (
     <Card padding="lg" style={{ marginBottom: 16 }}>
-      {isOwner && (
-        <>
-          <MembersIsland />
-          <div style={{ borderTop: "1px solid var(--border-default)", margin: "16px 0" }} />
-        </>
-      )}
+      {isOwner && <MembersIsland />}
       <RecurringIsland />
     </Card>
   );
