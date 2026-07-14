@@ -95,23 +95,23 @@ details live in `CHANGELOG.md`, not here.
 - [x] Every modal's Cancel/Save pair now uses the shared
       `design-system/components/forms/Button.jsx` instead of raw
       `<button className="cancel/save">`; the now-dead `.modal .save`/
-      `.modal .cancel` CSS rules were removed. (1.18.3)
+      `.modal .cancel` CSS rules were removed. (1.18.4)
 - [x] Migrated every hand-copied inline-style text field
       (`ItemEditModal`, `MealEditModal`, `MealPlanModal`'s
       responsible-person field, `AdminIsland`, `MembersIsland`,
       `ProfileIsland`'s password fields, `RecurringIsland`) onto the
       shared `design-system/components/forms/Input.jsx`, which now also
       forwards `id`/arbitrary props so it works with `htmlFor` labels and
-      native attributes like `list`/`min`. (1.18.3)
+      native attributes like `list`/`min`. (1.18.4)
 - [x] Migrated real icon-only buttons (`InstallBanner`'s dismiss,
       `MealPlanModal`'s dropdown chevron, `SuggestionsModal`'s add chip)
       onto `design-system/components/forms/IconButton.jsx`, which now
       also accepts a `style` override for cases needing custom
       positioning. (`LoginScreen`'s show/hide toggle is text-labeled, not
-      icon-only, so it was left as-is.) (1.18.3)
+      icon-only, so it was left as-is.) (1.18.4)
 - [x] `MembersIsland.jsx`'s hand-rolled "Eier"/"Admin" pills now use the
       shared `Badge` component; the now-dead `.badge-tag` CSS was removed.
-      (1.18.3)
+      (1.18.4)
 - [x] Routed the app's actually-duplicated semantic icons (the
       expand/collapse chevron in `ShoppingListTab`/`AccordionRow`, and the
       list/grid view toggle) through `UiIcon`/`uiIcons.js` instead of raw
@@ -121,11 +121,11 @@ details live in `CHANGELOG.md`, not here.
       Design-system primitives (`Button`, `IconButton`, `Input`,
       `FabMenu`, `Checkbox`, `Header`, `ListItem`) keep rendering their own
       raw icon prop directly, by design — they're generic icon slots, not
-      duplicates of `UiIcon`'s semantic lookup. (1.18.3)
+      duplicates of `UiIcon`'s semantic lookup. (1.18.4)
 - [x] `RecurringContext.jsx`'s save/reload path returns `{ error }`;
       `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) now reads it
       and surfaces failures via toast instead of dropping them silently.
-      (1.18.2)
+      (1.18.3)
 - [x] Investigated whether `ShoppingListTab`'s 7s poll can interrupt the
       400ms local item-resolve animation: not reproducible — the toggled
       item's `bought` state flips optimistically before the resolve delay
@@ -133,28 +133,28 @@ details live in `CHANGELOG.md`, not here.
       a local timer untouched by `loadList`, and React's style diffing
       never reassigns `animation` to the DOM node when the computed string
       is unchanged between renders, so a same-state poll mid-window can't
-      restart the CSS animation. No code change made. (1.18.2)
+      restart the CSS animation. No code change made. (1.18.3)
 - [x] `CredentialsModal`'s `copyInvite` now surfaces clipboard
       success/failure via toast and only closes the modal after a
-      successful copy. (1.18.2)
+      successful copy. (1.18.3)
 - [x] Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) are now
       keyboard/screen-reader reachable (`role="button" tabIndex={0}` +
       Enter/Space toggles bought), matching `PwaInstallCTA.jsx`'s pattern.
-      (1.18.1)
+      (1.18.2)
 - [x] Modals (`Sheet.jsx`) now move focus in on open, trap `Tab`, restore
       focus to the trigger on close, and expose `role="dialog"`/
-      `aria-modal`, matching `FabMenu.jsx`'s focus-move approach. (1.18.1)
+      `aria-modal`, matching `FabMenu.jsx`'s focus-move approach. (1.18.2)
 - [x] Form labels in `ItemEditModal`, `MealEditModal`, `MealPlanModal`, and
       the admin/member/recurring settings forms are now programmatically
       associated with their inputs (`htmlFor`/`id`, or `aria-label`/
       `aria-labelledby`); `ProfileIsland`'s password fields gained visible
-      labels. (1.18.1)
+      labels. (1.18.2)
 - [x] `--text-tertiary` in light mode moved from `--nv-50` to `--nv-40`
       (~6.5:1 contrast against card/page surfaces, up from ~3.9–4.1:1) to
-      meet WCAG AA. (1.18.1)
-- [x] `Header.jsx`'s back-caret button now has an `aria-label`. (1.18.1)
+      meet WCAG AA. (1.18.2)
+- [x] `Header.jsx`'s back-caret button now has an `aria-label`. (1.18.2)
 - [x] The toast container now has `role="status"`/`aria-live="polite"`.
-      (1.18.1)
+      (1.18.2)
 - [x] CI pinned `trufflesecurity/trufflehog@main` (a moving ref) — pinned to
       the `v3.95.9` release commit SHA instead. (1.15.0)
 - [x] No `Escape` key handler on any modal — a `keydown` listener on

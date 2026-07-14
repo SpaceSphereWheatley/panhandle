@@ -67,7 +67,7 @@
   different, inconsistent colors), native `alert()`, and silently dropped
   failures.
 
-## [1.18.3] — 2026-07-14
+## [1.18.4] — 2026-07-14
 
 ### Changed
 - Consolidated modal Cancel/Save button pairs, hand-copied text inputs,
@@ -79,7 +79,7 @@
   instead of raw hand-sized icon tags, so the same icon renders at one
   consistent size everywhere it's used as a plain indicator.
 
-## [1.18.2] — 2026-07-14
+## [1.18.3] — 2026-07-14
 
 ### Fixed
 - Recurring-meal responsibility save failures (`RecurringIsland`) are now
@@ -87,7 +87,7 @@
 - `CredentialsModal`'s invite-copy button now shows success/failure via
   toast and only closes the modal after a successful copy.
 
-## [1.18.1] — 2026-07-14
+## [1.18.2] — 2026-07-14
 
 ### Accessibility
 - Shopping-list item cards (`ItemCard`/`ItemGridCard`) are now reachable and
@@ -108,6 +108,21 @@
 - `Header`'s back button now has an `aria-label`.
 - The toast container now announces itself to screen readers via
   `role="status"`/`aria-live="polite"`.
+
+## [1.18.1] — 2026-07-14
+
+### Fixed
+- **Switching tabs still visibly "flew in" cards from the top-left corner**,
+  even after the fix that kept Handleliste/Måltider mounted across tab
+  switches (1.17.4-era). That fix stopped the data from resetting, but the
+  item/day cards use Framer Motion's `layout` animation, which measures
+  position via `getBoundingClientRect()` — and a `display: none` pane (how
+  inactive tabs are hidden) measures as a zero-size box pinned at `(0,0)`.
+  Reactivating the tab made Framer see a jump from that stale `(0,0)` rect to
+  the real position and animate it, i.e. every card flying in from the
+  top-left for one frame. `layout` is now only enabled while the tab is
+  actually active, so its first measurement on reactivation is the real
+  position with nothing to interpolate from.
 
 ## [1.18.0] — 2026-07-13
 

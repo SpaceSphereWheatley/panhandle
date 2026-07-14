@@ -344,7 +344,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -378,7 +378,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
             </div>
           )}
         </>
@@ -467,7 +467,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, active) {
   return (
     <div style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false}>
@@ -483,6 +483,7 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
               resolving={!!resolvingIds?.has(item.id)}
               onToggle={onToggle}
               onEdit={onEdit}
+              active={active}
             />
           );
         })}
