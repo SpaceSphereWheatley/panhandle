@@ -1,4 +1,5 @@
 import { Card } from "../../design-system/index.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { MembersIsland } from "./MembersIsland.jsx";
 import { RecurringIsland } from "./RecurringIsland.jsx";
 
@@ -6,7 +7,10 @@ import { RecurringIsland } from "./RecurringIsland.jsx";
 // single visual container, per the spec's "4 distinct visual container
 // islands." Owners see both sections divided inside one card; non-owner
 // members (no Medlemmer access) just get Recurring's content in the card.
-export function HomeIsland({ isOwner }) {
+// Reads isOwner itself via useAuth() (rather than taking it as a prop),
+// matching AdminIsland's self-contained permission check.
+export function HomeIsland() {
+  const { isOwner } = useAuth();
   return (
     <Card padding="lg" style={{ marginBottom: 16 }}>
       {isOwner && (

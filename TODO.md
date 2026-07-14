@@ -6,189 +6,155 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. Grid view: a category with a single item leaves the other 1-2 cells in
-   its row visibly empty (each `CatSection`'s grid in
-   `src/tabs/ShoppingListTab.jsx` is its own 3-col grid, so a lone item
-   doesn't reflow into the next category's row).
-   Looks unfinished, especially with several single-item categories in a
-   row. Either flow items into one continuous grid across category
-   boundaries, or only show the category header inline without a hard grid
-   break per group.
-   _Value: Low · Importance: Low · Type: UX (visual polish)_
-2. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+1. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-3. Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) render as plain
-   `<div>`s with `onClick`/long-press only — no `role="button"`,
-   `tabIndex`, or keyboard handler — so the core toggle-bought/edit
-   interaction is completely unreachable via keyboard or screen reader.
-   `src/components/settings/PwaInstallCTA.jsx` already has the right
-   pattern (`role="button" tabIndex={0}` + Enter/Space `onKeyDown`) for
-   the same div-as-button case; apply it here too.
-   _Value: High · Importance: High · Type: Accessibility_
-4. Modals (`Sheet.jsx`, shared by all ~10 modals via `Modal.jsx`) never
-   move focus in on open, never trap `Tab` (focus can escape to the page
-   behind the scrim), and never restore focus to the trigger on close; no
-   `role="dialog"`/`aria-modal` either. `FabMenu.jsx` already does
-   focus-move + `role="menu"` correctly for its own overlay — port the
-   same approach to `Sheet.jsx`.
-   _Value: High · Importance: High · Type: Accessibility_
-5. No form `<label>` in the app is programmatically associated with its
-   input (zero `htmlFor`/matching `id` anywhere in `src/`) — screen
-   readers get no accessible name from labels next to inputs in
-   `ItemEditModal`, `MealEditModal`, `MealPlanModal`, admin/member forms.
-   `ProfileIsland`'s password fields have no visible label at all, only a
-   placeholder.
-   _Value: High · Importance: High · Type: Accessibility_
-6. `--text-tertiary` in light mode
-   (`src/design-system/tokens/colors.css:125`) computes to ~3.9–4.1:1
-   contrast against card/page surfaces — below the 4.5:1 WCAG AA
-   threshold for normal text — and is used pervasively (form labels via
-   `index.css:190`, empty-state copy, inactive tab labels, sync-status
-   text). Dark mode's equivalent token is fine (~5.16:1); only the
-   light-mode value needs adjusting.
-   _Value: High · Importance: Medium · Type: Accessibility_
-7. `Header.jsx`'s back-caret button has no `aria-label` (currently dead
-   since `AppShell` never wires an `onBack`, but would ship unlabeled the
-   moment it is).
-   _Value: Low · Importance: Medium · Type: Accessibility_
-8. `design-system/components/forms/IconButton.jsx` enforces an
-   `aria-label` via its required `label` prop, but has zero real usages —
-   every actual icon-only button in the app is hand-rolled instead
-   (`InstallBanner`, `LoginScreen`, `MealPlanModal`'s chevron,
-   `SuggestionsModal`'s add chip), so labeling is consistent only by
-   luck. Migrate icon-only buttons onto `IconButton`.
-   _Value: Medium · Importance: Medium · Type: Accessibility_
-9. The toast container (`src/context/ToastContext.jsx`, `#toast`) has no
-   `aria-live`/`role="status"`, so screen reader users are never notified
-   when a toast appears.
-   _Value: Low · Importance: Medium · Type: Accessibility_
-10. Three styling systems coexist permanently rather than mid-migration
-    (`src/index.css`'s own header comment admits it): the token-driven
-    `src/design-system/`, legacy `index.css` classnames (`.cancel`,
-    `.save`, `.btn-primary`), and hand-copied inline `style={{}}` objects.
-    Every modal's own Cancel/Save pair uses raw
-    `<button className="cancel/save">` instead of the shared `Button`
-    component. Consolidate onto `design-system/components/forms/Button.jsx`.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-11. `Input` (`design-system/components/forms/Input.jsx`) is used in only 2
-    files (`LoginScreen`, the shopping-list add-item field); every other
-    text field (`ItemEditModal`, `MealEditModal`, `MealPlanModal`'s
-    responsible-person field, `AdminIsland`, `MembersIsland`,
-    `ProfileIsland`'s password fields, `RecurringIsland`) hand-copies its
-    own inline-style object, and these copies have already drifted
-    (`ProfileIsland`'s password fields are missing `background`/`color`
-    tokens the others have). Migrate to the shared `Input`.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-12. `Badge` (`design-system/components/data-display/Badge.jsx`) has 0
-    usages anywhere — `MembersIsland.jsx` hand-rolls "Eier"/"Admin" pills
-    as raw `<span className="badge-tag">` instead. Migrate to `Badge`.
-    _Value: Low · Importance: Low · Type: Consistency_
-13. Phosphor icons are rendered via a raw `<i className="ph ph-{slug}">`
-    with a hand-set `fontSize` almost everywhere, even though a semantic
-    wrapper (`UiIcon.jsx` + `uiIcons.js`) exists specifically to
-    centralize icon choice/sizing — it's used at only 3 call sites. The
-    same semantic icon (e.g. chevron-down) currently renders at
-    13/14/15px in different places, and only `TabBar` ever applies the
-    `ph-fill` active-weight variant.
-    _Value: Low · Importance: Low · Type: Consistency_
-14. Error/feedback presentation is split across four channels — toast
-    (`ToastContext`), inline colored `<div>` messages (with the error
-    color itself inconsistent: `--status-danger` in some forms,
-    `--accent-primary` in others, e.g. `AdminIsland.jsx`/
-    `MembersIsland.jsx`), native `alert()`/`confirm()`, and silently
-    swallowed catches — sometimes mixed within the same file
-    (`AdminIsland.jsx` uses inline text for one error, `alert()` for
-    another). Standardize on toast with one consistent error color.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-15. `RecurringContext.jsx`'s save/reload path returns `{ error }`, but
-    `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) never reads
-    it — a designed error-feedback path that's dead on arrival, silently
-    dropping save failures.
-    _Value: Medium · Importance: Medium · Type: Bug_
-16. Confirmation before destructive actions is inconsistent between
-    near-identical sibling actions: deleting a catalogue meal
-    (`MealEditModal`) confirms via `window.confirm`, deleting a planned
-    day (`MealPlanModal.deletePlanDay`) does not. Toggling a user's
-    admin/owner flag (`AdminIsland.setFlag`) has no confirmation, while
-    removing a member does. Make confirmation consistent for all
-    destructive/sensitive actions, ideally via a custom modal rather than
-    native `confirm()`.
-    _Value: Medium · Importance: Medium · Type: UX_
-17. `ShoppingListTab`/`MealsTab` have no `loading` state at all — the
-    initial fetch is visually indistinguishable from a genuinely empty
-    list/week. Three other ad hoc "loading" conventions exist elsewhere
-    (`AdminIsland`'s `"–"` placeholders, `MealPlanModal`'s bare modal
-    shell, `MealCatalogueBrowseModal`'s blank list). Add one shared
-    loading indicator/state and use it consistently.
-    _Value: Medium · Importance: Medium · Type: UX_
-18. No shared empty-state component exists; each screen has its own
-    copy/styling convention (shopping list's bespoke block vs. three
-    modals sharing a `.cred-note` paragraph class vs. the meals week/
-    members list having no distinct empty treatment at all).
-    _Value: Low · Importance: Low · Type: Consistency_
-19. Shopping-item toggle is optimistic (with rollback-on-failure and a
-    400ms local "resolve" animation), but `MealPlanModal.savePlan`/
-    `deletePlanDay` has no optimistic update at all — it blocks on a full
-    network round trip with the modal staying open. Bring meal editing in
-    line with the shopping-list pattern.
-    _Value: Medium · Importance: Low · Type: UX_
-20. `ShoppingListTab`'s 7s poll (`loadList`) can in principle fire
-    mid-way through the 400ms local item-resolve animation window,
-    interrupting it. Confirm whether this is observable in practice and
-    guard the resolve window against an in-flight poll if so.
-    _Value: Low · Importance: Low · Type: Bug (needs investigation)_
-21. `AppShell.jsx` keeps `ShoppingListTab`/`MealsTab` mounted-but-hidden
-    after first visit, but `SettingsTab` is conditionally
-    mounted/unmounted on every tab switch, so it re-fetches admin counts,
-    user lists, and recurring-meal config from scratch every time. Align
-    it with the same persist-after-first-visit pattern.
-    _Value: Medium · Importance: Low · Type: Performance_
-22. Admin-only content is gated at the top `SettingsTab` level (whole
-    island incl. heading), while owner-only content is gated one level
-    down inside `HomeIsland`'s body — two different mechanisms for
-    structurally similar "privileged section" cases. Pick one pattern and
-    apply it consistently.
-    _Value: Low · Importance: Low · Type: Consistency_
-23. Touch targets vary widely for conceptually similar controls:
-    bottom-nav tab buttons ~40px tall, the suggest-item add button and
-    meal-name dropdown arrow are 32px, ingredient checkboxes are 20px, vs.
-    the FAB (56px) and FabMenu items (48px) used for similar "add"
-    actions. Bring these closer to a consistent ~44–48px minimum.
-    _Value: Low · Importance: Low · Type: UX (visual polish)_
-24. `ItemCard`/`ItemGridCard`/`MealsTab` use Framer Motion for enter/
-    exit/layout animation, but `AdminIsland`/`MembersIsland` rows mount/
-    unmount with no animation. Extend the same motion treatment
-    (respecting the existing `prefers-reduced-motion`/design-intensity
-    gating) to settings-tab lists.
-    _Value: Low · Importance: Low · Type: UX (visual polish)_
-25. `Sheet.jsx`'s `title` prop is fully wired but never passed anywhere —
-    every modal hand-rolls its own `<h3>` instead. Either adopt it
-    everywhere or remove the prop. Also remove the orphaned
-    `.theme-toggle`/`.setrow` CSS rules in `index.css` (zero remaining
-    references since `ProfileIsland` switched to `SegmentedControl`).
-    _Value: Low · Importance: Low · Type: Cleanup_
-26. 8 `// eslint-disable-next-line react-hooks/exhaustive-deps` comments
-    exist across the codebase (`ShoppingListTab`, `MealsTab`,
-    `MealPlanModal`, `MealEditModal`, `RecurringIsland`), but ESLint
-    isn't installed (absent from `package.json`/`node_modules`) and no
-    config file exists, so these directives are currently inert. Either
-    add ESLint as a devDependency with a matching config, or remove the
-    dead comments.
-    _Value: Low · Importance: Low · Type: Cleanup_
-27. `CredentialsModal`'s `copyInvite` swallows
-    `navigator.clipboard.writeText` failures silently (no toast either
-    way) and closes the modal unconditionally regardless of whether the
-    copy succeeded. Surface success/failure via toast and only close
-    after a successful copy.
-    _Value: Low · Importance: Low · Type: Bug_
 
 ## Done
 
+- [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
+      taking it as a prop threaded from `SettingsTab.jsx`, matching
+      `AdminIsland`'s already-self-contained permission check — one
+      consistent pattern ("each settings island determines its own
+      permission-gated rendering via `useAuth()` directly") instead of two.
+      (1.19.3)
+- [x] Adopted `Sheet.jsx`'s `title` prop everywhere: `Modal.jsx` now
+      forwards a `title` prop to `Sheet`, and all ~11 modal call sites
+      (`ItemEditModal`, `MealEditModal`, `MealPlanModal` ×2,
+      `SuggestionsModal`, `WeekIngredientsModal`,
+      `MealCatalogueBrowseModal`, `IngredientPickerModal`,
+      `InstallHelpModal`, `CredentialsModal`, `ChangelogModal`,
+      `ConfirmContext`) pass it instead of hand-rolling their own `<h3>` —
+      the now-dead `.modal h3` CSS rule was removed. Also removed the
+      orphaned `.theme-toggle` CSS rule. (`.setrow`, also flagged as
+      orphaned, turned out to now be in active use by `MetricsSettings.jsx`
+      — left in place.) (1.19.3)
+- [x] Removed the 8 dead `// eslint-disable-next-line
+      react-hooks/exhaustive-deps` comments (`ShoppingListTab`, `MealsTab`,
+      `useDeployVersionCheck`, `RecurringIsland`, `MealPlanModal`,
+      `IngredientPickerModal`, `MealEditModal`, `WeekIngredientsModal`) —
+      ESLint isn't installed or configured, so they were inert. (1.19.3)
+- [x] Investigated grid-view single-item category rows: the shopping list
+      already renders one continuous flat grid across category boundaries
+      (aisle-sorted, no per-category `CatSection`/grid break) rather than
+      per-category grids — that restructuring must have already happened
+      by the time this item was written. Re-verified there's no visible
+      "unfinished row" artifact; no code change needed. (1.19.2)
+- [x] Bumped the suggest-item add button (`SuggestionsModal`) and the
+      meal-name dropdown arrow (`MealPlanModal`) from 32px to 48px/40px
+      respectively, closer to the ~44–48px touch-target guideline.
+      (Bottom-nav tab buttons and the ingredient-row checkboxes were
+      re-measured and already meet it — the nav button's full flex column
+      is ~58px tall, and the ingredient checklist's whole row, not just
+      the 24px checkbox glyph, is the actual ~48px tap target — so neither
+      needed a change.) (1.19.2)
+- [x] Extended the same Framer Motion enter/exit/layout treatment used by
+      `ItemCard`/`ItemGridCard`/`MealsTab` (respecting
+      `prefers-reduced-motion`/design-intensity gating via
+      `useMotionConfig`) to `AdminIsland`/`MembersIsland`'s user rows.
+      (1.19.2)
+- [x] `AppShell.jsx` now keeps `SettingsTab` mounted-but-hidden after first
+      visit (same persist-after-first-visit pattern already used for
+      `ShoppingListTab`/`MealsTab`), instead of mounting/unmounting it on
+      every tab switch — it no longer re-fetches admin counts, user lists,
+      and recurring-meal config from scratch every time. (1.19.1)
+- [x] Added `ConfirmContext`/`useConfirm` — a promise-based, app-styled
+      replacement for native `confirm()` (mirrors `ToastContext`'s shape).
+      Every destructive/sensitive action now confirms through it
+      consistently: catalogue-meal delete, deleting a planned day
+      (previously had no confirmation at all), forgetting a catalogue
+      item, admin/owner flag changes (previously had no confirmation),
+      password reset, and member removal. (1.19.0)
+- [x] Standardized error/feedback presentation on toast with one
+      consistent error color, replacing the mixed inline-`<div>`
+      (inconsistent `--status-danger`/`--accent-primary`)/`alert()`/
+      silent-catch channels across `ItemEditModal`, `MealEditModal`,
+      `AdminIsland`, `MembersIsland`, and `ProfileIsland`. (1.19.0)
+- [x] Added a shared `LoadingState`/`Spinner` (design-system) and used it
+      for `ShoppingListTab`/`MealsTab`'s initial fetch (previously no
+      loading state at all — indistinguishable from a genuinely empty
+      list/week) and to replace the ad hoc blank-list/bare-modal-shell
+      gaps in `MealPlanModal`, `MealCatalogueBrowseModal`,
+      `WeekIngredientsModal`, and `IngredientPickerModal`. (`AdminIsland`'s
+      per-tile `"–"` placeholders were left as-is — a full-screen spinner
+      would block the whole dashboard behind independently-loading
+      stats, which is a worse tradeoff for that layout.) (1.19.0)
+- [x] Added a shared `EmptyState` component (design-system) and used it
+      for the shopping list's empty block and the empty-list cases in
+      `SuggestionsModal`, `WeekIngredientsModal`, and
+      `MealCatalogueBrowseModal`, replacing the shared-but-unrelated
+      `.cred-note` paragraph class those previously borrowed. (1.19.0)
+- [x] `MealPlanModal`'s save/delete are now optimistic (update local plan
+      state immediately, roll back with a toast on failure), matching the
+      shopping-list toggle pattern, instead of blocking the modal open on
+      a full network round trip. (1.19.0)
+- [x] Every modal's Cancel/Save pair now uses the shared
+      `design-system/components/forms/Button.jsx` instead of raw
+      `<button className="cancel/save">`; the now-dead `.modal .save`/
+      `.modal .cancel` CSS rules were removed. (1.18.4)
+- [x] Migrated every hand-copied inline-style text field
+      (`ItemEditModal`, `MealEditModal`, `MealPlanModal`'s
+      responsible-person field, `AdminIsland`, `MembersIsland`,
+      `ProfileIsland`'s password fields, `RecurringIsland`) onto the
+      shared `design-system/components/forms/Input.jsx`, which now also
+      forwards `id`/arbitrary props so it works with `htmlFor` labels and
+      native attributes like `list`/`min`. (1.18.4)
+- [x] Migrated real icon-only buttons (`InstallBanner`'s dismiss,
+      `MealPlanModal`'s dropdown chevron, `SuggestionsModal`'s add chip)
+      onto `design-system/components/forms/IconButton.jsx`, which now
+      also accepts a `style` override for cases needing custom
+      positioning. (`LoginScreen`'s show/hide toggle is text-labeled, not
+      icon-only, so it was left as-is.) (1.18.4)
+- [x] `MembersIsland.jsx`'s hand-rolled "Eier"/"Admin" pills now use the
+      shared `Badge` component; the now-dead `.badge-tag` CSS was removed.
+      (1.18.4)
+- [x] Routed the app's actually-duplicated semantic icons (the
+      expand/collapse chevron in `ShoppingListTab`/`AccordionRow`, and the
+      list/grid view toggle) through `UiIcon`/`uiIcons.js` instead of raw
+      `<i className="ph ph-{slug}">`, normalizing the collapse chevron to
+      one consistent size everywhere it's used as a plain indicator.
+      `UiIcon` now supports a `weight="fill"` prop and a `style` override.
+      Design-system primitives (`Button`, `IconButton`, `Input`,
+      `FabMenu`, `Checkbox`, `Header`, `ListItem`) keep rendering their own
+      raw icon prop directly, by design — they're generic icon slots, not
+      duplicates of `UiIcon`'s semantic lookup. (1.18.4)
+- [x] `RecurringContext.jsx`'s save/reload path returns `{ error }`;
+      `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) now reads it
+      and surfaces failures via toast instead of dropping them silently.
+      (1.18.3)
+- [x] Investigated whether `ShoppingListTab`'s 7s poll can interrupt the
+      400ms local item-resolve animation: not reproducible — the toggled
+      item's `bought` state flips optimistically before the resolve delay
+      starts, `resolvingIds` (which gates the animation) is driven only by
+      a local timer untouched by `loadList`, and React's style diffing
+      never reassigns `animation` to the DOM node when the computed string
+      is unchanged between renders, so a same-state poll mid-window can't
+      restart the CSS animation. No code change made. (1.18.3)
+- [x] `CredentialsModal`'s `copyInvite` now surfaces clipboard
+      success/failure via toast and only closes the modal after a
+      successful copy. (1.18.3)
+- [x] Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) are now
+      keyboard/screen-reader reachable (`role="button" tabIndex={0}` +
+      Enter/Space toggles bought), matching `PwaInstallCTA.jsx`'s pattern.
+      (1.18.2)
+- [x] Modals (`Sheet.jsx`) now move focus in on open, trap `Tab`, restore
+      focus to the trigger on close, and expose `role="dialog"`/
+      `aria-modal`, matching `FabMenu.jsx`'s focus-move approach. (1.18.2)
+- [x] Form labels in `ItemEditModal`, `MealEditModal`, `MealPlanModal`, and
+      the admin/member/recurring settings forms are now programmatically
+      associated with their inputs (`htmlFor`/`id`, or `aria-label`/
+      `aria-labelledby`); `ProfileIsland`'s password fields gained visible
+      labels. (1.18.2)
+- [x] `--text-tertiary` in light mode moved from `--nv-50` to `--nv-40`
+      (~6.5:1 contrast against card/page surfaces, up from ~3.9–4.1:1) to
+      meet WCAG AA. (1.18.2)
+- [x] `Header.jsx`'s back-caret button now has an `aria-label`. (1.18.2)
+- [x] The toast container now has `role="status"`/`aria-live="polite"`.
+      (1.18.2)
 - [x] CI pinned `trufflesecurity/trufflehog@main` (a moving ref) — pinned to
       the `v3.95.9` release commit SHA instead. (1.15.0)
 - [x] No `Escape` key handler on any modal — a `keydown` listener on

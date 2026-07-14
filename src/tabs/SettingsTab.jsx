@@ -28,7 +28,7 @@ function IslandLabel({ children }) {
 }
 
 export function SettingsTab() {
-  const { isAdmin, isOwner } = useAuth();
+  const { isAdmin } = useAuth();
   return (
     <section>
       <IslandLabel>Meg &amp; min app</IslandLabel>
@@ -36,7 +36,7 @@ export function SettingsTab() {
       <PwaInstallCTA />
 
       <IslandLabel>Vårt hjem</IslandLabel>
-      <HomeIsland isOwner={isOwner} />
+      <HomeIsland />
 
       {isAdmin && (
         <>

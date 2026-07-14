@@ -3,8 +3,9 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Card, SegmentedControl, Switch } from "../../design-system/index.js";
+import { Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 
 function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
@@ -28,12 +29,12 @@ const INTENSITY_OPTIONS = [
 // after this card rather than a row nested inside it.
 export function ProfileIsland() {
   const { user, logout } = useAuth();
+  const toast = useToast();
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
-  const [pwMsg, setPwMsg] = useState({ text: "", ok: false });
 
   function onSetTheme(t) {
     setTheme(t);
@@ -53,7 +54,7 @@ export function ProfileIsland() {
 
   async function changePassword() {
     if (pwNew.length < 6) {
-      setPwMsg({ text: "Nytt passord må være minst 6 tegn", ok: false });
+      toast("Nytt passord må være minst 6 tegn", { error: true });
       return;
     }
     try {
@@ -62,17 +63,17 @@ export function ProfileIsland() {
         body: JSON.stringify({ current_password: pwCurrent, new_password: pwNew }),
       });
       if (res.error) {
-        setPwMsg({ text: res.error, ok: false });
+        toast(res.error, { error: true });
         return;
       }
       // server returns a fresh token valid on the new version; the header
       // refresh is skipped for this endpoint, so the body token is authoritative.
       if (res.token) localStorage.setItem("ph_token", res.token);
-      setPwMsg({ text: "Passord endret. Andre enheter er logget ut.", ok: true });
+      toast("Passord endret. Andre enheter er logget ut.");
       setPwCurrent("");
       setPwNew("");
     } catch {
-      setPwMsg({ text: "Noe gikk galt", ok: false });
+      toast("Noe gikk galt", { error: true });
     }
   }
 
@@ -96,24 +97,29 @@ export function ProfileIsland() {
       </div>
 
       <AccordionRow label="Bytt passord">
-        <input
+        <label htmlFor="profile-pw-current" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+          Nåværende passord
+        </label>
+        <Input
+          id="profile-pw-current"
           type="password"
           placeholder="Nåværende passord"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          style={{ marginBottom: 8 }}
           value={pwCurrent}
           onChange={(e) => setPwCurrent(e.target.value)}
         />
-        <input
+        <label htmlFor="profile-pw-new" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+          Nytt passord (min. 6 tegn)
+        </label>
+        <Input
+          id="profile-pw-new"
           type="password"
           placeholder="Nytt passord (min. 6 tegn)"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          style={{ marginBottom: 8 }}
           value={pwNew}
           onChange={(e) => setPwNew(e.target.value)}
         />
         <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
-        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: pwMsg.ok ? "var(--status-success)" : "var(--status-danger)" }}>
-          {pwMsg.text}
-        </div>
       </AccordionRow>
 
       <button className="logout" style={{ marginTop: 16 }} onClick={() => logout()}>Logg ut</button>

@@ -1,4 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Bottom sheet overlay — used for all modal-style flows.
  * Source: Panhandle Design System (components/overlays/Sheet.jsx), extended
@@ -7,6 +10,10 @@ import React, { useEffect } from 'react';
  * in src/index.css (labels, inputs, selects, action rows) without every
  * modal's internal markup needing to move onto design-system components. */
 export function Sheet({ open = true, onClose, title, children, className }) {
+  const contentRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const titleId = React.useId();
+
   useEffect(() => {
     if (!open || !onClose) return;
     const handleKeyDown = (e) => {
@@ -15,6 +22,37 @@ export function Sheet({ open = true, onClose, title, children, className }) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
+
+  // Focus management: move focus into the sheet on open, trap Tab within it
+  // while open, and restore focus to whatever triggered it on close — same
+  // approach as FabMenu.jsx's own overlay.
+  useEffect(() => {
+    if (!open) return undefined;
+    previousFocusRef.current = document.activeElement;
+    const node = contentRef.current;
+    const firstFocusable = node?.querySelector(FOCUSABLE_SELECTOR);
+    (firstFocusable || node)?.focus();
+
+    function handleTab(e) {
+      if (e.key !== 'Tab' || !node) return;
+      const focusables = Array.from(node.querySelectorAll(FOCUSABLE_SELECTOR));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', handleTab);
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      previousFocusRef.current?.focus?.();
+    };
+  }, [open]);
 
   if (!open) return null;
   return (
@@ -29,7 +67,12 @@ export function Sheet({ open = true, onClose, title, children, className }) {
       animation: 'ph-scrim-in var(--duration-base) var(--ease-out)',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       <div
+        ref={contentRef}
         className={className}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         onClick={e => e.stopPropagation()}
         style={{
           background: 'var(--surface-card)',
@@ -46,7 +89,7 @@ export function Sheet({ open = true, onClose, title, children, className }) {
       >
         <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />
         {title ? (
-          <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 14px', color: 'var(--text-primary)' }}>{title}</h2>
+          <h2 id={titleId} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 14px', color: 'var(--text-primary)' }}>{title}</h2>
         ) : null}
         {children}
       </div>

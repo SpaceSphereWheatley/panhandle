@@ -4,7 +4,7 @@ import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 /** Icon-only circular button, for compact toolbar/list actions.
  * Source: Panhandle Design System (components/forms/IconButton.jsx), with the
  * app's pointer-based press and the design system's Android Material ripple. */
-export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, label }) {
+export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, label, style: styleOverride }) {
   const [hover, setHover] = React.useState(false);
   const [press, setPress] = React.useState(false);
   const { ripples, spawn } = useRipple();
@@ -48,6 +48,7 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
         fontSize: dim * 0.5,
         flexShrink: 0,
         ...variants[variant],
+        ...styleOverride,
       }}
     >
       {hover || press ? (
