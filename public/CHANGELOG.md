@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.0] — 2026-07-13
+
+### Added
+- **Site-wide admin metrics dashboard.** A new "Statistikk (alle lister)"
+  section under Innstillinger → Administrasjon (superadmin-only) shows usage
+  across every list: user/list counts, signups and new lists per week,
+  shopping activity (items added per week, bought vs. total, most-bought
+  items), meal-plan fill rate and most-planned meals, and a per-list
+  breakdown table. Gated beyond ordinary `is_admin` by a new
+  `SUPERADMIN_USERNAMES` Worker variable (`GET /admin/metrics`), since
+  `is_admin` is normally scoped to a single list.
+
 ## [1.17.2] — 2026-07-13
 
 ### Fixed
