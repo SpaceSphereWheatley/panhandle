@@ -1,23 +1,15 @@
 // Plain-Node integration test for meal usage stats + suggestions (no test
-// framework, no package.json — see CLAUDE.md's "no build step, no Node
-// toolchain" constraint). Spins up the real Worker locally against a local
-// D1, exercises the actual HTTP API, and asserts on the responses.
+// framework — see CLAUDE.md's Testing conventions). Spins up the real Worker
+// locally against a local D1, exercises the actual HTTP API, and asserts on
+// the responses.
 //
 // Run: node tests/meal-suggestions.test.mjs
 //
 // Requires `npx` (downloads `wrangler` on first run if not cached).
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { writeFileSync, unlinkSync, existsSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { startWorker, seedAndLogin } from "./_helpers.mjs";
 
-const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 8799;
-const BASE = `http://127.0.0.1:${PORT}/api`;
-const DEV_VARS_PATH = path.join(ROOT, ".dev.vars");
-const SEED_SECRET = "test-seed-secret";
-const JWT_SECRET = "test-jwt-secret-not-for-production";
 const TEST_USER = `meal_test_${Date.now()}`;
 const TEST_PASS = "Test-password-123!";
 
@@ -27,68 +19,18 @@ function isoDaysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
-async function waitForServer(proc, timeoutMs = 30000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(`${BASE}/version`);
-      if (res.ok) return;
-    } catch { /* not up yet */ }
-    if (proc.exitCode !== null) throw new Error("wrangler dev exited before becoming ready");
-    await new Promise(r => setTimeout(r, 500));
-  }
-  throw new Error("Timed out waiting for wrangler dev to start");
-}
-
 async function main() {
-  let wroteDevVars = false;
-  if (!existsSync(DEV_VARS_PATH)) {
-    writeFileSync(DEV_VARS_PATH, `JWT_SECRET=${JWT_SECRET}\nSEED_SECRET=${SEED_SECRET}\n`);
-    wroteDevVars = true;
-  }
-
-  console.log("Applying local D1 migrations...");
-  await run("npx", ["wrangler", "d1", "migrations", "apply", "panhandle", "--local"]);
-
-  console.log("Starting wrangler dev (local)...");
-  const proc = spawn("npx", ["wrangler", "dev", "--local", "--port", String(PORT)], {
-    cwd: ROOT, stdio: ["ignore", "pipe", "pipe"]
-  });
-  let stderr = "";
-  proc.stderr.on("data", d => { stderr += d; });
-
+  const worker = await startWorker({ port: PORT });
   try {
-    await waitForServer(proc);
-    await runTests();
+    await runTests(worker.base);
     console.log("\nAll meal suggestion/usage-stats tests passed.");
   } finally {
-    proc.kill();
-    if (wroteDevVars) unlinkSync(DEV_VARS_PATH);
+    await worker.teardown();
   }
 }
 
-function run(cmd, args) {
-  return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { cwd: ROOT, stdio: "inherit" });
-    p.on("exit", code => code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(" ")} exited ${code}`)));
-  });
-}
-
-async function runTests() {
-  // ---- bootstrap a throwaway account ----
-  let res = await fetch(`${BASE}/seed`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: SEED_SECRET, accounts: [{ username: TEST_USER, password: TEST_PASS }] })
-  });
-  assert.equal(res.status, 200, "seed should succeed");
-
-  res = await fetch(`${BASE}/login`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: TEST_USER, password: TEST_PASS })
-  });
-  assert.equal(res.status, 200, "login should succeed");
-  const { token } = await res.json();
-  const auth = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+async function runTests(BASE) {
+  const { auth } = await seedAndLogin(BASE, TEST_USER, TEST_PASS);
 
   const postPlan = (plan_date, meal_name, extra = {}) =>
     fetch(`${BASE}/plan`, { method: "POST", headers: auth, body: JSON.stringify({ plan_date, meal_name, ...extra }) });
