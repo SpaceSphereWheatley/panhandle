@@ -46,7 +46,7 @@ export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn, clu
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         textAlign: "center",
         gap: 4,
         minHeight: 112,

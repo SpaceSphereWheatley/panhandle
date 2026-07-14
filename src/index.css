@@ -29,6 +29,7 @@ body {
 .ui-icon { vertical-align: middle; flex-shrink: 0; }
 .item-badge .item-icon { width: 24px; height: 24px; display: block; }
 .grid-badge .item-icon { width: 36px; height: 36px; display: block; }
+.item-badge, .grid-badge { line-height: 1; }
 
 main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
