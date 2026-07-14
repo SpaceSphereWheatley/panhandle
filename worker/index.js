@@ -441,7 +441,7 @@ async function verifyTurnstile(token, ip, env) {
 // ---------- transactional email (Resend) ----------
 // Update once a sending domain is verified in Resend's dashboard (manual,
 // one-time — see CLAUDE.md/the signup feature's PR description).
-const EMAIL_FROM = "Panhandle <no-reply@mail.mohibb.com>";
+const EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
 async function sendEmail(env, { to, subject, html }) {
   try {
     const res = await fetch("https://api.resend.com/emails", {
