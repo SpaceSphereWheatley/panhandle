@@ -6,18 +6,14 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. Let a user delete their own account. If the user is an owner, delete the
-   list as well. A user needs to be able to exist without a list, and anyone
-   should be able to create lists, be members of multiple lists, and choose
-   between them. Every user today is tied to exactly one `list_id` (see
-   CLAUDE.md's multi-tenant model) with no way to leave or delete an account
-   short of a raw DB edit — a real gap now that self-service signup (1.20.0)
-   lets anyone create one with no matching offboarding path. This is a
-   genuine data-model change (nullable list membership, an N:N
-   user↔list join instead of a single FK, a "choose/create list" UI), not a
-   small addition — worth scoping into phases (e.g. "delete my account" for
-   a single-list user first, multi-list membership after) rather than one
-   big migration.
+1. Let a user exist without a list, and let anyone create lists, be members
+   of multiple lists, and choose between them (phase 2 of the account-
+   lifecycle item — phase 1, self-delete under the one-list-per-user model,
+   shipped in 1.21.0). Every user today is still tied to exactly one
+   `list_id` (see CLAUDE.md's multi-tenant model); this phase is the actual
+   data-model change (nullable list membership, an N:N user↔list join
+   instead of a single FK, a "choose/create list" UI) that phase 1
+   deliberately deferred.
    _Value: High · Importance: Low · Type: Data model / Account lifecycle_
 
 2. Let the super-admin delete a user account outright. Today's admin/owner
@@ -76,6 +72,16 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Let a user delete their own account (Settings → Profile → "Slett
+      konto"), phase 1 of the account-lifecycle item — still one list per
+      user. A non-owner (or an owner with a co-owner) just leaves; the
+      list's last/sole owner cascade-deletes the entire list (shopping list,
+      meal plan, catalogue, recurring schedule, every other member's
+      account too) rather than being refused, since there's no "reassign
+      ownership" flow yet. New `DELETE /account`, same current-password +
+      IP-throttle pattern as `/change-password`/`/change-email`. "Exist
+      without a list" / multi-list membership stays open as a future phase.
+      (1.21.0)
 - [x] The recurring meal responsibility section in Settings (`RecurringIsland.jsx`)
       is now minimizable — wrapped in the same `AccordionRow` already used by
       `MembersIsland`'s/`AdminIsland`'s/`ProfileIsland`'s sub-sections, instead

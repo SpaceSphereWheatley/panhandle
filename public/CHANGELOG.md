@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.21.0] — 2026-07-14
+
+### Added
+- **Let a user delete their own account** (Settings → Profile → "Slett
+  konto"), requiring current-password confirmation plus an explicit confirm
+  dialog. A non-owner (or an owner with a co-owner) just leaves the list; the
+  list's last/sole owner cascade-deletes the entire list — shopping list,
+  meal plan, catalogue, recurring schedule, and every other member's account
+  — since there's no "reassign ownership" flow yet and blocking self-deletion
+  outright would leave solo/last-owner accounts with no way to close their
+  account at all. New `DELETE /account` endpoint, same current-password +
+  IP-throttle pattern as `/change-password`/`/change-email`. This is phase 1
+  of the account-lifecycle TODO item — still one list per user; "exist
+  without a list" / multi-list membership is a separate future phase.
+
 ## [1.20.3] — 2026-07-14
 
 ### Changed
