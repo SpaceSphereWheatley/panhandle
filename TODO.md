@@ -14,6 +14,19 @@ details live in `CHANGELOG.md`, not here.
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
 
+2. Create some way for the user to give feedback
+
+3. Fix the Register buttons on the login and landing pages
+
+4. Update the screenshots on the landing page
+
+5. Make the app work well on iOS as well
+   _Value: High · Importance: High · Type: Compatibility_
+
+7. In Settings, "Install Panhandle" should be on top
+
+8. In settings, the users should be able to minimize the recurring meal responsibilities
+
 ## Done
 
 - [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
