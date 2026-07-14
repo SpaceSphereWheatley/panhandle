@@ -451,12 +451,12 @@ export function escapeHtml(str) {
 // Update once a sending domain is verified in Resend's dashboard (manual,
 // one-time — see CLAUDE.md/the signup feature's PR description).
 const EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
-async function sendEmail(env, { to, subject, html }) {
+async function sendEmail(env, { to, subject, html, replyTo }) {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html }),
+      body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html, ...(replyTo ? { reply_to: [replyTo] } : {}) }),
     });
     if (!res.ok) console.error("Resend send failed", res.status, await res.text());
     return res.ok;
@@ -989,8 +989,17 @@ export default {
       if (!env.FEEDBACK_EMAIL) {
         return authedJson({ error: "Tilbakemelding er ikke satt opp ennå" }, 500);
       }
+      // Sender identity survives even through Resend's shared "from" address:
+      // the username is in the subject line (visible in an inbox list without
+      // opening the email) and repeated in the body, and — when the sender
+      // has an email on file — set as reply-to so replying goes straight to
+      // them instead of the noreply@ address in "from".
+      const acct = await env.DB.prepare(
+        "SELECT email FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
       const sent = await sendEmail(env, {
         to: env.FEEDBACK_EMAIL,
+        replyTo: acct?.email || undefined,
         subject: `Tilbakemelding fra ${user.username}`,
         html: `<p><strong>${escapeHtml(user.username)}</strong> sendte en tilbakemelding fra Panhandle:</p><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
       });
