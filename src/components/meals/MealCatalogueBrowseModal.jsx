@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
+import { Button } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 
@@ -81,7 +82,7 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit }) {
         )}
       </div>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Lukk</button>
+        <Button variant="primary" onClick={onClose}>Lukk</Button>
       </div>
     </Modal>
   );

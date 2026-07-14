@@ -1,4 +1,5 @@
 import { Modal } from "./Modal.jsx";
+import { Button } from "../design-system/index.js";
 import { useToast } from "../context/ToastContext.jsx";
 
 // One-time credential dialog with a "copy invite text" button. The password
@@ -24,8 +25,8 @@ export function CredentialsModal({ username, password, onClose }) {
       <p className="cred-note">Dette passordet vises bare nå. Kopier og send det til brukeren.</p>
       <div className="cred-box">{invite}</div>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Lukk</button>
-        <button className="save" onClick={copyInvite}>Kopier invitasjon</button>
+        <Button variant="outline" onClick={onClose}>Lukk</Button>
+        <Button variant="primary" onClick={copyInvite}>Kopier invitasjon</Button>
       </div>
     </Modal>
   );

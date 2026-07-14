@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { UiIcon } from "../UiIcon.jsx";
 import { Button } from "../../design-system/components/forms/Button.jsx";
+import { Input } from "../../design-system/components/forms/Input.jsx";
+import { IconButton } from "../../design-system/components/forms/IconButton.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
@@ -172,14 +173,14 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
           onFocus={() => setShowDropdown(true)}
           placeholder="F.eks. Taco"
         />
-        <button
-          type="button"
-          className="meal-name-arrow"
+        <IconButton
+          icon="caret-down"
+          size="sm"
+          variant="ghost"
           onClick={() => setShowDropdown((v) => !v)}
-          aria-label="Vis lagrede måltider"
-        >
-          <UiIcon name="chevronDown" size={14} />
-        </button>
+          label="Vis lagrede måltider"
+          style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
+        />
         <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
           {dropdownMatches.length ? (
             dropdownMatches.map((m) => (
@@ -216,18 +217,18 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
         <option value="__other__">Annet...</option>
       </select>
       {respSelect === "__other__" && (
-        <input
+        <Input
           type="text"
           aria-label="Beskriv ansvarlig"
           placeholder="Beskriv (f.eks. Ute og spiser)"
-          style={{ marginTop: 8, width: "100%", padding: 10, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
+          style={{ marginTop: 8 }}
           value={respOther}
           onChange={(e) => setRespOther(e.target.value)}
         />
       )}
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Avbryt</button>
-        <button className="save" onClick={savePlan}>Lagre</button>
+        <Button variant="outline" onClick={onClose}>Avbryt</Button>
+        <Button variant="primary" onClick={savePlan}>Lagre</Button>
       </div>
       {(current.meal_name || current.responsible) && (
         <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>

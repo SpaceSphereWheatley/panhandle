@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { Input } from "../../design-system/index.js";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 
 // Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility.
@@ -74,11 +75,11 @@ export function RecurringIsland() {
                 <option value="__other__">Annet...</option>
               </select>
               {isOther && (
-                <input
+                <Input
                   type="text"
                   placeholder="Beskriv ansvaret"
                   aria-label={`Beskriv ansvar for ${day}`}
-                  style={{ display: "block", marginTop: 8, width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
+                  style={{ marginTop: 8 }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}
                 />

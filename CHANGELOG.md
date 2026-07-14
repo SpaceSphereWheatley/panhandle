@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.3] — 2026-07-14
+
+### Changed
+- Consolidated modal Cancel/Save button pairs, hand-copied text inputs,
+  icon-only buttons, and the "Eier"/"Admin" member pills onto the shared
+  design-system `Button`, `Input`, `IconButton`, and `Badge` components
+  instead of ad hoc `className`/inline-style copies.
+- Routed the app's duplicated semantic icons (the expand/collapse chevron,
+  the shopping-list view toggle) through the existing `UiIcon` wrapper
+  instead of raw hand-sized icon tags, so the same icon renders at one
+  consistent size everywhere it's used as a plain indicator.
+
 ## [1.18.2] — 2026-07-14
 
 ### Fixed

@@ -1,4 +1,5 @@
 import { Modal } from "../Modal.jsx";
+import { Button } from "../../design-system/index.js";
 
 // Manual install walkthrough for Chrome on Android, shown when the browser
 // hasn't (yet) fired `beforeinstallprompt` itself — there's no JS API to
@@ -18,7 +19,7 @@ export function InstallHelpModal({ onClose }) {
         installerbar, og kan trenge litt mer bruk av siden før den tilbyr full installasjon.
       </p>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Lukk</button>
+        <Button variant="primary" onClick={onClose}>Lukk</Button>
       </div>
     </Modal>
   );

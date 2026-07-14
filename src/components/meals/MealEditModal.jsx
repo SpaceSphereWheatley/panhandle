@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button } from "../../design-system/index.js";
+import { Button, Input } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 
@@ -94,7 +94,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
     <Modal onClose={onClose}>
       <h3>{id ? "Rediger måltid" : "Nytt måltid"}</h3>
       <label htmlFor="meal-edit-name">Navn</label>
-      <input
+      <Input
         id="meal-edit-name"
         value={name}
         onChange={(e) => {
@@ -107,9 +107,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
         {similarNote.text}
       </div>
       <label htmlFor="meal-edit-ingredients">Ingredienser (kommaseparert)</label>
-      <input id="meal-edit-ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
+      <Input id="meal-edit-ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
       <label htmlFor="meal-edit-labels">Etiketter (kommaseparert)</label>
-      <input id="meal-edit-labels" list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
+      <Input id="meal-edit-labels" list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
       <datalist id="mealLabelOptions">
         {knownLabels.map((l) => (
           <option value={l} key={l} />
@@ -117,8 +117,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
       </datalist>
       <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Avbryt</button>
-        <button className="save" onClick={save}>Lagre</button>
+        <Button variant="outline" onClick={onClose}>Avbryt</Button>
+        <Button variant="primary" onClick={save}>Lagre</Button>
       </div>
       {id && (
         <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>

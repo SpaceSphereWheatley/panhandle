@@ -9,6 +9,7 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
+import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, FabMenu } from "../design-system/index.js";
 
@@ -319,7 +320,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "list", intensity === "classic")}
           >
-            <i className="ph ph-list-bullets" />
+            <UiIcon name="list" size={16} />
           </button>
           <button
             onClick={() => setView("grid")}
@@ -328,7 +329,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "grid", intensity === "classic")}
           >
-            <i className="ph ph-squares-four" />
+            <UiIcon name="grid" size={16} />
           </button>
         </div>
       </div>
@@ -366,10 +367,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 }}
               >
                 <span>Nylig kjøpt</span>
-                <i
-                  className="ph ph-caret-down"
+                <UiIcon
+                  name="chevronDown"
+                  size={14}
                   style={{
-                    fontSize: 13,
                     transition: "transform var(--duration-fast) var(--ease-out)",
                     transform: boughtCollapsed ? "rotate(-90deg)" : "none",
                   }}

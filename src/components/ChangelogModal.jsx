@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal } from "./Modal.jsx";
+import { Button } from "../design-system/index.js";
 
 export function ChangelogModal({ onClose }) {
   const [body, setBody] = useState("Laster...");
@@ -20,7 +21,7 @@ export function ChangelogModal({ onClose }) {
       <h3>Hva er nytt</h3>
       <pre className="cred-box changelog-box">{body}</pre>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Lukk</button>
+        <Button variant="primary" onClick={onClose}>Lukk</Button>
       </div>
     </Modal>
   );

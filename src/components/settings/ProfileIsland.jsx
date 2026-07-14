@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Card, SegmentedControl, Switch } from "../../design-system/index.js";
+import { Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 
 function hapticsEnabled() {
@@ -99,22 +99,22 @@ export function ProfileIsland() {
         <label htmlFor="profile-pw-current" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
           Nåværende passord
         </label>
-        <input
+        <Input
           id="profile-pw-current"
           type="password"
           placeholder="Nåværende passord"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          style={{ marginBottom: 8 }}
           value={pwCurrent}
           onChange={(e) => setPwCurrent(e.target.value)}
         />
         <label htmlFor="profile-pw-new" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
           Nytt passord (min. 6 tegn)
         </label>
-        <input
+        <Input
           id="profile-pw-new"
           type="password"
           placeholder="Nytt passord (min. 6 tegn)"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          style={{ marginBottom: 8 }}
           value={pwNew}
           onChange={(e) => setPwNew(e.target.value)}
         />

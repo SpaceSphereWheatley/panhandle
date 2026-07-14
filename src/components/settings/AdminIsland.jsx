@@ -5,7 +5,7 @@ import { iconForItem } from "../../lib/itemIcons.js";
 import { APP_VERSION } from "../../lib/version.js";
 import { CredentialsModal } from "../CredentialsModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { Card } from "../../design-system/index.js";
+import { Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { MetricsSettings } from "./MetricsSettings.jsx";
 
@@ -131,10 +131,9 @@ export function AdminIsland() {
 
       <AccordionRow label="Opprett eier (ny liste)">
         <label htmlFor="admin-new-owner" className="sr-only">Brukernavn for ny eier</label>
-        <input
+        <Input
           id="admin-new-owner"
           placeholder="Brukernavn for ny eier"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={newOwnerName}
           onChange={(e) => setNewOwnerName(e.target.value)}
         />

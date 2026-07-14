@@ -1,4 +1,5 @@
 import { Modal } from "./Modal.jsx";
+import { IconButton } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 
 export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
@@ -18,14 +19,13 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
                   {Math.round(it.avg_interval_days)}. dag
                 </span>
               </span>
-              <button
-                type="button"
-                className="suggest-add"
-                aria-label={`Legg til ${cap(it.name)}`}
+              <IconButton
+                icon="plus"
+                size="sm"
+                variant="filled"
+                label={`Legg til ${cap(it.name)}`}
                 onClick={() => onAdd(it)}
-              >
-                +
-              </button>
+              />
             </div>
           ))
         )}

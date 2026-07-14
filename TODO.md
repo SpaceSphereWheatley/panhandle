@@ -22,42 +22,6 @@ details live in `CHANGELOG.md`, not here.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-8. `design-system/components/forms/IconButton.jsx` enforces an
-   `aria-label` via its required `label` prop, but has zero real usages —
-   every actual icon-only button in the app is hand-rolled instead
-   (`InstallBanner`, `LoginScreen`, `MealPlanModal`'s chevron,
-   `SuggestionsModal`'s add chip), so labeling is consistent only by
-   luck. Migrate icon-only buttons onto `IconButton`.
-   _Value: Medium · Importance: Medium · Type: Accessibility_
-10. Three styling systems coexist permanently rather than mid-migration
-    (`src/index.css`'s own header comment admits it): the token-driven
-    `src/design-system/`, legacy `index.css` classnames (`.cancel`,
-    `.save`, `.btn-primary`), and hand-copied inline `style={{}}` objects.
-    Every modal's own Cancel/Save pair uses raw
-    `<button className="cancel/save">` instead of the shared `Button`
-    component. Consolidate onto `design-system/components/forms/Button.jsx`.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-11. `Input` (`design-system/components/forms/Input.jsx`) is used in only 2
-    files (`LoginScreen`, the shopping-list add-item field); every other
-    text field (`ItemEditModal`, `MealEditModal`, `MealPlanModal`'s
-    responsible-person field, `AdminIsland`, `MembersIsland`,
-    `ProfileIsland`'s password fields, `RecurringIsland`) hand-copies its
-    own inline-style object, and these copies have already drifted
-    (`ProfileIsland`'s password fields are missing `background`/`color`
-    tokens the others have). Migrate to the shared `Input`.
-    _Value: Medium · Importance: Medium · Type: Consistency_
-12. `Badge` (`design-system/components/data-display/Badge.jsx`) has 0
-    usages anywhere — `MembersIsland.jsx` hand-rolls "Eier"/"Admin" pills
-    as raw `<span className="badge-tag">` instead. Migrate to `Badge`.
-    _Value: Low · Importance: Low · Type: Consistency_
-13. Phosphor icons are rendered via a raw `<i className="ph ph-{slug}">`
-    with a hand-set `fontSize` almost everywhere, even though a semantic
-    wrapper (`UiIcon.jsx` + `uiIcons.js`) exists specifically to
-    centralize icon choice/sizing — it's used at only 3 call sites. The
-    same semantic icon (e.g. chevron-down) currently renders at
-    13/14/15px in different places, and only `TabBar` ever applies the
-    `ph-fill` active-weight variant.
-    _Value: Low · Importance: Low · Type: Consistency_
 14. Error/feedback presentation is split across four channels — toast
     (`ToastContext`), inline colored `<div>` messages (with the error
     color itself inconsistent: `--status-danger` in some forms,
@@ -134,6 +98,36 @@ details live in `CHANGELOG.md`, not here.
     _Value: Low · Importance: Low · Type: Cleanup_
 ## Done
 
+- [x] Every modal's Cancel/Save pair now uses the shared
+      `design-system/components/forms/Button.jsx` instead of raw
+      `<button className="cancel/save">`; the now-dead `.modal .save`/
+      `.modal .cancel` CSS rules were removed. (1.18.3)
+- [x] Migrated every hand-copied inline-style text field
+      (`ItemEditModal`, `MealEditModal`, `MealPlanModal`'s
+      responsible-person field, `AdminIsland`, `MembersIsland`,
+      `ProfileIsland`'s password fields, `RecurringIsland`) onto the
+      shared `design-system/components/forms/Input.jsx`, which now also
+      forwards `id`/arbitrary props so it works with `htmlFor` labels and
+      native attributes like `list`/`min`. (1.18.3)
+- [x] Migrated real icon-only buttons (`InstallBanner`'s dismiss,
+      `MealPlanModal`'s dropdown chevron, `SuggestionsModal`'s add chip)
+      onto `design-system/components/forms/IconButton.jsx`, which now
+      also accepts a `style` override for cases needing custom
+      positioning. (`LoginScreen`'s show/hide toggle is text-labeled, not
+      icon-only, so it was left as-is.) (1.18.3)
+- [x] `MembersIsland.jsx`'s hand-rolled "Eier"/"Admin" pills now use the
+      shared `Badge` component; the now-dead `.badge-tag` CSS was removed.
+      (1.18.3)
+- [x] Routed the app's actually-duplicated semantic icons (the
+      expand/collapse chevron in `ShoppingListTab`/`AccordionRow`, and the
+      list/grid view toggle) through `UiIcon`/`uiIcons.js` instead of raw
+      `<i className="ph ph-{slug}">`, normalizing the collapse chevron to
+      one consistent size everywhere it's used as a plain indicator.
+      `UiIcon` now supports a `weight="fill"` prop and a `style` override.
+      Design-system primitives (`Button`, `IconButton`, `Input`,
+      `FabMenu`, `Checkbox`, `Header`, `ListItem`) keep rendering their own
+      raw icon prop directly, by design — they're generic icon slots, not
+      duplicates of `UiIcon`'s semantic lookup. (1.18.3)
 - [x] `RecurringContext.jsx`'s save/reload path returns `{ error }`;
       `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) now reads it
       and surfaces failures via toast instead of dropping them silently.

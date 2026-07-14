@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../../lib/api.js";
-import { Button } from "../../design-system/index.js";
+import { Badge, Button, Input } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
@@ -57,8 +57,8 @@ export function MembersIsland() {
             <div className="who">
               <div className="uname">
                 {u.username}{" "}
-                {u.is_owner && <span className="badge-tag">Eier</span>}{" "}
-                {u.is_admin && <span className="badge-tag admin">Admin</span>}
+                {u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
+                {u.is_admin && <Badge tone="primary">Admin</Badge>}
               </div>
               {u.username === currentUser && <div className="sub">deg</div>}
             </div>
@@ -71,10 +71,9 @@ export function MembersIsland() {
 
       <AccordionRow label="Legg til medlem">
         <label htmlFor="members-new-username" className="sr-only">Brukernavn for nytt medlem</label>
-        <input
+        <Input
           id="members-new-username"
           placeholder="Brukernavn for nytt medlem"
-          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
         />
