@@ -12,13 +12,15 @@ const MotionCard = motion(Card);
 // solid backdrop instead of a text-color tint. `clusterBg` is the pale
 // per-aisle backdrop, now painted on the card itself (sections no longer
 // have their own background — see ShoppingListTab.jsx).
-export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg }) {
+export function ItemGridCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg, active }) {
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
+  // See ItemCard.jsx's comment on why `layout` is gated on `active` rather
+  // than just `shouldAnimate`.
   const motionProps = shouldAnimate
     ? {
-        layout: true,
+        layout: active,
         transition,
         initial: { opacity: 0, y: 8 },
         animate: { opacity: 1, y: 0 },
