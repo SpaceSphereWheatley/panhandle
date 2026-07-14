@@ -135,7 +135,16 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           const dow = (d.getDay() + 6) % 7;
           const recurring = !p?.responsible ? schedule[dow] : null;
           const CardComponent = shouldAnimate ? MotionCard : Card;
-          const motionProps = shouldAnimate ? { layout: true, transition } : {};
+          // `layout` gated on `active`, not just `shouldAnimate`: this tab stays
+          // mounted (hidden via `display: none`) when switched away from (see
+          // AppShell.jsx), and a display:none subtree measures as a zero-size
+          // box at (0,0) — if Framer kept tracking layout through that, it'd
+          // see a jump from (0,0) to the real position on reactivation and
+          // animate it, i.e. cards visibly flying in from the top-left on
+          // every tab switch. Layout tracking only turns on once visible, so
+          // its first measurement is the real position with nothing to
+          // interpolate from.
+          const motionProps = shouldAnimate ? { layout: active, transition } : {};
           return (
             <CardComponent
               key={iso}

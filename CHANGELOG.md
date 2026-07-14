@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.18.1] — 2026-07-14
+
+### Fixed
+- **Switching tabs still visibly "flew in" cards from the top-left corner**,
+  even after the fix that kept Handleliste/Måltider mounted across tab
+  switches (1.17.4-era). That fix stopped the data from resetting, but the
+  item/day cards use Framer Motion's `layout` animation, which measures
+  position via `getBoundingClientRect()` — and a `display: none` pane (how
+  inactive tabs are hidden) measures as a zero-size box pinned at `(0,0)`.
+  Reactivating the tab made Framer see a jump from that stale `(0,0)` rect to
+  the real position and animate it, i.e. every card flying in from the
+  top-left for one frame. `layout` is now only enabled while the tab is
+  actually active, so its first measurement on reactivation is the real
+  position with nothing to interpolate from.
+
 ## [1.18.0] — 2026-07-13
 
 ### Added

@@ -14,13 +14,18 @@ const MotionCard = motion(Card);
 // currentColor, so they need a solid tinted badge behind them rather than a
 // text-color tint. `clusterBg` is the pale per-aisle backdrop, painted on
 // the card itself (there's no per-category section container anymore).
-export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg }) {
+export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg, active }) {
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const CardComponent = shouldAnimate ? MotionCard : Card;
+  // `layout` gated on `active`, not just `shouldAnimate` — see MealsTab.jsx's
+  // comment on why: this card's pane can be hidden via `display: none` while
+  // staying mounted (AppShell.jsx), and Framer would otherwise measure a
+  // stale zero-size rect while hidden and animate a "fly in from (0,0)" on
+  // reactivation.
   const motionProps = shouldAnimate
     ? {
-        layout: true,
+        layout: active,
         transition,
         initial: { opacity: 0, y: 8 },
         animate: { opacity: 1, y: 0 },
