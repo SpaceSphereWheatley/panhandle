@@ -67,11 +67,6 @@ details live in `CHANGELOG.md`, not here.
     (`AdminIsland.jsx` uses inline text for one error, `alert()` for
     another). Standardize on toast with one consistent error color.
     _Value: Medium · Importance: Medium · Type: Consistency_
-15. `RecurringContext.jsx`'s save/reload path returns `{ error }`, but
-    `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) never reads
-    it — a designed error-feedback path that's dead on arrival, silently
-    dropping save failures.
-    _Value: Medium · Importance: Medium · Type: Bug_
 16. Confirmation before destructive actions is inconsistent between
     near-identical sibling actions: deleting a catalogue meal
     (`MealEditModal`) confirms via `window.confirm`, deleting a planned
@@ -99,11 +94,6 @@ details live in `CHANGELOG.md`, not here.
     network round trip with the modal staying open. Bring meal editing in
     line with the shopping-list pattern.
     _Value: Medium · Importance: Low · Type: UX_
-20. `ShoppingListTab`'s 7s poll (`loadList`) can in principle fire
-    mid-way through the 400ms local item-resolve animation window,
-    interrupting it. Confirm whether this is observable in practice and
-    guard the resolve window against an in-flight poll if so.
-    _Value: Low · Importance: Low · Type: Bug (needs investigation)_
 21. `AppShell.jsx` keeps `ShoppingListTab`/`MealsTab` mounted-but-hidden
     after first visit, but `SettingsTab` is conditionally
     mounted/unmounted on every tab switch, so it re-fetches admin counts,
@@ -142,15 +132,23 @@ details live in `CHANGELOG.md`, not here.
     add ESLint as a devDependency with a matching config, or remove the
     dead comments.
     _Value: Low · Importance: Low · Type: Cleanup_
-27. `CredentialsModal`'s `copyInvite` swallows
-    `navigator.clipboard.writeText` failures silently (no toast either
-    way) and closes the modal unconditionally regardless of whether the
-    copy succeeded. Surface success/failure via toast and only close
-    after a successful copy.
-    _Value: Low · Importance: Low · Type: Bug_
-
 ## Done
 
+- [x] `RecurringContext.jsx`'s save/reload path returns `{ error }`;
+      `RecurringIsland.jsx` (`onSelectChange`/`onOtherBlur`) now reads it
+      and surfaces failures via toast instead of dropping them silently.
+      (1.18.2)
+- [x] Investigated whether `ShoppingListTab`'s 7s poll can interrupt the
+      400ms local item-resolve animation: not reproducible — the toggled
+      item's `bought` state flips optimistically before the resolve delay
+      starts, `resolvingIds` (which gates the animation) is driven only by
+      a local timer untouched by `loadList`, and React's style diffing
+      never reassigns `animation` to the DOM node when the computed string
+      is unchanged between renders, so a same-state poll mid-window can't
+      restart the CSS animation. No code change made. (1.18.2)
+- [x] `CredentialsModal`'s `copyInvite` now surfaces clipboard
+      success/failure via toast and only closes the modal after a
+      successful copy. (1.18.2)
 - [x] Shopping list items (`ItemCard.jsx`/`ItemGridCard.jsx`) are now
       keyboard/screen-reader reachable (`role="button" tabIndex={0}` +
       Enter/Space toggles bought), matching `PwaInstallCTA.jsx`'s pattern.

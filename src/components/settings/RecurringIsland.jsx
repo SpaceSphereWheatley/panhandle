@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 
 // Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility.
@@ -9,6 +10,7 @@ import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 export function RecurringIsland() {
   const { people, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
+  const toast = useToast();
   const [otherDrafts, setOtherDrafts] = useState({});
 
   useEffect(() => {
@@ -27,12 +29,14 @@ export function RecurringIsland() {
       delete next[dow];
       return next;
     });
-    await saveDay(dow, value);
+    const res = await saveDay(dow, value);
+    if (res.error) toast(res.error, { error: true });
   }
 
   async function onOtherBlur(dow, value) {
     const val = value.trim();
-    await saveDay(dow, val || "");
+    const res = await saveDay(dow, val || "");
+    if (res.error) toast(res.error, { error: true });
     if (!val) {
       setOtherDrafts((prev) => {
         const next = { ...prev };

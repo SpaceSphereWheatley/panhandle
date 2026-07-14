@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.18.2] — 2026-07-14
+
+### Fixed
+- Recurring-meal responsibility save failures (`RecurringIsland`) are now
+  surfaced via toast instead of failing silently.
+- `CredentialsModal`'s invite-copy button now shows success/failure via
+  toast and only closes the modal after a successful copy.
+
 ## [1.18.1] — 2026-07-14
 
 ### Accessibility
