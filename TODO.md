@@ -16,8 +16,6 @@ details live in `CHANGELOG.md`, not here.
 
 2. Create some way for the user to give feedback
 
-3. Fix the Register buttons on the login and landing pages
-
 4. Update the screenshots on the landing page
 
 5. Make the app work well on iOS as well
@@ -37,6 +35,15 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] The landing page's "Registrer deg" button opened a static "we're in
+      closed beta, contact Mohibb" modal — a leftover from before
+      self-service signup shipped (1.20.0). It now links straight to the
+      real signup screen (`/app.html?signup=1`, a new query param
+      `AuthScreens.jsx` reads alongside its existing `reset_token`
+      handling); the dead modal markup/CSS/JS in `public/index.html` was
+      removed. The in-app login screen's own "Opprett ny husstand" button
+      was already correctly wired to the signup flow and needed no change.
+      (1.20.1)
 - [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
       taking it as a prop threaded from `SettingsTab.jsx`, matching
       `AdminIsland`'s already-self-contained permission check — one

@@ -8,8 +8,10 @@ import { ResetPasswordScreen } from "./ResetPasswordScreen.jsx";
 // from the email sent by /forgot-password) always wins over whatever mode
 // was last selected, since the user just clicked in from their inbox.
 export function AuthScreens() {
-  const resetToken = new URLSearchParams(window.location.search).get("reset_token");
-  const [mode, setMode] = useState(resetToken ? "reset" : "login");
+  const params = new URLSearchParams(window.location.search);
+  const resetToken = params.get("reset_token");
+  const wantsSignup = params.get("signup") === "1";
+  const [mode, setMode] = useState(resetToken ? "reset" : wantsSignup ? "signup" : "login");
 
   if (resetToken && mode === "reset") {
     return <ResetPasswordScreen token={resetToken} onDone={() => setMode("login")} />;
