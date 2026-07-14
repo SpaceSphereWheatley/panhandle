@@ -36,23 +36,14 @@ details live in `CHANGELOG.md`, not here.
    system.
    _Value: Medium · Importance: Low · Type: Feature_
 
-5. Update the screenshots on the landing page. `public/index.html`'s
-   "showcase" section isn't real screenshots — it's hand-coded CSS mockups
-   (`.mock-card`/`.mock-screen`/`.mock-row`, etc.) approximating the UI,
-   and they're now stale: they still show the old flat-row shopping list
-   styling, while the real app moved to solid-color tile cards in 1.18.0.
-   Worth deciding whether to keep hand-building the mockup (update it to
-   match) or switch to real captured screenshots of the live app.
-   _Value: Low · Importance: Low · Type: Content / Marketing_
-
-6. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
+5. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
    currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
    identity/theme card, both under the "Meg & min app" island label.
    Moving it above `ProfileIsland` (or above the island label entirely) is
    a small JSX reorder, not a redesign.
    _Value: Low · Importance: Low · Type: UX polish_
 
-7. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+6. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
@@ -63,6 +54,16 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] The landing page's shopping-list mockups (`public/index.html`) showed
+      a stale UI pattern — per-category header rows (e.g. "Kjøtt og fisk",
+      "Meieriprodukter") above groups of items — that the real app no
+      longer has; unbought items render as one flat, aisle-sorted list/grid
+      with no category dividers since the shopping list's category-section
+      removal. Removed the fake headers from both the list-view and
+      grid-view mockups; "Nylig kjøpt" keeps its own label since that
+      section is still real. Kept as hand-coded CSS mockups rather than
+      switching to real captured screenshots — no build step needed,
+      matches how the section already worked. (1.21.2)
 - [x] Let the super-admin delete a user account outright (Settings →
       Administrasjon → "Alle brukere" → "Slett", superadmin-only). New
       `DELETE /admin/users/{u}`, gated by `is_admin` + `isSuperAdmin` (same

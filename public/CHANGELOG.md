@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.2] — 2026-07-14
+
+### Fixed
+- **Landing page's shopping-list mockups were stale.** They showed a
+  per-category header row (e.g. "Kjøtt og fisk", "Meieriprodukter") above
+  groups of items — a UI pattern the real app no longer has; unbought items
+  have rendered as one flat, aisle-sorted list/grid with no category
+  dividers since the shopping list's category-section removal. Removed the
+  fake headers from both the list-view and grid-view mockups in
+  `public/index.html`; "Nylig kjøpt" (recently bought) keeps its own label,
+  since that section is still real.
+
 ## [1.21.1] — 2026-07-14
 
 ### Added
