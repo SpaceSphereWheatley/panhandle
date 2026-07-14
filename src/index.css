@@ -202,7 +202,7 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
    arrow indicator is inconsistent across browsers and often doesn't open
    anything when clicked). */
 .meal-name-field { position: relative; }
-.meal-name-field input { padding-right: 36px; }
+.meal-name-field input { padding-right: 44px; }
 .meal-name-dropdown {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface-card);
   border: 1px solid var(--border-default); border-radius: var(--radius-md); z-index: 20;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/api.js";
 import { Badge, Button, Input } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -7,6 +8,9 @@ import { CredentialsModal } from "../CredentialsModal.jsx";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useMotionConfig } from "../../hooks/useMotionConfig.js";
+
+const MotionRow = motion.div;
 
 // Island 2 (part 1) — "Vårt Hjem": member list + add member, each in its own
 // accordion per the spec ("Se nåværende, legg til"). Content-only — no own
@@ -17,6 +21,7 @@ export function MembersIsland() {
   const { listUsers, refresh } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
+  const { shouldAnimate, transition } = useMotionConfig();
   const [newName, setNewName] = useState("");
   const [creds, setCreds] = useState(null);
 
@@ -54,21 +59,31 @@ export function MembersIsland() {
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{listUsers.length} / 10 brukere</div>
 
       <AccordionRow label="Se nåværende medlemmer">
-        {listUsers.map((u) => (
-          <div className="mgmt-row" key={u.username}>
-            <div className="who">
-              <div className="uname">
-                {u.username}{" "}
-                {u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
-                {u.is_admin && <Badge tone="primary">Admin</Badge>}
+        <AnimatePresence initial={false}>
+          {listUsers.map((u) => (
+            <MotionRow
+              className="mgmt-row"
+              key={u.username}
+              layout={shouldAnimate}
+              transition={transition}
+              initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
+              animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
+              exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
+            >
+              <div className="who">
+                <div className="uname">
+                  {u.username}{" "}
+                  {u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
+                  {u.is_admin && <Badge tone="primary">Admin</Badge>}
+                </div>
+                {u.username === currentUser && <div className="sub">deg</div>}
               </div>
-              {u.username === currentUser && <div className="sub">deg</div>}
-            </div>
-            <div className="acts">
-              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
-            </div>
-          </div>
-        ))}
+              <div className="acts">
+                <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
+              </div>
+            </MotionRow>
+          ))}
+        </AnimatePresence>
       </AccordionRow>
 
       <AccordionRow label="Legg til medlem">

@@ -6,15 +6,6 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-1. Grid view: a category with a single item leaves the other 1-2 cells in
-   its row visibly empty (each `CatSection`'s grid in
-   `src/tabs/ShoppingListTab.jsx` is its own 3-col grid, so a lone item
-   doesn't reflow into the next category's row).
-   Looks unfinished, especially with several single-item categories in a
-   row. Either flow items into one continuous grid across category
-   boundaries, or only show the category header inline without a hard grid
-   break per group.
-   _Value: Low · Importance: Low · Type: UX (visual polish)_
 2. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
@@ -28,18 +19,6 @@ details live in `CHANGELOG.md`, not here.
     structurally similar "privileged section" cases. Pick one pattern and
     apply it consistently.
     _Value: Low · Importance: Low · Type: Consistency_
-23. Touch targets vary widely for conceptually similar controls:
-    bottom-nav tab buttons ~40px tall, the suggest-item add button and
-    meal-name dropdown arrow are 32px, ingredient checkboxes are 20px, vs.
-    the FAB (56px) and FabMenu items (48px) used for similar "add"
-    actions. Bring these closer to a consistent ~44–48px minimum.
-    _Value: Low · Importance: Low · Type: UX (visual polish)_
-24. `ItemCard`/`ItemGridCard`/`MealsTab` use Framer Motion for enter/
-    exit/layout animation, but `AdminIsland`/`MembersIsland` rows mount/
-    unmount with no animation. Extend the same motion treatment
-    (respecting the existing `prefers-reduced-motion`/design-intensity
-    gating) to settings-tab lists.
-    _Value: Low · Importance: Low · Type: UX (visual polish)_
 25. `Sheet.jsx`'s `title` prop is fully wired but never passed anywhere —
     every modal hand-rolls its own `<h3>` instead. Either adopt it
     everywhere or remove the prop. Also remove the orphaned
@@ -57,6 +36,25 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Investigated grid-view single-item category rows: the shopping list
+      already renders one continuous flat grid across category boundaries
+      (aisle-sorted, no per-category `CatSection`/grid break) rather than
+      per-category grids — that restructuring must have already happened
+      by the time this item was written. Re-verified there's no visible
+      "unfinished row" artifact; no code change needed. (1.19.2)
+- [x] Bumped the suggest-item add button (`SuggestionsModal`) and the
+      meal-name dropdown arrow (`MealPlanModal`) from 32px to 48px/40px
+      respectively, closer to the ~44–48px touch-target guideline.
+      (Bottom-nav tab buttons and the ingredient-row checkboxes were
+      re-measured and already meet it — the nav button's full flex column
+      is ~58px tall, and the ingredient checklist's whole row, not just
+      the 24px checkbox glyph, is the actual ~48px tap target — so neither
+      needed a change.) (1.19.2)
+- [x] Extended the same Framer Motion enter/exit/layout treatment used by
+      `ItemCard`/`ItemGridCard`/`MealsTab` (respecting
+      `prefers-reduced-motion`/design-intensity gating via
+      `useMotionConfig`) to `AdminIsland`/`MembersIsland`'s user rows.
+      (1.19.2)
 - [x] `AppShell.jsx` now keeps `SettingsTab` mounted-but-hidden after first
       visit (same persist-after-first-visit pattern already used for
       `ShoppingListTab`/`MealsTab`), instead of mounting/unmounting it on

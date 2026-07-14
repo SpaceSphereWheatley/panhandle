@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.19.2] — 2026-07-14
+
+### Changed
+- Grew the suggest-item add button and the meal-name dropdown arrow from
+  32px to 48px/40px, closer to a ~44–48px touch-target minimum.
+- `AdminIsland`/`MembersIsland` user rows now animate in/out with the same
+  Framer Motion treatment used elsewhere in the app (respecting reduced-
+  motion/design-intensity settings).
+
+### Investigated
+- Confirmed the shopping list's grid view no longer has the single-item
+  category row artifact described in the backlog — it already renders one
+  continuous aisle-sorted grid instead of a grid per category. Also
+  re-measured the bottom-nav tab buttons and ingredient-row tap targets;
+  both already meet the ~44–48px guideline once padding is accounted for.
+  No code change needed for either.
+
 ## [1.19.1] — 2026-07-14
 
 ### Fixed

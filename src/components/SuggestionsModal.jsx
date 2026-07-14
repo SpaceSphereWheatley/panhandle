@@ -21,7 +21,7 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
               </span>
               <IconButton
                 icon="plus"
-                size="sm"
+                size="lg"
                 variant="filled"
                 label={`Legg til ${cap(it.name)}`}
                 onClick={() => onAdd(it)}

@@ -178,11 +178,11 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
         />
         <IconButton
           icon="caret-down"
-          size="sm"
+          size="md"
           variant="ghost"
           onClick={() => setShowDropdown((v) => !v)}
           label="Vis lagrede måltider"
-          style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
+          style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
         />
         <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
           {dropdownMatches.length ? (

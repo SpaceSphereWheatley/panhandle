@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/api.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { iconForItem } from "../../lib/itemIcons.js";
@@ -10,6 +11,9 @@ import { AccordionRow } from "./AccordionRow.jsx";
 import { MetricsSettings } from "./MetricsSettings.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useMotionConfig } from "../../hooks/useMotionConfig.js";
+
+const MotionRow = motion.div;
 
 // Island 3 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
 // dashboard, then the heavier management tools accordioned.
@@ -18,6 +22,7 @@ export function AdminIsland() {
   const { refresh: refreshListUsers } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
+  const { shouldAnimate, transition } = useMotionConfig();
   const [userCount, setUserCount] = useState("–");
   const [listCount, setListCount] = useState("–");
   const [versionDetail, setVersionDetail] = useState("–");
@@ -158,33 +163,43 @@ export function AdminIsland() {
             <div className="admin-group">
               Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
             </div>
-            {groups[listId].map((u) => (
-              <div className="mgmt-row" key={u.username}>
-                <div className="who">
-                  <div className="uname">{u.username}</div>
-                  <div className="sub">{u.username === currentUser ? "deg" : u.created_by ? "av " + u.created_by : " "}</div>
-                </div>
-                <div className="acts">
-                  <label className="flag">
-                    <input
-                      type="checkbox"
-                      checked={!!u.is_admin}
-                      onChange={(e) => setFlag(u.username, "is_admin", e.target.checked)}
-                    />
-                    Admin
-                  </label>
-                  <label className="flag">
-                    <input
-                      type="checkbox"
-                      checked={!!u.is_owner}
-                      onChange={(e) => setFlag(u.username, "is_owner", e.target.checked)}
-                    />
-                    Eier
-                  </label>
-                  <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
-                </div>
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {groups[listId].map((u) => (
+                <MotionRow
+                  className="mgmt-row"
+                  key={u.username}
+                  layout={shouldAnimate}
+                  transition={transition}
+                  initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
+                  animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
+                  exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
+                >
+                  <div className="who">
+                    <div className="uname">{u.username}</div>
+                    <div className="sub">{u.username === currentUser ? "deg" : u.created_by ? "av " + u.created_by : " "}</div>
+                  </div>
+                  <div className="acts">
+                    <label className="flag">
+                      <input
+                        type="checkbox"
+                        checked={!!u.is_admin}
+                        onChange={(e) => setFlag(u.username, "is_admin", e.target.checked)}
+                      />
+                      Admin
+                    </label>
+                    <label className="flag">
+                      <input
+                        type="checkbox"
+                        checked={!!u.is_owner}
+                        onChange={(e) => setFlag(u.username, "is_owner", e.target.checked)}
+                      />
+                      Eier
+                    </label>
+                    <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
+                  </div>
+                </MotionRow>
+              ))}
+            </AnimatePresence>
           </div>
         ))}
       </AccordionRow>
