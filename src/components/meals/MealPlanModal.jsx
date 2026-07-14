@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { UiIcon } from "../UiIcon.jsx";
 import { Button } from "../../design-system/components/forms/Button.jsx";
+import { Input } from "../../design-system/components/forms/Input.jsx";
+import { IconButton } from "../../design-system/components/forms/IconButton.jsx";
+import { LoadingState } from "../../design-system/components/data-display/Spinner.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
 
 // Plans/edits a single day: meal name (with a dropdown of known meals),
 // ingredients, and a responsible person (list member, or free-text "Annet").
-export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker }) {
+export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpenIngredientPicker }) {
   const { people } = useListUsers();
   const { schedule, ensureLoaded } = useRecurring();
   const toast = useToast();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [mealCatalogue, setMealCatalogue] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -55,7 +59,6 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       setRespOther(isOther ? resp : "");
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
 
   useEffect(() => {
@@ -87,7 +90,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
     return respSelect;
   }
 
-  async function savePlan() {
+  function savePlan() {
     const name = mealName.trim();
     const responsible = getResp();
     const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
@@ -95,16 +98,15 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       onClose();
       return;
     }
-    await api("/plan", {
-      method: "POST",
-      body: JSON.stringify({ plan_date: iso, meal_name: name || null, responsible, ingredients: ing }),
-    });
-    onSaved();
+    onClose();
+    onSavePlan(iso, { meal_name: name || null, responsible, ingredients: ing });
   }
 
   async function deletePlanDay() {
-    await api(`/plan/${iso}`, { method: "DELETE" });
-    onSaved();
+    if (!(await confirm("Fjerne måltidet for denne dagen?", { title: "Fjerne måltid?", confirmLabel: "Fjern" })))
+      return;
+    onClose();
+    onDeletePlanDay(iso);
   }
 
   // Persist the meal first so typed ingredients are remembered, then swap to
@@ -132,8 +134,8 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
 
   if (loading) {
     return (
-      <Modal onClose={onClose}>
-        <h3>Planlegg måltid</h3>
+      <Modal onClose={onClose} title="Planlegg måltid">
+        <LoadingState />
       </Modal>
     );
   }
@@ -143,8 +145,7 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
   );
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Planlegg måltid</h3>
+    <Modal onClose={onClose} title="Planlegg måltid">
       {suggestions.length > 0 && (
         <>
           <label>Forslag (lenge siden, ofte brukt)</label>
@@ -162,23 +163,24 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
           </div>
         </>
       )}
-      <label>Måltid (velg eller skriv nytt)</label>
+      <label htmlFor="meal-plan-name">Måltid (velg eller skriv nytt)</label>
       <div className="meal-name-field" ref={fieldRef}>
         <input
+          id="meal-plan-name"
           autoComplete="off"
           value={mealName}
           onChange={(e) => onMealNameChange(e.target.value)}
           onFocus={() => setShowDropdown(true)}
           placeholder="F.eks. Taco"
         />
-        <button
-          type="button"
-          className="meal-name-arrow"
+        <IconButton
+          icon="caret-down"
+          size="md"
+          variant="ghost"
           onClick={() => setShowDropdown((v) => !v)}
-          aria-label="Vis lagrede måltider"
-        >
-          <UiIcon name="chevronDown" size={14} />
-        </button>
+          label="Vis lagrede måltider"
+          style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
+        />
         <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
           {dropdownMatches.length ? (
             dropdownMatches.map((m) => (
@@ -193,8 +195,9 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
           )}
         </div>
       </div>
-      <label>Ingredienser (kommaseparert)</label>
+      <label htmlFor="meal-plan-ingredients">Ingredienser (kommaseparert)</label>
       <input
+        id="meal-plan-ingredients"
         value={ingredients}
         onChange={(e) => setIngredients(e.target.value)}
         placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
@@ -202,11 +205,11 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
       <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
         Ingredienser huskes per måltid og deles for alle dager med samme navn.
       </div>
-      <button type="button" className="ing-add-btn" onClick={pickIngredients}>
-        + Legg ingredienser på handlelisten
-      </button>
-      <label>Ansvarlig</label>
-      <select value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
+      <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
+        Legg ingredienser på handlelisten
+      </Button>
+      <label htmlFor="meal-plan-resp">Ansvarlig</label>
+      <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
         <option value="">Ingen</option>
         {people.map((p) => (
           <option value={p} key={p}>{p}</option>
@@ -214,17 +217,18 @@ export function MealPlanModal({ iso, onClose, onSaved, onOpenIngredientPicker })
         <option value="__other__">Annet...</option>
       </select>
       {respSelect === "__other__" && (
-        <input
+        <Input
           type="text"
+          aria-label="Beskriv ansvarlig"
           placeholder="Beskriv (f.eks. Ute og spiser)"
-          style={{ marginTop: 8, width: "100%", padding: 10, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
+          style={{ marginTop: 8 }}
           value={respOther}
           onChange={(e) => setRespOther(e.target.value)}
         />
       )}
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Avbryt</button>
-        <button className="save" onClick={savePlan}>Lagre</button>
+        <Button variant="outline" onClick={onClose}>Avbryt</Button>
+        <Button variant="primary" onClick={savePlan}>Lagre</Button>
       </div>
       {(current.meal_name || current.responsible) && (
         <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>

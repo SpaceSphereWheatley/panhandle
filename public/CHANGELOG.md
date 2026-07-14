@@ -1,5 +1,187 @@
 # Changelog
 
+## [1.20.0] — 2026-07-14
+
+### Added
+- **Self-service signup, "Sign in with Google", and email-based password
+  recovery.** Anyone can now create their own household directly from the
+  login screen ("Opprett ny husstand") — no more asking the developer to
+  create an owner account by hand. New public `POST /register`,
+  `POST /auth/google`, `POST /forgot-password`, and `POST /reset-password`
+  endpoints on the Worker; signup is protected by Cloudflare Turnstile plus
+  an IP rate limit (mirroring the existing `login_attempts` pattern), and a
+  Google sign-in with a matching email links onto an existing password
+  account instead of creating a duplicate. Email delivery uses Resend.
+- **Add/change your email from Settings → Profile.** Existing accounts
+  (created via `/seed`, `/admin/owners`, or `/list-users`) have no email on
+  file, so without this there was no way for them to link a Google sign-in
+  or use `/forgot-password` short of a manual DB edit. New authenticated
+  `GET /account` and `POST /change-email` endpoints (the latter requires
+  the current password, same as `/change-password`, since email is what
+  password recovery trusts).
+
+## [1.19.3] — 2026-07-14
+
+### Changed
+- `HomeIsland` now determines its own owner-only rendering via `useAuth()`
+  directly instead of taking `isOwner` as a prop, matching how
+  `AdminIsland` already self-checks its own permission — one consistent
+  pattern for privileged-section gating across Settings.
+- Every modal now passes its heading through `Modal`'s `title` prop
+  (forwarded to the shared `Sheet`) instead of hand-rolling its own
+  `<h3>`.
+
+### Removed
+- The orphaned `.theme-toggle` CSS rule and the now-dead `.modal h3` rule.
+- 8 inert `eslint-disable-next-line` comments (ESLint isn't installed or
+  configured in this project).
+
+## [1.19.2] — 2026-07-14
+
+### Changed
+- Grew the suggest-item add button and the meal-name dropdown arrow from
+  32px to 48px/40px, closer to a ~44–48px touch-target minimum.
+- `AdminIsland`/`MembersIsland` user rows now animate in/out with the same
+  Framer Motion treatment used elsewhere in the app (respecting reduced-
+  motion/design-intensity settings).
+
+### Investigated
+- Confirmed the shopping list's grid view no longer has the single-item
+  category row artifact described in the backlog — it already renders one
+  continuous aisle-sorted grid instead of a grid per category. Also
+  re-measured the bottom-nav tab buttons and ingredient-row tap targets;
+  both already meet the ~44–48px guideline once padding is accounted for.
+  No code change needed for either.
+
+## [1.19.1] — 2026-07-14
+
+### Fixed
+- `SettingsTab` now stays mounted (hidden) after the first visit like the
+  other two tabs, instead of remounting on every switch — it no longer
+  redoes its admin counts, user list, and recurring-meal fetches every
+  time you open Innstillinger.
+
+## [1.19.0] — 2026-07-14
+
+### Added
+- A custom, app-styled confirmation dialog (`useConfirm`) replaces native
+  `confirm()` everywhere, and now consistently gates every
+  destructive/sensitive action — including two that previously had no
+  confirmation at all: deleting a planned meal day, and changing a user's
+  admin/owner access.
+- Shared loading and empty-state components. The shopping list and meal
+  planner now show a loading indicator on their initial fetch instead of
+  looking indistinguishable from a genuinely empty list/week, and several
+  modals (`MealPlanModal`, `MealCatalogueBrowseModal`,
+  `WeekIngredientsModal`, `IngredientPickerModal`) that used to render
+  blank while loading now show the same indicator.
+
+### Changed
+- Meal-plan save/delete are now optimistic (instant local update,
+  roll back with a toast on failure) instead of blocking the modal open on
+  a full network round trip, matching the shopping list's item-toggle
+  behavior.
+- Error and confirmation feedback across Settings (`AdminIsland`,
+  `MembersIsland`, `ProfileIsland`) and the item/meal edit modals is now
+  consistently a toast, replacing a mix of inline colored text (with two
+  different, inconsistent colors), native `alert()`, and silently dropped
+  failures.
+
+## [1.18.4] — 2026-07-14
+
+### Changed
+- Consolidated modal Cancel/Save button pairs, hand-copied text inputs,
+  icon-only buttons, and the "Eier"/"Admin" member pills onto the shared
+  design-system `Button`, `Input`, `IconButton`, and `Badge` components
+  instead of ad hoc `className`/inline-style copies.
+- Routed the app's duplicated semantic icons (the expand/collapse chevron,
+  the shopping-list view toggle) through the existing `UiIcon` wrapper
+  instead of raw hand-sized icon tags, so the same icon renders at one
+  consistent size everywhere it's used as a plain indicator.
+
+## [1.18.3] — 2026-07-14
+
+### Fixed
+- Recurring-meal responsibility save failures (`RecurringIsland`) are now
+  surfaced via toast instead of failing silently.
+- `CredentialsModal`'s invite-copy button now shows success/failure via
+  toast and only closes the modal after a successful copy.
+
+## [1.18.2] — 2026-07-14
+
+### Accessibility
+- Shopping-list item cards (`ItemCard`/`ItemGridCard`) are now reachable and
+  operable by keyboard/screen reader — `role="button"`, `tabIndex`, and an
+  Enter/Space handler for toggling bought, matching the pattern already used
+  by the PWA install CTA.
+- Modals (`Sheet.jsx`, shared by every modal) now move focus in on open,
+  trap `Tab` inside the sheet, restore focus to the trigger on close, and
+  expose `role="dialog"`/`aria-modal`.
+- Every form `<label>` in `ItemEditModal`, `MealEditModal`, `MealPlanModal`,
+  and the admin/member/recurring settings forms is now programmatically
+  associated with its input (`htmlFor`/`id`, or `aria-label`/
+  `aria-labelledby` where a visible label didn't fit); `ProfileIsland`'s
+  password fields gained visible labels instead of relying on placeholder
+  text alone.
+- Fixed `--text-tertiary`'s light-mode contrast (was ~3.9–4.1:1 against
+  card/page surfaces) to meet the 4.5:1 WCAG AA threshold for normal text.
+- `Header`'s back button now has an `aria-label`.
+- The toast container now announces itself to screen readers via
+  `role="status"`/`aria-live="polite"`.
+
+## [1.18.1] — 2026-07-14
+
+### Fixed
+- **Switching tabs still visibly "flew in" cards from the top-left corner**,
+  even after the fix that kept Handleliste/Måltider mounted across tab
+  switches (1.17.4-era). That fix stopped the data from resetting, but the
+  item/day cards use Framer Motion's `layout` animation, which measures
+  position via `getBoundingClientRect()` — and a `display: none` pane (how
+  inactive tabs are hidden) measures as a zero-size box pinned at `(0,0)`.
+  Reactivating the tab made Framer see a jump from that stale `(0,0)` rect to
+  the real position and animate it, i.e. every card flying in from the
+  top-left for one frame. `layout` is now only enabled while the tab is
+  actually active, so its first measurement on reactivation is the real
+  position with nothing to interpolate from.
+
+## [1.18.0] — 2026-07-13
+
+### Added
+- **Site-wide admin metrics dashboard.** A new "Statistikk (alle lister)"
+  section under Innstillinger → Administrasjon (superadmin-only) shows usage
+  across every list: user/list counts, signups and new lists per week,
+  shopping activity (items added per week, bought vs. total, most-bought
+  items), meal-plan fill rate and most-planned meals, and a per-list
+  breakdown table. Gated beyond ordinary `is_admin` by a new
+  `SUPERADMIN_USERNAMES` Worker variable (`GET /admin/metrics`), since
+  `is_admin` is normally scoped to a single list.
+
+## [1.17.2] — 2026-07-13
+
+### Fixed
+- **Deleting a meal from Måltider could silently wipe who's responsible for
+  that day.** The day's plan row was tied to its meal with a cascading
+  delete, so removing a meal from the catalogue deleted the whole day's
+  entry — including the responsible person — instead of just unassigning
+  the meal. Deleting a meal now correctly reverts the day to unplanned
+  while keeping who's responsible.
+- **Handleliste's delete button forgot the whole item, not just the line.**
+  Deleting an item from the shopping list cleared its saved category and
+  purchase history and removed every matching line on the list, even ones
+  you didn't mean to touch. Delete now just removes the tapped line; a
+  separate, clearly-labeled "forget this item entirely" option is still
+  available if you actually want to reset its history.
+- **A mistyped date sent from a broken client could get stuck in the meal
+  plan.** `POST /plan` now rejects a malformed date instead of silently
+  accepting it.
+
+### Security
+- Hardened the one-time account-setup endpoint's secret check against
+  timing attacks (it now uses the same constant-time comparison as login).
+- Changing your password is now rate-limited the same way login attempts
+  are, so a stolen device token can't be used to endlessly guess your
+  current password.
+
 ## [1.17.1] — 2026-07-13
 
 ### Fixed

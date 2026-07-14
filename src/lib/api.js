@@ -52,3 +52,31 @@ export async function rawLogin(username, password) {
   const data = await res.json();
   return { ok: res.ok, data };
 }
+
+// Unauthenticated POST helper shared by the public signup/recovery
+// endpoints below — no token exists yet for any of these calls.
+async function rawPost(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export function rawRegister(fields) {
+  return rawPost("/register", fields);
+}
+
+export function rawGoogleAuth(credential, listName) {
+  return rawPost("/auth/google", { credential, list_name: listName });
+}
+
+export function rawForgotPassword(email, turnstileToken) {
+  return rawPost("/forgot-password", { email, turnstile_token: turnstileToken });
+}
+
+export function rawResetPassword(token, newPassword) {
+  return rawPost("/reset-password", { token, new_password: newPassword });
+}

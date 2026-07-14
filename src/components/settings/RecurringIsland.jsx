@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
+import { Input } from "../../design-system/index.js";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 
 // Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility.
@@ -9,12 +11,12 @@ import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 export function RecurringIsland() {
   const { people, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
+  const toast = useToast();
   const [otherDrafts, setOtherDrafts] = useState({});
 
   useEffect(() => {
     refresh();
     ensureLoaded();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function onSelectChange(dow, value) {
@@ -27,12 +29,14 @@ export function RecurringIsland() {
       delete next[dow];
       return next;
     });
-    await saveDay(dow, value);
+    const res = await saveDay(dow, value);
+    if (res.error) toast(res.error, { error: true });
   }
 
   async function onOtherBlur(dow, value) {
     const val = value.trim();
-    await saveDay(dow, val || "");
+    const res = await saveDay(dow, val || "");
+    if (res.error) toast(res.error, { error: true });
     if (!val) {
       setOtherDrafts((prev) => {
         const next = { ...prev };
@@ -56,10 +60,11 @@ export function RecurringIsland() {
           const selectValue = isOther ? "__other__" : current;
           return (
             <div style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
+              <div id={`recurring-day-${dow}`} style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
               <select
                 value={selectValue}
                 onChange={(e) => onSelectChange(dow, e.target.value)}
+                aria-labelledby={`recurring-day-${dow}`}
                 style={{ width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
               >
                 <option value="">Ingen</option>
@@ -69,10 +74,11 @@ export function RecurringIsland() {
                 <option value="__other__">Annet...</option>
               </select>
               {isOther && (
-                <input
+                <Input
                   type="text"
                   placeholder="Beskriv ansvaret"
-                  style={{ display: "block", marginTop: 8, width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
+                  aria-label={`Beskriv ansvar for ${day}`}
+                  style={{ marginTop: 8 }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}
                 />

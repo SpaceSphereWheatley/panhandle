@@ -22,5 +22,10 @@ database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 # The Worker proxies frontend requests to the Pages project URL.
 
 # Secrets (set under Worker -> Settings -> Variables and Secrets):
-#   JWT_SECRET   - long random string, signs login tokens
-#   SEED_SECRET  - one-time secret to create accounts; REMOVE after seeding
+#   JWT_SECRET            - long random string, signs login tokens
+#   SEED_SECRET           - one-time secret to create accounts; REMOVE after seeding
+#   TURNSTILE_SECRET_KEY  - Cloudflare Turnstile secret key (Turnstile dashboard, separate from Workers)
+#   RESEND_API_KEY        - Resend API key, needs a DNS-verified sending domain first (resend.com dashboard)
+# GOOGLE_CLIENT_ID (worker/index.js) is not secret (shipped in frontend JS
+# too) - update the hardcoded constant there directly after creating an OAuth
+# client in Google Cloud Console, no dashboard variable needed.

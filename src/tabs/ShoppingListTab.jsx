@@ -9,8 +9,9 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
+import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, FabMenu } from "../design-system/index.js";
+import { Input, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 
@@ -26,6 +27,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const intensity = useDesignIntensity();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -77,12 +79,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   useEffect(() => {
     if (!active) return;
-    loadCatalogue().then(loadList);
+    loadCatalogue().then(loadList).finally(() => setLoading(false));
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   function setView(mode) {
@@ -319,7 +320,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "list", intensity === "classic")}
           >
-            <i className="ph ph-list-bullets" />
+            <UiIcon name="list" size={16} />
           </button>
           <button
             onClick={() => setView("grid")}
@@ -328,20 +329,22 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "grid", intensity === "classic")}
           >
-            <i className="ph ph-squares-four" />
+            <UiIcon name="grid" size={16} />
           </button>
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <div style={{ textAlign: "center", color: "var(--text-tertiary)", padding: "48px 16px", fontSize: "var(--text-sm)" }}>
-          Ingen varer på listen.
-          <br />
-          Legg til en vare over for å komme i gang.
-        </div>
+      {loading ? (
+        <LoadingState label="Laster handleliste..." />
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon="shopping-cart-simple"
+          title="Ingen varer på listen"
+          description="Legg til en vare over for å komme i gang."
+        />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -366,16 +369,16 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 }}
               >
                 <span>Nylig kjøpt</span>
-                <i
-                  className="ph ph-caret-down"
+                <UiIcon
+                  name="chevronDown"
+                  size={14}
                   style={{
-                    fontSize: 13,
                     transition: "transform var(--duration-fast) var(--ease-out)",
                     transform: boughtCollapsed ? "rotate(-90deg)" : "none",
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
             </div>
           )}
         </>
@@ -464,7 +467,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, active) {
   return (
     <div style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false}>
@@ -480,6 +483,7 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit) {
               resolving={!!resolvingIds?.has(item.id)}
               onToggle={onToggle}
               onEdit={onEdit}
+              active={active}
             />
           );
         })}

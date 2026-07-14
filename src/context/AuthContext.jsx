@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef, useState } from "react";
-import { configureApi, rawLogin } from "../lib/api.js";
+import { configureApi, rawLogin, rawRegister, rawGoogleAuth } from "../lib/api.js";
 
 const AuthContext = createContext(null);
 
@@ -9,6 +9,7 @@ function readStoredAuth() {
     user: localStorage.getItem("ph_user"),
     isAdmin: localStorage.getItem("ph_is_admin") === "1",
     isOwner: localStorage.getItem("ph_is_owner") === "1",
+    isSuperAdmin: localStorage.getItem("ph_is_superadmin") === "1",
   };
 }
 
@@ -18,12 +19,14 @@ function persistAuth(auth) {
     localStorage.removeItem("ph_user");
     localStorage.removeItem("ph_is_admin");
     localStorage.removeItem("ph_is_owner");
+    localStorage.removeItem("ph_is_superadmin");
     return;
   }
   localStorage.setItem("ph_token", auth.token);
   localStorage.setItem("ph_user", auth.user);
   localStorage.setItem("ph_is_admin", auth.isAdmin ? "1" : "0");
   localStorage.setItem("ph_is_owner", auth.isOwner ? "1" : "0");
+  localStorage.setItem("ph_is_superadmin", auth.isSuperAdmin ? "1" : "0");
 }
 
 export function AuthProvider({ children }) {
@@ -35,7 +38,7 @@ export function AuthProvider({ children }) {
   authRef.current = auth;
 
   function logout(reason) {
-    const cleared = { token: null, user: null, isAdmin: false, isOwner: false };
+    const cleared = { token: null, user: null, isAdmin: false, isOwner: false, isSuperAdmin: false };
     authRef.current = cleared;
     setAuth(cleared);
     persistAuth(cleared);
@@ -63,24 +66,50 @@ export function AuthProvider({ children }) {
     onUnauthorized: () => logout("expired"),
   });
 
-  async function login(username, password) {
-    setExpiredReason(null);
-    const { ok, data } = await rawLogin(username, password);
-    if (!ok) return { error: data.error || "Innlogging feilet" };
+  // Shared by every path that ends with "the server handed back a fresh
+  // login-shaped response" (login, register, Google sign-in, reset-password's
+  // auto-login) so each doesn't re-derive/store the auth shape separately.
+  function completeAuth(data) {
     const next = {
       token: data.token,
       user: data.user,
       isAdmin: !!data.is_admin,
       isOwner: !!data.is_owner,
+      isSuperAdmin: !!data.is_superadmin,
     };
     authRef.current = next;
     setAuth(next);
     persistAuth(next);
+  }
+
+  async function login(username, password) {
+    setExpiredReason(null);
+    const { ok, data } = await rawLogin(username, password);
+    if (!ok) return { error: data.error || "Innlogging feilet" };
+    completeAuth(data);
+    return { error: null };
+  }
+
+  async function register(fields) {
+    setExpiredReason(null);
+    const { ok, data } = await rawRegister(fields);
+    if (!ok) return { error: data.error || "Registrering feilet" };
+    completeAuth(data);
+    return { error: null };
+  }
+
+  async function loginWithGoogle(credential, listName) {
+    setExpiredReason(null);
+    const { ok, data } = await rawGoogleAuth(credential, listName);
+    if (!ok) return { error: data.error || "Google-innlogging feilet" };
+    completeAuth(data);
     return { error: null };
   }
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, logout, expiredReason }}>
+    <AuthContext.Provider
+      value={{ ...auth, login, register, loginWithGoogle, completeAuth, logout, expiredReason }}
+    >
       {children}
     </AuthContext.Provider>
   );

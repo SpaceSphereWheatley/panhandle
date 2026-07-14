@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button } from "../../design-system/index.js";
+import { Button, Input } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 
 // Add (id=null) or edit (id given) a meal_catalogue entry directly, outside
 // of planning a specific day. Reachable from the Måltider tab's FAB and from
 // each row of "Alle måltider".
 export function MealEditModal({ id, onClose, onSaved }) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [catalogue, setCatalogue] = useState([]);
   const [name, setName] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [labels, setLabels] = useState("");
-  const [msg, setMsg] = useState("");
   const [similarNote, setSimilarNote] = useState({ text: "", danger: false });
 
   useEffect(() => {
@@ -27,7 +30,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
         setLabels(parseIngredients(meal.labels).join(", "));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const knownLabels = useMemo(() => {
@@ -65,7 +67,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setMsg("Tomt navn");
+      toast("Tomt navn", { error: true });
       return;
     }
     const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
@@ -74,7 +76,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
       ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) })
       : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) });
     if (res.error) {
-      setMsg(res.error);
+      toast(res.error, { error: true });
       return;
     }
     onSaved();
@@ -85,16 +87,17 @@ export function MealEditModal({ id, onClose, onSaved }) {
   async function deleteEntry() {
     const meal = catalogue.find((m) => m.id === id);
     if (!meal) return;
-    if (!confirm(`Slette «${meal.name}» fra måltidskatalogen? Dager den er planlagt på blir tomme.`)) return;
+    if (!(await confirm(`Slette «${meal.name}» fra måltidskatalogen? Dager den er planlagt på blir tomme.`, { title: "Slette måltid?", confirmLabel: "Slett" })))
+      return;
     await api(`/meals/${id}`, { method: "DELETE" });
     onSaved();
   }
 
   return (
-    <Modal onClose={onClose}>
-      <h3>{id ? "Rediger måltid" : "Nytt måltid"}</h3>
-      <label>Navn</label>
-      <input
+    <Modal onClose={onClose} title={id ? "Rediger måltid" : "Nytt måltid"}>
+      <label htmlFor="meal-edit-name">Navn</label>
+      <Input
+        id="meal-edit-name"
         value={name}
         onChange={(e) => {
           setName(e.target.value);
@@ -105,19 +108,18 @@ export function MealEditModal({ id, onClose, onSaved }) {
       <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--status-danger)" : "var(--text-tertiary)" }}>
         {similarNote.text}
       </div>
-      <label>Ingredienser (kommaseparert)</label>
-      <input value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
-      <label>Etiketter (kommaseparert)</label>
-      <input list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
+      <label htmlFor="meal-edit-ingredients">Ingredienser (kommaseparert)</label>
+      <Input id="meal-edit-ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
+      <label htmlFor="meal-edit-labels">Etiketter (kommaseparert)</label>
+      <Input id="meal-edit-labels" list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
       <datalist id="mealLabelOptions">
         {knownLabels.map((l) => (
           <option value={l} key={l} />
         ))}
       </datalist>
-      <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: "var(--status-danger)" }}>{msg}</div>
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Avbryt</button>
-        <button className="save" onClick={save}>Lagre</button>
+        <Button variant="outline" onClick={onClose}>Avbryt</Button>
+        <Button variant="primary" onClick={save}>Lagre</Button>
       </div>
       {id && (
         <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>

@@ -21,7 +21,7 @@ export function Header({ title, onBack, action }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         {onBack ? (
-          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--text-primary)' }}>
+          <button onClick={onBack} aria-label="Tilbake" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--text-primary)' }}>
             <i className="ph ph-caret-left" style={{ fontSize: 22 }} />
           </button>
         ) : null}

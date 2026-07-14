@@ -1,13 +1,13 @@
 import { Modal } from "./Modal.jsx";
+import { IconButton, EmptyState } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 
 export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
   return (
-    <Modal onClose={onClose}>
-      <h3>Sannsynligvis tom for</h3>
+    <Modal onClose={onClose} title="Sannsynligvis tom for">
       <div>
         {suggestions.length === 0 ? (
-          <p className="cred-note">Ingen forslag akkurat nå.</p>
+          <EmptyState description="Ingen forslag akkurat nå." />
         ) : (
           suggestions.map((it) => (
             <div className="meal-browse-row suggest-row" key={it.id}>
@@ -18,14 +18,13 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
                   {Math.round(it.avg_interval_days)}. dag
                 </span>
               </span>
-              <button
-                type="button"
-                className="suggest-add"
-                aria-label={`Legg til ${cap(it.name)}`}
+              <IconButton
+                icon="plus"
+                size="lg"
+                variant="filled"
+                label={`Legg til ${cap(it.name)}`}
                 onClick={() => onAdd(it)}
-              >
-                +
-              </button>
+              />
             </div>
           ))
         )}

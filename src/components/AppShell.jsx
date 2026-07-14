@@ -89,7 +89,11 @@ export function AppShell() {
             <MealsTab active={tab === "meals"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
         )}
-        {tab === "settings" && <SettingsTab />}
+        {visited.settings && (
+          <div style={{ display: tab === "settings" ? "block" : "none" }}>
+            <SettingsTab />
+          </div>
+        )}
       </main>
       <TabBar
         tabs={[

@@ -154,17 +154,34 @@ const COMMON_ITEMS = [
   { name: "Blomster", category: "Annet" }
 ];
 
+// Creates a new list, seeded with COMMON_ITEMS. Shared by /seed, /admin/owners,
+// /register, and /auth/google so "what a brand-new list looks like" only
+// exists in one place. `name` is an optional household display name
+// (lists.name); omitted/undefined for the admin-driven paths, which don't
+// collect one.
+async function createList(env, name) {
+  const list = await env.DB.prepare(
+    "INSERT INTO lists (name) VALUES (?1) RETURNING id"
+  ).bind(name || null).first();
+  const listId = list.id;
+  await env.DB.batch(COMMON_ITEMS.map(it =>
+    env.DB.prepare("INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)")
+      .bind(it.name, it.category, listId)
+  ));
+  return listId;
+}
+
 // ---------- JWT helpers (HS256, no external deps) ----------
-function b64url(input) {
+export function b64url(input) {
   return btoa(String.fromCharCode(...new Uint8Array(input)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 // Encode via UTF-8 bytes so payloads with non-ASCII characters (e.g. a
 // username with æ/ø/å) don't make btoa throw.
-function b64urlStr(str) {
+export function b64urlStr(str) {
   return b64url(new TextEncoder().encode(str));
 }
-function b64urlDecode(str) {
+export function b64urlDecode(str) {
   str = str.replace(/-/g, "+").replace(/_/g, "/");
   while (str.length % 4) str += "=";
   const bin = atob(str);
@@ -173,13 +190,13 @@ function b64urlDecode(str) {
 }
 // Constant-time string comparison so a JWT signature check can't be probed
 // byte-by-byte via response timing.
-function timingSafeEqual(a, b) {
+export function timingSafeEqual(a, b) {
   if (a.length !== b.length) return false;
   let mismatch = 0;
   for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return mismatch === 0;
 }
-async function hmac(secret, data) {
+export async function hmac(secret, data) {
   const key = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
@@ -187,13 +204,13 @@ async function hmac(secret, data) {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return b64url(sig);
 }
-async function signJwt(payload, secret) {
+export async function signJwt(payload, secret) {
   const header = b64urlStr(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = b64urlStr(JSON.stringify(payload));
   const sig = await hmac(secret, `${header}.${body}`);
   return `${header}.${body}.${sig}`;
 }
-async function verifyJwt(token, secret) {
+export async function verifyJwt(token, secret) {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [header, body, sig] = parts;
@@ -213,7 +230,7 @@ const PBKDF2_ITER = 100000;
 // can't be used to enumerate valid usernames by response latency.
 const DUMMY_PASS_HASH =
   "100000:AAAAAAAAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-async function hashPassword(password, saltBytes) {
+export async function hashPassword(password, saltBytes) {
   const salt = saltBytes || crypto.getRandomValues(new Uint8Array(16));
   const keyMaterial = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
@@ -226,7 +243,7 @@ async function hashPassword(password, saltBytes) {
   const saltB64 = b64url(salt.buffer);
   return `${PBKDF2_ITER}:${saltB64}:${hashB64}`;
 }
-async function verifyPassword(password, stored) {
+export async function verifyPassword(password, stored) {
   try {
     const [iterStr, saltB64, hashB64] = stored.split(":");
     const iterations = parseInt(iterStr, 10);
@@ -246,7 +263,7 @@ async function verifyPassword(password, stored) {
 // accounts. Charset omits visually ambiguous characters (0/O, 1/l/I) since
 // these are read off a screen and retyped by hand. ~12 chars, grouped
 // xxxx-xxxx-xxxx. Rejection sampling avoids modulo bias. No external deps.
-function genPassword() {
+export function genPassword() {
   const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const len = 12;
   const max = Math.floor(256 / charset.length) * charset.length;
@@ -263,11 +280,17 @@ function genPassword() {
 
 // Normalizes/validates a username from request input. Letters (incl. æøå),
 // digits, and . _ - only; 1-32 chars. Returns null if invalid.
-function cleanUsername(u) {
+export function cleanUsername(u) {
   const s = (u || "").trim();
   if (!s || s.length > 32) return null;
   if (!/^[\p{L}\p{N}._-]+$/u.test(s)) return null;
   return s;
+}
+
+// Cheap format check shared by /register and /change-email — not RFC-strict,
+// just enough to reject obvious garbage before it hits the DB/Resend.
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "");
 }
 
 // Recognises a gluten-free marker (GF / gf / glutenfri / glutenfritt) typed as
@@ -277,7 +300,7 @@ function cleanUsername(u) {
 // share the same catalogue row but stay distinct list lines (the add path's
 // merge check is notes-aware). If the marker is the entire input (e.g. just
 // "GF"), it's left untouched — there's no item name to attach it to.
-function extractGlutenFree(name) {
+export function extractGlutenFree(name) {
   let gf = false;
   const cleaned = (name || "")
     .replace(/\b(gf|glutenfri|glutenfritt)\b/gi, () => { gf = true; return " "; })
@@ -291,7 +314,7 @@ function extractGlutenFree(name) {
 // always capitalised ("brød" -> "Brød"), leaving the rest as typed (proper
 // nouns, acronyms and casing like "7 Up" survive). Applied wherever a catalogue
 // name is created or renamed; the frontend mirrors it at display time.
-function capitalizeName(name) {
+export function capitalizeName(name) {
   const s = (name || "").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -299,7 +322,7 @@ function capitalizeName(name) {
 // Cleans a free-form labels array for storage on meal_catalogue: trims each,
 // drops blanks, capitalises like capitalizeName, and dedupes case-insensitively
 // (keeping the first-seen casing) so "vegetar" and "Vegetar" don't both stick.
-function sanitizeLabels(labels) {
+export function sanitizeLabels(labels) {
   if (!Array.isArray(labels)) return [];
   const seen = new Set();
   const out = [];
@@ -358,6 +381,135 @@ async function mintToken(u, env) {
   }, env.JWT_SECRET);
 }
 
+// Site-wide metrics (across every list) are gated beyond ordinary is_admin
+// (which is deliberately per-list) via this env var — a comma-separated
+// allowlist of usernames, set as a Worker dashboard variable alongside
+// JWT_SECRET/SEED_SECRET, never committed.
+export function isSuperAdmin(username, env) {
+  const allowed = (env.SUPERADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes((username || "").toLowerCase());
+}
+
+// Builds the same {token, user, is_admin, is_owner, list_id, is_superadmin}
+// shape that /login, /register, /reset-password, and /auth/google all return,
+// so the frontend has one response shape to store regardless of which path
+// authenticated the user.
+async function authResponse(row, env) {
+  const token = await mintToken(row, env);
+  return {
+    token, user: row.username,
+    is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id,
+    is_superadmin: isSuperAdmin(row.username, env),
+  };
+}
+
+// ---------- abuse protection for public signup/recovery endpoints ----------
+// Generalizes login_attempts' delete-expired-then-count pattern (IP-keyed,
+// opportunistic cleanup, no cron) across multiple independent endpoints via a
+// `kind` discriminator, so /register and /forgot-password each get their own
+// window/threshold without a near-duplicate table per endpoint.
+const RATE_LIMITS = {
+  register: { windowMs: 60 * 60 * 1000, max: 8 },        // 8/hour/IP
+  forgot_password: { windowMs: 60 * 60 * 1000, max: 5 }, // 5/hour/IP
+};
+async function checkRateLimit(env, ip, kind) {
+  const { windowMs, max } = RATE_LIMITS[kind];
+  const windowStart = Date.now() - windowMs;
+  await env.DB.prepare("DELETE FROM rate_limit_attempts WHERE kind = ?1 AND created_at < ?2")
+    .bind(kind, windowStart).run();
+  const { attempts } = await env.DB.prepare(
+    "SELECT COUNT(*) AS attempts FROM rate_limit_attempts WHERE kind = ?1 AND ip = ?2 AND created_at >= ?3"
+  ).bind(kind, ip, windowStart).first();
+  return attempts < max;
+}
+async function recordAttempt(env, ip, kind) {
+  await env.DB.prepare("INSERT INTO rate_limit_attempts (ip, kind, created_at) VALUES (?1, ?2, ?3)")
+    .bind(ip, kind, Date.now()).run();
+}
+
+// ---------- Cloudflare Turnstile verification ----------
+async function verifyTurnstile(token, ip, env) {
+  if (!token) return false;
+  const body = new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY || "", response: token, remoteip: ip });
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body });
+    const data = await res.json();
+    return data.success === true;
+  } catch { return false; }
+}
+
+// ---------- transactional email (Resend) ----------
+// Update once a sending domain is verified in Resend's dashboard (manual,
+// one-time — see CLAUDE.md/the signup feature's PR description).
+const EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
+async function sendEmail(env, { to, subject, html }) {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html }),
+    });
+    if (!res.ok) console.error("Resend send failed", res.status, await res.text());
+    return res.ok;
+  } catch (e) {
+    console.error("Resend fetch threw", e);
+    return false;
+  }
+}
+
+async function sha256Hex(str) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ---------- "Sign in with Google" ID token verification ----------
+// Public by nature (shipped in frontend JS), so it's hardcoded like other
+// public config (API_BASE, pagesUrl.hostname) rather than routed through env.
+const GOOGLE_CLIENT_ID = "148854883648-86vjm8s2ihc50pjl9sj4t0nj0pe98dh3.apps.googleusercontent.com";
+
+let googleJwksCache = null;
+async function getGoogleJwks() {
+  if (googleJwksCache) return googleJwksCache;
+  const res = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+  googleJwksCache = await res.json();
+  return googleJwksCache;
+}
+
+// Verifies a Google Identity Services ID token entirely by hand (RS256, via
+// Web Crypto), the same no-external-deps ethos as this file's own HS256
+// signJwt/verifyJwt — just someone else's keys instead of our own secret.
+// Returns the decoded payload (with a verified email) or null.
+async function verifyGoogleIdToken(idToken) {
+  if (!idToken || typeof idToken !== "string") return null;
+  const parts = idToken.split(".");
+  if (parts.length !== 3) return null;
+  const [headerB64, bodyB64, sigB64] = parts;
+  let header, payload;
+  try {
+    header = JSON.parse(b64urlDecode(headerB64));
+    payload = JSON.parse(b64urlDecode(bodyB64));
+  } catch { return null; }
+
+  if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+  if (payload.aud !== GOOGLE_CLIENT_ID) return null;
+  if (payload.iss !== "accounts.google.com" && payload.iss !== "https://accounts.google.com") return null;
+  if (!payload.email || payload.email_verified !== true) return null;
+
+  const jwks = await getGoogleJwks();
+  const jwk = jwks.keys.find((k) => k.kid === header.kid);
+  if (!jwk) return null;
+
+  try {
+    const key = await crypto.subtle.importKey(
+      "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]
+    );
+    const sigBytes = Uint8Array.from(atob(sigB64.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+    const signedData = new TextEncoder().encode(`${headerB64}.${bodyB64}`);
+    const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, sigBytes, signedData);
+    return ok ? payload : null;
+  } catch { return null; }
+}
+
 // ---------- main ----------
 export default {
   async fetch(request, env) {
@@ -402,12 +554,7 @@ export default {
       let ownerMade = false;
       const ensureList = async () => {
         if (bootstrapListId) return bootstrapListId;
-        const l = await env.DB.prepare("INSERT INTO lists DEFAULT VALUES RETURNING id").first();
-        bootstrapListId = l.id;
-        await env.DB.batch(COMMON_ITEMS.map(it =>
-          env.DB.prepare("INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)")
-            .bind(it.name, it.category, bootstrapListId)
-        ));
+        bootstrapListId = await createList(env);
         return bootstrapListId;
       };
       for (const a of accounts) {
@@ -468,11 +615,194 @@ export default {
           .bind(ip, Date.now()).run();
         return json({ error: "Feil brukernavn eller passord" }, 401);
       }
-      const token = await mintToken(row, env);
-      return json({
-        token, user: row.username,
-        is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id
+      return json(await authResponse(row, env));
+    }
+
+    // ===== REGISTER (public, self-service signup) =====
+    // Creates a brand-new household: a fresh list (optionally named) plus its
+    // first owner account. Open to anyone — gated by Turnstile + an IP rate
+    // limit instead of an invite code, since any signed-up member of an
+    // existing household is added by its owner via POST /list-users instead.
+    if (path === "/register" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "register"))) {
+        return json({ error: "For mange registreringsforsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      // Recorded regardless of outcome below: account-creation *volume* is the
+      // abuse vector here, not just guessing (unlike login_attempts, which
+      // only counts failures).
+      await recordAttempt(env, ip, "register");
+
+      // Cheap local validation first, before spending Turnstile's external
+      // round-trip on a request that was going to be rejected anyway.
+      const uname = cleanUsername(body.username);
+      if (!uname) return json({ error: "Ugyldig brukernavn" }, 400);
+      if (!body.password || body.password.length < 8) {
+        return json({ error: "Passord må være minst 8 tegn" }, 400);
+      }
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) {
+        return json({ error: "Ugyldig e-post" }, 400);
+      }
+      if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
+        return json({ error: "Bot-verifisering feilet" }, 403);
+      }
+      const existingUser = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(uname).first();
+      if (existingUser) return json({ error: "Brukernavnet er opptatt" }, 409);
+      const existingEmail = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE email = ?1 COLLATE NOCASE"
+      ).bind(cleanEmail).first();
+      if (existingEmail) return json({ error: "E-posten er allerede i bruk" }, 409);
+
+      const hash = await hashPassword(body.password);
+      const listId = await createList(env, (body.list_name || "").trim() || null);
+      await env.DB.prepare(
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email) VALUES (?1, ?2, 1, 0, 1, ?3, 'self-register', ?4)"
+      ).bind(uname, hash, listId, cleanEmail).run();
+      const row = { username: uname, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
+      return json(await authResponse(row, env));
+    }
+
+    // ===== SIGN IN WITH GOOGLE (public) =====
+    // Accepts the ID-token JWT from Google's client-side sign-in button.
+    // Logs in an existing account (matched by google_sub, or by email if this
+    // is that account's first time using Google), or creates a brand-new
+    // household the same way /register does. Google's own sign-in flow is
+    // already strong bot resistance, so account creation here skips Turnstile
+    // but still shares /register's rate-limit bucket.
+    if (path === "/auth/google" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const payload = await verifyGoogleIdToken(body.credential);
+      if (!payload) return json({ error: "Google-innlogging feilet" }, 401);
+      const email = payload.email.toLowerCase();
+
+      let row = await env.DB.prepare(
+        "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE google_sub = ?1"
+      ).bind(payload.sub).first();
+
+      if (!row) {
+        row = await env.DB.prepare(
+          "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE email = ?1 COLLATE NOCASE"
+        ).bind(email).first();
+        if (row) {
+          // First time this existing (password) account signs in with Google —
+          // link it so future Google sign-ins match directly by google_sub.
+          await env.DB.prepare("UPDATE users SET google_sub = ?1 WHERE username = ?2 COLLATE NOCASE")
+            .bind(payload.sub, row.username).run();
+        }
+      }
+
+      if (!row) {
+        if (!(await checkRateLimit(env, ip, "register"))) {
+          return json({ error: "For mange registreringsforsøk. Prøv igjen senere." }, 429);
+        }
+        await recordAttempt(env, ip, "register");
+        const uname = cleanUsername(email.split("@")[0]) || `bruker${Date.now()}`;
+        // Google's sub is globally unique per account, unlike a username derived
+        // from the email's local part — fall back to appending digits on clash.
+        let finalUname = uname;
+        for (let i = 0; i < 5; i++) {
+          const clash = await env.DB.prepare(
+            "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
+          ).bind(finalUname).first();
+          if (!clash) break;
+          finalUname = `${uname}${Math.floor(Math.random() * 10000)}`;
+        }
+        // No password is ever handed to the user for a Google-only account —
+        // stored as a hash of unknown random bytes so /login always fails
+        // safely until they run /forgot-password on this same verified email.
+        const hash = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+        const listId = await createList(env, (body.list_name || "").trim() || null);
+        await env.DB.prepare(
+          "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, google_sub) VALUES (?1, ?2, 1, 0, 1, ?3, 'google', ?4, ?5)"
+        ).bind(finalUname, hash, listId, email, payload.sub).run();
+        row = { username: finalUname, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
+      }
+
+      return json(await authResponse(row, env));
+    }
+
+    // ===== FORGOT PASSWORD (public) =====
+    if (path === "/forgot-password" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "forgot_password"))) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      await recordAttempt(env, ip, "forgot_password");
+
+      if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
+        return json({ error: "Bot-verifisering feilet" }, 403);
+      }
+      // Always the same response regardless of whether the email matched, so
+      // this endpoint can't be used to enumerate registered addresses.
+      const genericOk = json({ ok: true, message: "Hvis e-posten finnes, er en lenke sendt." });
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!cleanEmail) return genericOk;
+
+      const row = await env.DB.prepare(
+        "SELECT username FROM users WHERE email = ?1 COLLATE NOCASE"
+      ).bind(cleanEmail).first();
+      if (!row) return genericOk;
+
+      const rawToken = b64url(crypto.getRandomValues(new Uint8Array(32)).buffer);
+      const tokenHash = await sha256Hex(rawToken);
+      const now = Date.now();
+      await env.DB.prepare(
+        "INSERT INTO password_resets (username, token_hash, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
+      ).bind(row.username, tokenHash, now, now + 30 * 60 * 1000).run();
+
+      const resetUrl = `https://shopping.mohibb.com/app.html?reset_token=${rawToken}`;
+      await sendEmail(env, {
+        to: cleanEmail,
+        subject: "Tilbakestill passordet ditt - Panhandle",
+        html: `<p>Klikk her for å tilbakestille passordet ditt (lenken er gyldig i 30 minutter):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Hvis du ikke ba om dette, kan du ignorere denne e-posten.</p>`,
       });
+      return genericOk;
+    }
+
+    // ===== RESET PASSWORD (public) =====
+    if (path === "/reset-password" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "forgot_password"))) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body.new_password || body.new_password.length < 8) {
+        return json({ error: "Passord må være minst 8 tegn" }, 400);
+      }
+      if (!body.token) return json({ error: "Ugyldig eller utløpt lenke" }, 400);
+
+      const tokenHash = await sha256Hex(body.token);
+      const now = Date.now();
+      const reset = await env.DB.prepare(
+        "SELECT username FROM password_resets WHERE token_hash = ?1 AND expires_at > ?2"
+      ).bind(tokenHash, now).first();
+      if (!reset) return json({ error: "Ugyldig eller utløpt lenke" }, 400);
+
+      const userRow = await env.DB.prepare(
+        "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(reset.username).first();
+      if (!userRow) return json({ error: "Fant ikke bruker" }, 404);
+
+      const hash = await hashPassword(body.new_password);
+      const newVersion = userRow.token_version + 1;
+      await env.DB.prepare(
+        "UPDATE users SET pass_hash = ?1, token_version = ?2 WHERE username = ?3 COLLATE NOCASE"
+      ).bind(hash, newVersion, userRow.username).run();
+      // Invalidate every outstanding reset token for this user, not just the
+      // one just used, so an older emailed link can't also be redeemed later.
+      await env.DB.prepare("DELETE FROM password_resets WHERE username = ?1").bind(userRow.username).run();
+
+      return json(await authResponse({ ...userRow, token_version: newVersion }, env));
     }
 
     // ===== AUTH REQUIRED BELOW =====
@@ -523,6 +853,48 @@ export default {
       return json({ ok: true, token: tokenAfter });
     }
 
+    // ===== ACCOUNT (email, used for Google sign-in linking + password recovery) =====
+    if (path === "/account" && method === "GET") {
+      const row = await env.DB.prepare(
+        "SELECT email FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      return authedJson({ email: row.email || null });
+    }
+
+    if (path === "/change-email" && method === "POST") {
+      // Same per-IP throttle as /change-password, sharing login_attempts — a
+      // stolen token shouldn't grant unlimited current_password guesses, and
+      // email is what /forgot-password trusts to reset a password, so setting
+      // it needs the same proof-of-password as changing the password itself.
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const windowStart = Date.now() - LOGIN_WINDOW_MS;
+      const { attempts } = await env.DB.prepare(
+        "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
+      ).bind(ip, windowStart).first();
+      if (attempts >= LOGIN_MAX_ATTEMPTS) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) return json({ error: "Ugyldig e-post" }, 400);
+      const row = await env.DB.prepare(
+        "SELECT pass_hash FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      if (!(await verifyPassword(body.current_password || "", row.pass_hash))) {
+        await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
+          .bind(ip, Date.now()).run();
+        return json({ error: "Feil passord" }, 401);
+      }
+      const clash = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE email = ?1 COLLATE NOCASE AND username != ?2 COLLATE NOCASE"
+      ).bind(cleanEmail, user.username).first();
+      if (clash) return json({ error: "E-posten er allerede i bruk av en annen konto" }, 409);
+      await env.DB.prepare("UPDATE users SET email = ?1 WHERE username = ?2 COLLATE NOCASE")
+        .bind(cleanEmail, user.username).run();
+      return authedJson({ ok: true, email: cleanEmail });
+    }
+
     // ===== ADMIN ENDPOINTS (require is_admin) =====
     // Create a new owner + their own list, seeded with COMMON_ITEMS.
     if (path === "/admin/owners" && method === "POST") {
@@ -537,16 +909,10 @@ export default {
       if (exists) return authedJson({ error: "Brukernavnet er opptatt" }, 409);
       const password = genPassword();
       const hash = await hashPassword(password);
-      const list = await env.DB.prepare("INSERT INTO lists DEFAULT VALUES RETURNING id").first();
-      const listId = list.id;
-      const stmts = COMMON_ITEMS.map(it =>
-        env.DB.prepare("INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3)")
-          .bind(it.name, it.category, listId)
-      );
-      stmts.push(env.DB.prepare(
+      const listId = await createList(env);
+      await env.DB.prepare(
         "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, 0, 1, ?3, ?4)"
-      ).bind(uname, hash, listId, user.username));
-      await env.DB.batch(stmts);
+      ).bind(uname, hash, listId, user.username).run();
       return authedJson({ username: uname, password });
     }
 
@@ -606,6 +972,77 @@ export default {
         "UPDATE users SET is_admin = ?1, is_owner = ?2, token_version = token_version + 1 WHERE username = ?3 COLLATE NOCASE"
       ).bind(newAdmin, newOwner, row.username).run();
       return authedJson({ ok: true, username: row.username, is_admin: newAdmin, is_owner: newOwner });
+    }
+
+    // Site-wide usage metrics, across all lists (not just the caller's own).
+    // Gated beyond is_admin by isSuperAdmin — see its definition above.
+    if (path === "/admin/metrics" && method === "GET") {
+      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+
+      const [
+        listCount, userCount, roleCounts,
+        signupsByWeek, listsByWeek,
+        itemStats, itemsByWeek, topItems,
+        mealPlanFill, topMeals,
+        perList, recentFailedLogins,
+      ] = await Promise.all([
+        env.DB.prepare("SELECT COUNT(*) AS n FROM lists").first(),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM users").first(),
+        env.DB.prepare(
+          "SELECT SUM(is_admin) AS admins, SUM(is_owner) AS owners FROM users"
+        ).first(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', created_at) AS week, COUNT(*) AS n FROM users GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', created_at) AS week, COUNT(*) AS n FROM lists GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS total, SUM(bought) AS bought FROM list_items"
+        ).first(),
+        env.DB.prepare(
+          "SELECT strftime('%Y-%W', added_at) AS week, COUNT(*) AS n FROM list_items GROUP BY week ORDER BY week"
+        ).all(),
+        env.DB.prepare(
+          "SELECT name, SUM(times_bought) AS n FROM item_catalogue GROUP BY name ORDER BY n DESC LIMIT 10"
+        ).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS total, SUM(CASE WHEN meal_id IS NOT NULL THEN 1 ELSE 0 END) AS filled FROM meal_plan"
+        ).first(),
+        env.DB.prepare(
+          "SELECT name, SUM(times_planned) AS n FROM meal_catalogue GROUP BY name ORDER BY n DESC LIMIT 10"
+        ).all(),
+        env.DB.prepare(`
+          SELECT l.id AS list_id,
+                 (SELECT COUNT(*) FROM users u WHERE u.list_id = l.id) AS users,
+                 (SELECT COUNT(*) FROM item_catalogue c WHERE c.list_id = l.id) AS items,
+                 (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id AND li.bought = 1) AS bought
+          FROM lists l ORDER BY l.id
+        `).all(),
+        env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM login_attempts WHERE created_at >= ?1"
+        ).bind(Date.now() - 24 * 60 * 60 * 1000).first(),
+      ]);
+
+      return authedJson({
+        overview: {
+          lists: listCount.n, users: userCount.n,
+          admins: roleCounts.admins || 0, owners: roleCounts.owners || 0,
+        },
+        signups_by_week: signupsByWeek.results,
+        lists_by_week: listsByWeek.results,
+        shopping: {
+          total_items: itemStats.total || 0, bought_items: itemStats.bought || 0,
+          items_by_week: itemsByWeek.results, top_items: topItems.results,
+        },
+        meals: {
+          plan_total: mealPlanFill.total || 0, plan_filled: mealPlanFill.filled || 0,
+          top_meals: topMeals.results,
+        },
+        per_list: perList.results,
+        failed_logins_24h: recentFailedLogins.n,
+      });
     }
 
     // ===== LIST-USER ENDPOINTS =====

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
+import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
-import { cap } from "../../lib/shoppingUtils.js";
 import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
+import { IngredientChecklist } from "./IngredientChecklist.jsx";
 
 // The shopping tab's FAB primary action: pull every ingredient from this (or
 // next) week's planned meals into a checkable "add to shopping list" list.
@@ -41,7 +42,6 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       const built = buildIngredientRows(ingredients, catalogue, onList).map((r) => ({ ...r, checked: false }));
       setRows(built);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleRow(idx) {
@@ -74,27 +74,20 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
   const dateRange = `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Fra middagsplanen</h3>
+    <Modal onClose={onClose} title="Fra middagsplanen">
       <p className="cred-note">
         {weekLabel} ({dateRange}) · velg hvilke ingredienser som skal på listen.
       </p>
-      {rows && rows.length === 0 ? (
-        <p className="cred-note">Ingen ingredienser planlagt denne perioden.</p>
+      {rows === null ? (
+        <LoadingState />
+      ) : rows.length === 0 ? (
+        <EmptyState description="Ingen ingredienser planlagt denne perioden." />
       ) : (
-        <div className="ing-list">
-          {(rows || []).map((r, i) => (
-            <label className="ing-row" key={r.name}>
-              <input type="checkbox" checked={r.checked} onChange={() => toggleRow(i)} />
-              <span className="ing-name">{cap(r.name)}</span>
-              {r.already && <span className="ing-tag">allerede på listen</span>}
-            </label>
-          ))}
-        </div>
+        <IngredientChecklist rows={rows} onToggle={toggleRow} />
       )}
       <div className="actions">
-        <button className="cancel" onClick={onClose}>Avbryt</button>
-        <button className="save" onClick={confirmAdd}>Legg til valgte</button>
+        <Button variant="outline" onClick={onClose}>Avbryt</Button>
+        <Button variant="primary" onClick={confirmAdd}>Legg til valgte</Button>
       </div>
     </Modal>
   );

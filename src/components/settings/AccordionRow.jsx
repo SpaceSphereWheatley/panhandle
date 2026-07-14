@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { UiIcon } from "../UiIcon.jsx";
 
 // Reusable expand/collapse row used inside a Settings island for content
 // too heavy to show inline permanently (a form, a list with actions). A
@@ -26,10 +27,10 @@ export function AccordionRow({ label, defaultOpen = false, children }) {
         }}
       >
         <span>{label}</span>
-        <i
-          className="ph ph-caret-down"
+        <UiIcon
+          name="chevronDown"
+          size={14}
           style={{
-            fontSize: 15,
             color: "var(--accent-primary)",
             transform: open ? "none" : "rotate(-90deg)",
             transition: "transform var(--spring-duration-soft) var(--ease-spring-soft)",
