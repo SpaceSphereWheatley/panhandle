@@ -42,7 +42,7 @@ export function LoginScreen({ onSignup, onForgot }) {
     <div
       id="login"
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",

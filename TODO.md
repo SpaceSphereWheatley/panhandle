@@ -18,9 +18,6 @@ details live in `CHANGELOG.md`, not here.
 
 4. Update the screenshots on the landing page
 
-5. Make the app work well on iOS as well
-   _Value: High · Importance: High · Type: Compatibility_
-
 7. In Settings, "Install Panhandle" should be on top
 
 8. In settings, the users should be able to minimize the recurring meal responsibilities
@@ -35,6 +32,22 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] iOS compatibility pass: added an `apple-touch-icon` (`app.html` and
+      `public/index.html` — iOS Safari ignores `manifest.json` icons for
+      "Add to Home Screen" entirely and previously fell back to a page
+      screenshot), and swapped `100vh` → `100dvh` on the four auth screens
+      (`LoginScreen`, `SignupScreen`, `ForgotPasswordScreen`,
+      `ResetPasswordScreen`) to fix clipping/phantom-scroll as Safari's
+      toolbar chrome shows/hides. Investigated and explicitly deferred:
+      swipe-to-mark-bought (confirmed via git history to be an intentional
+      v1 simplification carried through two later redesigns, not an iOS
+      regression — not restored), the landing page's remaining Apple
+      meta tags/`viewport-fit=cover` (low impact since installs go through
+      `/app.html`, which already has them), `overscroll-behavior-y:
+      contain`'s incomplete support on iOS Safari <16 (no concrete bug,
+      closing it needs JS scroll-locking — speculative complexity for a
+      2-user app), and general service-worker iOS quirks (no concrete bug
+      found in `public/sw.js`). (1.20.2)
 - [x] The landing page's "Registrer deg" button opened a static "we're in
       closed beta, contact Mohibb" modal — a leftover from before
       self-service signup shipped (1.20.0). It now links straight to the

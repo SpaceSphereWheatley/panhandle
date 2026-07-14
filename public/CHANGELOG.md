@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.20.2] — 2026-07-14
+
+### Fixed
+- **iOS "Add to Home Screen" used a screenshot thumbnail instead of the app
+  icon.** iOS Safari ignores `manifest.json`'s icons for home-screen
+  installs entirely — added an `apple-touch-icon` link to `app.html` and
+  `public/index.html`.
+- **Auth screens (login/signup/forgot/reset password) could clip or show a
+  phantom scrollbar on iOS Safari** as the address-bar/toolbar chrome
+  showed/hid, since `100vh` includes that chrome in its calculation. Swapped
+  to `100dvh` (dynamic viewport height) on all four screens.
+
 ## [1.20.1] — 2026-07-14
 
 ### Fixed
