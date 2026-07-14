@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.20.1] — 2026-07-14
+
+### Fixed
+- **Landing page's "Registrer deg" button.** It still opened a static "we're
+  in closed beta, contact Mohibb" modal, a leftover from before self-service
+  signup existed — now links straight to the real signup screen
+  (`/app.html?signup=1`). The dead modal markup/CSS/JS was removed.
+
 ## [1.20.0] — 2026-07-14
 
 ### Added

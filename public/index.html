@@ -78,7 +78,6 @@
   }
   a { color: inherit; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-  .hidden { display: none !important; }
 
   /* Header */
   header.site {
@@ -272,23 +271,6 @@
     border-top: 1px solid var(--border-default); padding: 28px 0; text-align: center;
     color: var(--text-tertiary); font-size: var(--text-xs);
   }
-
-  /* Modal */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(43,38,33,0.45);
-    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
-  }
-  .modal-box {
-    background: var(--surface-card); border-radius: var(--radius-xl); padding: 28px; max-width: 420px; width: 100%;
-    text-align: center; box-shadow: var(--shadow-raised);
-  }
-  .modal-box .ico {
-    width: 52px; height: 52px; border-radius: 50%; background: var(--accent-primary-subtle); color: var(--accent-primary);
-    display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 22px;
-  }
-  .modal-box h3 { margin: 0 0 10px; color: var(--text-primary); font-size: var(--text-lg); font-weight: var(--weight-bold); }
-  .modal-box p { color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.55; margin: 0 0 20px; }
-  .modal-box .btn-close { width: 100%; }
 </style>
 </head>
 <body>
@@ -316,7 +298,7 @@
       på listen til dere. Begge ser samme liste i sanntid, fra hver sin telefon.
     </p>
     <div class="cta-row">
-      <button class="btn btn-primary lg" onclick="openSignupModal()">Registrer deg</button>
+      <a class="btn btn-primary lg" href="/app.html?signup=1">Registrer deg</a>
       <a class="btn btn-outline lg" href="/app.html">Logg inn</a>
     </div>
     <div class="secondary-note">Fungerer på mobil og desktop.</div>
@@ -427,24 +409,5 @@
   <div class="wrap">© Panhandle</div>
 </footer>
 
-<div id="signupModal" class="modal-overlay hidden" onclick="if(event.target===this) closeSignupModal()">
-  <div class="modal-box">
-    <span class="ico">
-      <i class="ph ph-lock-key"></i>
-    </span>
-    <h3>Vi er i en lukket beta</h3>
-    <p>
-      Panhandle er foreløpig kun tilgjengelig for inviterte testere.
-      Ta kontakt med Mohibb for å be om en testkonto.
-    </p>
-    <button class="btn btn-outline btn-close" onclick="closeSignupModal()">Lukk</button>
-  </div>
-</div>
-
-<script>
-function openSignupModal() { document.getElementById('signupModal').classList.remove('hidden'); }
-function closeSignupModal() { document.getElementById('signupModal').classList.add('hidden'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSignupModal(); });
-</script>
 </body>
 </html>
