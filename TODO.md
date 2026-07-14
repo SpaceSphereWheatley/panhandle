@@ -22,12 +22,6 @@ details live in `CHANGELOG.md`, not here.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-21. `AppShell.jsx` keeps `ShoppingListTab`/`MealsTab` mounted-but-hidden
-    after first visit, but `SettingsTab` is conditionally
-    mounted/unmounted on every tab switch, so it re-fetches admin counts,
-    user lists, and recurring-meal config from scratch every time. Align
-    it with the same persist-after-first-visit pattern.
-    _Value: Medium · Importance: Low · Type: Performance_
 22. Admin-only content is gated at the top `SettingsTab` level (whole
     island incl. heading), while owner-only content is gated one level
     down inside `HomeIsland`'s body — two different mechanisms for
@@ -63,6 +57,11 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] `AppShell.jsx` now keeps `SettingsTab` mounted-but-hidden after first
+      visit (same persist-after-first-visit pattern already used for
+      `ShoppingListTab`/`MealsTab`), instead of mounting/unmounting it on
+      every tab switch — it no longer re-fetches admin counts, user lists,
+      and recurring-meal config from scratch every time. (1.19.1)
 - [x] Added `ConfirmContext`/`useConfirm` — a promise-based, app-styled
       replacement for native `confirm()` (mirrors `ToastContext`'s shape).
       Every destructive/sensitive action now confirms through it

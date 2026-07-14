@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.19.1] — 2026-07-14
+
+### Fixed
+- `SettingsTab` now stays mounted (hidden) after the first visit like the
+  other two tabs, instead of remounting on every switch — it no longer
+  redoes its admin counts, user list, and recurring-meal fetches every
+  time you open Innstillinger.
+
 ## [1.19.0] — 2026-07-14
 
 ### Added
