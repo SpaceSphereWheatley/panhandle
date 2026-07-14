@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../lib/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
@@ -10,7 +11,7 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, Button, FabMenu } from "../design-system/index.js";
+import { Card, Avatar, Tag, Button, FabMenu, LoadingState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 const MotionCard = motion(Card);
@@ -37,6 +38,7 @@ function avatarColorFor(name) {
 }
 
 export function MealsTab({ onSyncTick, onOffline, active }) {
+  const toast = useToast();
   const { schedule, ensureLoaded } = useRecurring();
   const intensity = useDesignIntensity();
   const { shouldAnimate, transition } = useMotionConfig();
@@ -44,6 +46,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const weekOffsetRef = useRef(weekOffset);
   weekOffsetRef.current = weekOffset;
   const [plan, setPlan] = useState({}); // iso -> plan row
+  const [loading, setLoading] = useState(true);
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   // Single active modal for the whole tab, mirroring the vanilla app's one
   // #modalRoot swapping content: { type: "plan"|"browse"|"edit"|"ingredients", ... } | null
@@ -68,18 +71,51 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     setPlan(byDate);
   }
 
+  // Optimistic, matching the shopping-list toggle pattern: update local
+  // state immediately, then reconcile/roll back based on the network result
+  // instead of blocking the modal open on a full round trip.
+  async function savePlanDay(planIso, { meal_name, responsible, ingredients }) {
+    const prevEntry = plan[planIso];
+    setPlan((p) => ({ ...p, [planIso]: { ...(prevEntry || {}), plan_date: planIso, meal_name, responsible } }));
+    try {
+      await api("/plan", {
+        method: "POST",
+        body: JSON.stringify({ plan_date: planIso, meal_name, responsible, ingredients }),
+      });
+      loadPlan();
+    } catch {
+      setPlan((p) => ({ ...p, [planIso]: prevEntry }));
+      toast("Kunne ikke lagre måltidet – sjekk nettforbindelsen", { error: true });
+    }
+  }
+
+  async function deletePlanDay(planIso) {
+    const prevEntry = plan[planIso];
+    setPlan((p) => {
+      const next = { ...p };
+      delete next[planIso];
+      return next;
+    });
+    try {
+      await api(`/plan/${planIso}`, { method: "DELETE" });
+      loadPlan();
+    } catch {
+      setPlan((p) => ({ ...p, [planIso]: prevEntry }));
+      toast("Kunne ikke fjerne måltidet – sjekk nettforbindelsen", { error: true });
+    }
+  }
+
   useEffect(() => {
     if (!active) return;
     ensureLoaded();
     // Reload whatever week was last open, not the current week — the tab
     // stays mounted (hidden via CSS) across pane switches now, see
     // AppShell.jsx, so weekOffset persists and shouldn't reset on reactivation.
-    loadPlan(weekOffsetRef.current);
+    loadPlan(weekOffsetRef.current).finally(() => setLoading(false));
     const timer = setInterval(() => {
       if (!document.hidden) loadPlan(weekOffsetRef.current);
     }, POLL_MS);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   function shiftWeek(delta) {
@@ -126,6 +162,9 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         </button>
       </div>
 
+      {loading ? (
+        <LoadingState label="Laster ukeplan..." />
+      ) : (
       <div style={stackStyle}>
         {days.map((d) => {
           const iso = localIso(d);
@@ -219,6 +258,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           );
         })}
       </div>
+      )}
 
       <FabMenu
         label="Måltider"
@@ -233,10 +273,8 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         <MealPlanModal
           iso={modal.iso}
           onClose={() => setModal(null)}
-          onSaved={() => {
-            setModal(null);
-            loadPlan();
-          }}
+          onSavePlan={savePlanDay}
+          onDeletePlanDay={deletePlanDay}
           onOpenIngredientPicker={(ingredients, iso) => setModal({ type: "ingredients", ingredients, iso })}
         />
       )}

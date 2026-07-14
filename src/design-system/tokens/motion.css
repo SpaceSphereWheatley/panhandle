@@ -61,6 +61,13 @@
   100% { transform: scale(0.9);  opacity: 0; }
 }
 
+/* Initial-fetch loading indicator (Spinner / LoadingState) — a simple
+   continuous rotation, distinct from the app's one-shot entrance/feedback
+   animations above. */
+@keyframes ph-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

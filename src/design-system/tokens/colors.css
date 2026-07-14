@@ -122,7 +122,7 @@
 
   --text-primary:    var(--md-on-surface);
   --text-secondary:  var(--md-on-surface-variant);
-  --text-tertiary:   var(--nv-50);
+  --text-tertiary:   var(--nv-40);
   --text-on-accent:  var(--md-on-primary);
   --text-link:       var(--md-primary);
   --text-link-hover: var(--p-30);

@@ -20,4 +20,12 @@ export default defineConfig({
     // Local dev (`npm run dev`) starts at /app.html instead of Vite's usual "/".
     open: '/app.html',
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    globals: false,
+    // tests/*.test.mjs are plain node:test backend tests (see CLAUDE.md),
+    // not Vitest specs — exclude them so Vitest only picks up frontend tests.
+    exclude: ['tests/**', 'node_modules/**'],
+  },
 })

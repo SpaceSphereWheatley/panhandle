@@ -30,7 +30,13 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div id="toast" className={`${toast ? "show" : ""} ${toast?.error ? "error" : ""}`}>
+      <div
+        id="toast"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={`${toast ? "show" : ""} ${toast?.error ? "error" : ""}`}
+      >
         {toast && (
           <>
             <span>{toast.message}</span>

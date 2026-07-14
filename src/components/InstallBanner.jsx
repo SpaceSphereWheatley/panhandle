@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { UiIcon } from "./UiIcon.jsx";
+import { IconButton } from "../design-system/index.js";
 import { useInstallPrompt, isStandalone, isIos } from "../context/InstallPromptContext.jsx";
 
 function installDismissed() {
@@ -36,9 +37,7 @@ export function InstallBanner() {
           "Legg til på Hjemskjerm".
         </span>
       )}
-      <button className="dismiss" onClick={dismiss} aria-label="Lukk">
-        <UiIcon name="close" size={16} />
-      </button>
+      <IconButton icon="x" size="sm" variant="ghost" onClick={dismiss} label="Lukk" />
     </div>
   );
 }

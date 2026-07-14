@@ -24,10 +24,11 @@ jobs:
         with:
           node-version: '20'
 
-      # No package.json/lockfile exists (project intentionally has no Node
-      # toolchain), so actions/setup-node's built-in cache can't key off a
-      # lockfile. Cache npm's own download cache instead, keyed on the pinned
-      # tool versions below, so `npx` doesn't re-download eslint every run.
+      # This job only npx's eslint (a one-off tool), it doesn't run `npm ci`
+      # against the frontend's package-lock.json, so actions/setup-node's
+      # built-in lockfile cache doesn't apply here. Cache npm's own download
+      # cache instead, keyed on the pinned tool version below, so `npx`
+      # doesn't re-download eslint every run.
       - name: Cache npm downloads
         uses: actions/cache@v4
         with:
@@ -110,9 +111,44 @@ jobs:
           done
           echo "Migrations are sequential: $((expected - 1)) found"
 
+  frontend-test:
+    name: Frontend build & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Nothing else verifies the Vite build succeeds before Cloudflare Pages
+      # deploys it — catch a broken build here instead of in production.
+      - run: npm run build
+
+      - run: npm test
+
+  backend-unit-test:
+    name: Backend unit tests (no wrangler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Pure/crypto helpers only (tests/worker-unit.test.mjs, via node:test) —
+      # no D1, no wrangler dev, so this stays fast and dependency-free.
+      # wrangler-dev-backed integration tests (tests/*.test.mjs) intentionally
+      # stay out of CI; see CLAUDE.md's Testing conventions section.
+      - run: node --test tests/worker-unit.test.mjs
+
   notify-on-failure:
     name: Notify on failure
-    needs: [lint, secret-scan, sql-migrations]
+    needs: [lint, secret-scan, sql-migrations, frontend-test, backend-unit-test]
     if: failure()
     runs-on: ubuntu-latest
     steps:

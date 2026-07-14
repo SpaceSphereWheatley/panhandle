@@ -5,7 +5,7 @@ import React from 'react';
  * with `type`/ref-forwarding and a `trailing` slot (password show/hide
  * toggle) needed by the real app's login form. */
 export const Input = React.forwardRef(function Input(
-  { placeholder, value, onChange, onKeyDown, icon = null, type = 'text', autoComplete, trailing = null, style },
+  { placeholder, value, onChange, onKeyDown, icon = null, type = 'text', autoComplete, trailing = null, style, id, ...rest },
   ref
 ) {
   const [focus, setFocus] = React.useState(false);
@@ -27,12 +27,14 @@ export const Input = React.forwardRef(function Input(
       {icon ? <i className={`ph ph-${icon}`} style={{ color: 'var(--text-tertiary)', fontSize: '18px' }} /> : null}
       <input
         ref={ref}
+        id={id}
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
         autoComplete={autoComplete}
+        {...rest}
         style={{
           border: 'none',
           outline: 'none',
