@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
+import { Button, Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useConfirm } from "../../context/ConfirmContext.jsx";
 
 function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
@@ -28,8 +30,10 @@ const INTENSITY_OPTIONS = [
 // its own standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling
 // after this card rather than a row nested inside it.
 export function ProfileIsland() {
-  const { user, logout } = useAuth();
+  const { user, isOwner, logout } = useAuth();
+  const { listUsers } = useListUsers();
   const toast = useToast();
+  const confirm = useConfirm();
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
@@ -38,6 +42,8 @@ export function ProfileIsland() {
   const [email, setEmail] = useState(null);
   const [emailInput, setEmailInput] = useState("");
   const [emailPw, setEmailPw] = useState("");
+  const [pwDelete, setPwDelete] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     api("/account").then((res) => {
@@ -103,6 +109,33 @@ export function ProfileIsland() {
       setPwNew("");
     } catch {
       toast("Noe gikk galt", { error: true });
+    }
+  }
+
+  async function deleteAccount() {
+    const soleOwner = isOwner && listUsers.filter((u) => u.is_owner).length <= 1;
+    const otherMembers = listUsers.filter((u) => u.username !== user).map((u) => u.username);
+    const message = !soleOwner
+      ? "Kontoen din slettes for godt og du mister tilgang til listen. Dette kan ikke angres."
+      : otherMembers.length > 0
+        ? `Du er listens eneste eier. Sletter du kontoen din slettes hele listen — handleliste, måltidsplan og alt annet innhold — og tilgangen forsvinner også for: ${otherMembers.join(", ")}. Dette kan ikke angres.`
+        : "Du er listens eneste eier. Sletter du kontoen din slettes hele listen — handleliste, måltidsplan og alt annet innhold — for godt. Dette kan ikke angres.";
+    if (!(await confirm(message, { title: "Slette konto?", confirmLabel: "Slett konto for godt" }))) return;
+    setDeleting(true);
+    try {
+      const res = await api("/account", {
+        method: "DELETE",
+        body: JSON.stringify({ current_password: pwDelete }),
+      });
+      if (res.error) {
+        toast(res.error, { error: true });
+        setDeleting(false);
+        return;
+      }
+      logout();
+    } catch {
+      toast("Noe gikk galt", { error: true });
+      setDeleting(false);
     }
   }
 
@@ -181,6 +214,26 @@ export function ProfileIsland() {
       </AccordionRow>
 
       <button className="logout" style={{ marginTop: 16 }} onClick={() => logout()}>Logg ut</button>
+
+      <AccordionRow label="Slett konto">
+        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
+          {isOwner
+            ? "Hvis du er listens eneste eier, slettes hele listen — handleliste, måltidsplan og alt annet innhold — når du sletter kontoen din. Har listen en annen eier, mister du bare din egen tilgang."
+            : "Du mister tilgang til listen. Dette kan ikke angres."}
+        </div>
+        <label htmlFor="profile-delete-pw" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+          Nåværende passord
+        </label>
+        <Input
+          id="profile-delete-pw"
+          type="password"
+          placeholder="Nåværende passord"
+          style={{ marginBottom: 8 }}
+          value={pwDelete}
+          onChange={(e) => setPwDelete(e.target.value)}
+        />
+        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
+      </AccordionRow>
     </Card>
   );
 }

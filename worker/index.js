@@ -895,6 +895,69 @@ export default {
       return authedJson({ ok: true, email: cleanEmail });
     }
 
+    // Self-service account deletion (phase 1 of TODO's account-lifecycle
+    // item — still one list per user, so this only ever removes/replaces the
+    // caller's own household, never leaves them list-less). A non-owner just
+    // leaves; an owner who isn't the list's last owner does the same. The
+    // list's last owner deleting their account cascade-deletes the entire
+    // list (every other member included) rather than being refused like
+    // DELETE /list-users and PATCH /flags do — there's no "reassign
+    // ownership" flow yet, and blocking self-deletion entirely would leave
+    // solo/last-owner accounts with no way to close their account at all.
+    if (path === "/account" && method === "DELETE") {
+      // Same per-IP throttle as /change-password and /change-email.
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const windowStart = Date.now() - LOGIN_WINDOW_MS;
+      const { attempts } = await env.DB.prepare(
+        "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
+      ).bind(ip, windowStart).first();
+      if (attempts >= LOGIN_MAX_ATTEMPTS) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const row = await env.DB.prepare(
+        "SELECT pass_hash FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      if (!(await verifyPassword(body.current_password || "", row.pass_hash))) {
+        await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
+          .bind(ip, Date.now()).run();
+        return json({ error: "Feil passord" }, 401);
+      }
+
+      let listDeleted = false;
+      if (user.is_owner) {
+        const c = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
+        ).bind(user.list_id).first();
+        if (c.n <= 1) {
+          listDeleted = true;
+          // Children before parents — list_id/meal_id/catalogue_id FKs are
+          // enforced (see DELETE /list/:id/catalogue's cascade comment) but
+          // most of them aren't ON DELETE CASCADE from lists itself, so each
+          // list-scoped table is cleared explicitly rather than relying on
+          // cascade from a single `DELETE FROM lists`.
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM list_items WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM item_catalogue WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM meal_plan WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM meal_catalogue WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM recurring_schedule WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(user.list_id),
+          ]);
+        }
+      }
+      if (!listDeleted) {
+        // Deleting the row makes requireAuth's DB lookup fail (no row) on the
+        // user's next request → 401 → re-login, so no token_version bump
+        // needed — same reasoning as DELETE /list-users.
+        await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
+          .bind(user.username).run();
+      }
+      return json({ ok: true, list_deleted: listDeleted });
+    }
+
     // ===== ADMIN ENDPOINTS (require is_admin) =====
     // Create a new owner + their own list, seeded with COMMON_ITEMS.
     if (path === "/admin/owners" && method === "POST") {
