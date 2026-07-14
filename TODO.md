@@ -27,6 +27,11 @@ details live in `CHANGELOG.md`, not here.
 
 8. In settings, the users should be able to minimize the recurring meal responsibilities
 
+9. Let the Super-admin delete users
+
+10. Let a user delete their own user. If the user is an owner, delete the list as well. 
+    A user needs to be able to exist without a list, and anyone should be able to create lists, be members of multiple lists, and choose lists.
+
 ## Done
 
 - [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
