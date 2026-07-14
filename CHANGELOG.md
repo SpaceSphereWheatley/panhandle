@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.21.1] — 2026-07-14
+
+### Added
+- **Let the super-admin delete a user account outright** (Settings →
+  Administrasjon → "Alle brukere" → "Slett", superadmin-only). New
+  `DELETE /admin/users/{u}`, gated beyond ordinary `is_admin` by
+  `isSuperAdmin` (same double-gate as `GET /admin/metrics`) since deleting a
+  row outright is more consequential than the existing admin endpoints,
+  which only ever demote/reset/remove-from-one-list. Refuses (doesn't
+  cascade) if the target is the last admin site-wide or the last owner of
+  their list, mirroring `PATCH /admin/users/{u}/flags`'s existing guards —
+  the superadmin promotes/reassigns someone else first, same as any admin
+  already has to when demoting the last admin/owner.
+
 ## [1.21.0] — 2026-07-14
 
 ### Added

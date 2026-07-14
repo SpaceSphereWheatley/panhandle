@@ -105,6 +105,18 @@ export function AdminIsland() {
     setCreds({ username: res.username, password: res.password });
   }
 
+  async function deleteUser(username) {
+    if (!(await confirm(`Slette brukeren ${username} for godt? Dette kan ikke angres.`, { title: "Slette bruker?", confirmLabel: "Slett" })))
+      return;
+    const res = await api(`/admin/users/${encodeURIComponent(username)}`, { method: "DELETE" });
+    if (res.error) {
+      toast(res.error, { error: true });
+      return;
+    }
+    loadAllUsers();
+    refreshListUsers();
+  }
+
   async function createOwner() {
     const name = newOwnerName.trim();
     if (!name) {
@@ -196,6 +208,9 @@ export function AdminIsland() {
                       Eier
                     </label>
                     <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
+                    {isSuperAdmin && (
+                      <button className="mini danger" onClick={() => deleteUser(u.username)}>Slett</button>
+                    )}
                   </div>
                 </MotionRow>
               ))}
