@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.20.3] — 2026-07-14
+
+### Changed
+- **The recurring meal responsibility section in Settings can now be
+  minimized.** It's wrapped in the same `AccordionRow` used by
+  `MembersIsland`'s/`AdminIsland`'s/`ProfileIsland`'s sub-sections
+  (defaulting to open, so nothing changes at first glance) instead of
+  always being fully expanded.
+
 ## [1.20.2] — 2026-07-14
 
 ### Fixed

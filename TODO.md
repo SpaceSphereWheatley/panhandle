@@ -20,8 +20,6 @@ details live in `CHANGELOG.md`, not here.
 
 7. In Settings, "Install Panhandle" should be on top
 
-8. In settings, the users should be able to minimize the recurring meal responsibilities
-
 9. Let the Super-admin delete users
 
 10. Let a user delete their own user. If the user is an owner, delete the list as well. 
@@ -32,6 +30,15 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] The recurring meal responsibility section in Settings (`RecurringIsland.jsx`)
+      is now minimizable — wrapped in the same `AccordionRow` already used by
+      `MembersIsland`'s/`AdminIsland`'s/`ProfileIsland`'s sub-sections, instead
+      of always being fully expanded (it previously had an explicit "no
+      accordion" design note). Defaults to open, so nothing changes at first
+      glance. `HomeIsland.jsx`'s manual divider between `MembersIsland` and
+      `RecurringIsland` was removed since `AccordionRow` now supplies its own
+      top border, matching how `MembersIsland`'s own two accordions are
+      separated. (1.20.3)
 - [x] iOS compatibility pass: added an `apple-touch-icon` (`app.html` and
       `public/index.html` — iOS Safari ignores `manifest.json` icons for
       "Add to Home Screen" entirely and previously fell back to a page
