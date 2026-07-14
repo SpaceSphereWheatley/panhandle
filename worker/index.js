@@ -465,7 +465,7 @@ async function sha256Hex(str) {
 // ---------- "Sign in with Google" ID token verification ----------
 // Public by nature (shipped in frontend JS), so it's hardcoded like other
 // public config (API_BASE, pagesUrl.hostname) rather than routed through env.
-const GOOGLE_CLIENT_ID = "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "148854883648-86vjm8s2ihc50pjl9sj4t0nj0pe98dh3.apps.googleusercontent.com";
 
 let googleJwksCache = null;
 async function getGoogleJwks() {
