@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.3] — 2026-07-14
+
+### Added
+- **Send feedback from the app** (Settings → "Send tilbakemelding", next to
+  "Hva er nytt?"). A small modal with a free-text message emails
+  `env.FEEDBACK_EMAIL` via the same Resend integration already used for
+  password recovery — no ticketing system needed for a 2-person app. New
+  authenticated `POST /feedback`, rate-limited 5/hour/IP (same
+  `rate_limit_attempts` pattern as `/register`/`/forgot-password`).
+  `FEEDBACK_EMAIL` is a new Worker dashboard variable requiring the same
+  manual one-time setup as `RESEND_API_KEY`/`TURNSTILE_SECRET_KEY`.
+
 ## [1.21.2] — 2026-07-14
 
 ### Fixed

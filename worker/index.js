@@ -411,6 +411,7 @@ async function authResponse(row, env) {
 const RATE_LIMITS = {
   register: { windowMs: 60 * 60 * 1000, max: 8 },        // 8/hour/IP
   forgot_password: { windowMs: 60 * 60 * 1000, max: 5 }, // 5/hour/IP
+  feedback: { windowMs: 60 * 60 * 1000, max: 5 },        // 5/hour/IP
 };
 async function checkRateLimit(env, ip, kind) {
   const { windowMs, max } = RATE_LIMITS[kind];
@@ -436,6 +437,14 @@ async function verifyTurnstile(token, ip, env) {
     const data = await res.json();
     return data.success === true;
   } catch { return false; }
+}
+
+// Every other sendEmail() call so far only interpolates fixed URLs/usernames
+// (already sanitized elsewhere) into the HTML body — /feedback is the first
+// to embed real free-text user input, so it needs this to avoid the email
+// client rendering stray HTML the sender typed.
+export function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 // ---------- transactional email (Resend) ----------
@@ -956,6 +965,37 @@ export default {
           .bind(user.username).run();
       }
       return json({ ok: true, list_deleted: listDeleted });
+    }
+
+    // ===== FEEDBACK =====
+    // Emails env.FEEDBACK_EMAIL via the same Resend integration /forgot-password
+    // uses — a Worker dashboard variable, set up manually post-deploy like
+    // RESEND_API_KEY/TURNSTILE_SECRET_KEY (see CLAUDE.md), not committed. No
+    // ticketing system needed for a 2-person app; this just closes the loop.
+    if (path === "/feedback" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "feedback"))) {
+        return authedJson({ error: "For mange tilbakemeldinger. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      // Recorded regardless of outcome below, same as /register and
+      // /forgot-password — request volume is the abuse vector, not just
+      // successful sends.
+      await recordAttempt(env, ip, "feedback");
+      const message = (body.message || "").trim();
+      if (!message) return authedJson({ error: "Skriv en melding" }, 400);
+      if (message.length > 4000) return authedJson({ error: "Meldingen er for lang" }, 400);
+      if (!env.FEEDBACK_EMAIL) {
+        return authedJson({ error: "Tilbakemelding er ikke satt opp ennå" }, 500);
+      }
+      const sent = await sendEmail(env, {
+        to: env.FEEDBACK_EMAIL,
+        subject: `Tilbakemelding fra ${user.username}`,
+        html: `<p><strong>${escapeHtml(user.username)}</strong> sendte en tilbakemelding fra Panhandle:</p><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
+      });
+      if (!sent) return authedJson({ error: "Kunne ikke sende tilbakemelding. Prøv igjen senere." }, 502);
+      return authedJson({ ok: true });
     }
 
     // ===== ADMIN ENDPOINTS (require is_admin) =====

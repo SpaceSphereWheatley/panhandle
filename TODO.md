@@ -27,23 +27,14 @@ details live in `CHANGELOG.md`, not here.
    as much as code.
    _Value: Medium · Importance: Low · Type: Tech debt / Docs_
 
-4. Create some way for the user to give feedback. Nothing exists today —
-   no form, no `mailto:`, no feedback endpoint. For a 2-person household
-   app this doesn't need to be elaborate: even a simple "Send
-   tilbakemelding" link/modal in Settings (a `mailto:`, or a tiny `POST
-   /feedback` that emails via the Resend integration already wired up for
-   password recovery) would close the loop without needing a ticketing
-   system.
-   _Value: Medium · Importance: Low · Type: Feature_
-
-5. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
+4. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
    currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
    identity/theme card, both under the "Meg & min app" island label.
    Moving it above `ProfileIsland` (or above the island label entirely) is
    a small JSX reorder, not a redesign.
    _Value: Low · Importance: Low · Type: UX polish_
 
-6. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
@@ -54,6 +45,17 @@ details live in `CHANGELOG.md`, not here.
 
 ## Done
 
+- [x] Users can send feedback from the app (Settings → "Send
+      tilbakemelding", next to "Hva er nytt?"). A small modal
+      (`FeedbackModal.jsx`) with a free-text message emails
+      `env.FEEDBACK_EMAIL` via the same Resend integration already used for
+      password recovery. New authenticated `POST /feedback`, rate-limited
+      5/hour/IP (same `rate_limit_attempts` pattern as
+      `/register`/`/forgot-password` — the attempt is recorded right after
+      body parse, before validation, matching those endpoints' "volume is
+      the abuse vector" reasoning). `FEEDBACK_EMAIL` needs the same manual
+      one-time Worker dashboard setup as `RESEND_API_KEY`/
+      `TURNSTILE_SECRET_KEY`. (1.21.3)
 - [x] The landing page's shopping-list mockups (`public/index.html`) showed
       a stale UI pattern — per-category header rows (e.g. "Kjøtt og fisk",
       "Meieriprodukter") above groups of items — that the real app no
