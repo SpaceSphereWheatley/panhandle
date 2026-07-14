@@ -5,7 +5,7 @@ import { ToastProvider } from "./context/ToastContext.jsx";
 import { ListUsersProvider } from "./context/ListUsersContext.jsx";
 import { RecurringProvider } from "./context/RecurringContext.jsx";
 import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
-import { LoginScreen } from "./components/LoginScreen.jsx";
+import { AuthScreens } from "./components/AuthScreens.jsx";
 import { AppShell } from "./components/AppShell.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
 import { applyIntensity, currentIntensity } from "./lib/designIntensity.js";
@@ -27,7 +27,7 @@ function SketchyFilterDefs() {
 
 function Root() {
   const { token } = useAuth();
-  if (!token) return <LoginScreen />;
+  if (!token) return <AuthScreens />;
   return (
     <ListUsersProvider>
       <RecurringProvider>

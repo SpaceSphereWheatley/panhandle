@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Input, Button } from "../design-system/index.js";
+import { GoogleSignIn } from "./GoogleSignIn.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
-export function LoginScreen() {
-  const { login, expiredReason } = useAuth();
+export function LoginScreen({ onSignup, onForgot }) {
+  const { login, loginWithGoogle, expiredReason } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +17,19 @@ export function LoginScreen() {
     setBusy(true);
     try {
       const { error } = await login(username.trim(), password);
+      if (error) setError(error);
+    } catch {
+      setError("Nettverksfeil");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doGoogle(credential) {
+    setError("");
+    setBusy(true);
+    try {
+      const { error } = await loginWithGoogle(credential);
       if (error) setError(error);
     } catch {
       setError("Nettverksfeil");
@@ -100,6 +114,24 @@ export function LoginScreen() {
         style={{ color: "var(--status-danger)", fontSize: "var(--text-sm)", minHeight: 18, textAlign: "center" }}
       >
         {error || expiredReason}
+      </div>
+      <div style={{ margin: "2px 0", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>eller</div>
+      <GoogleSignIn onCredential={doGoogle} />
+      <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+        <button
+          type="button"
+          onClick={onSignup}
+          style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer" }}
+        >
+          Opprett ny husstand
+        </button>
+        <button
+          type="button"
+          onClick={onForgot}
+          style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer" }}
+        >
+          Glemt passord?
+        </button>
       </div>
     </div>
   );

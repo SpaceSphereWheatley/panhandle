@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.19.0] — 2026-07-14
+
+### Added
+- **Self-service signup, "Sign in with Google", and email-based password
+  recovery.** Anyone can now create their own household directly from the
+  login screen ("Opprett ny husstand") — no more asking the developer to
+  create an owner account by hand. New public `POST /register`,
+  `POST /auth/google`, `POST /forgot-password`, and `POST /reset-password`
+  endpoints on the Worker; signup is protected by Cloudflare Turnstile plus
+  an IP rate limit (mirroring the existing `login_attempts` pattern), and a
+  Google sign-in with a matching email links onto an existing password
+  account instead of creating a duplicate. Email delivery uses Resend.
+  **Requires manual one-time setup before this is fully live in
+  production:** a Turnstile widget for `shopping.mohibb.com` (Cloudflare
+  dashboard), a DNS-verified sending domain + API key in Resend, and an
+  OAuth Client ID from Google Cloud Console (the placeholder constants in
+  `worker/index.js`/`src/lib/google.js` need updating with the real values).
+
 ## [1.18.1] — 2026-07-14
 
 ### Fixed
