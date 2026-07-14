@@ -17,6 +17,13 @@
   dashboard), a DNS-verified sending domain + API key in Resend, and an
   OAuth Client ID from Google Cloud Console (the placeholder constants in
   `worker/index.js`/`src/lib/google.js` need updating with the real values).
+- **Add/change your email from Settings → Profile.** Existing accounts
+  (created via `/seed`, `/admin/owners`, or `/list-users`) have no email on
+  file, so without this there was no way for them to link a Google sign-in
+  or use `/forgot-password` short of a manual DB edit. New authenticated
+  `GET /account` and `POST /change-email` endpoints (the latter requires
+  the current password, same as `/change-password`, since email is what
+  password recovery trusts).
 
 ## [1.18.1] — 2026-07-14
 

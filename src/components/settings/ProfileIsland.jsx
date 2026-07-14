@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { api } from "../../lib/api.js";
 import { currentTheme, setTheme } from "../../lib/theme.js";
@@ -34,6 +34,37 @@ export function ProfileIsland() {
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwMsg, setPwMsg] = useState({ text: "", ok: false });
+  const [email, setEmail] = useState(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailPw, setEmailPw] = useState("");
+  const [emailMsg, setEmailMsg] = useState({ text: "", ok: false });
+
+  useEffect(() => {
+    api("/account").then((res) => {
+      if (res.error) return;
+      setEmail(res.email);
+      setEmailInput(res.email || "");
+    });
+  }, []);
+
+  async function saveEmail() {
+    setEmailMsg({ text: "", ok: false });
+    try {
+      const res = await api("/change-email", {
+        method: "POST",
+        body: JSON.stringify({ current_password: emailPw, email: emailInput.trim() }),
+      });
+      if (res.error) {
+        setEmailMsg({ text: res.error, ok: false });
+        return;
+      }
+      setEmail(res.email);
+      setEmailPw("");
+      setEmailMsg({ text: "E-post lagret.", ok: true });
+    } catch {
+      setEmailMsg({ text: "Noe gikk galt", ok: false });
+    }
+  }
 
   function onSetTheme(t) {
     setTheme(t);
@@ -94,6 +125,30 @@ export function ProfileIsland() {
       <div style={{ marginBottom: 4 }}>
         <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
       </div>
+
+      <AccordionRow label={email ? "E-post" : "Legg til e-post"}>
+        <div style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 8 }}>
+          Brukes til Google-innlogging og for å tilbakestille passord hvis du glemmer det.
+        </div>
+        <input
+          type="email"
+          placeholder="E-post"
+          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          value={emailInput}
+          onChange={(e) => setEmailInput(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Nåværende passord"
+          style={{ width: "100%", padding: 12, fontSize: 16, borderRadius: 10, border: "1px solid var(--border-default)", marginBottom: 8 }}
+          value={emailPw}
+          onChange={(e) => setEmailPw(e.target.value)}
+        />
+        <button onClick={saveEmail} className="btn-primary">Lagre e-post</button>
+        <div style={{ fontSize: 13, marginTop: 8, minHeight: 16, color: emailMsg.ok ? "var(--status-success)" : "var(--status-danger)" }}>
+          {emailMsg.text}
+        </div>
+      </AccordionRow>
 
       <AccordionRow label="Bytt passord">
         <input

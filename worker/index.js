@@ -287,6 +287,12 @@ function cleanUsername(u) {
   return s;
 }
 
+// Cheap format check shared by /register and /change-email — not RFC-strict,
+// just enough to reject obvious garbage before it hits the DB/Resend.
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "");
+}
+
 // Recognises a gluten-free marker (GF / gf / glutenfri / glutenfritt) typed as
 // part of an item name and reports it so the caller can lift it into the notes:
 // "Pasta GF" becomes name "Pasta" + note "GF". The cleaned name still resolves
@@ -638,7 +644,7 @@ export default {
         return json({ error: "Passord må være minst 8 tegn" }, 400);
       }
       const cleanEmail = (body.email || "").trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      if (!isValidEmail(cleanEmail)) {
         return json({ error: "Ugyldig e-post" }, 400);
       }
       const existingUser = await env.DB.prepare(
@@ -843,6 +849,48 @@ export default {
       ).bind(newHash, newVersion, user.username).run();
       const tokenAfter = await mintToken({ ...user, token_version: newVersion }, env);
       return json({ ok: true, token: tokenAfter });
+    }
+
+    // ===== ACCOUNT (email, used for Google sign-in linking + password recovery) =====
+    if (path === "/account" && method === "GET") {
+      const row = await env.DB.prepare(
+        "SELECT email FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      return authedJson({ email: row.email || null });
+    }
+
+    if (path === "/change-email" && method === "POST") {
+      // Same per-IP throttle as /change-password, sharing login_attempts — a
+      // stolen token shouldn't grant unlimited current_password guesses, and
+      // email is what /forgot-password trusts to reset a password, so setting
+      // it needs the same proof-of-password as changing the password itself.
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const windowStart = Date.now() - LOGIN_WINDOW_MS;
+      const { attempts } = await env.DB.prepare(
+        "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
+      ).bind(ip, windowStart).first();
+      if (attempts >= LOGIN_MAX_ATTEMPTS) {
+        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+      }
+      const body = await readJson(request);
+      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) return json({ error: "Ugyldig e-post" }, 400);
+      const row = await env.DB.prepare(
+        "SELECT pass_hash FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      if (!(await verifyPassword(body.current_password || "", row.pass_hash))) {
+        await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
+          .bind(ip, Date.now()).run();
+        return json({ error: "Feil passord" }, 401);
+      }
+      const clash = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE email = ?1 COLLATE NOCASE AND username != ?2 COLLATE NOCASE"
+      ).bind(cleanEmail, user.username).first();
+      if (clash) return json({ error: "E-posten er allerede i bruk av en annen konto" }, 409);
+      await env.DB.prepare("UPDATE users SET email = ?1 WHERE username = ?2 COLLATE NOCASE")
+        .bind(cleanEmail, user.username).run();
+      return authedJson({ ok: true, email: cleanEmail });
     }
 
     // ===== ADMIN ENDPOINTS (require is_admin) =====
