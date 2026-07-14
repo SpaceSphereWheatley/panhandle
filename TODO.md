@@ -6,36 +6,38 @@ are completed, just strike them and move to Done; re-pack (renumber) only
 when the open list gets sparse, as just happened here. Full "fixed in"
 details live in `CHANGELOG.md`, not here.
 
-2. Poll interval is a fixed 7s with no backoff when the tab is idle (no
+1. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
    actually grows, and it trades off responsiveness (stale data right
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-22. Admin-only content is gated at the top `SettingsTab` level (whole
-    island incl. heading), while owner-only content is gated one level
-    down inside `HomeIsland`'s body — two different mechanisms for
-    structurally similar "privileged section" cases. Pick one pattern and
-    apply it consistently.
-    _Value: Low · Importance: Low · Type: Consistency_
-25. `Sheet.jsx`'s `title` prop is fully wired but never passed anywhere —
-    every modal hand-rolls its own `<h3>` instead. Either adopt it
-    everywhere or remove the prop. Also remove the orphaned
-    `.theme-toggle`/`.setrow` CSS rules in `index.css` (zero remaining
-    references since `ProfileIsland` switched to `SegmentedControl`).
-    _Value: Low · Importance: Low · Type: Cleanup_
-26. 8 `// eslint-disable-next-line react-hooks/exhaustive-deps` comments
-    exist across the codebase (`ShoppingListTab`, `MealsTab`,
-    `MealPlanModal`, `MealEditModal`, `RecurringIsland`), but ESLint
-    isn't installed (absent from `package.json`/`node_modules`) and no
-    config file exists, so these directives are currently inert. Either
-    add ESLint as a devDependency with a matching config, or remove the
-    dead comments.
-    _Value: Low · Importance: Low · Type: Cleanup_
 
 ## Done
 
+- [x] `HomeIsland.jsx` now reads `isOwner` itself via `useAuth()` instead of
+      taking it as a prop threaded from `SettingsTab.jsx`, matching
+      `AdminIsland`'s already-self-contained permission check — one
+      consistent pattern ("each settings island determines its own
+      permission-gated rendering via `useAuth()` directly") instead of two.
+      (1.19.3)
+- [x] Adopted `Sheet.jsx`'s `title` prop everywhere: `Modal.jsx` now
+      forwards a `title` prop to `Sheet`, and all ~11 modal call sites
+      (`ItemEditModal`, `MealEditModal`, `MealPlanModal` ×2,
+      `SuggestionsModal`, `WeekIngredientsModal`,
+      `MealCatalogueBrowseModal`, `IngredientPickerModal`,
+      `InstallHelpModal`, `CredentialsModal`, `ChangelogModal`,
+      `ConfirmContext`) pass it instead of hand-rolling their own `<h3>` —
+      the now-dead `.modal h3` CSS rule was removed. Also removed the
+      orphaned `.theme-toggle` CSS rule. (`.setrow`, also flagged as
+      orphaned, turned out to now be in active use by `MetricsSettings.jsx`
+      — left in place.) (1.19.3)
+- [x] Removed the 8 dead `// eslint-disable-next-line
+      react-hooks/exhaustive-deps` comments (`ShoppingListTab`, `MealsTab`,
+      `useDeployVersionCheck`, `RecurringIsland`, `MealPlanModal`,
+      `IngredientPickerModal`, `MealEditModal`, `WeekIngredientsModal`) —
+      ESLint isn't installed or configured, so they were inert. (1.19.3)
 - [x] Investigated grid-view single-item category rows: the shopping list
       already renders one continuous flat grid across category boundaries
       (aisle-sorted, no per-category `CatSection`/grid break) rather than

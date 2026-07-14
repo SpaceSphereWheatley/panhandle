@@ -39,8 +39,7 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit }) {
   }, [meals, filter, labelFilter]);
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Alle måltider</h3>
+    <Modal onClose={onClose} title="Alle måltider">
       <button className="meal-browse-add" onClick={() => onOpenEdit(null)}>+ Nytt måltid</button>
       <input placeholder="Søk..." value={filter} onChange={(e) => setFilter(e.target.value)} />
       {labels.length > 0 && (

@@ -20,8 +20,7 @@ export function CredentialsModal({ username, password, onClose }) {
   }
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Konto opprettet</h3>
+    <Modal onClose={onClose} title="Konto opprettet">
       <p className="cred-note">Dette passordet vises bare nå. Kopier og send det til brukeren.</p>
       <div className="cred-box">{invite}</div>
       <div className="actions">

@@ -9,7 +9,7 @@ import { Sheet } from "../design-system/index.js";
 let openModalCount = 0;
 let historyEntryPushed = false;
 
-export function Modal({ onClose, children }) {
+export function Modal({ onClose, title, children }) {
   const closedByPopRef = useRef(false);
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function Modal({ onClose, children }) {
   }, []);
 
   return (
-    <Sheet open onClose={onClose} className="modal">
+    <Sheet open onClose={onClose} title={title} className="modal">
       {children}
     </Sheet>
   );

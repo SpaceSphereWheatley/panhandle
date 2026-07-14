@@ -26,7 +26,6 @@ export function IngredientPickerModal({ ingredients, onClose }) {
       const built = buildIngredientRows(ingredients, catalogue, onList).map((r) => ({ ...r, checked: !r.already }));
       setRows(built);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleRow(idx) {
@@ -55,8 +54,7 @@ export function IngredientPickerModal({ ingredients, onClose }) {
   }
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Legg til på handlelisten</h3>
+    <Modal onClose={onClose} title="Legg til på handlelisten">
       <p className="cred-note">Velg hvilke ingredienser som skal på listen.</p>
       {rows === null ? <LoadingState /> : <IngredientChecklist rows={rows} onToggle={toggleRow} />}
       <div className="actions">

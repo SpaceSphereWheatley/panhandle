@@ -30,7 +30,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
         setLabels(parseIngredients(meal.labels).join(", "));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const knownLabels = useMemo(() => {
@@ -95,8 +94,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
   }
 
   return (
-    <Modal onClose={onClose}>
-      <h3>{id ? "Rediger måltid" : "Nytt måltid"}</h3>
+    <Modal onClose={onClose} title={id ? "Rediger måltid" : "Nytt måltid"}>
       <label htmlFor="meal-edit-name">Navn</label>
       <Input
         id="meal-edit-name"

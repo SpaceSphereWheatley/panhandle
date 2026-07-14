@@ -17,8 +17,7 @@ export function ChangelogModal({ onClose }) {
   }, []);
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Hva er nytt</h3>
+    <Modal onClose={onClose} title="Hva er nytt">
       <pre className="cred-box changelog-box">{body}</pre>
       <div className="actions">
         <Button variant="primary" onClick={onClose}>Lukk</Button>

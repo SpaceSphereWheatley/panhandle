@@ -4,8 +4,7 @@ import { cap } from "../lib/shoppingUtils.js";
 
 export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
   return (
-    <Modal onClose={onClose}>
-      <h3>Sannsynligvis tom for</h3>
+    <Modal onClose={onClose} title="Sannsynligvis tom for">
       <div>
         {suggestions.length === 0 ? (
           <EmptyState description="Ingen forslag akkurat nå." />

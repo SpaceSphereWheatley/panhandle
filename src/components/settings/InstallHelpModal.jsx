@@ -7,8 +7,7 @@ import { Button } from "../../design-system/index.js";
 // actual button + focused steps, instead of a paragraph of static text.
 export function InstallHelpModal({ onClose }) {
   return (
-    <Modal onClose={onClose}>
-      <h3>Installer Panhandle</h3>
+    <Modal onClose={onClose} title="Installer Panhandle">
       <ol style={{ margin: "0 0 4px", paddingLeft: 20, color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.7 }}>
         <li>Trykk menyknappen <span style={{ fontWeight: 700 }}>⋮</span> øverst til høyre i Chrome.</li>
         <li>Velg <span style={{ fontWeight: 700 }}>"Installer app"</span> (eller "Legg til på startskjerm" hvis det er det eneste valget).</li>

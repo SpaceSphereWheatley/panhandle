@@ -116,7 +116,6 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       if (!document.hidden) loadPlan(weekOffsetRef.current);
     }, POLL_MS);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   function shiftWeek(delta) {

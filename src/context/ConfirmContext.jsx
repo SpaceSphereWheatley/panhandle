@@ -31,8 +31,7 @@ export function ConfirmProvider({ children }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       {state && (
-        <Modal onClose={() => settle(false)}>
-          <h3>{state.title}</h3>
+        <Modal onClose={() => settle(false)} title={state.title}>
           <p style={{ color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.5, margin: 0 }}>
             {state.message}
           </p>

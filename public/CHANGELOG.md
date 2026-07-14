@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.19.3] — 2026-07-14
+
+### Changed
+- `HomeIsland` now determines its own owner-only rendering via `useAuth()`
+  directly instead of taking `isOwner` as a prop, matching how
+  `AdminIsland` already self-checks its own permission — one consistent
+  pattern for privileged-section gating across Settings.
+- Every modal now passes its heading through `Modal`'s `title` prop
+  (forwarded to the shared `Sheet`) instead of hand-rolling its own
+  `<h3>`.
+
+### Removed
+- The orphaned `.theme-toggle` CSS rule and the now-dead `.modal h3` rule.
+- 8 inert `eslint-disable-next-line` comments (ESLint isn't installed or
+  configured in this project).
+
 ## [1.19.2] — 2026-07-14
 
 ### Changed

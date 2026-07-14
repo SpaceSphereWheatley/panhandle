@@ -84,7 +84,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       if (!document.hidden) loadList();
     }, POLL_MS);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   function setView(mode) {

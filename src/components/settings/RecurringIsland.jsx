@@ -17,7 +17,6 @@ export function RecurringIsland() {
   useEffect(() => {
     refresh();
     ensureLoaded();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function onSelectChange(dow, value) {

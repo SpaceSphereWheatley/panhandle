@@ -59,7 +59,6 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       setRespOther(isOther ? resp : "");
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso]);
 
   useEffect(() => {
@@ -135,8 +134,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
 
   if (loading) {
     return (
-      <Modal onClose={onClose}>
-        <h3>Planlegg måltid</h3>
+      <Modal onClose={onClose} title="Planlegg måltid">
         <LoadingState />
       </Modal>
     );
@@ -147,8 +145,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   );
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Planlegg måltid</h3>
+    <Modal onClose={onClose} title="Planlegg måltid">
       {suggestions.length > 0 && (
         <>
           <label>Forslag (lenge siden, ofte brukt)</label>

@@ -42,7 +42,6 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       const built = buildIngredientRows(ingredients, catalogue, onList).map((r) => ({ ...r, checked: false }));
       setRows(built);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleRow(idx) {
@@ -75,8 +74,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
   const dateRange = `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
 
   return (
-    <Modal onClose={onClose}>
-      <h3>Fra middagsplanen</h3>
+    <Modal onClose={onClose} title="Fra middagsplanen">
       <p className="cred-note">
         {weekLabel} ({dateRange}) · velg hvilke ingredienser som skal på listen.
       </p>

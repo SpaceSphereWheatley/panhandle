@@ -57,8 +57,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   }
 
   return (
-    <Modal onClose={onClose}>
-      <h3>{cap(item.name)}</h3>
+    <Modal onClose={onClose} title={cap(item.name)}>
       <div className="meta">Lagt til av {item.added_by}</div>
       <label htmlFor="item-edit-name">Navn</label>
       <Input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
