@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 import { startWorker, SEED_SECRET } from "./_helpers.mjs";
 
 const PORT = 8800;
-const RUN_ID = Date.now();
+// Base36 keeps usernames short enough to stay under cleanUsername's 32-char
+// limit even with a descriptive prefix (a 13-digit decimal timestamp alone
+// already eats most of that budget). RUN_ID_NUM (the raw epoch ms) is kept
+// separately for the synthetic-IP octet math below, which needs a number.
+const RUN_ID_NUM = Date.now();
+const RUN_ID = RUN_ID_NUM.toString(36);
 const PASS = "Test-password-123!";
 
 async function main() {
@@ -101,7 +106,7 @@ async function testLoginRateLimiting(BASE) {
   // A synthetic, unique-to-this-run IP so this test's lockout doesn't pollute
   // the shared "unknown" bucket used by every other unheadered request in
   // this file/other test files sharing the same local D1.
-  const ip = `10.42.${RUN_ID % 250}.1`;
+  const ip = `10.42.${RUN_ID_NUM % 250}.1`;
   const username = `auth_ratelimit_${RUN_ID}`;
   assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
 
@@ -213,7 +218,7 @@ async function testTokenVersionOnSeedRerun(BASE) {
 async function testChangePasswordRateLimiting(BASE) {
   // Distinct synthetic IP from testLoginRateLimiting's, so the two lockouts
   // don't interfere with each other.
-  const ip = `10.43.${RUN_ID % 250}.1`;
+  const ip = `10.43.${RUN_ID_NUM % 250}.1`;
   const username = `auth_cp_ratelimit_${RUN_ID}`;
   assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
   const token = await tokenFor(BASE, username, PASS);
