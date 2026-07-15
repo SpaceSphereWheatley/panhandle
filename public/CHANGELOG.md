@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.5] — 2026-07-15
+
+### Fixed
+- **Shopping list grid-view icon badges looked misaligned.** Badges now
+  anchor to a fixed offset from the top of each card instead of centering
+  with the text below, so they line up across a row regardless of whether
+  an item has a qty/notes subtitle. The single-letter fallback badge (shown
+  when an item has no matching icon) and the hand-drawn SVG icons
+  themselves are now optically centered in their circle too — the icons
+  were drawn asymmetrically within their canvas, so each one's true visual
+  center is now computed and corrected individually.
+
 ## [1.21.4] — 2026-07-14
 
 ### Changed
