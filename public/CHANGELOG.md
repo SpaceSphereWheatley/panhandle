@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.22.0] — 2026-07-15
+
+### Added
+- **Superadmin can now delete a list's last owner (and the whole list with it).**
+  Deleting any other user under Administrasjon still just deletes that
+  account, but deleting a list's sole owner used to be flatly refused
+  ("Listen ville miste sin eneste eier"). It now shows an explicit warning
+  that this permanently deletes the entire list (varer, katalog, måltider)
+  for everyone on it, and only proceeds on confirmation.
+
+### Fixed
+- **New lists were seeded with a much smaller item catalogue than existing
+  ones.** `migrations/0002_seed_catalogue.sql` and `0003_expand_catalogue.sql`
+  backfilled ~710 common Norwegian household items into every list that
+  existed at the time they were run, but new lists created since (via
+  registration, admin-created owners, or Google sign-in) only ever got the
+  original, much smaller ~120-item seed list baked into the Worker — a real
+  household already hit this in production. Every new list now gets the
+  same full ~710-item catalogue as older ones; existing under-seeded lists
+  were backfilled directly.
+
 ## [1.21.9] — 2026-07-15
 
 ### Fixed
