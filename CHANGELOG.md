@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.22.1] — 2026-07-15
+
+### Fixed
+- **"Sign in with Google" could go missing from the login screen after a
+  session timeout.** When a JWT expires, the app drops back to the login
+  screen in place, without a full page reload — but Google's sign-in script
+  keeps internal state tied to the page's original load, which can go stale
+  after the page has stayed open a long time (exactly how a session timeout
+  happens) and silently fail to draw the button. The login screen now
+  re-fetches a fresh copy of Google's script every time it's shown instead of
+  reusing a possibly long-loaded one, matching what a real page reload would
+  do.
+
 ## [1.22.0] — 2026-07-15
 
 ### Added
