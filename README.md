@@ -18,7 +18,7 @@ A shared shopping list and meal planner PWA for two people, built on Cloudflare 
 ## Architecture
 
 - **Frontend:** Vite + React, built to static assets and deployed on Cloudflare Pages (`src/`, built via `npm run build` to `dist/`)
-- **API:** Cloudflare Worker (handles `/api/*` and `/seed`)
+- **API:** Cloudflare Worker (handles `/api/*`)
 - **Database:** Cloudflare D1 (SQLite)
 - **Auth:** JWT with PBKDF2 password hashing, token versioning, plus self-service signup, "Sign in with Google", and email password recovery
 
@@ -29,7 +29,7 @@ Both the Pages project and the Worker are connected directly to this GitHub repo
 - **Pages:** Connect to Git → this repo → branch `main` → build command `npm run build`, output directory `dist`.
 - **Worker:** Connect to Git → this repo → branch `main` → deploy command `npx wrangler deploy` (reads `wrangler.toml` at repo root), no build command.
 - **D1 database:** schema/data changes live in `migrations/` and are applied with Wrangler's built-in D1 migrations runner: `npx wrangler d1 migrations apply panhandle --remote` (requires `wrangler login` or `CLOUDFLARE_API_TOKEN`). Wrangler records applied files in the `d1_migrations` table inside the DB, so only new numbered files run. This is a manual step a developer runs after merging a migration file — it is intentionally **not** wired into the Git integration/CI.
-- **Worker secrets:** set directly in the Worker's dashboard (Settings → Variables and Secrets), independent of the Git integration — `JWT_SECRET`, `SEED_SECRET`, plus `RESEND_API_KEY`/`TURNSTILE_SECRET_KEY`/`FEEDBACK_EMAIL`/`SUPERADMIN_USERNAMES` for email, CAPTCHA, feedback, and superadmin features (see `CLAUDE.md`'s Deployment section for what each gates).
+- **Worker secrets:** set directly in the Worker's dashboard (Settings → Variables and Secrets), independent of the Git integration — `JWT_SECRET`, plus `RESEND_API_KEY`/`TURNSTILE_SECRET_KEY`/`FEEDBACK_EMAIL`/`SUPERADMIN_USERNAMES` for email, CAPTCHA, feedback, and superadmin features (see `CLAUDE.md`'s Deployment section for what each gates).
 
 ## Development
 
@@ -49,7 +49,6 @@ Both halves deploy automatically on push to `main`:
 - `shared/` — small modules (`version.js`, `categories.js`) imported by both the Worker and the frontend, so version/category lists have one source of truth
 - `public/` — static assets Vite copies verbatim into `dist/`
   - `index.html` — static marketing/landing page (unauthenticated, links to `/app.html`)
-  - `seed.html` — one-time account creation page (posts to `/seed`, delete after setup)
   - `manifest.json` — PWA metadata
   - `icon-*.png` — app icons
 - `migrations/` — D1 schema; `0001_init.sql` is the consolidated base schema, `0002`/`0003` seed the ~710-item catalogue, and later numbered files add suggestion stats, recurring schedules, and self-service signup/recovery — see `CLAUDE.md`'s Architecture section for the full breakdown

@@ -164,7 +164,7 @@ async function testAccountAndChangeEmail(BASE) {
 
   let res = await fetch(`${BASE}/account`, { headers: auth });
   assert.equal(res.status, 200);
-  assert.equal((await res.json()).email, null, "a /seed-created account starts with no email on file");
+  assert.equal((await res.json()).email, null, "an admin/owner-bootstrapped account starts with no email on file");
 
   res = await fetch(`${BASE}/change-email`, {
     method: "POST", headers: auth,

@@ -1,7 +1,7 @@
 /* Panhandle service worker — app-shell caching for real offline support.
  *
- * All /api/* and /seed requests are always passed straight to the network,
- * untouched: they carry the auth/X-Refresh-Token flow and must never be
+ * All /api/* requests are always passed straight to the network, untouched:
+ * they carry the auth/X-Refresh-Token flow and must never be
  * served from or written to cache. Everything else (the app shell —
  * app.html plus its hashed JS/CSS/image assets) uses stale-while-revalidate:
  * respond from cache immediately if available (instant load, works offline),
@@ -28,7 +28,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname === '/seed') return;
+  if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {

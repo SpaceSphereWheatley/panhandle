@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.22.5] — 2026-07-15
+
+### Security
+- **Removed the `/seed` account-bootstrap endpoint.** It was a one-time,
+  secret-gated (`SEED_SECRET`) route for creating the very first account(s)
+  of a fresh deployment, meant to be disabled after first use — but since
+  self-service signup (`POST /register`) and "Sign in with Google" now cover
+  account creation, and admins/owners can create accounts via `POST
+  /admin/owners`/`POST /list-users`, it was no longer needed and was still a
+  standing (if secret-gated) attack surface. Deleted the route, `SEED_SECRET`
+  handling, the `public/seed.html` form, and all references to it in
+  `wrangler.toml`, `README.md`, `CLAUDE.md`, and the service worker. The
+  `SEED_SECRET` variable should also be removed from the Worker's Cloudflare
+  dashboard (Settings → Variables and Secrets), since nothing reads it
+  anymore. Integration tests bootstrap throwaway accounts by writing
+  directly to the local D1 SQLite file instead of calling an HTTP endpoint.
+
 ## [1.22.4] — 2026-07-15
 
 ### Fixed
