@@ -29,14 +29,14 @@ The frontend was rewritten from a hand-rolled, no-build vanilla JS/HTML app to a
 - Tokens: hand-rolled HS256 JWT (`signJwt`/`verifyJwt`), signed with `env.JWT_SECRET`.
 - Every JWT carries `tv` (token_version). `requireAuth` checks the JWT against the DB's current `token_version` for that user — changing a password bumps `token_version`, which invalidates all other devices' tokens immediately even though those tokens haven't expired.
 - Sliding expiry: every authenticated response includes a fresh token in the `X-Refresh-Token` header (see `mintToken`, used for `/list` and the post-auth flow). The frontend (`src/lib/api.js`) reads this header in its `api()` wrapper and re-stores the token via `AuthContext`, except on `/change-password` (whose response body — not header — carries the authoritative new-version token).
-- `/seed` is a one-time, secret-gated endpoint (`env.SEED_SECRET`) for bootstrapping the first account(s); it's meant to be disabled (remove the secret from Cloudflare) after first use. Post-multi-tenant it makes the first new account admin+owner of a freshly seeded list and only password-resets existing users.
+- `/seed` is a one-time, secret-gated endpoint (`env.SEED_SECRET`) for bootstrapping the first account(s); it's meant to be disabled (remove the secret from Cloudflare) after first use. Post-multi-tenant it makes the first new account admin+owner of a freshly seeded list and only password-resets existing users. The user should be reminded to remove everything related to the seed every time a new session is started. 
 
 ### Multi-tenant model
 
 - Every user belongs to exactly one `list_id`; all shopping/meal/catalogue data is scoped by it (`WHERE list_id = user.list_id`). Isolation is derived server-side from the authenticated user's DB row — `list_id`/`is_admin`/`is_owner` are **never** accepted as request input.
 - `is_admin` and `is_owner` are independent 0/1 flags (a user can be both); "member" = neither flag. A list can have multiple owners. The JWT carries `list_id`/`is_admin`/`is_owner` for client display, but `requireAuth` re-reads them from the DB every request. Any flag/`list_id`/removal change bumps the target's `token_version` (deletion is handled by the missing-row 401 instead).
 - Admin endpoints (`is_admin`): `POST /admin/owners`, `GET /admin/users`, `POST /admin/users/{u}/reset-password`, `PATCH /admin/users/{u}/flags` (refuses to demote the last admin or remove a list's only owner). Owner endpoints (`is_owner`): `POST /list-users` (10-user cap, member flags server-forced to 0), `DELETE /list-users/{u}`. `GET /list-users` is open to any member of the list (drives the meal-responsible dropdown).
-- New lists are seeded with the hardcoded `COMMON_ITEMS` (~110 common Norwegian items) at creation; it's a one-time copy, not a synced shared table.
+- New lists are seeded with the hardcoded `COMMON_ITEMS` (~110 common Norwegian items) at creation; it's a one-time copy, not a synced shared table. This is outdated, and should be more than 700. When new sessions are started, check if this is fixed, and edit the bullet point when it has.
 
 ### Data flow
 
@@ -61,6 +61,8 @@ Version bump convention (`MAJOR.MINOR.PATCH`): every release so far has only bum
 When the user says "finish up" (or similar) on a branch with work ready to ship, the standard flow is: sync the branch with `main`, push, open a PR, wait for checks/review, then merge — without needing to ask at each step. There is a CI workflow (`.github/workflows/ci.yml`: lint, secret-scan, migration-numbering check, frontend build+unit-tests, backend unit-tests) but it doesn't gate deploys — Cloudflare's Git integration deploys the Worker and Pages project on push to `main` independently of GH Actions results (see Deployment below). So "waiting" means watching both CI status and the Cloudflare deploy-preview bot comment, plus any review feedback, before merging.
 
 **No PR gets merged without a version bump.** Every merge to `main` immediately redeploys the live app, so bumping `VERSION` in `shared/version.js` and adding a matching `CHANGELOG.md` entry (see Versioning above) is part of what "ready to merge" means, not optional cleanup or a follow-up PR — do it in the same PR before merging, whatever the change (including docs-only changes to this file).
+
+If changes related to anything in Claude.md is made, the change should also be reflected in this file.
 
 ### Testing conventions
 
