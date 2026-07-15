@@ -33,6 +33,23 @@ body {
 
 main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
+/* Desktop framing: the layout (Header/main/TabBar) is already centered at
+   480px, but on a wide viewport it just floats on a body of the same
+   background as the app itself, with no visible edge. Above a phone/tablet
+   breakpoint, give the body a distinct backdrop and wrap #app in a
+   bordered/shadowed column so it reads as a contained "app" rather than a
+   column of content with no boundary. */
+@media (min-width: 700px) {
+  body { background: var(--surface-sunken); }
+  #root {
+    max-width: 480px;
+    min-height: 100vh;
+    margin: 0 auto;
+    background: var(--surface-page);
+    box-shadow: 0 0 0 1px var(--border-default), var(--shadow-raised);
+  }
+}
+
 /* Toast / snackbar (action feedback + undo) */
 #toast {
   position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);

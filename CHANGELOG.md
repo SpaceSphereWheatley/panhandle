@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.22.2] — 2026-07-15
+
+### Fixed
+- **The app had no visible edge on a desktop-width window.** The layout was
+  already centered in a 480px column on wide screens, but shared the exact
+  same background as the surrounding page, so it was hard to tell where the
+  app ended. On viewports wider than 700px, the page now gets a contrasting
+  backdrop and the app sits in a bordered, shadowed frame.
+
 ## [1.22.1] — 2026-07-15
 
 ### Fixed
