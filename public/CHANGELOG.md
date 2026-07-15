@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.22.3] — 2026-07-15
+
+### Fixed
+- **The desktop frame (1.22.2) could stretch arbitrarily tall.** The app's
+  bordered frame always filled the full viewport height, so on a wide *and*
+  tall browser window it read as an oddly elongated column instead of a
+  phone-like app. The frame is now capped to a 2:1 height:width ratio and
+  centered both vertically and horizontally in the window, shrinking further
+  only if the window itself is shorter than that. The floating action button
+  and modal sheets, which anchor to the frame's edges rather than the raw
+  browser viewport, were adjusted to match.
+
 ## [1.22.2] — 2026-07-15
 
 ### Fixed
