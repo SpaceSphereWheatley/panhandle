@@ -30,31 +30,6 @@ details live in `CHANGELOG.md`, not here.
    2-person household.
    _Value: High · Importance: Low · Type: Feature_
 
-11. In the meal planner, the "Endre"/"Legg til" button on today's card is
-    hard to read in both light and dark mode. Root cause found: today's
-    card flips to an inverse surface (`background: var(--md-inverse-
-    surface)`, `color: var(--md-inverse-on-surface)` in `MealsTab.jsx`),
-    but the shared `Button` component's `outline` variant
-    (`design-system/components/forms/Button.jsx`) hardcodes `color:
-    var(--text-primary)` / `border: var(--border-strong)` — tokens tied
-    to the *ambient* theme, not the inverse one — so the button's
-    text/border stay low-contrast against the flipped background
-    regardless of light/dark mode. Fix is either an inverse-aware
-    `outline` variant/prop on `Button`, or a one-off style override on
-    this specific button.
-    _Value: Medium · Importance: High · Type: Bug / Accessibility_
-
-8. Bug: switching between grid and list view changes what's shown, not
-   just how it's laid out. One concrete cause confirmed in
-   `ShoppingListTab.jsx`: the "Nylig kjøpt" (recently bought) section
-   caps at `boughtRowCap` — 9 items in grid view (3×3) vs. 3 in list view
-   — so toggling the view can make several recently-bought items appear
-   or disappear, which likely reads as a bug even though it's deliberate
-   ("3 rows' worth" in each layout). Worth reproducing to confirm that's
-   the actual complaint, or whether there's a second real inconsistency
-   (e.g. sort order), before deciding the fix.
-   _Value: Medium · Importance: Medium · Type: Bug / UI_
-
 14. Disable/remove the `/seed` endpoint's `SEED_SECRET` from the Worker's
     Cloudflare dashboard vars (Settings → Variables and Secrets) now that
     self-service signup (`POST /register`) and Google sign-in (`POST
@@ -77,16 +52,16 @@ details live in `CHANGELOG.md`, not here.
    as much as code.
    _Value: Medium · Importance: Low · Type: Tech debt / Docs_
 
-12. Should each day be a bit smaller in the meal planner week view? Try to
-    show the whole week without scrolling. Plausible given the current
-    per-day `Card` sizing (`MealsTab.jsx`): today's card uses
-    `--md-headline-emphasized-size` text plus a responsible-person avatar
-    row, other days use `--md-title-large-size` — across 7 cards that's a
-    lot of vertical space on a typical phone viewport. Needs an actual
-    measurement pass (does it currently scroll on common screen sizes?)
-    before picking a fix (smaller non-today cards, tighter padding, or a
-    more compact "week strip" layout).
-    _Value: Medium · Importance: Low · Type: UI / Layout_
+15. Add language support (i18n). The UI is currently 100% hardcoded
+    Norwegian strings across every tab/component/modal — no translation
+    layer, no string-key extraction, no language switcher. Needs a
+    translation infrastructure decision (a lightweight locale →
+    string-map approach fits this app's size better than pulling in a
+    full i18n library), a language switcher (Settings, persisted
+    per-device like theme), then extracting/translating every existing
+    string. Large, cross-cutting effort — touches nearly every component,
+    not a contained feature.
+    _Value: Medium · Importance: Low · Type: Feature / i18n_
 
 5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
@@ -134,6 +109,29 @@ details live in `CHANGELOG.md`, not here.
    _Value: Low · Importance: Low · Type: UI / Layout_
 
 ## Done
+- [x] In the meal planner, the "Endre"/"Legg til" button on today's card
+      was hard to read in both light and dark mode. Root cause: today's
+      card flips to an inverse surface (`background: var(--md-inverse-
+      surface)`, `color: var(--md-inverse-on-surface)` in `MealsTab.jsx`),
+      but `Button`'s `outline` variant hardcoded `color: var(--text-
+      primary)` / `border: var(--border-strong)` — tokens tied to the
+      *ambient* theme, not the inverse one. Fixed with a per-instance
+      style override on today's button using the matching inverse tokens.
+      Verified visually in both color schemes via a local wrangler-dev +
+      Vite dev-proxy session. (1.22.4)
+- [x] Bug: switching between grid and list view changed what "Nylig
+      kjøpt" showed, not just how it was laid out — the section capped at
+      9 items in grid view (3×3) vs. 3 in list view. Unified to a single
+      view-independent cap (`BOUGHT_CAP = 9` in `ShoppingListTab.jsx`) so
+      toggling the view only changes layout now, confirmed identical item
+      sets in both views via a local visual check. (1.22.4)
+- [x] Meal planner week view: non-today day cards are now more compact
+      (`Card`'s `padding="sm"` instead of the default `md`, tighter title
+      margin, smaller inter-card gap in the mobile stacked layout) so the
+      week takes less vertical space overall. Today's card keeps its
+      full-size prominent treatment; fitting the entire week without any
+      scrolling on every device would need a larger layout rework, not
+      attempted here. (1.22.4)
 - [x] In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
       currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
       identity/theme card, both under the "Meg & min app" island label.
