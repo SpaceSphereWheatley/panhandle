@@ -52,9 +52,10 @@ function patchFlags(base, adminToken, targetUsername, flags) {
   });
 }
 
-function deleteUser(base, adminToken, targetUsername) {
+function deleteUser(base, adminToken, targetUsername, body) {
   return fetch(`${base}/admin/users/${encodeURIComponent(targetUsername)}`, {
     method: "DELETE", headers: authHeaders(adminToken),
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 }
 
@@ -63,7 +64,8 @@ async function runTests(BASE) {
   await testPermissionChecks(BASE, superToken);
   await testDeletesPlainMember(BASE, superToken);
   await testRefusesLastAdmin(BASE, superToken);
-  await testRefusesLastOwner(BASE, superToken);
+  await testRefusesLastOwnerWithoutConfirmation(BASE);
+  await testLastOwnerCascadeWithConfirmation(BASE);
 }
 
 async function testPermissionChecks(BASE, superToken) {
@@ -144,33 +146,50 @@ async function testRefusesLastAdmin(BASE, superToken) {
 
 // is_owner is scoped per-list, so — unlike the last-admin case above — this
 // doesn't need the same demote-everyone-else isolation: a freshly seeded
-// account is always the sole owner of its own brand-new list. The
-// SUPERADMIN_USERNAME account was deleted by testRefusesLastAdmin (usernames
-// are free again once deleted), so it's re-seeded here as this test's actor.
-// The target is deliberately promoted to admin too (alongside the actor),
-// so the global admin count is guaranteed >=2 regardless of ambient state —
-// otherwise the is_admin guard (checked first in the handler) could
-// short-circuit before the is_owner guard actually gets exercised.
-async function testRefusesLastOwner(BASE) {
-  const ownerUsername = `adu_lastowner_${RUN_ID}`;
+// account is always the sole owner of its own brand-new list. Without the
+// delete_list confirmation flag, deleting a list's last owner is still
+// refused outright (same "eneste eier" guard as PATCH .../flags and
+// DELETE /list-users) — the flag has to be an explicit, opt-in choice, never
+// the default.
+async function testRefusesLastOwnerWithoutConfirmation(BASE) {
+  const ownerUsername = `adu_lastowner_noconfirm_${RUN_ID}`;
   await seedAndLogin(BASE, ownerUsername, PASS);
   const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
-  assert.equal((await patchFlags(BASE, superToken, ownerUsername, { is_admin: true })).status, 200);
-  // Promoting bumps token_version — (re-)login for a fresh token.
-  const { token: ownerToken } = await (await login(BASE, ownerUsername, PASS)).json();
 
   const refusedRes = await deleteUser(BASE, superToken, ownerUsername);
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
   assert.match(refusedBody.error, /eneste eier/i);
 
-  // Add a second owner on the same list, then the deletion succeeds.
-  const { username: secondOwner } = await addMember(BASE, ownerToken, `adu_lastowner_second_${RUN_ID}`);
-  assert.equal((await patchFlags(BASE, superToken, secondOwner, { is_owner: true })).status, 200);
-  const deleteRes = await deleteUser(BASE, superToken, ownerUsername);
-  assert.equal(deleteRes.status, 200, "deleting is allowed once a second owner exists on the list");
+  // The account and its list are untouched by the refused attempt.
+  assert.equal((await login(BASE, ownerUsername, PASS)).status, 200,
+    "the refused last-owner account should still exist and be able to log in");
 
-  console.log("  - refuses to delete a list's last owner, allows it once a second owner exists");
+  console.log("  - refuses to delete a list's last owner without body.delete_list");
+}
+
+// With body.delete_list: true, deleting a list's last owner cascades into
+// deleting the entire list (every table scoped by list_id) instead of being
+// refused — same outcome as a last owner self-deleting via DELETE /account,
+// just triggered by a superadmin acting on someone else's account.
+async function testLastOwnerCascadeWithConfirmation(BASE) {
+  const ownerUsername = `adu_lastowner_cascade_${RUN_ID}`;
+  const { token: ownerToken } = await seedAndLogin(BASE, ownerUsername, PASS);
+  const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
+  const { username: memberUsername, password: memberPassword } =
+    await addMember(BASE, ownerToken, `adu_lastowner_cascade_m_${RUN_ID}`);
+
+  const deleteRes = await deleteUser(BASE, superToken, ownerUsername, { delete_list: true });
+  assert.equal(deleteRes.status, 200);
+  const deleteBody = await deleteRes.json();
+  assert.equal(deleteBody.list_deleted, true, "response should report the whole list was deleted");
+
+  assert.equal((await login(BASE, ownerUsername, PASS)).status, 401,
+    "the deleted owner's account should no longer exist");
+  assert.equal((await login(BASE, memberUsername, memberPassword)).status, 401,
+    "every other member of the cascade-deleted list should also be gone");
+
+  console.log("  - body.delete_list cascades: deletes the last owner AND their entire list (all members included)");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

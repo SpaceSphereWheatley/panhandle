@@ -108,6 +108,29 @@ export function AdminIsland() {
   }
 
   async function deleteUser(username) {
+    const target = users.find((u) => u.username === username);
+    const isLoneOwner = !!target?.is_owner
+      && groups[target.list_id].filter((u) => u.is_owner).length <= 1;
+
+    if (isLoneOwner) {
+      if (!(await confirm(
+        `${username} er eneste eier av listen sin. Å slette brukeren sletter HELE listen med alt innhold (varer, katalog, måltider) permanent for alle på den. Dette kan ikke angres.`,
+        { title: "Slette bruker og liste?", confirmLabel: "Slett bruker og liste" }
+      ))) return;
+      const res = await api(`/admin/users/${encodeURIComponent(username)}`, {
+        method: "DELETE",
+        body: JSON.stringify({ delete_list: true }),
+      });
+      if (res.error) {
+        toast(res.error, { error: true });
+        return;
+      }
+      toast(`${username} og listen er slettet`);
+      loadAllUsers();
+      refreshListUsers();
+      return;
+    }
+
     if (!(await confirm(`Slette brukeren ${username} for godt? Dette kan ikke angres.`, { title: "Slette bruker?", confirmLabel: "Slett" })))
       return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}`, { method: "DELETE" });

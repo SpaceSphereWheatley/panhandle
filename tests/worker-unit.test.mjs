@@ -8,8 +8,9 @@ import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   cleanUsername, extractGlutenFree, capitalizeName, sanitizeLabels,
-  isSuperAdmin, escapeHtml,
+  isSuperAdmin, escapeHtml, COMMON_ITEMS,
 } from "../worker/index.js";
+import { CATEGORIES } from "../shared/categories.js";
 
 describe("b64url / b64urlStr / b64urlDecode", () => {
   test("roundtrips a UTF-8 string through b64urlStr/b64urlDecode", () => {
@@ -296,5 +297,32 @@ describe("escapeHtml", () => {
     const escaped = escapeHtml(malicious);
     assert.ok(!escaped.includes("<img"), "raw tag must not survive escaping");
     assert.equal(escaped, "&lt;/p&gt;&lt;img src=x onerror=alert(1)&gt;&lt;p&gt;");
+  });
+});
+
+describe("COMMON_ITEMS (new-list catalogue seed)", () => {
+  test("carries the full catalogue migrations 0002/0003 backfilled into every list, not just the original smaller set", () => {
+    // Regression guard: createList() only ever seeds new lists from this
+    // array, so if it shrinks back down to the ~120-item set that predates
+    // migrations/0002_seed_catalogue.sql + 0003_expand_catalogue.sql, every
+    // list created afterwards silently falls behind the ~710-item catalogue
+    // those migrations gave every list that already existed at the time.
+    assert.ok(COMMON_ITEMS.length >= 700, `expected >=700 items, got ${COMMON_ITEMS.length}`);
+  });
+
+  test("every item has a category from the shared CATEGORIES list", () => {
+    const bad = COMMON_ITEMS.filter((it) => !CATEGORIES.includes(it.category));
+    assert.deepEqual(bad, []);
+  });
+
+  test("has no duplicate names (case-insensitive, matching item_catalogue's COLLATE NOCASE unique constraint)", () => {
+    const seen = new Set();
+    const dupes = [];
+    for (const it of COMMON_ITEMS) {
+      const key = it.name.toLowerCase();
+      if (seen.has(key)) dupes.push(it.name);
+      seen.add(key);
+    }
+    assert.deepEqual(dupes, []);
   });
 });
