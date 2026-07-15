@@ -139,7 +139,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // Handleliste's clusters, for consistency) so "I dag" can stand apart.
   const stackStyle =
     intensity === "classic"
-      ? { display: "flex", flexDirection: "column", gap: 8 }
+      ? { display: "flex", flexDirection: "column", gap: 6 }
       : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 
   return (
@@ -188,6 +188,10 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
             <CardComponent
               key={iso}
               {...motionProps}
+              // Non-today cards are more compact (smaller padding, tighter
+              // title margin below) so the whole week takes up less vertical
+              // space — today's card keeps the full-size prominent treatment.
+              padding={isToday ? "md" : "sm"}
               style={
                 isToday
                   ? {
@@ -221,7 +225,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                       fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
                       color: p?.meal_name ? (isToday ? "var(--md-inverse-on-surface)" : "var(--text-primary)") : "var(--text-tertiary)",
                       fontStyle: p?.meal_name ? "normal" : "italic",
-                      margin: "4px 0",
+                      margin: isToday ? "4px 0" : "2px 0",
                     }}
                   >
                     {p?.meal_name || "Ingen måltid planlagt"}
@@ -250,7 +254,15 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                     </div>
                   ) : null}
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setModal({ type: "plan", iso })}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModal({ type: "plan", iso })}
+                  // `outline`'s color/border tokens follow the ambient theme, but
+                  // today's card flips to an inverse surface above — override to
+                  // the matching inverse tokens so the button stays readable.
+                  style={isToday ? { color: "var(--md-inverse-on-surface)", border: "1.5px solid var(--md-inverse-on-surface)" } : undefined}
+                >
                   {p?.meal_name ? "Endre" : "Legg til"}
                 </Button>
               </div>

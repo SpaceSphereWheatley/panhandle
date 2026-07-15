@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.22.4] — 2026-07-15
+
+### Fixed
+- **The meal planner's "Endre"/"Legg til" button on today's card was hard to
+  read, in both light and dark mode.** Today's card flips to an inverse
+  surface, but the button's `outline` style used the ambient theme's
+  color/border tokens instead of the inverse ones, leaving low-contrast text
+  against the flipped background either way. It now uses the matching
+  inverse tokens on today's card.
+- **Switching the shopping list between grid and list view changed what was
+  in "Nylig kjøpt" (recently bought), not just how it looked.** The section
+  capped at a different number of items per view (9 in grid, 3 in list) to
+  fill out each layout's rows, so toggling the view made items appear or
+  disappear. It now shows the same fixed set of items in both views.
+- Meal planner week view: non-today day cards are more compact (smaller
+  padding, tighter spacing) so the week takes up less vertical space overall.
+
 ## [1.22.3] — 2026-07-15
 
 ### Docs

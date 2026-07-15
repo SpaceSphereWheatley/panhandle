@@ -264,9 +264,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // regardless of the user's stored grid/list preference — ph_view stays
   // untouched so switching back to muted/expressive restores it exactly.
   const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
-  // Cap at 3 rows' worth: 3 columns × 3 rows in grid view, 3 rows in list view.
-  const boughtRowCap = effectiveViewMode === "grid" ? 9 : 3;
-  const boughtDisplayItems = bought.slice(0, boughtRowCap).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
+  // Fixed regardless of view mode so toggling grid/list only changes layout,
+  // not which items show — a view-dependent cap (previously 9 in grid vs. 3
+  // in list, to fill 3 grid rows vs. 3 list rows) made items appear/disappear
+  // on toggle, which read as a bug rather than an intentional density choice.
+  const BOUGHT_CAP = 9;
+  const boughtDisplayItems = bought.slice(0, BOUGHT_CAP).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
