@@ -55,6 +55,8 @@ details live in `CHANGELOG.md`, not here.
 12. Should each day be a bit smaller? Try to show the whole week without 
     scrolling.
 
+13. Create more icons.
+
 ## Done
 - [x] In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
       currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
