@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.21.7] — 2026-07-15
+
+### Changed
+- **Grid ⇄ list now animates.** Switching the shopping list's view toggle
+  used to snap instantly (the grid and list cards were separate components,
+  so React swapped them outright). Cards now morph smoothly between the row
+  and tile shape, ripple in with a slight stagger under Ekspressiv intensity,
+  and the icon/text ease into their new spot instead of popping. The
+  Liste/Rutenett toggle buttons also gained a sliding indicator. Classic
+  intensity is unaffected — it still forces list view with no motion.
+
 ## [1.21.6] — 2026-07-15
 
 ### Changed

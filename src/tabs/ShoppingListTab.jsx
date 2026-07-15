@@ -6,7 +6,6 @@ import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } fr
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { ItemCard } from "../components/ItemCard.jsx";
-import { ItemGridCard } from "../components/ItemGridCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
@@ -312,7 +311,31 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", minHeight: 16 }}>{summary}</div>
-        <div style={{ display: "flex", gap: 4, background: "var(--surface-sunken)", borderRadius: "var(--radius-pill)", padding: 3 }}>
+        <div
+          style={{
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 4,
+            background: "var(--surface-sunken)",
+            borderRadius: "var(--radius-pill)",
+            padding: 3,
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              zIndex: 0,
+              top: 3,
+              bottom: 3,
+              left: 3,
+              width: "calc(50% - 5px)",
+              background: "var(--accent-primary)",
+              borderRadius: "var(--radius-pill)",
+              transform: effectiveViewMode === "grid" ? "translateX(calc(100% + 4px))" : "translateX(0)",
+              transition: "transform var(--spring-duration-soft) var(--ease-spring-soft)",
+            }}
+          />
           <button
             onClick={() => setView("list")}
             aria-label="Listevisning"
@@ -471,11 +494,10 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, act
   return (
     <div style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false}>
-        {displayItems.map(({ item, clusterKey }) => {
+        {displayItems.map(({ item, clusterKey }, index) => {
           const { bg, on } = clusterFor(clusterKey);
-          const ItemComponent = viewMode === "grid" ? ItemGridCard : ItemCard;
           return (
-            <ItemComponent
+            <ItemCard
               key={item.id}
               item={item}
               clusterOn={on}
@@ -484,6 +506,8 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, act
               onToggle={onToggle}
               onEdit={onEdit}
               active={active}
+              viewMode={viewMode}
+              index={index}
             />
           );
         })}
@@ -494,8 +518,10 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, act
 
 function viewToggleBtnStyle(active, disabled) {
   return {
+    position: "relative",
+    zIndex: 1,
     border: "none",
-    background: active ? "var(--accent-primary)" : "transparent",
+    background: "transparent",
     color: active ? "var(--text-on-accent)" : "var(--text-tertiary)",
     borderRadius: "var(--radius-pill)",
     fontSize: 16,
@@ -504,5 +530,7 @@ function viewToggleBtnStyle(active, disabled) {
     opacity: disabled ? 0.4 : 1,
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
+    transition: "color 150ms var(--ease-out)",
   };
 }
