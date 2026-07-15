@@ -8,6 +8,7 @@ import { CredentialsModal } from "../CredentialsModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { AccordionGroup } from "./AccordionGroup.jsx";
 import { SectionHeader } from "./SectionHeader.jsx";
 import { MetricsSettings } from "./MetricsSettings.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
@@ -151,80 +152,82 @@ export function AdminIsland() {
         {listCount} {listCount === 1 ? "liste" : "lister"} · Versjon {versionDetail}
       </div>
 
-      <AccordionRow label="Varer uten ikon">
-        <div className="icon-gap-list">
-          {iconGaps.map((n) => (
-            <span key={n}>{n}</span>
-          ))}
-        </div>
-      </AccordionRow>
-
-      <AccordionRow label="Opprett eier (ny liste)">
-        <label htmlFor="admin-new-owner" className="sr-only">Brukernavn for ny eier</label>
-        <Input
-          id="admin-new-owner"
-          placeholder="Brukernavn for ny eier"
-          value={newOwnerName}
-          onChange={(e) => setNewOwnerName(e.target.value)}
-        />
-        <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
-      </AccordionRow>
-
-      <AccordionRow label="Alle brukere">
-        {Object.keys(groups).map((listId) => (
-          <div key={listId}>
-            <div className="admin-group">
-              Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
-            </div>
-            <AnimatePresence initial={false}>
-              {groups[listId].map((u) => (
-                <MotionRow
-                  className="mgmt-row"
-                  key={u.username}
-                  layout={shouldAnimate}
-                  transition={transition}
-                  initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
-                  animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
-                  exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
-                >
-                  <div className="who">
-                    <div className="uname">{u.username}</div>
-                    <div className="sub">{u.username === currentUser ? "deg" : u.created_by ? "av " + u.created_by : " "}</div>
-                  </div>
-                  <div className="acts">
-                    <label className="flag">
-                      <input
-                        type="checkbox"
-                        checked={!!u.is_admin}
-                        onChange={(e) => setFlag(u.username, "is_admin", e.target.checked)}
-                      />
-                      Admin
-                    </label>
-                    <label className="flag">
-                      <input
-                        type="checkbox"
-                        checked={!!u.is_owner}
-                        onChange={(e) => setFlag(u.username, "is_owner", e.target.checked)}
-                      />
-                      Eier
-                    </label>
-                    <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
-                    {isSuperAdmin && (
-                      <button className="mini danger" onClick={() => deleteUser(u.username)}>Slett</button>
-                    )}
-                  </div>
-                </MotionRow>
-              ))}
-            </AnimatePresence>
+      <AccordionGroup>
+        <AccordionRow label="Varer uten ikon">
+          <div className="icon-gap-list">
+            {iconGaps.map((n) => (
+              <span key={n}>{n}</span>
+            ))}
           </div>
-        ))}
-      </AccordionRow>
-
-      {isSuperAdmin && (
-        <AccordionRow label="Statistikk (alle lister)">
-          <MetricsSettings />
         </AccordionRow>
-      )}
+
+        <AccordionRow label="Opprett eier (ny liste)">
+          <label htmlFor="admin-new-owner" className="sr-only">Brukernavn for ny eier</label>
+          <Input
+            id="admin-new-owner"
+            placeholder="Brukernavn for ny eier"
+            value={newOwnerName}
+            onChange={(e) => setNewOwnerName(e.target.value)}
+          />
+          <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
+        </AccordionRow>
+
+        <AccordionRow label="Alle brukere">
+          {Object.keys(groups).map((listId) => (
+            <div key={listId}>
+              <div className="admin-group">
+                Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
+              </div>
+              <AnimatePresence initial={false}>
+                {groups[listId].map((u) => (
+                  <MotionRow
+                    className="mgmt-row"
+                    key={u.username}
+                    layout={shouldAnimate}
+                    transition={transition}
+                    initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
+                    animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
+                    exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
+                  >
+                    <div className="who">
+                      <div className="uname">{u.username}</div>
+                      <div className="sub">{u.username === currentUser ? "deg" : u.created_by ? "av " + u.created_by : " "}</div>
+                    </div>
+                    <div className="acts">
+                      <label className="flag">
+                        <input
+                          type="checkbox"
+                          checked={!!u.is_admin}
+                          onChange={(e) => setFlag(u.username, "is_admin", e.target.checked)}
+                        />
+                        Admin
+                      </label>
+                      <label className="flag">
+                        <input
+                          type="checkbox"
+                          checked={!!u.is_owner}
+                          onChange={(e) => setFlag(u.username, "is_owner", e.target.checked)}
+                        />
+                        Eier
+                      </label>
+                      <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
+                      {isSuperAdmin && (
+                        <button className="mini danger" onClick={() => deleteUser(u.username)}>Slett</button>
+                      )}
+                    </div>
+                  </MotionRow>
+                ))}
+              </AnimatePresence>
+            </div>
+          ))}
+        </AccordionRow>
+
+        {isSuperAdmin && (
+          <AccordionRow label="Statistikk (alle lister)">
+            <MetricsSettings />
+          </AccordionRow>
+        )}
+      </AccordionGroup>
 
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />
