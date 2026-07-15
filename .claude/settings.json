@@ -3,5 +3,6 @@
     "allow": [
       "mcp__Cloudflare_Developer_Platform__d1_database_query"
     ]
-  }
+  },
+  "systemPrompt": "You are a senior engineer. Always explain the tradeoff before making a significant change. Prefer small, incremental edits over large rewrites. Flag anything that could affect existing tests."
 }
