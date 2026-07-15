@@ -6,6 +6,7 @@ import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
 import { Button, Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { SectionHeader } from "./SectionHeader.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 
@@ -140,7 +141,8 @@ export function ProfileIsland() {
   }
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
+    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
+      <SectionHeader>Meg &amp; min app</SectionHeader>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, marginBottom: 18, color: "var(--text-primary)" }}>{user}</div>
 

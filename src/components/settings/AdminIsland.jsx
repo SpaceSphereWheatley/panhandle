@@ -8,6 +8,7 @@ import { CredentialsModal } from "../CredentialsModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { SectionHeader } from "./SectionHeader.jsx";
 import { MetricsSettings } from "./MetricsSettings.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
@@ -137,8 +138,8 @@ export function AdminIsland() {
   for (const u of users) (groups[u.list_id] = groups[u.list_id] || []).push(u);
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginBottom: 10 }}>Administrasjon</div>
+    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
+      <SectionHeader>Administrasjon</SectionHeader>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 6 }}>
         <StatTile label="Varer i katalog" value={catCount} icon="package" />

@@ -8,41 +8,30 @@ import { AboutFooter } from "../components/settings/AboutFooter.jsx";
 // A single scrolling screen of 4 always-visible island containers, rather
 // than a drill-down menu — Designintensitet, the PWA highlight, and the
 // admin stats grid all need to be directly visible, which a subpage-behind-
-// navigation model can't give them.
-function IslandLabel({ children }) {
-  return (
-    <div
-      style={{
-        fontFamily: "var(--font-sans)",
-        fontSize: "var(--text-2xs)",
-        fontWeight: 700,
-        color: "var(--text-tertiary)",
-        textTransform: "uppercase",
-        letterSpacing: "var(--tracking-wide)",
-        margin: "20px 4px 8px",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
+// navigation model can't give them. Each island carries its own section
+// title as a header strip baked into its Card (see SectionHeader.jsx)
+// instead of a label floating above it, so the title reads as part of its
+// card rather than a separate element competing with it. The extra
+// marginBottom on each section wrapper (on top of each island's own
+// internal spacing) is what visually separates the three sections from
+// each other.
 export function SettingsTab() {
   const { isAdmin } = useAuth();
   return (
     <section>
-      <IslandLabel>Meg &amp; min app</IslandLabel>
-      <ProfileIsland />
-      <PwaInstallCTA />
+      <div style={{ marginBottom: 24 }}>
+        <ProfileIsland />
+        <PwaInstallCTA />
+      </div>
 
-      <IslandLabel>Vårt hjem</IslandLabel>
-      <HomeIsland />
+      <div style={{ marginBottom: 24 }}>
+        <HomeIsland />
+      </div>
 
       {isAdmin && (
-        <>
-          <IslandLabel>Administrasjon</IslandLabel>
+        <div style={{ marginBottom: 24 }}>
           <AdminIsland />
-        </>
+        </div>
       )}
 
       <AboutFooter />
