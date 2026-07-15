@@ -28,8 +28,16 @@ describe("parseItemInput", () => {
     expect(parseItemInput("7 Up", catalogue)).toEqual({ name: "7 Up", qty: 1 });
   });
 
-  it("does not parse a trailing number as a quantity", () => {
+  it("parses a trailing '<name> <qty>' below 20 as a quantity", () => {
+    expect(parseItemInput("Melk 2", [])).toEqual({ name: "Melk", qty: 2 });
+  });
+
+  it("does not treat a large trailing number as a quantity", () => {
     expect(parseItemInput("Yoghurt 500", [])).toEqual({ name: "Yoghurt 500", qty: 1 });
+  });
+
+  it("does not treat a large leading number as a quantity", () => {
+    expect(parseItemInput("500 Yoghurt", [])).toEqual({ name: "500 Yoghurt", qty: 1 });
   });
 
   it("defaults to qty 1 for plain text", () => {

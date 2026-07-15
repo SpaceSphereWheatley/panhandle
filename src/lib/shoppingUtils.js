@@ -9,16 +9,23 @@ export function cap(s) {
 }
 
 // If the typed text is already a known catalogue item, don't strip a leading
-// integer thinking it's a quantity (e.g. a "7 Up" typed with a space). Only a
-// *leading* "<qty> <name>" is parsed as quantity ("2 melk") — a trailing
-// number is too often part of the product name itself.
+// or trailing integer thinking it's a quantity (e.g. a "7 Up" typed with a
+// space). Otherwise a leading or trailing "<qty>" below 20 is parsed as
+// quantity ("2 melk" or "melk 2") — larger numbers ("Yoghurt 500") are too
+// often part of the product name/size itself to treat as a quantity.
 export function parseItemInput(raw, catalogue) {
   const text = raw.trim();
   if (catalogue.some((c) => c.name.toLowerCase() === text.toLowerCase())) {
     return { name: text, qty: 1 };
   }
-  const m = text.match(/^(\d+)\s+(.+)$/);
-  if (m) return { name: m[2].trim(), qty: parseInt(m[1], 10) };
+  const leading = text.match(/^(\d+)\s+(.+)$/);
+  if (leading && Number(leading[1]) < 20) {
+    return { name: leading[2].trim(), qty: parseInt(leading[1], 10) };
+  }
+  const trailing = text.match(/^(.+)\s+(\d+)$/);
+  if (trailing && Number(trailing[2]) < 20) {
+    return { name: trailing[1].trim(), qty: parseInt(trailing[2], 10) };
+  }
   return { name: text, qty: 1 };
 }
 

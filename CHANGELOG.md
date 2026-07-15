@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.21.8] — 2026-07-15
+
+### Fixed
+- **Trailing quantities in new item names weren't parsed.** Typing "2 melk"
+  correctly split into item "Melk" with qty 2, but "Melk 2" was added as a
+  literal new catalogue item called "Melk 2" instead of "Melk" with qty 2.
+  A leading or trailing number below 20 is now parsed as the quantity
+  either way; larger numbers (e.g. "Yoghurt 500") are still left alone since
+  they're usually part of the product size/name.
+
 ## [1.21.7] — 2026-07-15
 
 ### Changed
