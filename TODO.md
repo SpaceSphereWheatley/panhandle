@@ -97,6 +97,10 @@ details live in `CHANGELOG.md`, not here.
    since this is a 2-person app used mostly on phones.
    _Value: Low · Importance: Low · Type: UI / Layout_
 
+16. Move all completed items to Todo_done.md. Expose the item numbers so they can be viewed through md, and sort the items.
+
+
+
 ## Done
 - [x] Removed the `/seed` bootstrap endpoint (and its `SEED_SECRET`-gated
       code path, `public/seed.html` form, and all references in
