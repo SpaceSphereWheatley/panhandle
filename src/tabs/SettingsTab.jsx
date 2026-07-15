@@ -19,9 +19,10 @@ export function SettingsTab() {
   const { isAdmin } = useAuth();
   return (
     <section>
+      <PwaInstallCTA />
+
       <div style={{ marginBottom: 24 }}>
         <ProfileIsland />
-        <PwaInstallCTA />
       </div>
 
       <div style={{ marginBottom: 24 }}>
