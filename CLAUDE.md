@@ -50,7 +50,7 @@ The frontend was rewritten from a hand-rolled, no-build vanilla JS/HTML app to a
 
 ### Versioning
 
-There's a single version number, duplicated: `VERSION` in `worker/index.js` and `APP_VERSION` in `src/lib/version.js` — bump both together on a release and add a `CHANGELOG.md` entry. (`public/app.html`'s own `APP_VERSION` is stale/unused now that it's no longer served — don't bother bumping it.) The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
+There's a single version number, `VERSION` in `shared/version.js` — both `worker/index.js` and `src/lib/version.js` (`APP_VERSION`) import it from there, so a release only requires bumping it in that one file, plus adding a `CHANGELOG.md` entry. (`public/app.html`'s own `APP_VERSION` is stale/unused now that it's no longer served — don't bother bumping it.) The Worker and Pages deploy independently, so the Profile page reads `GET /api/version` (public, unauthenticated) and shows both the app and API versions; a mismatch means one half of a deploy is still in flight or stale.
 
 `CHANGELOG.md` is also duplicated into `public/CHANGELOG.md` so Vite's `publicDir` copy-through carries it into `dist/` as a static asset (the repo-root copy isn't in the Pages build output dir) — the frontend fetches `/CHANGELOG.md` directly to show a changelog modal (triggered from the "Om" settings subpage via `src/components/ChangelogModal.jsx`, and from a one-time toast when a device's last-seen `APP_VERSION` doesn't match the current one, see `src/hooks/useDeployVersionCheck.js`). Copy the updated `CHANGELOG.md` into `public/` whenever it changes.
 
@@ -59,6 +59,8 @@ Version bump convention (`MAJOR.MINOR.PATCH`): every release so far has only bum
 ## Workflow conventions
 
 When the user says "finish up" (or similar) on a branch with work ready to ship, the standard flow is: sync the branch with `main`, push, open a PR, wait for checks/review, then merge — without needing to ask at each step. There is a CI workflow (`.github/workflows/ci.yml`: lint, secret-scan, migration-numbering check, frontend build+unit-tests, backend unit-tests) but it doesn't gate deploys — Cloudflare's Git integration deploys the Worker and Pages project on push to `main` independently of GH Actions results (see Deployment below). So "waiting" means watching both CI status and the Cloudflare deploy-preview bot comment, plus any review feedback, before merging.
+
+**No PR gets merged without a version bump.** Every merge to `main` immediately redeploys the live app, so bumping `VERSION` in `shared/version.js` and adding a matching `CHANGELOG.md` entry (see Versioning above) is part of what "ready to merge" means, not optional cleanup or a follow-up PR — do it in the same PR before merging, whatever the change (including docs-only changes to this file).
 
 ### Testing conventions
 

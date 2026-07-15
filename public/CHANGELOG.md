@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.21.6] — 2026-07-15
+
+### Changed
+- **Settings tab decluttered.** Every subsection (E-post, Bytt passord,
+  Slett konto, medlemslister, m.fl.) now starts minimized, and opening one
+  automatically closes any other that was open in the same section instead
+  of letting them stack up. The three main sections (Meg & min app, Vårt
+  hjem, Administrasjon) now each carry a clearly separated title strip, and
+  the "Installer Panhandle" prompt moved to the top of the screen.
+
 ## [1.21.5] — 2026-07-15
 
 ### Fixed
