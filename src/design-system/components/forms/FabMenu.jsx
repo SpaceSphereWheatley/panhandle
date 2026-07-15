@@ -4,7 +4,7 @@ import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 
 /* Shared positioning with the Fab (keep in sync with Fab.jsx). */
 const FAB_BOTTOM = 'calc(84px + env(safe-area-inset-bottom))';
-const FAB_RIGHT = 'max(16px, calc(50vw - 224px))';
+const FAB_RIGHT = 'var(--fab-right)';
 
 /**
  * Material 3 FAB menu (speed-dial). The FAB stays pinned bottom-right; tapping

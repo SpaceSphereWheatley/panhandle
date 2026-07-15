@@ -9,6 +9,14 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { overscroll-behavior-y: contain; }
+:root {
+  /* Fab/FabMenu's `right` offset (see Fab.jsx/FabMenu.jsx): below the desktop
+     frame breakpoint, position:fixed is relative to the browser viewport, so
+     this reaches in from the viewport's own right edge to the edge of the
+     centered 480px column. Overridden to a flat 16px inside the frame media
+     query below, where #root itself becomes the fixed containing block. */
+  --fab-right: max(16px, calc(50vw - 224px));
+}
 body {
   margin: 0;
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
@@ -38,15 +46,34 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
    background as the app itself, with no visible edge. Above a phone/tablet
    breakpoint, give the body a distinct backdrop and wrap #app in a
    bordered/shadowed column so it reads as a contained "app" rather than a
-   column of content with no boundary. */
+   column of content with no boundary. The frame is capped at a 2:1
+   height:width ratio (phone-like) and centered in the viewport on both axes
+   instead of stretching to fill an arbitrarily tall window. */
 @media (min-width: 700px) {
-  body { background: var(--surface-sunken); }
-  #root {
-    max-width: 480px;
+  body {
+    background: var(--surface-sunken);
+    padding-bottom: 0;
     min-height: 100vh;
-    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #root {
+    width: 480px;
+    max-width: 480px;
+    aspect-ratio: 1 / 2;
+    max-height: 100vh;
     background: var(--surface-page);
     box-shadow: 0 0 0 1px var(--border-default), var(--shadow-raised);
+    overflow-y: auto;
+    /* A transform makes #root the containing block for its position:fixed
+       descendants (TabBar, Fab/FabMenu, Sheet overlays, toast), so they
+       anchor to the frame's edges instead of the browser viewport's now
+       that the frame is cropped/centered rather than always full-height. */
+    transform: translateZ(0);
+    /* #root's own width already is the app's right edge, so Fab/FabMenu no
+       longer need to reach in from the (now irrelevant) viewport edge. */
+    --fab-right: 16px;
   }
 }
 
