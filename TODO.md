@@ -16,6 +16,56 @@ details live in `CHANGELOG.md`, not here.
    deliberately deferred.
    _Value: High · Importance: Low · Type: Data model / Account lifecycle_
 
+7. Enable notifications properly. Possible notifications: items added to
+   the list (batched), no meal planned for tomorrow, a weekly reminder to
+   plan meals, a custom "get the other person's attention" ping, etc.
+   Currently there's no notification code at all — `public/sw.js` only
+   does app-shell caching (no `push`/`notificationclick` listeners), and
+   no subscription endpoint exists in `worker/index.js`. Needs Web Push
+   infrastructure end-to-end: VAPID keys, a `push_subscriptions` table/
+   migration, a subscribe flow in the frontend, and a Worker-side trigger
+   per notification type — the "no meal planned"/"weekly reminder" ones
+   also need a cron trigger, which the Worker doesn't have today. The
+   biggest lift of any item here, but meaningfully useful for a
+   2-person household.
+   _Value: High · Importance: Low · Type: Feature_
+
+11. In the meal planner, the "Endre"/"Legg til" button on today's card is
+    hard to read in both light and dark mode. Root cause found: today's
+    card flips to an inverse surface (`background: var(--md-inverse-
+    surface)`, `color: var(--md-inverse-on-surface)` in `MealsTab.jsx`),
+    but the shared `Button` component's `outline` variant
+    (`design-system/components/forms/Button.jsx`) hardcodes `color:
+    var(--text-primary)` / `border: var(--border-strong)` — tokens tied
+    to the *ambient* theme, not the inverse one — so the button's
+    text/border stay low-contrast against the flipped background
+    regardless of light/dark mode. Fix is either an inverse-aware
+    `outline` variant/prop on `Button`, or a one-off style override on
+    this specific button.
+    _Value: Medium · Importance: High · Type: Bug / Accessibility_
+
+8. Bug: switching between grid and list view changes what's shown, not
+   just how it's laid out. One concrete cause confirmed in
+   `ShoppingListTab.jsx`: the "Nylig kjøpt" (recently bought) section
+   caps at `boughtRowCap` — 9 items in grid view (3×3) vs. 3 in list view
+   — so toggling the view can make several recently-bought items appear
+   or disappear, which likely reads as a bug even though it's deliberate
+   ("3 rows' worth" in each layout). Worth reproducing to confirm that's
+   the actual complaint, or whether there's a second real inconsistency
+   (e.g. sort order), before deciding the fix.
+   _Value: Medium · Importance: Medium · Type: Bug / UI_
+
+14. Disable/remove the `/seed` endpoint's `SEED_SECRET` from the Worker's
+    Cloudflare dashboard vars (Settings → Variables and Secrets) now that
+    self-service signup (`POST /register`) and Google sign-in (`POST
+    /auth/google`) are the real account-creation paths — see CLAUDE.md's
+    Auth model, which explicitly calls for reminding the user of this
+    every session. `/seed` (`worker/index.js:1151`) is secret-gated, but
+    a leaked/guessed secret would let anyone create accounts or reset any
+    existing user's password; removing the dashboard var is a one-time,
+    no-deploy operational step, not a code change.
+    _Value: Medium · Importance: Medium · Type: Ops / Security_
+
 3. Go through the whole repo to clean up the code, remove stale/old code
    and files, and restructure if needed. A lot of this already happens
    incrementally (dead CSS/comments removed across 1.18.x–1.19.x, the old
@@ -27,6 +77,17 @@ details live in `CHANGELOG.md`, not here.
    as much as code.
    _Value: Medium · Importance: Low · Type: Tech debt / Docs_
 
+12. Should each day be a bit smaller in the meal planner week view? Try to
+    show the whole week without scrolling. Plausible given the current
+    per-day `Card` sizing (`MealsTab.jsx`): today's card uses
+    `--md-headline-emphasized-size` text plus a responsible-person avatar
+    row, other days use `--md-title-large-size` — across 7 cards that's a
+    lot of vertical space on a typical phone viewport. Needs an actual
+    measurement pass (does it currently scroll on common screen sizes?)
+    before picking a fix (smaller non-today cards, tighter padding, or a
+    more compact "week strip" layout).
+    _Value: Medium · Importance: Low · Type: UI / Layout_
+
 5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
@@ -35,27 +96,42 @@ details live in `CHANGELOG.md`, not here.
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
 
-6. Create a proper viewing window for desktop
+10. Simplify the in-app changelog. `ChangelogModal.jsx` currently just
+    fetches raw `/CHANGELOG.md` and dumps it verbatim into a `<pre>` —
+    the full text of every entry, not just titles. Should show entry
+    titles only, with a link out to the full changelog (GitHub, or a
+    page on the landing site) for detail.
+    _Value: Low · Importance: Low · Type: UI / Polish_
 
-7. Enable notifications properly. Possible notifications: Items added to the list (batched), No meal planned for tomorrow, remember to plan for the week, custom notification to get the others attention, etc.
+9. Make the install button smaller (less prominent) if the app is already
+   installed. `PwaInstallCTA.jsx` already hides itself when
+   `isStandalone()` is true (launched from the home-screen icon) or
+   `installed` is set — but `installed` (`InstallPromptContext.jsx`) only
+   ever flips true via the `appinstalled` event firing *in that page
+   load*. A user who installed previously but opens the site in an
+   ordinary browser tab (not the installed app) gets no signal they're
+   already installed, so the full-prominence CTA keeps showing every
+   time. Needs a persisted "already installed" flag (e.g. set in
+   `localStorage` on `appinstalled` and read on load) instead of relying
+   on session-only state.
+   _Value: Low · Importance: Low · Type: UI / Polish_
 
-8. Bug: When switching between grid and list, the result varies.
+13. Create more icons. `src/lib/itemIcons.js`'s `MAP` currently maps
+    ~500 of the 710 `COMMON_ITEMS` catalogue entries to a drawn icon —
+    the rest fall back to the plain first-letter badge in grid view.
+    Incremental, no-risk work: pick a base/glyph shape from the existing
+    library (or draw a new one) and add `MAP` entries for the remaining
+    ~200 items.
+    _Value: Low · Importance: Low · Type: Content / Polish_
 
-9. Make the install button smaller (less prominent) if the app is already 
-   installed
-
-10. Simplify the changelog within the app. Right now, the changelog has a bold 
-    title, followed by text. The in-app changelog should just show the titles, 
-    and a link to the complete changelog. Maybe on github? Maybe on the web 
-    page? Not sure what is better.
-
-11. In meal planner, the "Endre" button is not possible to read, neither in 
-    dark mode nor in light mode. Make it more visible.
-
-12. Should each day be a bit smaller? Try to show the whole week without 
-    scrolling.
-
-13. Create more icons.
+6. Create a proper viewing window for desktop. Today the layout is
+   deliberately mobile-first with a fixed `max-width: 480px` centered
+   column at any viewport size (`src/index.css:34`) — a past decision
+   documented in Done below chose this over a separate desktop layout.
+   Revisiting it means an actual desktop design (wider content, maybe a
+   two-pane or sidebar layout), not just raising the cap; low priority
+   since this is a 2-person app used mostly on phones.
+   _Value: Low · Importance: Low · Type: UI / Layout_
 
 ## Done
 - [x] In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
