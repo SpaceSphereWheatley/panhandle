@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.21.4] — 2026-07-14
+
+### Changed
+- **Feedback emails now identify the sender more reliably.** The username
+  was already in the subject/body, but the Worker now also looks up the
+  sender's account email (if they have one on file) and sets it as the
+  email's reply-to address, so replying from the recipient's inbox goes
+  straight to that person instead of the shared `noreply@` sending address.
+
 ## [1.21.3] — 2026-07-14
 
 ### Added
