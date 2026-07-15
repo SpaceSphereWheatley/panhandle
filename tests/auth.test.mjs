@@ -4,7 +4,7 @@
 //
 // Run: node tests/auth.test.mjs
 import assert from "node:assert/strict";
-import { startWorker, SEED_SECRET } from "./_helpers.mjs";
+import { startWorker, bootstrapAccount } from "./_helpers.mjs";
 
 const PORT = 8800;
 // Base36 keeps usernames short enough to stay under cleanUsername's 32-char
@@ -23,13 +23,6 @@ async function main() {
   } finally {
     await worker.teardown();
   }
-}
-
-function seedAccount(base, username, password) {
-  return fetch(`${base}/seed`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: SEED_SECRET, accounts: [{ username, password }] }),
-  });
 }
 
 function login(base, username, password, extraHeaders = {}) {
@@ -69,21 +62,20 @@ async function runTests(BASE) {
   await testTokenVersionOnChangePassword(BASE);
   await testTokenVersionOnAdminResetPassword(BASE);
   await testTokenVersionOnFlagsPatch(BASE);
-  await testTokenVersionOnSeedRerun(BASE);
   await testChangePasswordRateLimiting(BASE);
   await testSlidingRefreshTokenHeader(BASE);
 }
 
 async function testLoginSuccessAndFailure(BASE) {
   const username = `auth_login_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  await bootstrapAccount(BASE, username, PASS);
 
   let res = await login(BASE, username, PASS);
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.user, username);
-  assert.equal(body.is_admin, 1, "the first new account in a fresh /seed call becomes admin");
-  assert.equal(body.is_owner, 1, "the first new account in a fresh /seed call becomes owner");
+  assert.equal(body.is_admin, 1, "a freshly bootstrapped account is admin of its own list");
+  assert.equal(body.is_owner, 1, "a freshly bootstrapped account is owner of its own list");
   assert.ok(body.token);
   assert.equal(typeof body.list_id, "number");
 
@@ -108,7 +100,7 @@ async function testLoginRateLimiting(BASE) {
   // this file/other test files sharing the same local D1.
   const ip = `10.42.${RUN_ID_NUM % 250}.1`;
   const username = `auth_ratelimit_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  await bootstrapAccount(BASE, username, PASS);
 
   for (let i = 0; i < 10; i++) {
     const res = await login(BASE, username, "wrong", { "CF-Connecting-IP": ip });
@@ -126,7 +118,7 @@ async function testLoginRateLimiting(BASE) {
 
 async function testTokenVersionOnChangePassword(BASE) {
   const username = `auth_tv_pw_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  await bootstrapAccount(BASE, username, PASS);
   const token = await tokenFor(BASE, username, PASS);
 
   const changeRes = await fetch(`${BASE}/change-password`, {
@@ -157,7 +149,7 @@ async function testTokenVersionOnChangePassword(BASE) {
 async function testTokenVersionOnAdminResetPassword(BASE) {
   const adminUsername = `auth_tv_admin_${RUN_ID}`;
   const memberUsername = `auth_tv_member_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, adminUsername, PASS)).status, 200);
+  await bootstrapAccount(BASE, adminUsername, PASS);
   const adminToken = await tokenFor(BASE, adminUsername, PASS);
   const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
 
@@ -179,7 +171,7 @@ async function testTokenVersionOnAdminResetPassword(BASE) {
 async function testTokenVersionOnFlagsPatch(BASE) {
   const adminUsername = `auth_tv_flagsadmin_${RUN_ID}`;
   const memberUsername = `auth_tv_flagsmember_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, adminUsername, PASS)).status, 200);
+  await bootstrapAccount(BASE, adminUsername, PASS);
   const adminToken = await tokenFor(BASE, adminUsername, PASS);
   const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
 
@@ -197,30 +189,12 @@ async function testTokenVersionOnFlagsPatch(BASE) {
   console.log("  - token_version bump: an admin flags PATCH invalidates the target's old token");
 }
 
-async function testTokenVersionOnSeedRerun(BASE) {
-  const username = `auth_tv_seedrerun_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
-  const tokenBefore = await tokenFor(BASE, username, PASS);
-
-  const newPassword = "Another-password-789!";
-  const rerunRes = await seedAccount(BASE, username, newPassword);
-  assert.equal(rerunRes.status, 200, "re-running /seed for an existing username should succeed (password-reset path)");
-
-  assert.equal(
-    (await authedGet(BASE, "/list-users", tokenBefore)).status, 401,
-    "the pre-rerun token should be invalidated after re-running /seed for an existing username"
-  );
-  assert.equal((await login(BASE, username, newPassword)).status, 200, "the new password from the seed rerun should work");
-
-  console.log("  - token_version bump: re-running /seed for an existing username invalidates the old token");
-}
-
 async function testChangePasswordRateLimiting(BASE) {
   // Distinct synthetic IP from testLoginRateLimiting's, so the two lockouts
   // don't interfere with each other.
   const ip = `10.43.${RUN_ID_NUM % 250}.1`;
   const username = `auth_cp_ratelimit_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  await bootstrapAccount(BASE, username, PASS);
   const token = await tokenFor(BASE, username, PASS);
 
   for (let i = 0; i < 10; i++) {
@@ -247,7 +221,7 @@ async function testChangePasswordRateLimiting(BASE) {
 
 async function testSlidingRefreshTokenHeader(BASE) {
   const username = `auth_refresh_${RUN_ID}`;
-  assert.equal((await seedAccount(BASE, username, PASS)).status, 200);
+  await bootstrapAccount(BASE, username, PASS);
   const token = await tokenFor(BASE, username, PASS);
 
   const res = await authedGet(BASE, "/list-users", token);

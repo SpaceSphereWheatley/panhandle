@@ -30,17 +30,6 @@ details live in `CHANGELOG.md`, not here.
    2-person household.
    _Value: High · Importance: Low · Type: Feature_
 
-14. Disable/remove the `/seed` endpoint's `SEED_SECRET` from the Worker's
-    Cloudflare dashboard vars (Settings → Variables and Secrets) now that
-    self-service signup (`POST /register`) and Google sign-in (`POST
-    /auth/google`) are the real account-creation paths — see CLAUDE.md's
-    Auth model, which explicitly calls for reminding the user of this
-    every session. `/seed` (`worker/index.js:1151`) is secret-gated, but
-    a leaked/guessed secret would let anyone create accounts or reset any
-    existing user's password; removing the dashboard var is a one-time,
-    no-deploy operational step, not a code change.
-    _Value: Medium · Importance: Medium · Type: Ops / Security_
-
 3. Go through the whole repo to clean up the code, remove stale/old code
    and files, and restructure if needed. A lot of this already happens
    incrementally (dead CSS/comments removed across 1.18.x–1.19.x, the old
@@ -113,6 +102,18 @@ details live in `CHANGELOG.md`, not here.
 
 
 ## Done
+- [x] Removed the `/seed` bootstrap endpoint (and its `SEED_SECRET`-gated
+      code path, `public/seed.html` form, and all references in
+      `wrangler.toml`/`README.md`/`CLAUDE.md`/service worker) now that
+      self-service signup (`POST /register`) and Google sign-in (`POST
+      /auth/google`) are the real account-creation paths. The Worker no
+      longer has any endpoint that can create or reset accounts without an
+      existing authenticated session; the `SEED_SECRET` dashboard var
+      should also be removed from the Worker's Cloudflare settings since
+      nothing reads it anymore. Integration tests' account bootstrap
+      (`tests/_helpers.mjs`'s `seedAndLogin`/`bootstrapAccount`) now writes
+      directly to the local D1 SQLite file via `wrangler d1 execute
+      --local` instead of hitting an HTTP endpoint. (1.22.5)
 - [x] In the meal planner, the "Endre"/"Legg til" button on today's card
       was hard to read in both light and dark mode. Root cause: today's
       card flips to an inverse surface (`background: var(--md-inverse-

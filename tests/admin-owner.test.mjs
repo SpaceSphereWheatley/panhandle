@@ -6,7 +6,7 @@
 //
 // Run: node tests/admin-owner.test.mjs
 import assert from "node:assert/strict";
-import { startWorker, seedAndLogin, SEED_SECRET } from "./_helpers.mjs";
+import { startWorker, seedAndLogin } from "./_helpers.mjs";
 
 const PORT = 8801;
 // Base36 keeps usernames short enough to stay under cleanUsername's 32-char
@@ -106,8 +106,9 @@ async function testLastAdminProtection(BASE) {
 }
 
 // is_owner is scoped per-list (COUNT(*) WHERE is_owner=1 AND list_id=?), and
-// a fresh /seed call always creates a brand-new list with exactly one owner,
-// so this test is self-contained regardless of ambient DB state.
+// a fresh bootstrapAccount() call always creates a brand-new list with
+// exactly one owner, so this test is self-contained regardless of ambient
+// DB state.
 async function testLastOwnerProtectionViaFlags(BASE) {
   const username = `ao_lastowner_flags_${RUN_ID}`;
   const { token } = await seedAndLogin(BASE, username, PASS);

@@ -1,7 +1,7 @@
 // Laget av Mohibb Malik, 2026
 // Worker API for shared shopping list + meal planner
 // Served at shopping.mohibb.com. Frontend on Cloudflare Pages,
-// API = this Worker under /api/* and /seed. Proxies other paths to Pages.
+// API = this Worker under /api/*. Proxies other paths to Pages.
 // Auth: users in D1 with PBKDF2 password hashes, JWT with token versioning,
 //       sliding expiry, in-app password change that logs out other devices.
 // Multi-tenant: every user belongs to exactly one list (users.list_id); all
@@ -750,7 +750,7 @@ export const COMMON_ITEMS = [
   { name: "Gjødsel", category: "Annet" }
 ];
 
-// Creates a new list, seeded with COMMON_ITEMS. Shared by /seed, /admin/owners,
+// Creates a new list, seeded with COMMON_ITEMS. Shared by /admin/owners,
 // /register, and /auth/google so "what a brand-new list looks like" only
 // exists in one place. `name` is an optional household display name
 // (lists.name); omitted/undefined for the admin-driven paths, which don't
@@ -980,7 +980,7 @@ async function mintToken(u, env) {
 // Site-wide metrics (across every list) are gated beyond ordinary is_admin
 // (which is deliberately per-list) via this env var — a comma-separated
 // allowlist of usernames, set as a Worker dashboard variable alongside
-// JWT_SECRET/SEED_SECRET, never committed.
+// JWT_SECRET, never committed.
 export function isSuperAdmin(username, env) {
   const allowed = (env.SUPERADMIN_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   return allowed.includes((username || "").toLowerCase());
@@ -1122,11 +1122,7 @@ export default {
     const method = request.method;
 
     // ===== ROUTING =====
-    // /seed.html itself is a static asset (public/seed.html) and falls
-    // through to the Pages proxy below like any other non-API path — no
-    // need for a second copy here (TODO #24: this used to inline a stale
-    // duplicate that had drifted from public/seed.html).
-    const isApi = url.pathname === "/seed" || url.pathname.startsWith("/api");
+    const isApi = url.pathname.startsWith("/api");
     if (!isApi) {
       const pagesUrl = new URL(request.url);
       pagesUrl.hostname = "panhandle-ecj.pages.dev";
@@ -1134,57 +1130,6 @@ export default {
     }
 
     const path = url.pathname.replace(/^\/api/, "");
-
-    // ===== SEED ENDPOINT (POST) =====
-    // Bootstraps the very first account(s) of a fresh deployment. The first
-    // NEW account becomes admin + owner of a freshly-created (COMMON_ITEMS-
-    // seeded) list; any further new accounts in the same call join that list
-    // as plain members. Existing users only get their password reset (flags/
-    // list_id are preserved), so re-running seed never clobbers a live setup.
-    if (path === "/seed" && method === "POST") {
-      const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
-      const { secret, accounts } = body;
-      // Constant-time compare, same as the JWT signature check below — a
-      // plain !== would leak the correct secret one byte at a time via
-      // response timing.
-      if (!env.SEED_SECRET || !timingSafeEqual(secret || "", env.SEED_SECRET)) {
-        return json({ error: "Feil seed-hemmelighet" }, 403);
-      }
-      if (!Array.isArray(accounts) || !accounts.length) {
-        return json({ error: "Mangler kontoer" }, 400);
-      }
-      let created = 0;
-      let bootstrapListId = null;
-      let ownerMade = false;
-      const ensureList = async () => {
-        if (bootstrapListId) return bootstrapListId;
-        bootstrapListId = await createList(env);
-        return bootstrapListId;
-      };
-      for (const a of accounts) {
-        const uname = cleanUsername(a.username);
-        if (!uname || !a.password) continue;
-        const hash = await hashPassword(a.password);
-        const existing = await env.DB.prepare(
-          "SELECT username FROM users WHERE username = ?1 COLLATE NOCASE"
-        ).bind(uname).first();
-        if (existing) {
-          await env.DB.prepare(
-            "UPDATE users SET pass_hash = ?1, token_version = token_version + 1 WHERE username = ?2 COLLATE NOCASE"
-          ).bind(hash, uname).run();
-        } else {
-          const lid = await ensureList();
-          const isOwner = ownerMade ? 0 : 1;
-          await env.DB.prepare(
-            "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, ?3, ?4, ?5, 'seed')"
-          ).bind(uname, hash, isOwner, isOwner, lid).run();
-          ownerMade = true;
-        }
-        created++;
-      }
-      return json({ ok: true, created });
-    }
 
     // ===== VERSION (public, unauthenticated) =====
     // Cheap deploy-confirmation probe: lets the frontend (and a curl) read the

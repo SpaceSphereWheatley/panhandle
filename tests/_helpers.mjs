@@ -9,9 +9,9 @@ import { spawn } from "node:child_process";
 import { writeFileSync, unlinkSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { hashPassword } from "../worker/index.js";
 
 export const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-export const SEED_SECRET = "test-seed-secret";
 export const JWT_SECRET = "test-jwt-secret-not-for-production";
 const DEV_VARS_PATH = path.join(ROOT, ".dev.vars");
 
@@ -46,7 +46,7 @@ export async function startWorker({ port, extraDevVars = "" } = {}) {
 
   let wroteDevVars = false;
   if (!existsSync(DEV_VARS_PATH)) {
-    writeFileSync(DEV_VARS_PATH, `JWT_SECRET=${JWT_SECRET}\nSEED_SECRET=${SEED_SECRET}\n${extraDevVars}`);
+    writeFileSync(DEV_VARS_PATH, `JWT_SECRET=${JWT_SECRET}\n${extraDevVars}`);
     wroteDevVars = true;
   }
 
@@ -75,16 +75,38 @@ export async function startWorker({ port, extraDevVars = "" } = {}) {
   };
 }
 
-// Seeds a throwaway account (bootstrapping a fresh list, owner+admin) and
-// logs in, returning both the raw token and a ready-to-spread auth header.
-export async function seedAndLogin(base, username, password) {
-  let res = await fetch(`${base}/seed`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: SEED_SECRET, accounts: [{ username, password }] }),
-  });
-  if (res.status !== 200) throw new Error(`seed failed for ${username}: ${res.status} ${await res.text()}`);
+// Bootstraps a throwaway account (a fresh list, owner+admin) by writing
+// straight to the local D1 SQLite file via `wrangler d1 execute --local` —
+// there's no HTTP bootstrap endpoint (the old /seed route was removed once
+// self-service signup made it unnecessary; see CLAUDE.md's Auth model).
+// Throws (rejecting the whole test run, same as any other `run()` call in
+// this file) if the insert fails, rather than returning a status to check.
+function sqlEscape(str) {
+  return str.replace(/'/g, "''");
+}
 
-  res = await fetch(`${base}/login`, {
+export async function bootstrapAccount(base, username, password) {
+  const hash = await hashPassword(password);
+  const sql = [
+    "INSERT INTO lists (name) VALUES (NULL);",
+    `INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) ` +
+      `VALUES ('${sqlEscape(username)}', '${sqlEscape(hash)}', 1, 1, 1, last_insert_rowid(), 'test-bootstrap');`,
+  ].join("\n");
+  const sqlFile = path.join(ROOT, `.test-bootstrap-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
+  writeFileSync(sqlFile, sql);
+  try {
+    await run("npx", ["wrangler", "d1", "execute", "panhandle", "--local", "--file", sqlFile]);
+  } finally {
+    unlinkSync(sqlFile);
+  }
+}
+
+// bootstrapAccount() + login, returning both the raw token and a
+// ready-to-spread auth header.
+export async function seedAndLogin(base, username, password) {
+  await bootstrapAccount(base, username, password);
+
+  const res = await fetch(`${base}/login`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
