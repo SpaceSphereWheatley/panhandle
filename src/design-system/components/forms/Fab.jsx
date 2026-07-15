@@ -30,7 +30,7 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
       style={{
         position: 'fixed',
         bottom: 'calc(84px + env(safe-area-inset-bottom))',
-        right: 'var(--fab-right)',
+        right: 'max(16px, calc(50vw - 224px))',
         width: 56,
         height: 56,
         // Circle at rest, squircle when active — an M3-Expressive shape morph.
