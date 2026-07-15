@@ -27,13 +27,6 @@ details live in `CHANGELOG.md`, not here.
    as much as code.
    _Value: Medium · Importance: Low · Type: Tech debt / Docs_
 
-4. In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
-   currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
-   identity/theme card, both under the "Meg & min app" island label.
-   Moving it above `ProfileIsland` (or above the island label entirely) is
-   a small JSX reorder, not a redesign.
-   _Value: Low · Importance: Low · Type: UX polish_
-
 5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
    nothing today — only worth doing once user count or request volume
@@ -42,9 +35,32 @@ details live in `CHANGELOG.md`, not here.
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
 
+6. Create a proper viewing window for desktop
+
+7. Enable notifications properly. Possible notifications: Items added to the list (batched), No meal planned for tomorrow, remember to plan for the week, custom notification to get the others attention, etc.
+
+8. Bug: When switching between grid and list, the result varies.
+
+9. Make the install button smaller (less prominent) if the app is already 
+   installed
+
+10. Simplify the changelog within the app. Right now, the changelog has a bold 
+    title, followed by text. The in-app changelog should just show the titles, 
+    and a link to the complete changelog. Maybe on github? Maybe on the web 
+    page? Not sure what is better.
+
+11. In meal planner, the "Endre" button is not possible to read, neither in 
+    dark mode nor in light mode. Make it more visible.
+
+12. Should each day be a bit smaller? Try to show the whole week without 
+    scrolling.
 
 ## Done
-
+- [x] In Settings, "Install Panhandle" should be on top. `PwaInstallCTA`
+      currently renders second in `SettingsTab.jsx`, after `ProfileIsland`'s
+      identity/theme card, both under the "Meg & min app" island label.
+      Moving it above `ProfileIsland` (or above the island label entirely) is
+      a small JSX reorder, not a redesign.
 - [x] Users can send feedback from the app (Settings → "Send
       tilbakemelding", next to "Hva er nytt?"). A small modal
       (`FeedbackModal.jsx`) with a free-text message emails
