@@ -1,16 +1,21 @@
-import { useState } from "react";
+import { useId } from "react";
 import { UiIcon } from "../UiIcon.jsx";
+import { useAccordionGroup } from "./AccordionGroup.jsx";
 
 // Reusable expand/collapse row used inside a Settings island for content
 // too heavy to show inline permanently (a form, a list with actions). A
 // plain CSS transition — no Framer Motion — since this is content
 // disclosure, not a layout-reflow case, and it's opened/closed often.
-export function AccordionRow({ label, defaultOpen = false, children }) {
-  const [open, setOpen] = useState(defaultOpen);
+// Must be rendered inside an AccordionGroup, which makes it exclusive with
+// its siblings in that group (opening one closes any other that was open).
+export function AccordionRow({ label, children }) {
+  const id = useId();
+  const { openId, setOpenId } = useAccordionGroup();
+  const open = openId === id;
   return (
     <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 12 }}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpenId(open ? null : id)}
         style={{
           width: "100%",
           display: "flex",

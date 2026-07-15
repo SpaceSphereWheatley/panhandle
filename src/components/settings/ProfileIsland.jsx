@@ -6,6 +6,8 @@ import { currentTheme, setTheme } from "../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
 import { Button, Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
+import { AccordionGroup } from "./AccordionGroup.jsx";
+import { SectionHeader } from "./SectionHeader.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 
@@ -140,7 +142,8 @@ export function ProfileIsland() {
   }
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
+    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
+      <SectionHeader>Meg &amp; min app</SectionHeader>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, marginBottom: 18, color: "var(--text-primary)" }}>{user}</div>
 
@@ -158,82 +161,84 @@ export function ProfileIsland() {
         <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
       </div>
 
-      <AccordionRow label={email ? "E-post" : "Legg til e-post"}>
-        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
-          Brukes til Google-innlogging og for å tilbakestille passord hvis du glemmer det.
-        </div>
-        <label htmlFor="profile-email" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
-          E-post
-        </label>
-        <Input
-          id="profile-email"
-          type="email"
-          placeholder="E-post"
-          style={{ marginBottom: 8 }}
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-        />
-        <label htmlFor="profile-email-pw" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
-          Nåværende passord
-        </label>
-        <Input
-          id="profile-email-pw"
-          type="password"
-          placeholder="Nåværende passord"
-          style={{ marginBottom: 8 }}
-          value={emailPw}
-          onChange={(e) => setEmailPw(e.target.value)}
-        />
-        <button onClick={saveEmail} className="btn-primary">Lagre e-post</button>
-      </AccordionRow>
+      <AccordionGroup>
+        <AccordionRow label={email ? "E-post" : "Legg til e-post"}>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
+            Brukes til Google-innlogging og for å tilbakestille passord hvis du glemmer det.
+          </div>
+          <label htmlFor="profile-email" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            E-post
+          </label>
+          <Input
+            id="profile-email"
+            type="email"
+            placeholder="E-post"
+            style={{ marginBottom: 8 }}
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+          />
+          <label htmlFor="profile-email-pw" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Nåværende passord
+          </label>
+          <Input
+            id="profile-email-pw"
+            type="password"
+            placeholder="Nåværende passord"
+            style={{ marginBottom: 8 }}
+            value={emailPw}
+            onChange={(e) => setEmailPw(e.target.value)}
+          />
+          <button onClick={saveEmail} className="btn-primary">Lagre e-post</button>
+        </AccordionRow>
 
-      <AccordionRow label="Bytt passord">
-        <label htmlFor="profile-pw-current" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
-          Nåværende passord
-        </label>
-        <Input
-          id="profile-pw-current"
-          type="password"
-          placeholder="Nåværende passord"
-          style={{ marginBottom: 8 }}
-          value={pwCurrent}
-          onChange={(e) => setPwCurrent(e.target.value)}
-        />
-        <label htmlFor="profile-pw-new" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
-          Nytt passord (min. 6 tegn)
-        </label>
-        <Input
-          id="profile-pw-new"
-          type="password"
-          placeholder="Nytt passord (min. 6 tegn)"
-          style={{ marginBottom: 8 }}
-          value={pwNew}
-          onChange={(e) => setPwNew(e.target.value)}
-        />
-        <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
-      </AccordionRow>
+        <AccordionRow label="Bytt passord">
+          <label htmlFor="profile-pw-current" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Nåværende passord
+          </label>
+          <Input
+            id="profile-pw-current"
+            type="password"
+            placeholder="Nåværende passord"
+            style={{ marginBottom: 8 }}
+            value={pwCurrent}
+            onChange={(e) => setPwCurrent(e.target.value)}
+          />
+          <label htmlFor="profile-pw-new" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Nytt passord (min. 6 tegn)
+          </label>
+          <Input
+            id="profile-pw-new"
+            type="password"
+            placeholder="Nytt passord (min. 6 tegn)"
+            style={{ marginBottom: 8 }}
+            value={pwNew}
+            onChange={(e) => setPwNew(e.target.value)}
+          />
+          <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
+        </AccordionRow>
 
-      <button className="logout" style={{ marginTop: 16 }} onClick={() => logout()}>Logg ut</button>
+        <button className="logout" style={{ marginTop: 16 }} onClick={() => logout()}>Logg ut</button>
 
-      <AccordionRow label="Slett konto">
-        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
-          {isOwner
-            ? "Hvis du er listens eneste eier, slettes hele listen — handleliste, måltidsplan og alt annet innhold — når du sletter kontoen din. Har listen en annen eier, mister du bare din egen tilgang."
-            : "Du mister tilgang til listen. Dette kan ikke angres."}
-        </div>
-        <label htmlFor="profile-delete-pw" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
-          Nåværende passord
-        </label>
-        <Input
-          id="profile-delete-pw"
-          type="password"
-          placeholder="Nåværende passord"
-          style={{ marginBottom: 8 }}
-          value={pwDelete}
-          onChange={(e) => setPwDelete(e.target.value)}
-        />
-        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
-      </AccordionRow>
+        <AccordionRow label="Slett konto">
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
+            {isOwner
+              ? "Hvis du er listens eneste eier, slettes hele listen — handleliste, måltidsplan og alt annet innhold — når du sletter kontoen din. Har listen en annen eier, mister du bare din egen tilgang."
+              : "Du mister tilgang til listen. Dette kan ikke angres."}
+          </div>
+          <label htmlFor="profile-delete-pw" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Nåværende passord
+          </label>
+          <Input
+            id="profile-delete-pw"
+            type="password"
+            placeholder="Nåværende passord"
+            style={{ marginBottom: 8 }}
+            value={pwDelete}
+            onChange={(e) => setPwDelete(e.target.value)}
+          />
+          <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
+        </AccordionRow>
+      </AccordionGroup>
     </Card>
   );
 }

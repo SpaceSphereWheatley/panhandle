@@ -48,7 +48,7 @@ export function RecurringIsland() {
   }
 
   return (
-    <AccordionRow label="Fast ansvarlig per ukedag" defaultOpen>
+    <AccordionRow label="Fast ansvarlig per ukedag">
       <div style={{ fontSize: 13, color: "var(--text-tertiary)", margin: "0 0 12px" }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
         og du kan alltid endre det for en enkelt dag.

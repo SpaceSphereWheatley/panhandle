@@ -2,6 +2,8 @@ import { Card } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { MembersIsland } from "./MembersIsland.jsx";
 import { RecurringIsland } from "./RecurringIsland.jsx";
+import { SectionHeader } from "./SectionHeader.jsx";
+import { AccordionGroup } from "./AccordionGroup.jsx";
 
 // Island 2 — "Vårt Hjem": Medlemmer and Ukentlig matansvar merged into a
 // single visual container, per the spec's "4 distinct visual container
@@ -14,9 +16,12 @@ import { RecurringIsland } from "./RecurringIsland.jsx";
 export function HomeIsland() {
   const { isOwner } = useAuth();
   return (
-    <Card padding="lg" style={{ marginBottom: 16 }}>
-      {isOwner && <MembersIsland />}
-      <RecurringIsland />
+    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
+      <SectionHeader>Vårt hjem</SectionHeader>
+      <AccordionGroup>
+        {isOwner && <MembersIsland />}
+        <RecurringIsland />
+      </AccordionGroup>
     </Card>
   );
 }
