@@ -1,5 +1,7 @@
 # Multi-tenant rollout — step-by-step setup guide
 
+> **Historical.** This is the completed, one-time cutover runbook for the original multi-tenant rollout — it has already shipped and is kept only as a record. Two things below no longer reflect the current codebase: `migrations/0005_multi_tenant.sql` was later squashed into `migrations/0001_init.sql` (see `CLAUDE.md`'s Architecture section), and the frontend it references (`public/index.html` as the app itself) was later rewritten to Vite + React (`src/`, see `CLAUDE.md`'s Project section) — `public/index.html` is now just the static landing page. For current architecture, see `CLAUDE.md`.
+
 This is the **manual cutover checklist** for shipping the multi-tenant change
 (per-list isolation + owner/admin accounts). Everything that could be done in
 code is already committed on branch `claude/funny-carson-8da81i`. What remains

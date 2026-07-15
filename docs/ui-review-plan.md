@@ -7,7 +7,9 @@ now essentially shipped) — it picks up the visual/interaction/accessibility
 rough edges that remain. Each item has a stable ID (`U#`), a priority, and a
 phase, so it can be picked up across sessions. Check items off as they ship.
 
-Working constraints (see `CLAUDE.md`): **no build step, no framework, no test
+> **Note:** the working constraints below predate the Vite + React rewrite — the frontend now has a build step and a Vitest test suite; see `CLAUDE.md` for current architecture. Left as originally written since most `U#` items themselves are still accurate/open.
+
+Working constraints (as of writing, see `CLAUDE.md`): **no build step, no framework, no test
 suite.** Frontend lives in `public/app.html` (single file, inline `<style>` +
 `<script>`) and `public/index.html` (landing). Validation is manual
 (deploy / open in a browser). Keep `VERSION` (worker) and `APP_VERSION`
@@ -86,12 +88,11 @@ destructive action, and several controls have no button chrome or press state.*
   unthemed (jarring in dark mode), and out of place in an installed PWA.
 
 ### P3 — Reliability / PWA (bigger, test carefully)
-- [ ] **U12** — **App-shell service worker.** *(= `TODO.md #1`.)* The manifest,
-  install banners, and version-polling all imply a PWA, but there's no
-  `serviceWorker.register` — so the app won't even load offline, the worst case
-  for an in-store shopping list. Precache the shell (`app.html`, `itemIcons.js`,
-  `uiIcons.js`, icons, `CHANGELOG.md`) with stale-while-revalidate. This also
-  subsumes the hand-rolled deploy-drift toast.
+- [x] **U12** — **App-shell service worker.** Shipped (1.15.0, per `CHANGELOG.md`):
+  `public/sw.js` does stale-while-revalidate app-shell caching (everything except
+  `/api/*` and `/seed`), registered from `src/main.jsx`. The `TODO.md #1` this
+  once matched has since been renumbered to a different (still-open) item —
+  see `TODO.md`'s own numbering note.
 - [ ] **U13** — **Offline write queue.** Let add/toggle/delete happen offline and
   reconcile on reconnect, instead of hard-failing with a toast. Depends on U12.
 - [ ] **U14** — **Self-host / bundle Roboto.** The app render-blocks on
@@ -157,9 +158,9 @@ Ship in three arcs, cheapest-and-safest first:
    user-facing polish, completes the button/a11y pass).
 
 2. **Release B — "Offline & reliability" (P3).**
-   The service worker (U12) is the single highest-value reliability upgrade but
-   needs careful testing (cache versioning, update flow) — keep it out of
-   Release A so a caching bug can't strand users. U13/U14 ride along.
+   The service worker (U12, now shipped — see above) was the single
+   highest-value reliability upgrade; U13/U14 remain open and can ride along
+   in a future release now that U12's caching foundation is in place.
 
 3. **Incremental — P4 → P5**, a couple of items per session, each shippable on
    its own. **P6** items are larger and partly product decisions (esp. U24,

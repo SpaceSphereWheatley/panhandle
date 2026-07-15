@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.22.3] — 2026-07-15
+
+### Docs
+- **`CLAUDE.md`, `README.md`, and `docs/` had drifted from the actual
+  codebase.** `CLAUDE.md` was missing six migrations (recurring meal
+  schedules, meal/item suggestion stats, and self-service signup/Google
+  sign-in/password recovery), the newer Worker secrets and endpoints those
+  features need, and had a stale note about the catalogue item count that
+  was already fixed. `README.md` still described the pre-rewrite vanilla-JS
+  app instead of the Vite + React build. `docs/multi-tenant-setup.md` — a
+  one-time cutover runbook — was linked from both as if it were current
+  setup documentation; it's now marked historical in place. No code changes.
+
 ## [1.22.2] — 2026-07-15
 
 ### Fixed

@@ -5,7 +5,9 @@ app (landing page, login, shopping list, meal planner, profile). Organized so it
 can be picked up across separate sessions: each item has a stable ID (`T#`), a
 priority, and the phase it belongs to. Check items off as they ship.
 
-Working constraints (see `CLAUDE.md`): no build step, no test suite. Frontend
+> **Note:** the working constraints below predate the Vite + React rewrite — the frontend now has a build step and a Vitest test suite; see `CLAUDE.md` for current architecture. Left as originally written since most `T#` items themselves are still accurate/shipped.
+
+Working constraints (as of writing, see `CLAUDE.md`): no build step, no test suite. Frontend
 changes live in `public/app.html` / `public/index.html`; backend in
 `worker/index.js`; schema changes need a new numbered file in `migrations/`
 plus a manual `npx wrangler d1 migrations apply panhandle --remote`. Validation
