@@ -13,6 +13,8 @@ import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.j
 import { Input, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
+// Total resolve window ≈ 150ms strike-through delay + 200ms fade + buffer.
+const RESOLVE_MS = 400;
 
 // Cap track width at 1/3 of the row (minus the two 8px gaps) so auto-fit
 // never lays out more than 3 columns, while still stretching a short last
@@ -75,6 +77,25 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       timers.clear();
     };
   }, []);
+
+  // Framer's exit/layout (FLIP) tracking for a card can get permanently
+  // stuck — frozen in place, blocking reflow of the rest of the list — if a
+  // card's checked-off hold resolves (leaves the array, triggering
+  // AnimatePresence's exit) while its pane is hidden (`display: none` in
+  // AppShell) and the pane is then shown again. Rather than trying to time
+  // that transition around visibility, force a clean remount of the whole
+  // animated list every time the pane goes from hidden back to active: a
+  // fresh AnimatePresence instance has no stale exit/projection state to
+  // get stuck on, and `initial={false}` (see renderItems below) means the
+  // remount itself doesn't play a mount-in animation — items just reappear
+  // already in their correct, settled position. `renderGeneration` is the
+  // `key` passed to that list wrapper.
+  const [renderGeneration, setRenderGeneration] = useState(0);
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current) setRenderGeneration((g) => g + 1);
+    wasActive.current = active;
+  }, [active]);
 
   useEffect(() => {
     if (!active) return;
@@ -146,8 +167,22 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     loadList();
   }
 
-  // Total resolve window ≈ 150ms strike-through delay + 200ms fade + buffer.
-  const RESOLVE_MS = 400;
+  // Starts the timer that moves a checked-off item out of the array.
+  function scheduleResolve(id) {
+    const existing = resolveTimers.current.get(id);
+    if (existing) clearTimeout(existing);
+    resolveTimers.current.set(
+      id,
+      setTimeout(() => {
+        resolveTimers.current.delete(id);
+        setResolvingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, RESOLVE_MS)
+    );
+  }
 
   async function toggleItem(id) {
     const it = items.find((x) => x.id === id);
@@ -162,23 +197,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     // reorder is driven by this local timer, not by the network round-trip.
     if (!wasBought) {
       setResolvingIds((prev) => new Set(prev).add(id));
-      const existing = resolveTimers.current.get(id);
-      if (existing) clearTimeout(existing);
-      resolveTimers.current.set(
-        id,
-        setTimeout(() => {
-          resolveTimers.current.delete(id);
-          setResolvingIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
-        }, RESOLVE_MS)
-      );
+      scheduleResolve(id);
     }
     try {
       await api(`/list/${id}/toggle`, { method: "POST" });
-      loadList();
     } catch {
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought } : x)));
       clearResolving(id);
@@ -367,7 +389,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -401,7 +423,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, active)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration)}
             </div>
           )}
         </>
@@ -490,10 +512,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, active) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration) {
   return (
-    <div style={viewMode === "grid" ? gridStyle : listStyle}>
-      <AnimatePresence initial={false}>
+    <div key={renderGeneration} style={viewMode === "grid" ? gridStyle : listStyle}>
+      <AnimatePresence initial={false} mode="popLayout">
         {displayItems.map(({ item, clusterKey }, index) => {
           const { bg, on } = clusterFor(clusterKey);
           return (
@@ -505,7 +527,6 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, act
               resolving={!!resolvingIds?.has(item.id)}
               onToggle={onToggle}
               onEdit={onEdit}
-              active={active}
               viewMode={viewMode}
               index={index}
             />

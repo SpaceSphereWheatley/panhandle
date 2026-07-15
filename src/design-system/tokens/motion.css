@@ -52,15 +52,6 @@
   to { transform: scale(1); opacity: 0; }
 }
 
-/* Checking off a grocery item — a quick "pop" of acknowledgement, then the
-   row shrinks and fades as it re-sorts into "Nylig kjøpt". A little life on
-   the app's single most-repeated action. */
-@keyframes ph-item-resolve {
-  0%   { transform: scale(1);    opacity: 0.9; }
-  32%  { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(0.9);  opacity: 0; }
-}
-
 /* Initial-fetch loading indicator (Spinner / LoadingState) — a simple
    continuous rotation, distinct from the app's one-shot entrance/feedback
    animations above. */

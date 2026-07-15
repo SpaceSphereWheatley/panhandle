@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.21.9] — 2026-07-15
+
+### Fixed
+- **Checking off an item could leave it stuck in the list.** Marking an item
+  bought sometimes left a faded, unclickable ghost row in place instead of
+  reflowing the rest of the list — most reliably if you switched to another
+  tab and back while the "checked off" animation was still playing. Caused
+  by an animation-library edge case where an item's exit tracking got
+  permanently stuck if its pane was hidden mid-animation; the shopping list
+  now cleanly resets its item animations whenever you return to the tab, and
+  the item card no longer mixes two competing animation engines for its
+  "checked off" effect. Also stopped an unnecessary extra list refetch on
+  every toggle that could let two rapid taps' results arrive out of order.
+
 ## [1.21.8] — 2026-07-15
 
 ### Fixed

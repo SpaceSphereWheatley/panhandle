@@ -22,7 +22,7 @@ const STAGGER_CAP = 10;
 // `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
 // badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
 // not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg, active, viewMode = "list", index = 0 }) {
+export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg, viewMode = "list", index = 0 }) {
   const isGrid = viewMode === "grid";
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
@@ -33,16 +33,29 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
   const staggerDelay = shouldAnimate && intensity === "expressive" ? Math.min(index, STAGGER_CAP) * STAGGER_STEP_S : 0;
   const layoutTransition = { ...transition, delay: staggerDelay };
 
-  // `layout` gated on `active`, not just `shouldAnimate` — this card's pane
-  // can be hidden via `display: none` while staying mounted (AppShell.jsx),
-  // and Framer would otherwise measure a stale zero-size rect while hidden
-  // and animate a "fly in from (0,0)" on reactivation.
+  // `layout` is always on (never conditionally toggled per render) — Framer's
+  // exit/projection tracking for a card gets permanently stuck (frozen in
+  // place, blocking reflow of the rest of the list) if `layout` is flipped
+  // off and back on for a card during its resolve/exit lifecycle, which
+  // happened here whenever this card's pane was hidden (`display: none` in
+  // AppShell) and shown again mid-animation. ShoppingListTab.jsx forces a
+  // clean remount of the whole list on reactivation instead (`renderGeneration`
+  // key), which is what actually avoids Framer measuring a stale zero-size
+  // rect while hidden — a fresh AnimatePresence instance has no prior layout
+  // to FLIP from, so items just reappear already in their settled position.
+  //
+  // `resolving`'s "pop, then settle dimmed" is driven here (not a parallel
+  // CSS `animation`) so a single engine owns transform/opacity on this node —
+  // mixing a native CSS animation with Framer's motion values on the same
+  // element is an unstable combination.
   const motionProps = shouldAnimate
     ? {
-        layout: active,
+        layout: true,
         transition: { ...transition, layout: layoutTransition },
         initial: { opacity: 0, y: 8 },
-        animate: { opacity: 1, y: 0 },
+        animate: resolving
+          ? { opacity: 0.55, scale: [1, 1.05, 1], y: 0, transition: { duration: 0.3, ease: "easeOut" } }
+          : { opacity: 1, scale: 1, y: 0 },
         exit: { opacity: 0, scale: 0.9 },
       }
     : {};
@@ -81,12 +94,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
         transition: "opacity var(--duration-fast) var(--ease-out)",
         touchAction: "manipulation",
         userSelect: "none",
-        ...(resolving
-          ? {
-              animation: "ph-item-resolve 380ms var(--ease-out) forwards",
-              pointerEvents: "none",
-            }
-          : null),
+        ...(resolving ? { pointerEvents: "none" } : null),
       }}
     >
       <ContentWrapper
