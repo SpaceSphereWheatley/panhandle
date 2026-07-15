@@ -81,12 +81,7 @@ export function Sheet({ open = true, onClose, title, children, className }) {
           boxShadow: 'var(--shadow-sheet)',
           width: '100%',
           maxWidth: 480,
-          // % of the scrim's own box (which is `inset: 0` on the fixed
-          // containing block — the frame on desktop, viewport on mobile),
-          // not `vh`: on desktop the frame can be shorter than the actual
-          // browser viewport, and a vh-based cap could push the sheet past
-          // the frame's bottom edge.
-          maxHeight: '88%',
+          maxHeight: '88vh',
           overflowY: 'auto',
           padding: '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
           animation: 'ph-sheet-in var(--spring-duration) var(--ease-spring)',
