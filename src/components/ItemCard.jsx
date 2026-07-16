@@ -87,13 +87,13 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
         justifyContent: isGrid ? "flex-start" : undefined,
         textAlign: isGrid ? "center" : undefined,
         gap: isGrid ? 4 : 12,
-        padding: isGrid ? "16px 10px" : undefined,
         overflow: "hidden",
         background: clusterBg || "var(--surface-card)",
         opacity: item.bought ? 0.55 : 1,
         transition: "opacity var(--duration-fast) var(--ease-out)",
         touchAction: "manipulation",
         userSelect: "none",
+        ...(isGrid ? { padding: "16px 10px" } : null),
         ...(resolving ? { pointerEvents: "none" } : null),
       }}
     >
