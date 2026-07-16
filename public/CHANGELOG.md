@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.23.1] — 2026-07-16
+
+### Added
+- **A full changelog page at `/changelog.html`**, linked from the landing
+  page footer and from the in-app "Hva er nytt" modal's "Se hele
+  endringsloggen" link (previously an off-domain link to the file on
+  GitHub). It's a static, unauthenticated page — no build step, matching
+  `public/index.html`'s pattern — that fetches `/CHANGELOG.md` and renders
+  the full version history client-side with a small hand-rolled markdown
+  renderer, rather than sending anyone who wants full release detail off
+  to GitHub.
+
+### Changed
+- **Landing page copy no longer assumes exactly two people.** Panhandle
+  supports a household of one to ten people (see the 10-user cap on
+  `POST /list-users`), but `public/index.html`'s hero and feature copy was
+  still written as "for dere to" ("for the two of you") / "begge" ("both of
+  you") from before multi-tenant support shipped. Reworded to "for
+  husstanden" ("for the household") / "alle" ("everyone") instead;
+  `README.md` and `CLAUDE.md`'s opening descriptions updated to match.
+
 ## [1.23.0] — 2026-07-16
 
 ### Added

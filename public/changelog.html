@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Mohibb Malik">
+<meta name="theme-color" content="#C1592A">
+<meta name="description" content="Panhandle: full endringslogg over alle versjoner.">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<title>Endringslogg — Panhandle</title>
+<style>
+  :root {
+    /* Manually mirrored from src/design-system/tokens/*.css — public/ has no build
+       step, so nothing keeps these in sync automatically if the design system changes.
+       (Same tokens as public/index.html — keep both in sync by hand.) */
+    --warm-50:#FAF6EF; --warm-100:#F3ECDD; --warm-200:#E7DCC5; --warm-300:#DCCFAF;
+    --warm-400:#C3B393; --warm-500:#A5936F; --warm-600:#7D6D50; --warm-700:#5B4E39;
+    --warm-800:#3D3425; --warm-900:#2B2621;
+    --terracotta-100:#F6DDCC; --terracotta-300:#E4A57C; --terracotta-500:#C1592A;
+    --terracotta-600:#A2461F; --terracotta-700:#7E3618;
+    --sage-100:#E4EBDD; --sage-300:#B3C4A4; --sage-500:#5B7156; --sage-600:#465943; --sage-700:#354332;
+    --mustard-100:#F6E7C1; --mustard-500:#E0A537;
+    --red-500:#B23B3B; --red-100:#F4DEDA;
+
+    --surface-page:var(--warm-50); --surface-card:#FFFDF9; --surface-sunken:var(--warm-100); --surface-inverse:var(--warm-900);
+    --text-primary:var(--warm-900); --text-secondary:var(--warm-600); --text-tertiary:var(--warm-500);
+    --text-on-accent:#FFFDF9; --text-link:var(--terracotta-600); --text-link-hover:var(--terracotta-700);
+    --border-default:var(--warm-200); --border-strong:var(--warm-400);
+    --accent-primary:var(--terracotta-500); --accent-primary-hover:var(--terracotta-600);
+    --accent-primary-press:var(--terracotta-700); --accent-primary-subtle:var(--terracotta-100);
+    --accent-secondary:var(--sage-500);
+    --focus-ring:var(--terracotta-500);
+
+    --radius-sm:10px; --radius-md:16px; --radius-lg:20px; --radius-pill:999px;
+    --shadow-sm:0 1px 2px rgba(43,38,33,.06); --shadow-card:0 2px 8px rgba(43,38,33,.08);
+
+    --font-sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --text-2xl:34px; --text-xl:26px; --text-lg:20px; --text-md:17px; --text-sm:15px; --text-xs:13px; --text-2xs:11px;
+    --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+    --tracking-tight:-0.01em;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --warm-50:#1B1A17; --warm-100:#262420; --warm-200:#322F29; --warm-300:#443F37;
+      --warm-400:#6E6255; --warm-500:#A99C8B; --warm-600:#C7BBAA; --warm-700:#DCD2C4;
+      --warm-800:#ECE7DE; --warm-900:#F6F2EA;
+      --terracotta-100:#4A2A1B; --terracotta-300:#8C4A28; --terracotta-500:#D97A48;
+      --terracotta-600:#E89463; --terracotta-700:#F2AC80;
+      --sage-500:#8CA684;
+      --surface-card:var(--warm-100);
+      --text-on-accent:#1B1A17;
+      --border-default:var(--warm-300); --border-strong:var(--warm-500);
+      --shadow-card:0 2px 8px rgba(0,0,0,.3);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .001ms !important; }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: var(--font-sans);
+    background: var(--surface-page); color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--text-link); }
+  a:hover { color: var(--text-link-hover); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+  header.site {
+    position: sticky; top: 0; z-index: 30; background: var(--surface-page);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .nav-row {
+    max-width: 760px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand .word { font-weight: var(--weight-bold); font-size: 20px; letter-spacing: -0.3px; color: var(--text-primary); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; border-radius: var(--radius-pill); font-family: inherit; font-weight: var(--weight-semibold);
+    font-size: var(--text-sm); cursor: pointer; padding: 10px 18px; text-decoration: none;
+  }
+  .btn-outline { background: transparent; color: var(--text-primary); border: 1.5px solid var(--border-strong); padding: 8.5px 16.5px; }
+  .btn-outline:hover { background: var(--surface-sunken); }
+
+  main.content { padding: 40px 0 64px; }
+  main.content h1 {
+    font-size: clamp(28px, 5vw, 38px); font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight); margin: 0 0 8px;
+  }
+  .page-sub { color: var(--text-secondary); font-size: var(--text-sm); margin: 0 0 36px; }
+
+  h2.v-heading {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin: 40px 0 14px; padding-top: 8px;
+  }
+  h2.v-heading .v-num {
+    font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--text-primary);
+  }
+  h2.v-heading .v-date { font-size: var(--text-xs); color: var(--text-tertiary); font-weight: var(--weight-regular); }
+  main.content h2:not(.v-heading) {
+    font-size: var(--text-xl); font-weight: var(--weight-bold); margin: 44px 0 12px;
+  }
+  main.content h3 {
+    font-size: var(--text-sm); font-weight: var(--weight-bold); text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-tertiary); margin: 18px 0 8px;
+  }
+  main.content ul { margin: 0 0 4px; padding-left: 22px; }
+  main.content ul ul { margin-top: 4px; }
+  main.content li { font-size: var(--text-sm); line-height: 1.6; color: var(--text-secondary); margin-bottom: 8px; }
+  main.content li strong { color: var(--text-primary); }
+  main.content p { font-size: var(--text-sm); line-height: 1.6; color: var(--text-secondary); }
+  main.content code {
+    background: var(--surface-sunken); border-radius: 4px; padding: 1px 5px;
+    font-size: 0.9em; font-family: ui-monospace, monospace;
+  }
+  main.content hr { border: none; border-top: 1px solid var(--border-default); margin: 32px 0; }
+  .state-note { color: var(--text-tertiary); font-size: var(--text-sm); }
+
+  footer.site {
+    border-top: 1px solid var(--border-default); padding: 28px 0; text-align: center;
+    color: var(--text-tertiary); font-size: var(--text-xs);
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="nav-row">
+    <a class="brand" href="/">
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="28" cy="32" r="13.4" fill="none" stroke="#C1592A" stroke-width="6.2"/>
+        <rect x="39.1" y="28.9" width="12.3" height="6.2" rx="3.1" fill="#C1592A"/>
+      </svg>
+      <span class="word">panhandle</span>
+    </a>
+    <a class="btn btn-outline" href="/app.html">Logg inn</a>
+  </div>
+</header>
+
+<main class="content">
+  <div class="wrap">
+    <h1>Endringslogg</h1>
+    <p class="page-sub">Alle versjoner av Panhandle, nyeste først.</p>
+    <div id="log"><p class="state-note">Laster...</p></div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">© Panhandle</div>
+</footer>
+
+<script>
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function inline(s) {
+    s = esc(s);
+    s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    return s;
+  }
+
+  // Small hand-rolled renderer for this repo's CHANGELOG.md, not a general
+  // markdown parser — it only needs to handle the shapes that file actually
+  // uses (see CHANGELOG.md's own "About this file" section): #/##/### headings,
+  // one level of nested bullets, and wrapped continuation lines.
+  function renderChangelog(md) {
+    const lines = md.split("\n");
+    let html = "";
+    let inTop = false, inSub = false, topOpen = false, subOpen = false;
+    let para = null; // buffered plain-paragraph lines, joined into one <p> on flush
+
+    function flushPara() {
+      if (para !== null) { html += `<p>${inline(para)}</p>`; para = null; }
+    }
+    function closeSub() {
+      if (subOpen) { html += "</li>"; subOpen = false; }
+      if (inSub) { html += "</ul>"; inSub = false; }
+    }
+    function closeTop() {
+      flushPara();
+      closeSub();
+      if (topOpen) { html += "</li>"; topOpen = false; }
+      if (inTop) { html += "</ul>"; inTop = false; }
+    }
+
+    for (const raw of lines) {
+      if (/^\[.+\]:\s+\S+/.test(raw)) continue; // link reference definitions, not rendered content
+      if (/^---\s*$/.test(raw)) { closeTop(); html += "<hr>"; continue; }
+
+      const h1 = /^#\s+(.*)$/.exec(raw);
+      const h2 = /^##\s+(.*)$/.exec(raw);
+      const h3 = /^###\s+(.*)$/.exec(raw);
+      if (h1) { closeTop(); html += `<h1>${inline(h1[1])}</h1>`; continue; }
+      if (h2) {
+        closeTop();
+        const versioned = /^\[(.+?)\]\s*(?:—|-)\s*(.+)$/.exec(h2[1]);
+        html += versioned
+          ? `<h2 class="v-heading"><span class="v-num">${esc(versioned[1])}</span><span class="v-date">${esc(versioned[2])}</span></h2>`
+          : `<h2>${inline(h2[1])}</h2>`;
+        continue;
+      }
+      if (h3) { closeTop(); html += `<h3>${inline(h3[1])}</h3>`; continue; }
+
+      const bullet = /^(\s*)-\s+(.*)$/.exec(raw);
+      if (bullet) {
+        flushPara();
+        const nested = bullet[1].length >= 2;
+        if (nested) {
+          if (!inTop) { html += "<ul>"; inTop = true; }
+          if (!inSub) { html += "<ul>"; inSub = true; } else if (subOpen) { html += "</li>"; }
+          html += `<li>${inline(bullet[2])}`;
+          subOpen = true;
+        } else {
+          closeSub();
+          if (!inTop) { html += "<ul>"; inTop = true; } else if (topOpen) { html += "</li>"; }
+          html += `<li>${inline(bullet[2])}`;
+          topOpen = true;
+        }
+        continue;
+      }
+
+      if (raw.trim() === "") { flushPara(); continue; }
+
+      if (/^\s+\S/.test(raw) && (subOpen || topOpen)) {
+        html += " " + inline(raw.trim());
+        continue;
+      }
+
+      closeSub();
+      if (topOpen) { html += "</li>"; topOpen = false; }
+      if (inTop) { html += "</ul>"; inTop = false; }
+      para = para === null ? raw.trim() : `${para} ${raw.trim()}`;
+    }
+    closeTop();
+    return html;
+  }
+
+  (async () => {
+    const el = document.getElementById("log");
+    try {
+      const res = await fetch("/CHANGELOG.md");
+      if (!res.ok) throw new Error("fetch failed");
+      const md = await res.text();
+      el.innerHTML = renderChangelog(md);
+      const firstH1 = el.querySelector("h1");
+      if (firstH1) firstH1.remove(); // page already has its own "Endringslogg" <h1>
+    } catch {
+      el.innerHTML = '<p class="state-note">Kunne ikke laste endringsloggen.</p>';
+    }
+  })();
+</script>
+
+</body>
+</html>
