@@ -933,7 +933,7 @@ export function sanitizeLabels(labels) {
   return out;
 }
 
-// ---------- push notification helpers (TODO #7 phase 1) ----------
+// ---------- push notification helpers (TODO #7 phases 1-2) ----------
 // HH:mm, minutes restricted to 15-minute increments to match the cron's
 // check granularity (see runReminderPass below) — any other value would
 // simply never fire.
@@ -956,17 +956,28 @@ export function osloLocalDateParts(nowMs) {
   });
   const p = Object.fromEntries(fmt.formatToParts(nowMs).map((x) => [x.type, x.value]));
   const today = `${p.year}-${p.month}-${p.day}`;
+  const todayUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day));
   // Built from the local calendar date (not nowMs directly) so "+1 day"
   // can't be thrown off by the local UTC offset near midnight.
-  const tomorrow = new Date(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day) + 1))
-    .toISOString().slice(0, 10);
-  return { hhmm: `${p.hour}:${p.minute}`, today, tomorrow };
+  const tomorrow = new Date(todayUtc + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // 0=Mon..6=Sun, matching recurring_schedule.day_of_week's convention
+  // (JS's own getUTCDay() is 0=Sun..6=Sat, so shift it by one).
+  const dow = (new Date(todayUtc).getUTCDay() + 6) % 7;
+  return { hhmm: `${p.hour}:${p.minute}`, today, tomorrow, dow };
 }
 
 // Both sides are plain HH:mm strings — callers ensure configuredTime is
 // already validated/normalized at the notification-settings endpoint.
 export function isReminderDue(hhmm, configuredTime) {
   return hhmm === configuredTime;
+}
+
+// Adds `days` (may be negative) to a YYYY-MM-DD string, returning a new
+// YYYY-MM-DD string — used to compute the Sunday-end of the week that
+// starts on a given Monday (see checkWeeklyReminders).
+export function addDaysIso(iso, days) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 // ---------- response helpers ----------
@@ -1195,12 +1206,20 @@ async function sendPushToSubscription(env, sub, payload) {
   }
 }
 
-// The "no meal planned for tomorrow" reminder (TODO #7 phase 1). Exported
-// (not just called from `scheduled` below) and takes `now` as a parameter
-// rather than reading Date.now() internally, so integration tests can call
-// it directly with a fabricated timestamp against a real local D1, instead
-// of depending on wrangler dev's scheduled-event simulation.
-export async function runReminderPass(env, nowMs) {
+// Fans a push out to every subscribed device on a list, optionally skipping
+// some usernames' devices (e.g. whoever triggered the event already knows).
+// Shared by every notification type (TODO #7 phases 1-2) so there's one
+// fan-out implementation, not one per type.
+export async function sendPushToList(env, list_id, payload, { excludeUsernames = [] } = {}) {
+  const { results: subs } = await env.DB.prepare(
+    "SELECT endpoint, p256dh, auth, username FROM push_subscriptions WHERE list_id = ?1"
+  ).bind(list_id).all();
+  const targets = subs.filter((s) => !excludeUsernames.includes(s.username));
+  await Promise.all(targets.map((sub) => sendPushToSubscription(env, sub, payload)));
+}
+
+// The "no meal planned for tomorrow" reminder (TODO #7 phase 1).
+async function checkMealReminders(env, nowMs) {
   const { hhmm, tomorrow } = osloLocalDateParts(nowMs);
   const { results: enabledLists } = await env.DB.prepare(
     "SELECT list_id, meal_reminder_time FROM notification_settings WHERE meal_reminder_enabled = 1"
@@ -1223,18 +1242,66 @@ export async function runReminderPass(env, nowMs) {
     ).bind(list_id, tomorrow).run();
     if (inserted.meta.changes === 0) continue;
 
-    const { results: subs } = await env.DB.prepare(
-      "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE list_id = ?1"
-    ).bind(list_id).all();
     // Kept minimal — encrypted Web Push payloads have a ~4KB ceiling and
     // there's no reason to carry meal data for a "plan something" nudge.
-    const payload = {
+    await sendPushToList(env, list_id, {
       title: "Ingen middag planlagt i morgen",
       body: "Åpne Panhandle for å planlegge middag.",
       url: "/app.html",
-    };
-    await Promise.all(subs.map((sub) => sendPushToSubscription(env, sub, payload)));
+    });
   }
+}
+
+// The weekly meal-plan reminder (TODO #7 phase 2). Fires only on Sunday
+// evening (day hardcoded rather than a configurable column — this is a
+// low-frequency nudge, not worth another setting), and only when the
+// upcoming Mon-Sun week has zero planned meals at all — not "few," which
+// would need an arbitrary threshold and risks nagging a household that's
+// already started. `dow` is 0=Mon..6=Sun (see osloLocalDateParts).
+async function checkWeeklyReminders(env, nowMs) {
+  const { hhmm, tomorrow, dow } = osloLocalDateParts(nowMs);
+  if (dow !== 6) return; // only Sunday
+
+  const { results: enabledLists } = await env.DB.prepare(
+    "SELECT list_id, weekly_reminder_time FROM notification_settings WHERE weekly_reminder_enabled = 1"
+  ).all();
+  const dueListIds = enabledLists
+    .filter((row) => isReminderDue(hhmm, row.weekly_reminder_time))
+    .map((row) => row.list_id);
+  if (dueListIds.length === 0) return;
+
+  // Today is Sunday, so `tomorrow` is already the upcoming week's Monday.
+  const weekStart = tomorrow;
+  const weekEnd = addDaysIso(weekStart, 6);
+
+  for (const list_id of dueListIds) {
+    const planned = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM meal_plan WHERE list_id = ?1 AND plan_date BETWEEN ?2 AND ?3 AND meal_id IS NOT NULL"
+    ).bind(list_id, weekStart, weekEnd).first();
+    if (planned.n > 0) continue; // week already has at least one meal planned
+
+    const inserted = await env.DB.prepare(
+      "INSERT OR IGNORE INTO notification_log (list_id, type, target_date) VALUES (?1, 'weekly_reminder', ?2)"
+    ).bind(list_id, weekStart).run();
+    if (inserted.meta.changes === 0) continue;
+
+    await sendPushToList(env, list_id, {
+      title: "Ingen middager planlagt neste uke",
+      body: "Åpne Panhandle for å planlegge ukens middager.",
+      url: "/app.html",
+    });
+  }
+}
+
+// Cron entry point (TODO #7 phases 1-2), dispatching to each independently
+// testable notification-type check. Exported (not just called from
+// `scheduled` below) and takes `now` as a parameter rather than reading
+// Date.now() internally, so integration tests can call it directly with a
+// fabricated timestamp against a real local D1, instead of depending on
+// wrangler dev's scheduled-event simulation.
+export async function runNotificationPass(env, nowMs) {
+  await checkMealReminders(env, nowMs);
+  await checkWeeklyReminders(env, nowMs);
 }
 
 export default {
@@ -1649,6 +1716,7 @@ export default {
             env.DB.prepare("DELETE FROM recurring_schedule WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(user.list_id),
           ]);
@@ -1847,6 +1915,7 @@ export default {
             env.DB.prepare("DELETE FROM recurring_schedule WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(row.list_id),
           ]);
@@ -2438,11 +2507,13 @@ export default {
     // defaults rather than requiring a seeded row per list.
     if (path === "/notification-settings" && method === "GET") {
       const row = await env.DB.prepare(
-        "SELECT meal_reminder_enabled, meal_reminder_time FROM notification_settings WHERE list_id = ?1"
+        "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time FROM notification_settings WHERE list_id = ?1"
       ).bind(user.list_id).first();
       return authedJson({
         meal_reminder_enabled: row ? !!row.meal_reminder_enabled : true,
         meal_reminder_time: row?.meal_reminder_time || "18:00",
+        weekly_reminder_enabled: row ? !!row.weekly_reminder_enabled : true,
+        weekly_reminder_time: row?.weekly_reminder_time || "18:00",
       });
     }
 
@@ -2454,14 +2525,56 @@ export default {
       if (!REMINDER_TIME_RE.test(body.meal_reminder_time || "")) {
         return authedJson({ error: "Ugyldig tidspunkt" }, 400);
       }
+      if (!REMINDER_TIME_RE.test(body.weekly_reminder_time || "")) {
+        return authedJson({ error: "Ugyldig tidspunkt" }, 400);
+      }
       await env.DB.prepare(`
-        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time)
-        VALUES (?1, ?2, ?3)
+        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time)
+        VALUES (?1, ?2, ?3, ?4, ?5)
         ON CONFLICT(list_id) DO UPDATE SET
           meal_reminder_enabled = excluded.meal_reminder_enabled,
           meal_reminder_time = excluded.meal_reminder_time,
+          weekly_reminder_enabled = excluded.weekly_reminder_enabled,
+          weekly_reminder_time = excluded.weekly_reminder_time,
           updated_at = datetime('now')
-      `).bind(user.list_id, body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time).run();
+      `).bind(
+        user.list_id, body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time,
+        body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time
+      ).run();
+      return authedJson({ ok: true });
+    }
+
+    // On-demand "get the other person's attention" ping (TODO #7 phase 2).
+    // Any list member, same permission level as /recurring — not owner-gated.
+    // Fixed message (not a free-typed one) to sidestep needing input
+    // sanitization/length-capping for phase 2. A 2-minute per-list cooldown
+    // (tracked in notification_state, not the IP-keyed rate_limit_attempts
+    // table — this needs a per-*list* throttle regardless of who's sending,
+    // not a per-IP one) stops repeated taps from spamming the household.
+    if (path === "/push/ping" && method === "POST") {
+      // SQL-side comparison (not JS Date parsing) to match this codebase's
+      // existing convention for TEXT datetime('now') columns (e.g. meal_plan
+      // pruning's `plan_date < date('now', '-14 days')`).
+      const recent = await env.DB.prepare(
+        "SELECT 1 FROM notification_state WHERE list_id = ?1 AND type = 'ping' AND last_notified_at > datetime('now', '-2 minutes')"
+      ).bind(user.list_id).first();
+      if (recent) {
+        return authedJson({ error: "Vent litt før du pinger igjen" }, 429);
+      }
+      await env.DB.prepare(`
+        INSERT INTO notification_state (list_id, type, last_notified_at) VALUES (?1, 'ping', datetime('now'))
+        ON CONFLICT(list_id, type) DO UPDATE SET last_notified_at = excluded.last_notified_at
+      `).bind(user.list_id).run();
+
+      const caller = await env.DB.prepare(
+        "SELECT name FROM users WHERE username = ?1 COLLATE NOCASE"
+      ).bind(user.username).first();
+      const callerName = caller?.name || user.username;
+      await sendPushToList(env, user.list_id, {
+        title: "Panhandle",
+        body: `${callerName} trenger oppmerksomheten din`,
+        url: "/app.html",
+      }, { excludeUsernames: [user.username] });
       return authedJson({ ok: true });
     }
 
@@ -2469,8 +2582,8 @@ export default {
   },
 
   // Cron-driven (see [triggers] in wrangler.toml). Thin wrapper so the actual
-  // logic (runReminderPass, above) stays independently callable/testable.
+  // logic (runNotificationPass, above) stays independently callable/testable.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runReminderPass(env, event.scheduledTime));
+    ctx.waitUntil(runNotificationPass(env, event.scheduledTime));
   },
 };

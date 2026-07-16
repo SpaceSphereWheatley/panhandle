@@ -9,7 +9,7 @@ import {
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
   isSuperAdmin, escapeHtml, COMMON_ITEMS,
-  osloLocalDateParts, isReminderDue,
+  osloLocalDateParts, isReminderDue, addDaysIso,
 } from "../worker/index.js";
 import { CATEGORIES } from "../shared/categories.js";
 
@@ -298,25 +298,33 @@ describe("escapeHtml", () => {
 });
 
 describe("osloLocalDateParts", () => {
-  test("converts a winter (CET, UTC+1) timestamp to local hhmm/today/tomorrow", () => {
+  test("converts a winter (CET, UTC+1) timestamp to local hhmm/today/tomorrow/dow", () => {
     const nowMs = Date.parse("2026-01-15T12:00:00Z");
-    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "13:00", today: "2026-01-15", tomorrow: "2026-01-16" });
+    // 2026-01-15 is a Thursday -> dow 3 (0=Mon..6=Sun).
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "13:00", today: "2026-01-15", tomorrow: "2026-01-16", dow: 3 });
   });
 
-  test("converts a summer (CEST, UTC+2) timestamp to local hhmm/today/tomorrow", () => {
+  test("converts a summer (CEST, UTC+2) timestamp to local hhmm/today/tomorrow/dow", () => {
     const nowMs = Date.parse("2026-07-15T12:00:00Z");
-    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "14:00", today: "2026-07-15", tomorrow: "2026-07-16" });
+    // 2026-07-15 is a Wednesday -> dow 2.
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "14:00", today: "2026-07-15", tomorrow: "2026-07-16", dow: 2 });
   });
 
-  test("rolls 'today'/'tomorrow' onto the Oslo-local calendar date, not the UTC one, near midnight", () => {
-    // 22:30 UTC in summer is 00:30 the *next* day in Oslo (UTC+2).
+  test("rolls 'today'/'tomorrow'/'dow' onto the Oslo-local calendar date, not the UTC one, near midnight", () => {
+    // 22:30 UTC in summer is 00:30 the *next* day in Oslo (UTC+2); 2026-07-16 is a Thursday -> dow 3.
     const nowMs = Date.parse("2026-07-15T22:30:00Z");
-    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "00:30", today: "2026-07-16", tomorrow: "2026-07-17" });
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "00:30", today: "2026-07-16", tomorrow: "2026-07-17", dow: 3 });
   });
 
   test("rolls 'tomorrow' across a month boundary", () => {
     const nowMs = Date.parse("2026-01-31T20:00:00Z"); // 21:00 CET
-    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "21:00", today: "2026-01-31", tomorrow: "2026-02-01" });
+    // 2026-01-31 is a Saturday -> dow 5.
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "21:00", today: "2026-01-31", tomorrow: "2026-02-01", dow: 5 });
+  });
+
+  test("recognizes Sunday as dow 6 (used to gate the weekly reminder)", () => {
+    const nowMs = Date.parse("2026-02-01T17:00:00Z"); // 18:00 CET; 2026-02-01 is a Sunday
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "18:00", today: "2026-02-01", tomorrow: "2026-02-02", dow: 6 });
   });
 });
 
@@ -328,6 +336,24 @@ describe("isReminderDue", () => {
   test("false when hhmm differs from the configured time", () => {
     assert.equal(isReminderDue("18:15", "18:00"), false);
     assert.equal(isReminderDue("6:00", "06:00"), false);
+  });
+});
+
+describe("addDaysIso", () => {
+  test("adds days within the same month", () => {
+    assert.equal(addDaysIso("2026-07-15", 6), "2026-07-21");
+  });
+
+  test("zero days returns the same date", () => {
+    assert.equal(addDaysIso("2026-06-01", 0), "2026-06-01");
+  });
+
+  test("rolls across a month boundary", () => {
+    assert.equal(addDaysIso("2026-01-28", 6), "2026-02-03");
+  });
+
+  test("rolls across a year boundary", () => {
+    assert.equal(addDaysIso("2026-12-28", 6), "2027-01-03");
   });
 });
 
