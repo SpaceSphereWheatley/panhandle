@@ -2,6 +2,10 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const InstallPromptContext = createContext(null);
 
+// Persisted so "installed" survives reloads/new tabs — `appinstalled` only
+// ever fires once, in the page load where the install actually happened.
+const INSTALLED_KEY = "ph_pwa_installed";
+
 export function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
@@ -15,7 +19,7 @@ export function isIos() {
 // an install banner or a manual "Installer" button.
 export function InstallPromptProvider({ children }) {
   const [deferredEvent, setDeferredEvent] = useState(null);
-  const [installed, setInstalled] = useState(false);
+  const [installed, setInstalled] = useState(() => localStorage.getItem(INSTALLED_KEY) === "1");
 
   useEffect(() => {
     function onBeforeInstallPrompt(e) {
@@ -23,6 +27,7 @@ export function InstallPromptProvider({ children }) {
       setDeferredEvent(e);
     }
     function onAppInstalled() {
+      localStorage.setItem(INSTALLED_KEY, "1");
       setInstalled(true);
       setDeferredEvent(null);
     }

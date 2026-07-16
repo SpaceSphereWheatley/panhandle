@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.22.6] — 2026-07-16
+
+### Changed
+- **The "Installer Panhandle" install CTA in Settings no longer stays at full
+  size forever.** It previously showed the same large, high-contrast hero
+  block on every visit until the browser's `appinstalled` event fired in
+  that exact page load — so a user who'd already installed but opened the
+  site in an ordinary browser tab (not the installed app) kept seeing the
+  full prompt every time, and the "installed" signal itself was never
+  persisted across reloads. Now: the full CTA (unchanged) is still the
+  default for anyone who hasn't installed or interacted with it — its job is
+  to actually drive installs, so it stays maximally prominent there. Once
+  installed (now persisted in `localStorage`, surviving reloads) it demotes
+  to a compact filled pill rather than disappearing outright, since that
+  signal can go stale after an uninstall and a demoted-but-visible CTA is a
+  safer failure mode than a vanished one. A new dismiss ("×") button on the
+  full CTA demotes it further, to a plain text row, since an explicit
+  "not now" is a stronger signal than an inferred one.
+
 ## [1.22.5] — 2026-07-15
 
 ### Security
