@@ -1,5 +1,11 @@
 # Multi-tenant migration — execution log
 
+> **Historical.** This is the execution log for the original multi-tenant
+> cutover — it has already shipped. The migration file it discusses was later
+> squashed into `migrations/0001_init.sql`, and the frontend it references
+> (`public/index.html` as the app itself) was later rewritten to Vite + React
+> (`src/`). Kept only as a record; for current architecture, see `CLAUDE.md`.
+
 Companion to `docs/multi-tenant-plan.md` (the design) and
 `docs/multi-tenant-setup.md` (the manual cutover steps). This log records
 **what was actually built**, the decisions taken autonomously where the plan
