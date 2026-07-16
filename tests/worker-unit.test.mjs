@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
-  cleanUsername, extractGlutenFree, capitalizeName, sanitizeLabels,
+  sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
   isSuperAdmin, escapeHtml, COMMON_ITEMS,
 } from "../worker/index.js";
 import { CATEGORIES } from "../shared/categories.js";
@@ -151,37 +151,33 @@ describe("genPassword", () => {
   });
 });
 
-describe("cleanUsername", () => {
-  test("accepts plain ASCII", () => {
-    assert.equal(cleanUsername("alice"), "alice");
+describe("sanitizeDisplayName", () => {
+  test("trims leading/trailing whitespace", () => {
+    assert.equal(sanitizeDisplayName("  Alice  "), "Alice");
   });
 
-  test("accepts Norwegian letters (æøå)", () => {
-    assert.equal(cleanUsername("bjørn.åse"), "bjørn.åse");
+  test("collapses internal whitespace runs", () => {
+    assert.equal(sanitizeDisplayName("Alice   Bob"), "Alice Bob");
   });
 
-  test("rejects strings longer than 32 chars", () => {
-    assert.equal(cleanUsername("a".repeat(33)), null);
+  test("preserves casing/punctuation as typed (not force-capitalized)", () => {
+    assert.equal(sanitizeDisplayName("iPhone-Ola"), "iPhone-Ola");
   });
 
-  test("accepts exactly 32 chars", () => {
-    assert.equal(cleanUsername("a".repeat(32)), "a".repeat(32));
+  test("preserves Norwegian letters (æøå)", () => {
+    assert.equal(sanitizeDisplayName("Bjørn Åse"), "Bjørn Åse");
   });
 
-  test("rejects empty/whitespace-only input", () => {
-    assert.equal(cleanUsername(""), null);
-    assert.equal(cleanUsername("   "), null);
-    assert.equal(cleanUsername(undefined), null);
+  test("returns empty string for empty/whitespace-only/undefined input", () => {
+    assert.equal(sanitizeDisplayName(""), "");
+    assert.equal(sanitizeDisplayName("   "), "");
+    assert.equal(sanitizeDisplayName(undefined), "");
   });
 
-  test("rejects disallowed characters", () => {
-    assert.equal(cleanUsername("alice bob"), null);
-    assert.equal(cleanUsername("alice@example"), null);
-    assert.equal(cleanUsername("alice/bob"), null);
-  });
-
-  test("accepts allowed punctuation (. _ -)", () => {
-    assert.equal(cleanUsername("alice.bob_dan-eve"), "alice.bob_dan-eve");
+  test("caps length at 60 characters", () => {
+    const long = "a".repeat(100);
+    assert.equal(sanitizeDisplayName(long).length, 60);
+    assert.equal(sanitizeDisplayName(long), "a".repeat(60));
   });
 });
 

@@ -32,13 +32,16 @@ async function login(base, username, password) {
   });
 }
 
-async function addMember(base, ownerToken, username) {
+// `label` becomes the member's e-mail local part (username always mirrors
+// e-mail — see TODO #17) and doubles as their display name.
+async function addMember(base, ownerToken, label) {
+  const email = `${label}@example.test`;
   const res = await fetch(`${base}/list-users`, {
     method: "POST", headers: authHeaders(ownerToken),
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ email, name: label }),
   });
   assert.equal(res.status, 200, "adding a member should succeed");
-  const { password } = await res.json();
+  const { username, password } = await res.json();
   const { token } = await (await login(base, username, password)).json();
   return { username, password, token };
 }

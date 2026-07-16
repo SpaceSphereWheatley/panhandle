@@ -5,10 +5,12 @@ import { CATEGORIES, cap } from "../lib/shoppingUtils.js";
 import { api } from "../lib/api.js";
 import { useConfirm } from "../context/ConfirmContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import { useListUsers } from "../context/ListUsersContext.jsx";
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
   const confirm = useConfirm();
   const toast = useToast();
+  const { nameFor } = useListUsers();
   const [name, setName] = useState(cap(item.name));
   const [category, setCategory] = useState(item.category);
   const [qty, setQty] = useState(item.qty || 1);
@@ -58,7 +60,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
 
   return (
     <Modal onClose={onClose} title={cap(item.name)}>
-      <div className="meta">Lagt til av {item.added_by}</div>
+      <div className="meta">Lagt til av {nameFor(item.added_by)}</div>
       <label htmlFor="item-edit-name">Navn</label>
       <Input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
       <label htmlFor="item-edit-category">Kategori</label>

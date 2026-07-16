@@ -10,7 +10,7 @@ import { AccordionRow } from "./AccordionRow.jsx";
 // minimizable like MembersIsland's sub-sections. Content-only — no own
 // Card wrapper, see MembersIsland.jsx / HomeIsland.jsx.
 export function RecurringIsland() {
-  const { people, refresh } = useListUsers();
+  const { people, nameFor, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
   const toast = useToast();
   const [otherDrafts, setOtherDrafts] = useState({});
@@ -69,7 +69,7 @@ export function RecurringIsland() {
               >
                 <option value="">Ingen</option>
                 {people.map((p) => (
-                  <option value={p} key={p}>{p}</option>
+                  <option value={p} key={p}>{nameFor(p)}</option>
                 ))}
                 <option value="__other__">Annet...</option>
               </select>

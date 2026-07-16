@@ -6,7 +6,7 @@ import { useToast } from "../context/ToastContext.jsx";
 // is never recoverable after this — the server only stores its hash.
 export function CredentialsModal({ username, password, onClose }) {
   const toast = useToast();
-  const invite = `Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com\nBrukernavn: ${username}\nPassord: ${password}\n(Bytt passord etter at du har logget inn.)`;
+  const invite = `Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com\nE-post (brukernavn): ${username}\nPassord: ${password}\n(Bytt passord etter at du har logget inn.)`;
 
   async function copyInvite() {
     try {

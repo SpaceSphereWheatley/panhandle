@@ -35,13 +35,16 @@ async function login(base, username, password) {
   });
 }
 
-async function addMember(base, ownerToken, username) {
+// `label` becomes the member's e-mail local part (username always mirrors
+// e-mail — see TODO #17) and doubles as their display name.
+async function addMember(base, ownerToken, label) {
+  const email = `${label}@example.test`;
   const res = await fetch(`${base}/list-users`, {
     method: "POST", headers: authHeaders(ownerToken),
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ email, name: label }),
   });
   assert.equal(res.status, 200, "adding a member should succeed");
-  const { password } = await res.json();
+  const { username, password } = await res.json();
   const { token } = await (await login(base, username, password)).json();
   return { username, password, token };
 }
@@ -164,6 +167,18 @@ async function testRefusesLastOwnerWithoutConfirmation(BASE) {
   // The account and its list are untouched by the refused attempt.
   assert.equal((await login(BASE, ownerUsername, PASS)).status, 200,
     "the refused last-owner account should still exist and be able to log in");
+
+  // SUPERADMIN_USERNAME must stay a fixed literal across every test in this
+  // file (it's the one value SUPERADMIN_USERNAMES allowlists in this run's
+  // .dev.vars, see main()) — testRefusesLastAdmin already deleted the
+  // original bootstrap of it, and this test just re-bootstrapped a fresh one
+  // above (bootstrapAccount is a raw INSERT, not an upsert), so it has to be
+  // torn down again here or the next test's own re-bootstrap of the same
+  // username collides on users.username's PRIMARY KEY.
+  await fetch(`${BASE}/account`, {
+    method: "DELETE", headers: authHeaders(superToken),
+    body: JSON.stringify({ current_password: PASS }),
+  });
 
   console.log("  - refuses to delete a list's last owner without body.delete_list");
 }

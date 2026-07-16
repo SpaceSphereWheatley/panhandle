@@ -23,22 +23,29 @@ export function MembersIsland() {
   const toast = useToast();
   const { shouldAnimate, transition } = useMotionConfig();
   const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [creds, setCreds] = useState(null);
 
   const full = listUsers.length >= 10;
 
   async function addMember() {
     const name = newName.trim();
+    const email = newEmail.trim();
     if (!name) {
-      toast("Skriv inn et brukernavn", { error: true });
+      toast("Skriv inn et navn", { error: true });
       return;
     }
-    const res = await api("/list-users", { method: "POST", body: JSON.stringify({ username: name }) });
+    if (!email) {
+      toast("Skriv inn en e-post", { error: true });
+      return;
+    }
+    const res = await api("/list-users", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
       toast(res.error, { error: true });
       return;
     }
     setNewName("");
+    setNewEmail("");
     await refresh();
     setCreds({ username: res.username, password: res.password });
   }
@@ -72,11 +79,11 @@ export function MembersIsland() {
             >
               <div className="who">
                 <div className="uname">
-                  {u.username}{" "}
+                  {u.name || u.username}{" "}
                   {u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
                   {u.is_admin && <Badge tone="primary">Admin</Badge>}
                 </div>
-                {u.username === currentUser && <div className="sub">deg</div>}
+                <div className="sub">{u.username === currentUser ? "deg" : u.username}</div>
               </div>
               <div className="acts">
                 <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
@@ -87,12 +94,21 @@ export function MembersIsland() {
       </AccordionRow>
 
       <AccordionRow label="Legg til medlem">
-        <label htmlFor="members-new-username" className="sr-only">Brukernavn for nytt medlem</label>
+        <label htmlFor="members-new-name" className="sr-only">Navn på nytt medlem</label>
         <Input
-          id="members-new-username"
-          placeholder="Brukernavn for nytt medlem"
+          id="members-new-name"
+          placeholder="Navn"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+        <label htmlFor="members-new-email" className="sr-only">E-post for nytt medlem</label>
+        <Input
+          id="members-new-email"
+          type="email"
+          placeholder="E-post"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
         />
         <button onClick={addMember} disabled={full} className="btn-primary mt-8" style={{ opacity: full ? 0.5 : 1 }}>
           + Legg til bruker

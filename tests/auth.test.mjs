@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 import { startWorker, bootstrapAccount } from "./_helpers.mjs";
 
 const PORT = 8800;
-// Base36 keeps usernames short enough to stay under cleanUsername's 32-char
-// limit even with a descriptive prefix (a 13-digit decimal timestamp alone
-// already eats most of that budget). RUN_ID_NUM (the raw epoch ms) is kept
-// separately for the synthetic-IP octet math below, which needs a number.
+// Base36 keeps test labels short even with a descriptive prefix (a 13-digit
+// decimal timestamp alone already eats most of a readable line). RUN_ID_NUM
+// (the raw epoch ms) is kept separately for the synthetic-IP octet math
+// below, which needs a number.
 const RUN_ID_NUM = Date.now();
 const RUN_ID = RUN_ID_NUM.toString(36);
 const PASS = "Test-password-123!";
@@ -43,17 +43,19 @@ async function tokenFor(base, username, password) {
 }
 
 // Adds a plain member to `ownerToken`'s list via POST /list-users, logs them
-// in, and returns their token. Owner-only endpoint, so ownerToken must
-// belong to an owner.
-async function addMemberAndLogin(base, ownerToken, memberUsername) {
+// in, and returns their username + token. Owner-only endpoint, so ownerToken
+// must belong to an owner. `label` becomes the member's e-mail local part
+// (username always mirrors e-mail — see TODO #17) and display name.
+async function addMemberAndLogin(base, ownerToken, label) {
+  const email = `${label}@example.test`;
   const res = await fetch(`${base}/list-users`, {
     method: "POST",
     headers: { Authorization: `Bearer ${ownerToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ username: memberUsername }),
+    body: JSON.stringify({ email, name: label }),
   });
   assert.equal(res.status, 200, "adding a member should succeed");
-  const { password } = await res.json();
-  return { password, token: await tokenFor(base, memberUsername, password) };
+  const { username, password } = await res.json();
+  return { username, password, token: await tokenFor(base, username, password) };
 }
 
 async function runTests(BASE) {
@@ -148,10 +150,10 @@ async function testTokenVersionOnChangePassword(BASE) {
 
 async function testTokenVersionOnAdminResetPassword(BASE) {
   const adminUsername = `auth_tv_admin_${RUN_ID}`;
-  const memberUsername = `auth_tv_member_${RUN_ID}`;
   await bootstrapAccount(BASE, adminUsername, PASS);
   const adminToken = await tokenFor(BASE, adminUsername, PASS);
-  const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
+  const { username: memberUsername, token: memberTokenBefore } =
+    await addMemberAndLogin(BASE, adminToken, `auth_tv_member_${RUN_ID}`);
 
   const resetRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(memberUsername)}/reset-password`, {
     method: "POST", headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" },
@@ -170,10 +172,10 @@ async function testTokenVersionOnAdminResetPassword(BASE) {
 
 async function testTokenVersionOnFlagsPatch(BASE) {
   const adminUsername = `auth_tv_flagsadmin_${RUN_ID}`;
-  const memberUsername = `auth_tv_flagsmember_${RUN_ID}`;
   await bootstrapAccount(BASE, adminUsername, PASS);
   const adminToken = await tokenFor(BASE, adminUsername, PASS);
-  const { token: memberTokenBefore } = await addMemberAndLogin(BASE, adminToken, memberUsername);
+  const { username: memberUsername, token: memberTokenBefore } =
+    await addMemberAndLogin(BASE, adminToken, `auth_tv_flagsmember_${RUN_ID}`);
 
   const patchRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(memberUsername)}/flags`, {
     method: "PATCH", headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" },

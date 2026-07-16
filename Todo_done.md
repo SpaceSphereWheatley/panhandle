@@ -7,6 +7,28 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+76. (17) Restructured user identity around three editable fields — **Name**
+    (display name, shown throughout the UI), **e-mail**, and **username**,
+    where username always mirrors the e-mail. New `users.name` column
+    (`0011_user_display_name.sql`); `POST /change-name` edits it (Settings
+    → "Meg & min app" → "Navn"), shown wherever a person's identity appears
+    (`ProfileIsland`'s "Innlogget som", `MembersIsland`/`AdminIsland`'s
+    member lists, meal-responsible avatars/dropdowns via
+    `ListUsersContext`'s new `nameFor`, "lagt til av" on items). `POST
+    /change-email` now also renames the username to match everywhere it's
+    stored by value — `list_items.added_by`, `meal_plan.responsible`,
+    `recurring_schedule.responsible`, `users.created_by`,
+    `password_resets.username` — via a batched `renameUsername` helper,
+    returning a fresh token in the response body since the rename
+    invalidates the caller's current one (same pattern as
+    `/change-password`'s token_version bump). `POST /register`, `POST
+    /admin/owners`, and `POST /list-users` all now take an e-mail + name
+    instead of a freeform username — every account has a real e-mail, no
+    exception. `POST /auth/google` seeds Name/e-mail from the ID token's
+    claims once (new account, or first-time linking), never overwriting a
+    later local edit. Existing production accounts (whose usernames
+    predated this invariant) were migrated directly via the same cascading
+    rename. (1.23.0)
 75. (3) Repo cleanup pass: fixed stale claims in `README.md` ("no offline
     mode"/"service worker for offline support" were listed as a limitation
     and a future idea, despite `public/sw.js` already shipping real offline

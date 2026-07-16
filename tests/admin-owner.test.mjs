@@ -9,9 +9,8 @@ import assert from "node:assert/strict";
 import { startWorker, seedAndLogin } from "./_helpers.mjs";
 
 const PORT = 8801;
-// Base36 keeps usernames short enough to stay under cleanUsername's 32-char
-// limit even with a descriptive prefix (a 13-digit decimal timestamp alone
-// already eats most of that budget).
+// Base36 keeps test labels short even with a descriptive prefix (a 13-digit
+// decimal timestamp alone already eats most of a readable line).
 const RUN_ID = Date.now().toString(36);
 const PASS = "Test-password-123!";
 
@@ -39,13 +38,16 @@ async function login(base, username, password) {
 }
 
 // Adds a plain member to `ownerToken`'s list, returns {username, password, token}.
-async function addMember(base, ownerToken, username) {
+// `label` becomes the member's e-mail local part (username always mirrors
+// e-mail — see TODO #17) and doubles as their display name.
+async function addMember(base, ownerToken, label) {
+  const email = `${label}@example.test`;
   const res = await fetch(`${base}/list-users`, {
     method: "POST", headers: authHeaders(ownerToken),
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ email, name: label }),
   });
   assert.equal(res.status, 200, "adding a member should succeed");
-  const { password } = await res.json();
+  const { username, password } = await res.json();
   const { token } = await login(base, username, password);
   return { username, password, token };
 }
@@ -157,7 +159,7 @@ async function testTenUserListCap(BASE) {
   for (let i = 0; i < 8; i++) {
     const res = await fetch(`${BASE}/list-users`, {
       method: "POST", headers: authHeaders(token),
-      body: JSON.stringify({ username: `ao_cap_m${i}_${RUN_ID}` }),
+      body: JSON.stringify({ email: `ao_cap_m${i}_${RUN_ID}@example.test`, name: `ao_cap_m${i}_${RUN_ID}` }),
     });
     assert.equal(res.status, 200, `member ${i + 1}/8 should be added (list at ${i + 2}/10 users)`);
   }
@@ -165,14 +167,14 @@ async function testTenUserListCap(BASE) {
   assert.equal(
     (await fetch(`${BASE}/list-users`, {
       method: "POST", headers: authHeaders(token),
-      body: JSON.stringify({ username: `ao_cap_m9_${RUN_ID}` }),
+      body: JSON.stringify({ email: `ao_cap_m9_${RUN_ID}@example.test`, name: `ao_cap_m9_${RUN_ID}` }),
     })).status, 200,
     "the 10th user on the list should be allowed"
   );
   // 11th user should be refused.
   const overflowRes = await fetch(`${BASE}/list-users`, {
     method: "POST", headers: authHeaders(token),
-    body: JSON.stringify({ username: `ao_cap_m10_${RUN_ID}` }),
+    body: JSON.stringify({ email: `ao_cap_m10_${RUN_ID}@example.test`, name: `ao_cap_m10_${RUN_ID}` }),
   });
   assert.equal(overflowRes.status, 400);
   const overflowBody = await overflowRes.json();
@@ -184,12 +186,13 @@ async function testTenUserListCap(BASE) {
 async function testMemberFlagsForcedToZero(BASE) {
   const username = `ao_forcezero_${RUN_ID}`;
   const { token } = await seedAndLogin(BASE, username, PASS);
-  const memberUsername = `ao_forcezero_m_${RUN_ID}`;
+  const memberLabel = `ao_forcezero_m_${RUN_ID}`;
+  const memberUsername = `${memberLabel}@example.test`;
 
   // Attempt self-escalation via the request body — should be silently ignored.
   const res = await fetch(`${BASE}/list-users`, {
     method: "POST", headers: authHeaders(token),
-    body: JSON.stringify({ username: memberUsername, is_admin: true, is_owner: true }),
+    body: JSON.stringify({ email: memberUsername, name: memberLabel, is_admin: true, is_owner: true }),
   });
   assert.equal(res.status, 200);
 
@@ -212,7 +215,7 @@ async function testPermissionChecks(BASE) {
   // admin/owner-gated endpoint.
   const checks = [
     ["POST /admin/owners", () => fetch(`${BASE}/admin/owners`, {
-      method: "POST", headers: authHeaders(memberToken), body: JSON.stringify({ username: `ao_perm_x_${RUN_ID}` }),
+      method: "POST", headers: authHeaders(memberToken), body: JSON.stringify({ email: `ao_perm_x_${RUN_ID}@example.test`, name: `ao_perm_x_${RUN_ID}` }),
     })],
     ["GET /admin/users", () => fetch(`${BASE}/admin/users`, { headers: authHeaders(memberToken) })],
     ["POST /admin/users/{u}/reset-password", () => fetch(`${BASE}/admin/users/${encodeURIComponent(ownerUsername)}/reset-password`, {
@@ -221,7 +224,7 @@ async function testPermissionChecks(BASE) {
     ["PATCH /admin/users/{u}/flags", () => patchFlags(BASE, memberToken, ownerUsername, { is_admin: false })],
     ["GET /admin/metrics", () => fetch(`${BASE}/admin/metrics`, { headers: authHeaders(memberToken) })],
     ["POST /list-users", () => fetch(`${BASE}/list-users`, {
-      method: "POST", headers: authHeaders(memberToken), body: JSON.stringify({ username: `ao_perm_y_${RUN_ID}` }),
+      method: "POST", headers: authHeaders(memberToken), body: JSON.stringify({ email: `ao_perm_y_${RUN_ID}@example.test`, name: `ao_perm_y_${RUN_ID}` }),
     })],
     ["DELETE /list-users/{u}", () => fetch(`${BASE}/list-users/${encodeURIComponent(ownerUsername)}`, {
       method: "DELETE", headers: authHeaders(memberToken),
