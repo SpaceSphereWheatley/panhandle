@@ -13,9 +13,17 @@ const PASS = "Test-password-123!";
 // other admin created in this run (or left behind by earlier test files
 // against the same local D1) is an ordinary admin only.
 const SUPERADMIN_USERNAME = `adu_superadmin_${RUN_ID}`;
+// A second allowlisted account, seeded once and never deleted (superadmin
+// accounts can't be deleted at all — see testRefusesSuperAdminDeletion) —
+// exists purely to prove that guard doesn't depend on how many superadmins
+// there are.
+const SECOND_SUPERADMIN_USERNAME = `adu_superadmin2_${RUN_ID}`;
 
 async function main() {
-  const worker = await startWorker({ port: PORT, extraDevVars: `SUPERADMIN_USERNAMES=${SUPERADMIN_USERNAME}\n` });
+  const worker = await startWorker({
+    port: PORT,
+    extraDevVars: `SUPERADMIN_USERNAMES=${SUPERADMIN_USERNAME},${SECOND_SUPERADMIN_USERNAME}\n`,
+  });
   try {
     await runTests(worker.base);
     console.log("\nAll admin-delete-user tests passed.");
@@ -63,12 +71,18 @@ function deleteUser(base, adminToken, targetUsername, body) {
 }
 
 async function runTests(BASE) {
+  // Seeded once, for the whole file — superadmin accounts can never be
+  // deleted (self or by each other) now, so unlike ordinary test accounts
+  // there's no need (or way) to delete-and-recreate either of these between
+  // tests.
   const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
+  const { token: secondToken } = await seedAndLogin(BASE, SECOND_SUPERADMIN_USERNAME, PASS);
   await testPermissionChecks(BASE, superToken);
   await testDeletesPlainMember(BASE, superToken);
   await testRefusesLastAdmin(BASE, superToken);
-  await testRefusesLastOwnerWithoutConfirmation(BASE);
-  await testLastOwnerCascadeWithConfirmation(BASE);
+  await testRefusesLastOwnerWithoutConfirmation(BASE, superToken);
+  await testLastOwnerCascadeWithConfirmation(BASE, superToken);
+  await testRefusesSuperAdminDeletion(BASE, superToken, secondToken);
 }
 
 async function testPermissionChecks(BASE, superToken) {
@@ -112,39 +126,39 @@ async function testDeletesPlainMember(BASE, superToken) {
   console.log("  - deletes a plain (non-admin, non-owner) member outright, no guards involved");
 }
 
-// Global admin count persists across every earlier test file run against
-// this same local D1 (see admin-owner.test.mjs's own note on this), so —
-// exactly like that file's testLastAdminProtection — the only deterministic
-// way to test "refuses the last admin" is to demote every other admin down
-// to just the target first, then attempt self-deletion via the superadmin
-// endpoint (the caller IS the target here: it's the only way the is_admin
-// gate can pass while the target is simultaneously the sole remaining admin).
+// DELETE /admin/users/{u} requires the caller to be both is_admin and
+// isSuperAdmin, so the caller's own is_admin=1 always keeps the global
+// is_admin count at >= 1 — meaning the count-based "last admin" branch can
+// only ever fire when the caller targets themselves. Since superadmins can
+// never be deleted at all now (see testRefusesSuperAdminDeletion below),
+// that self-deletion path is refused by the superadmin guard first,
+// regardless of how many other admins exist — demoting every other admin
+// here just proves that doesn't change the outcome.
 async function testRefusesLastAdmin(BASE, superToken) {
   const usersRes = await fetch(`${BASE}/admin/users`, { headers: authHeaders(superToken) });
   const allUsers = await usersRes.json();
+  // Exclude SECOND_SUPERADMIN_USERNAME too — it's also bootstrapped as
+  // is_admin=1, and demoting it here would bump its token_version, leaving
+  // its own already-minted token (used later, in testRefusesSuperAdminDeletion)
+  // stale.
+  const protectedUsernames = [SUPERADMIN_USERNAME, SECOND_SUPERADMIN_USERNAME].map((u) => u.toLowerCase());
   const otherAdmins = allUsers.filter(
-    (u) => u.is_admin && u.username.toLowerCase() !== SUPERADMIN_USERNAME.toLowerCase()
+    (u) => u.is_admin && !protectedUsernames.includes(u.username.toLowerCase())
   );
   for (const u of otherAdmins) {
     const res = await patchFlags(BASE, superToken, u.username, { is_admin: false });
     assert.equal(res.status, 200, `demoting other admin ${u.username} should succeed while >=2 admins remain`);
   }
 
-  // Now exactly one admin (the superadmin) remains — deleting them must be refused.
+  // Even as the sole remaining admin, self-deletion is refused.
   const refusedRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /siste admin/i);
+  assert.match(refusedBody.error, /app-eier/i);
+  assert.equal((await login(BASE, SUPERADMIN_USERNAME, PASS)).status, 200,
+    "the refused account should still exist and be able to log in");
 
-  // Promote a second admin+owner (the superadmin's seeded account is both,
-  // so both guards need a second person cleared before deletion succeeds).
-  const { username: secondAdmin } = await addMember(BASE, superToken, `adu_lastadmin_second_${RUN_ID}`);
-  assert.equal((await patchFlags(BASE, superToken, secondAdmin, { is_admin: true, is_owner: true })).status, 200);
-  const deleteRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
-  assert.equal(deleteRes.status, 200, "deleting is allowed once a second admin+owner exists");
-  assert.equal((await login(BASE, SUPERADMIN_USERNAME, PASS)).status, 401);
-
-  console.log("  - refuses to delete the last admin (even via self-deletion), allows it once a second admin exists");
+  console.log("  - a superadmin can never self-delete via this endpoint, even as the sole remaining admin");
 }
 
 // is_owner is scoped per-list, so — unlike the last-admin case above — this
@@ -154,10 +168,9 @@ async function testRefusesLastAdmin(BASE, superToken) {
 // refused outright (same "eneste eier" guard as PATCH .../flags and
 // DELETE /list-users) — the flag has to be an explicit, opt-in choice, never
 // the default.
-async function testRefusesLastOwnerWithoutConfirmation(BASE) {
+async function testRefusesLastOwnerWithoutConfirmation(BASE, superToken) {
   const ownerUsername = `adu_lastowner_noconfirm_${RUN_ID}`;
   await seedAndLogin(BASE, ownerUsername, PASS);
-  const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
 
   const refusedRes = await deleteUser(BASE, superToken, ownerUsername);
   assert.equal(refusedRes.status, 400);
@@ -168,18 +181,6 @@ async function testRefusesLastOwnerWithoutConfirmation(BASE) {
   assert.equal((await login(BASE, ownerUsername, PASS)).status, 200,
     "the refused last-owner account should still exist and be able to log in");
 
-  // SUPERADMIN_USERNAME must stay a fixed literal across every test in this
-  // file (it's the one value SUPERADMIN_USERNAMES allowlists in this run's
-  // .dev.vars, see main()) — testRefusesLastAdmin already deleted the
-  // original bootstrap of it, and this test just re-bootstrapped a fresh one
-  // above (bootstrapAccount is a raw INSERT, not an upsert), so it has to be
-  // torn down again here or the next test's own re-bootstrap of the same
-  // username collides on users.username's PRIMARY KEY.
-  await fetch(`${BASE}/account`, {
-    method: "DELETE", headers: authHeaders(superToken),
-    body: JSON.stringify({ current_password: PASS }),
-  });
-
   console.log("  - refuses to delete a list's last owner without body.delete_list");
 }
 
@@ -187,10 +188,9 @@ async function testRefusesLastOwnerWithoutConfirmation(BASE) {
 // deleting the entire list (every table scoped by list_id) instead of being
 // refused — same outcome as a last owner self-deleting via DELETE /account,
 // just triggered by a superadmin acting on someone else's account.
-async function testLastOwnerCascadeWithConfirmation(BASE) {
+async function testLastOwnerCascadeWithConfirmation(BASE, superToken) {
   const ownerUsername = `adu_lastowner_cascade_${RUN_ID}`;
   const { token: ownerToken } = await seedAndLogin(BASE, ownerUsername, PASS);
-  const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
   const { username: memberUsername, password: memberPassword } =
     await addMember(BASE, ownerToken, `adu_lastowner_cascade_m_${RUN_ID}`);
 
@@ -205,6 +205,29 @@ async function testLastOwnerCascadeWithConfirmation(BASE) {
     "every other member of the cascade-deleted list should also be gone");
 
   console.log("  - body.delete_list cascades: deletes the last owner AND their entire list (all members included)");
+}
+
+// isSuperAdmin is env-allowlist-based, not a DB flag — a superadmin can
+// never be deleted through this endpoint at all, whether targeting
+// themselves or another superadmin, and regardless of how many superadmin
+// accounts currently exist.
+async function testRefusesSuperAdminDeletion(BASE, superToken, secondToken) {
+  const otherRes = await deleteUser(BASE, superToken, SECOND_SUPERADMIN_USERNAME);
+  assert.equal(otherRes.status, 400, "a superadmin must not be able to force-delete another superadmin");
+  const otherBody = await otherRes.json();
+  assert.match(otherBody.error, /app-eier/i);
+
+  const selfRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
+  assert.equal(selfRes.status, 400, "a superadmin must not be able to force-delete their own account here either");
+  const selfBody = await selfRes.json();
+  assert.match(selfBody.error, /app-eier/i);
+
+  assert.equal((await login(BASE, SUPERADMIN_USERNAME, PASS)).status, 200);
+  assert.equal((await login(BASE, SECOND_SUPERADMIN_USERNAME, PASS)).status, 200);
+  // secondToken was never invalidated by either refused attempt.
+  assert.equal((await fetch(`${BASE}/list`, { headers: authHeaders(secondToken) })).status, 200);
+
+  console.log("  - refuses to delete any superadmin account, whether self-targeted or targeting another superadmin");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

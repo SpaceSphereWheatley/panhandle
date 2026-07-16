@@ -10,9 +10,16 @@ import { startWorker, seedAndLogin } from "./_helpers.mjs";
 const PORT = 8803;
 const RUN_ID = Date.now().toString(36);
 const PASS = "Test-password-123!";
+// Two accounts this test's own .dev.vars grants isSuperAdmin to, so
+// testRefusesLastSuperAdmin has "another superadmin" to delete down from.
+const SUPERADMIN_A = `sda_superadmin_a_${RUN_ID}`;
+const SUPERADMIN_B = `sda_superadmin_b_${RUN_ID}`;
 
 async function main() {
-  const worker = await startWorker({ port: PORT });
+  const worker = await startWorker({
+    port: PORT,
+    extraDevVars: `SUPERADMIN_USERNAMES=${SUPERADMIN_A},${SUPERADMIN_B}\n`,
+  });
   try {
     await runTests(worker.base);
     console.log("\nAll self-delete-account tests passed.");
@@ -59,6 +66,7 @@ async function runTests(BASE) {
   await testOwnerWithAnotherOwnerLeaves(BASE);
   await testSoleOwnerNoOtherMembersCascades(BASE);
   await testSoleOwnerWithMembersCascadesEveryone(BASE);
+  await testRefusesSuperAdminSelfDelete(BASE);
 }
 
 async function testWrongPasswordRefused(BASE) {
@@ -172,6 +180,26 @@ async function testSoleOwnerWithMembersCascadesEveryone(BASE) {
     "the member's account itself should no longer exist, not just be removed from the list");
 
   console.log("  - sole-owner self-delete WITH other members: cascades the whole list, removing every member's account too");
+}
+
+// isSuperAdmin is env-allowlist-based, not a DB flag — a superadmin can never
+// self-delete, full stop, regardless of whether another superadmin account
+// exists. SUPERADMIN_A and SUPERADMIN_B are both seeded here (rather than
+// reusing one) specifically to prove the guard doesn't depend on count.
+async function testRefusesSuperAdminSelfDelete(BASE) {
+  const { token: tokenA } = await seedAndLogin(BASE, SUPERADMIN_A, PASS);
+  const { token: tokenB } = await seedAndLogin(BASE, SUPERADMIN_B, PASS);
+
+  for (const [username, token] of [[SUPERADMIN_A, tokenA], [SUPERADMIN_B, tokenB]]) {
+    const res = await deleteAccount(BASE, token, PASS);
+    assert.equal(res.status, 400, `${username} must not be able to self-delete, even with another superadmin present`);
+    const body = await res.json();
+    assert.match(body.error, /app-eier/i);
+    assert.equal((await login(BASE, username, PASS)).status, 200,
+      `${username}'s account should still exist and be able to log in after the refused attempt`);
+  }
+
+  console.log("  - refuses to let any superadmin self-delete, even when another superadmin account exists");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

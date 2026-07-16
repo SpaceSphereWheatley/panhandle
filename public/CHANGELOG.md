@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.23.6] — 2026-07-16
+
+### Fixed
+- **Superadmin accounts can no longer be deleted at all, by anyone.**
+  `DELETE /account` (self-delete) and the superadmin-only
+  `DELETE /admin/users/{u}` (force-delete) both now refuse outright — no
+  override flag, unlike the existing last-owner cascade guard — the moment
+  the target matches `SUPERADMIN_USERNAMES`, whether it's a superadmin
+  self-deleting or one deleting another. Superadmin status comes solely
+  from that env var, which this code has no way to edit, so the only path
+  back after a deletion would be a developer editing the Worker's
+  dashboard variable by hand.
+
 ## [1.23.5] — 2026-07-16
 
 ### Added
