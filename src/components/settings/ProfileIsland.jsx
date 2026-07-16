@@ -27,10 +27,11 @@ const INTENSITY_OPTIONS = [
   { value: "classic", label: "Klassisk" },
 ];
 
-// Island 1 — "Meg & Min App": identity, Designintensitet + Tema + Vibrasjon,
-// and (accordioned) password change + logout. The PWA install highlight is
-// its own standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling
-// after this card rather than a row nested inside it.
+// Island 1 — "Meg & Min App": grouped "me" first (identity display, then
+// accordioned Navn/E-post/Bytt passord/Logg ut/Slett konto), then "min app"
+// (Designintensitet, Tema, Vibrasjon). The PWA install highlight is its own
+// standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling after this
+// card rather than a row nested inside it.
 export function ProfileIsland() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
@@ -171,20 +172,6 @@ export function ProfileIsland() {
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginBottom: 18 }}>{user}</div>
 
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
-        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Tema</div>
-        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
-      </div>
-
-      <div style={{ marginBottom: 4 }}>
-        <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
-      </div>
-
       <AccordionGroup>
         <AccordionRow label="Navn">
           <label htmlFor="profile-name" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
@@ -277,6 +264,20 @@ export function ProfileIsland() {
           <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
         </AccordionRow>
       </AccordionGroup>
+
+      <div style={{ marginTop: 18, marginBottom: 14 }}>
+        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
+        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Tema</div>
+        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
+      </div>
+
+      <div>
+        <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
+      </div>
     </Card>
   );
 }
