@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.23.3] — 2026-07-16
+
+### Fixed
+- **The icon/letter circle on list-view item cards was clipped by the
+  card's top-left corner.** `ItemCard.jsx` passed `padding: undefined` in
+  the inline `style` object it hands to `Card`; since that object is
+  spread onto the style after `Card`'s own default padding is computed,
+  the explicit `undefined` still overwrote the `sm` padding, leaving list
+  rows with no padding at all. With no clearance, the badge sat flush
+  against the card's rounded (asymmetric, 28px top-left) corner and got
+  cut off by it. Padding is now only overridden for grid tiles, letting
+  list rows fall back to `Card`'s own `sm` padding.
+
 ## [1.23.2] — 2026-07-16
 
 ### Fixed
