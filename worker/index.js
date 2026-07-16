@@ -1998,6 +1998,25 @@ export default {
       return authedJson({ ok: true });
     }
 
+    // ===== PRESENCE =====
+    // Heartbeat called alongside the shopping list poll (see POLL_MS in
+    // ShoppingListTab) so members can see who else currently has the list
+    // open — an upsert-per-poll rather than tracked connection state, so a
+    // closed tab or dropped connection just stops refreshing and silently
+    // ages out of the "active" window below.
+    if (path === "/presence" && method === "POST") {
+      await env.DB.prepare(`
+        INSERT INTO list_presence (list_id, username, last_seen) VALUES (?1, ?2, datetime('now'))
+        ON CONFLICT(list_id, username) DO UPDATE SET last_seen = datetime('now')
+      `).bind(user.list_id, user.username).run();
+      const { results } = await env.DB.prepare(`
+        SELECT username FROM list_presence
+        WHERE list_id = ?1 AND username != ?2 AND last_seen > datetime('now', '-20 seconds')
+        ORDER BY username
+      `).bind(user.list_id, user.username).all();
+      return authedJson(results.map((r) => r.username));
+    }
+
     // ===== SHOPPING LIST (all queries scoped to user.list_id) =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`

@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.25.0] — 2026-07-16
+
+### Added
+- **See who else has the shopping list open right now.** Above the item
+  list, small overlapping avatars show any other household member who's
+  actively viewing the list — no manual "I'm done editing" toggle to
+  remember, since it's driven by the same background poll the list already
+  uses and a person just drops off the row a few seconds after they leave
+  the tab or go idle (`POST /presence`, new `list_presence` table).
+
 ## [1.24.0] — 2026-07-16
 
 ### Added
