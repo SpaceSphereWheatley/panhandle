@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.24.0] — 2026-07-16
+
+### Added
+- **Push notifications, phase 1 (TODO #7): a "no meal planned for tomorrow"
+  reminder.** Settings → "Varsler" now has an "Aktiver varsler" toggle that
+  requests browser notification permission and subscribes this device to
+  Web Push, plus a shared household setting (any list member can change it)
+  for a daily reminder time — a cron check every 15 minutes sends a push to
+  every subscribed device on a list if tomorrow still has no meal planned by
+  that time, deduped so it never sends twice for the same day. Built on
+  `@pushforge/builder`, a small dependency-free (Web Crypto only) Web Push
+  library — a deliberate, documented exception to this app's usual
+  no-external-crypto-deps stance, since hand-rolling RFC 8291's payload
+  encryption by hand carries more security risk than a focused, audited
+  library. Web Push on iOS only works for the PWA installed to the Home
+  Screen (iOS 16.4+), not an ordinary Safari tab — Settings shows a hint
+  when that's the case. Batched item-added notifications, a weekly
+  meal-plan reminder, and a custom "get the other person's attention" ping
+  remain future phases of the same TODO item.
+
 ## [1.23.8] — 2026-07-16
 
 ### Fixed

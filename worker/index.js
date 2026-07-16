@@ -11,6 +11,7 @@
 
 import { VERSION } from "../shared/version.js";
 import { CATEGORIES } from "../shared/categories.js";
+import { buildPushHTTPRequest } from "@pushforge/builder";
 
 // Deployed Worker (API) version, imported from shared/version.js so it can't
 // drift from src/lib/version.js's APP_VERSION. Surfaced at GET /api/version —
@@ -932,6 +933,42 @@ export function sanitizeLabels(labels) {
   return out;
 }
 
+// ---------- push notification helpers (TODO #7 phase 1) ----------
+// HH:mm, minutes restricted to 15-minute increments to match the cron's
+// check granularity (see runReminderPass below) — any other value would
+// simply never fire.
+const REMINDER_TIME_RE = /^([01]\d|2[0-3]):(00|15|30|45)$/;
+
+// Computes the current Europe/Oslo local wall-clock time plus "today"/
+// "tomorrow" calendar dates from a UTC timestamp, via Intl's IANA tz
+// database rather than manual UTC-offset math — this correctly follows
+// Oslo's CET/CEST DST transitions. Two known, accepted edge cases (not
+// fixed here): a reminder time that falls in the skipped local hour on the
+// spring-forward day silently doesn't fire that one day/year, and the
+// repeated local hour on the fall-back day makes two different UTC cron
+// ticks resolve to the same hhmm/target date — notification_log's
+// UNIQUE(list_id, type, target_date) constraint absorbs that as a no-op
+// second attempt rather than a double-send.
+export function osloLocalDateParts(nowMs) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Oslo", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const p = Object.fromEntries(fmt.formatToParts(nowMs).map((x) => [x.type, x.value]));
+  const today = `${p.year}-${p.month}-${p.day}`;
+  // Built from the local calendar date (not nowMs directly) so "+1 day"
+  // can't be thrown off by the local UTC offset near midnight.
+  const tomorrow = new Date(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day) + 1))
+    .toISOString().slice(0, 10);
+  return { hhmm: `${p.hour}:${p.minute}`, today, tomorrow };
+}
+
+// Both sides are plain HH:mm strings — callers ensure configuredTime is
+// already validated/normalized at the notification-settings endpoint.
+export function isReminderDue(hhmm, configuredTime) {
+  return hhmm === configuredTime;
+}
+
 // ---------- response helpers ----------
 const json = (data, status = 200, extra = {}) =>
   new Response(JSON.stringify(data), {
@@ -977,11 +1014,12 @@ async function mintToken(u, env) {
 }
 
 // Username is a by-value copy — not a foreign key — inside list_items.added_by,
-// meal_plan.responsible, recurring_schedule.responsible, users.created_by, and
-// password_resets.username (see TODO #17), so renaming it means updating
-// every one of those alongside the users row itself, in one batch so they
-// can't drift apart. Callers must mint a fresh token afterward — the caller's
-// existing JWT's `sub` now points at a row that no longer exists.
+// meal_plan.responsible, recurring_schedule.responsible, users.created_by,
+// password_resets.username, and push_subscriptions.username (see TODO #17),
+// so renaming it means updating every one of those alongside the users row
+// itself, in one batch so they can't drift apart. Callers must mint a fresh
+// token afterward — the caller's existing JWT's `sub` now points at a row
+// that no longer exists.
 async function renameUsername(env, oldUsername, newUsername) {
   await env.DB.batch([
     env.DB.prepare("UPDATE list_items SET added_by = ?1 WHERE added_by = ?2").bind(newUsername, oldUsername),
@@ -989,6 +1027,7 @@ async function renameUsername(env, oldUsername, newUsername) {
     env.DB.prepare("UPDATE recurring_schedule SET responsible = ?1 WHERE responsible = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE users SET created_by = ?1 WHERE created_by = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE password_resets SET username = ?1 WHERE username = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE push_subscriptions SET username = ?1 WHERE username = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE users SET username = ?1, email = ?1 WHERE username = ?2 COLLATE NOCASE").bind(newUsername, oldUsername),
   ]);
 }
@@ -1132,6 +1171,72 @@ async function verifyGoogleIdToken(idToken) {
 }
 
 // ---------- main ----------
+// Sends one push notification to one subscription, deleting the row if the
+// push service reports it's gone (404/410 — the standard signal a
+// subscription has expired or been revoked, distinct from a transient
+// delivery failure). VAPID's `sub` claim (RFC 8292 requires a mailto:/https:
+// contact URI) reuses the existing FEEDBACK_EMAIL secret rather than adding
+// a new env var.
+async function sendPushToSubscription(env, sub, payload) {
+  try {
+    const { endpoint, headers, body } = await buildPushHTTPRequest({
+      privateJWK: JSON.parse(env.VAPID_PRIVATE_KEY),
+      subscription: { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      message: { payload, adminContact: `mailto:${env.FEEDBACK_EMAIL}` },
+    });
+    const res = await fetch(endpoint, { method: "POST", headers, body });
+    if (res.status === 404 || res.status === 410) {
+      await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1").bind(sub.endpoint).run();
+    }
+  } catch (e) {
+    // Don't let one bad subscription (network hiccup, malformed keys) abort
+    // the fan-out to the rest of a list's devices.
+    console.error("push send failed", e?.message ?? e);
+  }
+}
+
+// The "no meal planned for tomorrow" reminder (TODO #7 phase 1). Exported
+// (not just called from `scheduled` below) and takes `now` as a parameter
+// rather than reading Date.now() internally, so integration tests can call
+// it directly with a fabricated timestamp against a real local D1, instead
+// of depending on wrangler dev's scheduled-event simulation.
+export async function runReminderPass(env, nowMs) {
+  const { hhmm, tomorrow } = osloLocalDateParts(nowMs);
+  const { results: enabledLists } = await env.DB.prepare(
+    "SELECT list_id, meal_reminder_time FROM notification_settings WHERE meal_reminder_enabled = 1"
+  ).all();
+  const dueListIds = enabledLists
+    .filter((row) => isReminderDue(hhmm, row.meal_reminder_time))
+    .map((row) => row.list_id);
+
+  for (const list_id of dueListIds) {
+    const plan = await env.DB.prepare(
+      "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
+    ).bind(list_id, tomorrow).first();
+    if (plan && plan.meal_id !== null) continue; // already planned
+
+    // Dedup guard: INSERT OR IGNORE fails silently (changes === 0) if this
+    // list/date was already notified today — including a second cron tick
+    // that resolves to the same local hhmm on an Oslo DST fall-back day.
+    const inserted = await env.DB.prepare(
+      "INSERT OR IGNORE INTO notification_log (list_id, type, target_date) VALUES (?1, 'meal_reminder', ?2)"
+    ).bind(list_id, tomorrow).run();
+    if (inserted.meta.changes === 0) continue;
+
+    const { results: subs } = await env.DB.prepare(
+      "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE list_id = ?1"
+    ).bind(list_id).all();
+    // Kept minimal — encrypted Web Push payloads have a ~4KB ceiling and
+    // there's no reason to carry meal data for a "plan something" nudge.
+    const payload = {
+      title: "Ingen middag planlagt i morgen",
+      body: "Åpne Panhandle for å planlegge middag.",
+      url: "/app.html",
+    };
+    await Promise.all(subs.map((sub) => sendPushToSubscription(env, sub, payload)));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -1542,12 +1647,19 @@ export default {
             env.DB.prepare("DELETE FROM meal_plan WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM meal_catalogue WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM recurring_schedule WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(user.list_id),
           ]);
         }
       }
       if (!listDeleted) {
+        // A push subscription is a live credential, not historical data like
+        // added_by/responsible — a departing user shouldn't keep receiving
+        // this list's reminders on their device.
+        await env.DB.prepare("DELETE FROM push_subscriptions WHERE username = ?1")
+          .bind(user.username).run();
         // Deleting the row makes requireAuth's DB lookup fail (no row) on the
         // user's next request → 401 → re-login, so no token_version bump
         // needed — same reasoning as DELETE /list-users.
@@ -1733,12 +1845,16 @@ export default {
             env.DB.prepare("DELETE FROM meal_plan WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM meal_catalogue WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM recurring_schedule WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(row.list_id),
           ]);
         }
       }
       if (!listDeleted) {
+        await env.DB.prepare("DELETE FROM push_subscriptions WHERE username = ?1")
+          .bind(row.username).run();
         await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
           .bind(row.username).run();
       }
@@ -1870,6 +1986,11 @@ export default {
         ).bind(user.list_id).first();
         if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne listens eneste eier" }, 400);
       }
+      // A push subscription is a live credential, not historical data like
+      // added_by/responsible — a removed member shouldn't keep receiving
+      // this list's reminders on their device.
+      await env.DB.prepare("DELETE FROM push_subscriptions WHERE username = ?1 AND list_id = ?2")
+        .bind(row.username, user.list_id).run();
       // Deleting the row makes requireAuth's DB lookup fail (no row) on the
       // user's next request → 401 → re-login, so no token_version bump needed.
       await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
@@ -2256,6 +2377,81 @@ export default {
       return authedJson({ ok: true });
     }
 
+    // ===== PUSH NOTIFICATIONS (TODO #7 phase 1) =====
+    // Kept behind the auth boundary — a user must already be logged in
+    // before reaching the "enable notifications" control, so there's no
+    // need for a new public route the way /version is.
+    if (path === "/push/vapid-public-key" && method === "GET") {
+      return authedJson({ publicKey: env.VAPID_PUBLIC_KEY || null });
+    }
+
+    // A push subscription belongs to a browser/device, not an account — on a
+    // shared household device, whoever last (re)subscribed owns it, so this
+    // upserts by `endpoint` (the table's primary key), not by username.
+    if (path === "/push/subscribe" && method === "POST") {
+      const body = await readJson(request);
+      if (!body?.endpoint || !body?.keys?.p256dh || !body?.keys?.auth) {
+        return authedJson({ error: "Ugyldig abonnement" }, 400);
+      }
+      await env.DB.prepare(`
+        INSERT INTO push_subscriptions (endpoint, username, list_id, p256dh, auth)
+        VALUES (?1, ?2, ?3, ?4, ?5)
+        ON CONFLICT(endpoint) DO UPDATE SET
+          username = excluded.username, list_id = excluded.list_id,
+          p256dh = excluded.p256dh, auth = excluded.auth, updated_at = datetime('now')
+      `).bind(body.endpoint, user.username, user.list_id, body.keys.p256dh, body.keys.auth).run();
+      return authedJson({ ok: true });
+    }
+
+    // Called on toggle-off, and from the frontend's `pushsubscriptionchange`
+    // handler when a browser silently rotates a subscription.
+    if (path === "/push/subscribe" && method === "DELETE") {
+      const body = await readJson(request);
+      if (!body?.endpoint) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1")
+        .bind(body.endpoint).run();
+      return authedJson({ ok: true });
+    }
+
+    // Shared household setting — same permission level as /recurring (any
+    // list member, not owner-gated). No row exists until someone visits
+    // Settings and changes something, so GET falls back to app-level
+    // defaults rather than requiring a seeded row per list.
+    if (path === "/notification-settings" && method === "GET") {
+      const row = await env.DB.prepare(
+        "SELECT meal_reminder_enabled, meal_reminder_time FROM notification_settings WHERE list_id = ?1"
+      ).bind(user.list_id).first();
+      return authedJson({
+        meal_reminder_enabled: row ? !!row.meal_reminder_enabled : true,
+        meal_reminder_time: row?.meal_reminder_time || "18:00",
+      });
+    }
+
+    if (path === "/notification-settings" && method === "POST") {
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      // 15-minute increments only, matching the cron's check granularity —
+      // any other value would just never fire.
+      if (!REMINDER_TIME_RE.test(body.meal_reminder_time || "")) {
+        return authedJson({ error: "Ugyldig tidspunkt" }, 400);
+      }
+      await env.DB.prepare(`
+        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT(list_id) DO UPDATE SET
+          meal_reminder_enabled = excluded.meal_reminder_enabled,
+          meal_reminder_time = excluded.meal_reminder_time,
+          updated_at = datetime('now')
+      `).bind(user.list_id, body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time).run();
+      return authedJson({ ok: true });
+    }
+
     return authedJson({ error: "Not found" }, 404);
-  }
+  },
+
+  // Cron-driven (see [triggers] in wrangler.toml). Thin wrapper so the actual
+  // logic (runReminderPass, above) stays independently callable/testable.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runReminderPass(env, event.scheduledTime));
+  },
 };

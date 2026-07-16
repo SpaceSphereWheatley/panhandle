@@ -139,11 +139,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      # worker/index.js imports @pushforge/builder (Web Push encryption —
+      # see CLAUDE.md's Push notifications section) as of TODO #7 phase 1,
+      # so node:test can no longer resolve the file's imports without
+      # node_modules present, unlike when the backend was fully dependency-free.
+      - run: npm ci
 
       # Pure/crypto helpers only (tests/worker-unit.test.mjs, via node:test) —
-      # no D1, no wrangler dev, so this stays fast and dependency-free.
-      # wrangler-dev-backed integration tests (tests/*.test.mjs) intentionally
-      # stay out of CI; see CLAUDE.md's Testing conventions section.
+      # no D1, no wrangler dev needed. wrangler-dev-backed integration tests
+      # (tests/*.test.mjs) intentionally stay out of CI; see CLAUDE.md's
+      # Testing conventions section.
       - run: node --test tests/worker-unit.test.mjs
 
   notify-on-failure:
