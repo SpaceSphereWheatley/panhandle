@@ -27,11 +27,15 @@ const INTENSITY_OPTIONS = [
   { value: "classic", label: "Klassisk" },
 ];
 
-// Island 1 — "Meg & Min App": grouped "me" first (identity display, then
-// accordioned Navn/E-post/Bytt passord/Logg ut/Slett konto), then "min app"
-// (Designintensitet, Tema, Vibrasjon). The PWA install highlight is its own
-// standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling after this
-// card rather than a row nested inside it.
+// Island 1 — one Card split into two labeled subsections via SectionHeader:
+// "Konto" (identity display, then accordioned Navn/E-post/Bytt passord/
+// Logg ut/Slett konto) and "Appinnstillinger" (Designintensitet, Tema,
+// Vibrasjon). Two headers in one Card rather than two separate Card islands
+// — keeps the extra chrome/padding down on an already-long Settings tab
+// (same reasoning as HomeIsland merging MembersIsland/RecurringIsland).
+// The PWA install highlight is its own standalone CTA — see
+// PwaInstallCTA.jsx — rendered as a sibling after this card rather than a
+// row nested inside it.
 export function ProfileIsland() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
@@ -167,7 +171,7 @@ export function ProfileIsland() {
 
   return (
     <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
-      <SectionHeader>Meg &amp; min app</SectionHeader>
+      <SectionHeader>Konto</SectionHeader>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginBottom: 18 }}>{user}</div>
@@ -265,7 +269,9 @@ export function ProfileIsland() {
         </AccordionRow>
       </AccordionGroup>
 
-      <div style={{ marginTop: 18, marginBottom: 14 }}>
+      <SectionHeader style={{ margin: "18px -24px 18px" }}>Appinnstillinger</SectionHeader>
+
+      <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
         <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
       </div>
