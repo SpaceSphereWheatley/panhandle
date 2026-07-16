@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.23.5] — 2026-07-16
+
+### Added
+- **A real favicon.** The site previously had no `<link rel="icon">` at all
+  (just an `apple-touch-icon`), so browser tabs and bookmarks fell back to
+  a generic globe/blank icon. Added `favicon.svg` (crisp at any size,
+  modern browsers), a 32×32 PNG fallback, and a hand-built multi-resolution
+  `favicon.ico` (for user agents that ignore `<link>` tags and request
+  `/favicon.ico` directly) — all rasterized from the same
+  `panhandle-icon.svg` mark the app icons already use, so the tab icon now
+  matches the home-screen/PWA icon. Wired into `app.html`, `public/index.html`,
+  and `public/changelog.html`.
+
 ## [1.23.4] — 2026-07-16
 
 ### Changed
