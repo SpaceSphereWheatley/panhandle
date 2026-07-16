@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "../../lib/api.js";
-import { useListUsers } from "../../context/ListUsersContext.jsx";
-import { iconForItem } from "../../lib/itemIcons.js";
-import { APP_VERSION } from "../../lib/version.js";
-import { CredentialsModal } from "../CredentialsModal.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { Card, Input } from "../../design-system/index.js";
-import { AccordionRow } from "./AccordionRow.jsx";
-import { AccordionGroup } from "./AccordionGroup.jsx";
-import { SectionHeader } from "./SectionHeader.jsx";
-import { MetricsSettings } from "./MetricsSettings.jsx";
-import { useConfirm } from "../../context/ConfirmContext.jsx";
-import { useToast } from "../../context/ToastContext.jsx";
-import { useMotionConfig } from "../../hooks/useMotionConfig.js";
+import { api } from "../../../lib/api.js";
+import { useListUsers } from "../../../context/ListUsersContext.jsx";
+import { iconForItem } from "../../../lib/itemIcons.js";
+import { APP_VERSION } from "../../../lib/version.js";
+import { CredentialsModal } from "../../CredentialsModal.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import { Card, Input } from "../../../design-system/index.js";
+import { AccordionRow } from "../AccordionRow.jsx";
+import { AccordionGroup } from "../AccordionGroup.jsx";
+import { SettingsRow } from "../SettingsRow.jsx";
+import { useConfirm } from "../../../context/ConfirmContext.jsx";
+import { useToast } from "../../../context/ToastContext.jsx";
+import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
 
 const MotionRow = motion.div;
 
-// Island 4 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
-// dashboard, then the heavier management tools accordioned.
-export function AdminIsland() {
+// Administrasjon subpage — directly-visible 2x2 stats, then the heavier
+// management tools accordioned (admin is a power-user screen, so this
+// density is fine). Statistikk is promoted out to its own subpage/row
+// instead of one more accordion, since a full charts dashboard needs its
+// own screen (see StatistikkSubpage.jsx).
+export function AdminSubpage({ onNavigate }) {
   const { user: currentUser, isSuperAdmin } = useAuth();
   const { refresh: refreshListUsers } = useListUsers();
   const confirm = useConfirm();
@@ -82,9 +84,6 @@ export function AdminIsland() {
     const flagLabel = flag === "is_admin" ? "admin" : "eier";
     const verb = value ? `gjøre ${username} til ${flagLabel}` : `fjerne ${flagLabel}-tilgangen til ${username}`;
     if (!(await confirm(`Er du sikker på at du vil ${verb}?`, { title: "Endre tilgang?", confirmLabel: "Bekreft", danger: !value }))) {
-      // The checkbox's native DOM state already flipped on click, ahead of
-      // this async confirmation — force a render so React's controlled
-      // `checked` prop (unchanged, since we're bailing) resyncs onto it.
       setUsers((prev) => [...prev]);
       return;
     }
@@ -169,9 +168,7 @@ export function AdminIsland() {
   for (const u of users) (groups[u.list_id] = groups[u.list_id] || []).push(u);
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
-      <SectionHeader>Administrasjon</SectionHeader>
-
+    <Card padding="lg" style={{ overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 6 }}>
         <StatTile label="Varer i katalog" value={catCount} icon="package" />
         <StatTile label="Varer uten ikon" value={iconGapCount} icon="image-square" />
@@ -263,13 +260,19 @@ export function AdminIsland() {
             </div>
           ))}
         </AccordionRow>
-
-        {isSuperAdmin && (
-          <AccordionRow label="Statistikk (alle lister)">
-            <MetricsSettings />
-          </AccordionRow>
-        )}
       </AccordionGroup>
+
+      {isSuperAdmin && (
+        <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 4 }}>
+          <SettingsRow
+            icon="chart-bar"
+            tone="secondary"
+            label="Statistikk"
+            supportingText="Bruksdata for alle lister"
+            onClick={() => onNavigate(["admin", "statistikk"])}
+          />
+        </div>
+      )}
 
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />

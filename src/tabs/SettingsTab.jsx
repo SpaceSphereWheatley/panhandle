@@ -1,50 +1,20 @@
-import { useAuth } from "../context/AuthContext.jsx";
-import { ProfileIsland } from "../components/settings/ProfileIsland.jsx";
-import { AppSettingsIsland } from "../components/settings/AppSettingsIsland.jsx";
-import { NotificationsIsland } from "../components/settings/NotificationsIsland.jsx";
-import { PwaInstallCTA } from "../components/settings/PwaInstallCTA.jsx";
-import { HomeIsland } from "../components/settings/HomeIsland.jsx";
-import { AdminIsland } from "../components/settings/AdminIsland.jsx";
-import { AboutFooter } from "../components/settings/AboutFooter.jsx";
+import { SettingsRoot } from "../components/settings/SettingsRoot.jsx";
+import { KontoSubpage } from "../components/settings/subpages/KontoSubpage.jsx";
+import { VarslerSubpage } from "../components/settings/subpages/VarslerSubpage.jsx";
+import { HjemSubpage } from "../components/settings/subpages/HjemSubpage.jsx";
+import { AdminSubpage } from "../components/settings/subpages/AdminSubpage.jsx";
+import { StatistikkSubpage } from "../components/settings/subpages/StatistikkSubpage.jsx";
 
-// A single scrolling screen of always-visible island containers, rather
-// than a drill-down menu — Designintensitet, the PWA highlight, and the
-// admin stats grid all need to be directly visible, which a subpage-behind-
-// navigation model can't give them. Each island carries its own section
-// title as a header strip baked into its Card (see SectionHeader.jsx)
-// instead of a label floating above it, so the title reads as part of its
-// card rather than a separate element competing with it. The extra
-// marginBottom on each section wrapper (on top of each island's own
-// internal spacing) is what visually separates the sections from each other.
-export function SettingsTab() {
-  const { isAdmin } = useAuth();
-  return (
-    <section>
-      <PwaInstallCTA />
+// Router over the Settings nav stack owned by AppShell (settingsPath / the
+// shared Header's title+back button live there — see AppShell.jsx). This
+// component only decides which screen's body to render.
+export function SettingsTab({ settingsPath = [], onNavigate }) {
+  const [root, sub] = settingsPath;
 
-      <div style={{ marginBottom: 24 }}>
-        <ProfileIsland />
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <AppSettingsIsland />
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <NotificationsIsland />
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <HomeIsland />
-      </div>
-
-      {isAdmin && (
-        <div style={{ marginBottom: 24 }}>
-          <AdminIsland />
-        </div>
-      )}
-
-      <AboutFooter />
-    </section>
-  );
+  if (root === "konto") return <KontoSubpage />;
+  if (root === "varsler") return <VarslerSubpage />;
+  if (root === "hjem") return <HjemSubpage />;
+  if (root === "admin" && sub === "statistikk") return <StatistikkSubpage />;
+  if (root === "admin") return <AdminSubpage onNavigate={onNavigate} />;
+  return <SettingsRoot onNavigate={onNavigate} />;
 }

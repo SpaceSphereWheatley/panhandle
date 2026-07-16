@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.26.0] — 2026-07-16
+
+### Changed
+- **Settings redesigned as a two-tier grouped list with subpages, instead of
+  six always-open accordion islands on one long scroll.** The root screen
+  now shows two compact grouped clusters — device-local prefs
+  (Designintensitet, Tema, Vibrasjon) and navigable rows (Konto, Varsler,
+  Vårt hjem, Administrasjon) — each opening its own subpage with a back
+  button, both in-app and via the hardware/browser back button. Konto's
+  fields are no longer hidden behind accordions now that a subpage has room,
+  and its Logg ut/Slett konto actions are pulled into a visually distinct
+  danger zone. Statistikk (superadmin) is promoted from a fold-out nested
+  three levels deep inside Administrasjon into its own full subpage.
+
 ## [1.25.0] — 2026-07-16
 
 ### Added

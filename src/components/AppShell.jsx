@@ -11,6 +11,17 @@ import { haptic } from "../lib/shoppingUtils.js";
 
 const TITLES = { list: "Handleliste", meals: "Måltider", settings: "Innstillinger" };
 
+// Settings subpage titles, keyed by the joined settingsPath (e.g.
+// "admin/statistikk") — drives the single shared Header when a Settings
+// subpage is open, so subpages never render their own second header.
+const SETTINGS_SUBPAGE_TITLES = {
+  konto: "Konto",
+  varsler: "Varsler",
+  hjem: "Vårt hjem",
+  admin: "Administrasjon",
+  "admin/statistikk": "Statistikk",
+};
+
 export function AppShell() {
   const [tab, setTab] = useState("list");
   // Tabs are mounted once (on first visit) and then kept alive, hidden via
@@ -19,21 +30,27 @@ export function AppShell() {
   const [visited, setVisited] = useState({ list: true });
   const [sync, setSync] = useState({ text: "", offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
+  // Nav stack for the Settings tab only (e.g. [], ["konto"],
+  // ["admin","statistikk"]) — lives here rather than in SettingsTab so it
+  // shares the one history/popstate mechanism below instead of a second one.
+  // Not reset on tab switch, so returning to Settings resumes where you left off.
+  const [settingsPath, setSettingsPath] = useState([]);
   const toast = useToast();
   const applyingPopRef = useRef(false);
 
   useDeployVersionCheck({ toast, onOpenChangelog: () => setShowChangelog(true) });
 
-  // Tab switches each push a history entry so the hardware/browser back
-  // button steps through them instead of exiting the installed PWA outright
-  // — there's no other history to fall back to. (Modals don't participate
-  // in this yet — see CLAUDE.md/PR notes.)
+  // Tab switches (and Settings subpage navigations) each push a history
+  // entry so the hardware/browser back button steps through them instead of
+  // exiting the installed PWA outright — there's no other history to fall
+  // back to. (Modals don't participate in this yet — see CLAUDE.md/PR notes.)
   useEffect(() => {
-    history.replaceState({ tab: "list" }, "");
+    history.replaceState({ tab: "list", settingsPath: [] }, "");
     function onPopState(e) {
-      const state = e.state || { tab: "list" };
+      const state = e.state || { tab: "list", settingsPath: [] };
       applyingPopRef.current = true;
       setTab(state.tab);
+      setSettingsPath(state.settingsPath || []);
       setVisited((prev) => (prev[state.tab] ? prev : { ...prev, [state.tab]: true }));
       applyingPopRef.current = false;
     }
@@ -43,7 +60,17 @@ export function AppShell() {
 
   function pushNav(nextTab) {
     if (applyingPopRef.current) return;
-    history.pushState({ tab: nextTab }, "");
+    history.pushState({ tab: nextTab, settingsPath }, "");
+  }
+
+  // Pushes a new Settings subpage (e.g. ["konto"], ["admin","statistikk"]).
+  // Back navigation — hardware/browser back or a subpage's Header back
+  // arrow — always goes through history.back(), which lands on onPopState
+  // above, so both back mechanisms share one code path and can't drift.
+  function pushSettingsPath(path) {
+    if (applyingPopRef.current) return;
+    setSettingsPath(path);
+    history.pushState({ tab: "settings", settingsPath: path }, "");
   }
 
   function onSyncTick() {
@@ -62,12 +89,16 @@ export function AppShell() {
     pushNav(t);
   }
 
-  const title = TITLES[tab];
+  const settingsSubpageTitle = tab === "settings" && settingsPath.length > 0
+    ? SETTINGS_SUBPAGE_TITLES[settingsPath.join("/")]
+    : null;
+  const title = settingsSubpageTitle || TITLES[tab];
 
   return (
     <div id="app">
       <Header
         title={title}
+        onBack={settingsSubpageTitle ? () => history.back() : undefined}
         action={
           <span
             className={`sync${sync.offline ? " offline" : ""}`}
@@ -91,7 +122,7 @@ export function AppShell() {
         )}
         {visited.settings && (
           <div style={{ display: tab === "settings" ? "block" : "none" }}>
-            <SettingsTab />
+            <SettingsTab settingsPath={settingsPath} onNavigate={pushSettingsPath} />
           </div>
         )}
       </main>
