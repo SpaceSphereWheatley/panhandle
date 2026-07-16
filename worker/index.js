@@ -874,19 +874,18 @@ export function genPassword() {
   return out.join("").replace(/(.{4})(.{4})(.{4})/, "$1-$2-$3");
 }
 
-// Normalizes/validates a username from request input. Letters (incl. æøå),
-// digits, and . _ - only; 1-32 chars. Returns null if invalid.
-export function cleanUsername(u) {
-  const s = (u || "").trim();
-  if (!s || s.length > 32) return null;
-  if (!/^[\p{L}\p{N}._-]+$/u.test(s)) return null;
-  return s;
-}
-
 // Cheap format check shared by /register and /change-email — not RFC-strict,
 // just enough to reject obvious garbage before it hits the DB/Resend.
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "");
+}
+
+// Cleans a free-typed display name (Settings, signup, admin/owner creation):
+// trims, collapses internal whitespace, caps length. Unlike capitalizeName
+// (catalogue items), a person's name isn't force-capitalized — nicknames/
+// casing like "iPhone-Ola" should survive as typed. Returns "" if blank.
+export function sanitizeDisplayName(name) {
+  return (name || "").trim().replace(/\s+/g, " ").slice(0, 60);
 }
 
 // Recognises a gluten-free marker (GF / gf / glutenfri / glutenfritt) typed as
@@ -977,6 +976,23 @@ async function mintToken(u, env) {
   }, env.JWT_SECRET);
 }
 
+// Username is a by-value copy — not a foreign key — inside list_items.added_by,
+// meal_plan.responsible, recurring_schedule.responsible, users.created_by, and
+// password_resets.username (see TODO #17), so renaming it means updating
+// every one of those alongside the users row itself, in one batch so they
+// can't drift apart. Callers must mint a fresh token afterward — the caller's
+// existing JWT's `sub` now points at a row that no longer exists.
+async function renameUsername(env, oldUsername, newUsername) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE list_items SET added_by = ?1 WHERE added_by = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE meal_plan SET responsible = ?1 WHERE responsible = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE recurring_schedule SET responsible = ?1 WHERE responsible = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE users SET created_by = ?1 WHERE created_by = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE password_resets SET username = ?1 WHERE username = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE users SET username = ?1, email = ?1 WHERE username = ?2 COLLATE NOCASE").bind(newUsername, oldUsername),
+  ]);
+}
+
 // Site-wide metrics (across every list) are gated beyond ordinary is_admin
 // (which is deliberately per-list) via this env var — a comma-separated
 // allowlist of usernames, set as a Worker dashboard variable alongside
@@ -993,7 +1009,7 @@ export function isSuperAdmin(username, env) {
 async function authResponse(row, env) {
   const token = await mintToken(row, env);
   return {
-    token, user: row.username,
+    token, user: row.username, name: row.name || row.username,
     is_admin: row.is_admin, is_owner: row.is_owner, list_id: row.list_id,
     is_superadmin: isSuperAdmin(row.username, env),
   };
@@ -1155,7 +1171,7 @@ export default {
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { username, password } = body;
       const row = await env.DB.prepare(
-        "SELECT username, pass_hash, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+        "SELECT username, name, pass_hash, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind((username || "").trim()).first();
       // Always run the PBKDF2 check (against a dummy hash for unknown users) so
       // login latency doesn't reveal whether a username exists.
@@ -1163,7 +1179,7 @@ export default {
       if (!row || !ok) {
         await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
           .bind(ip, Date.now()).run();
-        return json({ error: "Feil brukernavn eller passord" }, 401);
+        return json({ error: "Feil e-post eller passord" }, 401);
       }
       return json(await authResponse(row, env));
     }
@@ -1186,9 +1202,11 @@ export default {
       await recordAttempt(env, ip, "register");
 
       // Cheap local validation first, before spending Turnstile's external
-      // round-trip on a request that was going to be rejected anyway.
-      const uname = cleanUsername(body.username);
-      if (!uname) return json({ error: "Ugyldig brukernavn" }, 400);
+      // round-trip on a request that was going to be rejected anyway. Username
+      // is always the e-mail (see TODO #17) — there's no separate username
+      // field to collect.
+      const cleanName = sanitizeDisplayName(body.name);
+      if (!cleanName) return json({ error: "Skriv inn et navn" }, 400);
       if (!body.password || body.password.length < 8) {
         return json({ error: "Passord må være minst 8 tegn" }, 400);
       }
@@ -1199,21 +1217,17 @@ export default {
       if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
         return json({ error: "Bot-verifisering feilet" }, 403);
       }
-      const existingUser = await env.DB.prepare(
-        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
-      ).bind(uname).first();
-      if (existingUser) return json({ error: "Brukernavnet er opptatt" }, 409);
       const existingEmail = await env.DB.prepare(
-        "SELECT 1 FROM users WHERE email = ?1 COLLATE NOCASE"
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
       ).bind(cleanEmail).first();
       if (existingEmail) return json({ error: "E-posten er allerede i bruk" }, 409);
 
       const hash = await hashPassword(body.password);
       const listId = await createList(env, (body.list_name || "").trim() || null);
       await env.DB.prepare(
-        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email) VALUES (?1, ?2, 1, 0, 1, ?3, 'self-register', ?4)"
-      ).bind(uname, hash, listId, cleanEmail).run();
-      const row = { username: uname, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, name) VALUES (?1, ?2, 1, 0, 1, ?3, 'self-register', ?4, ?5)"
+      ).bind(cleanEmail, hash, listId, cleanEmail, cleanName).run();
+      const row = { username: cleanEmail, name: cleanName, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
       return json(await authResponse(row, env));
     }
 
@@ -1233,18 +1247,28 @@ export default {
       const email = payload.email.toLowerCase();
 
       let row = await env.DB.prepare(
-        "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE google_sub = ?1"
+        "SELECT username, name, token_version, is_admin, is_owner, list_id FROM users WHERE google_sub = ?1"
       ).bind(payload.sub).first();
 
       if (!row) {
         row = await env.DB.prepare(
-          "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE email = ?1 COLLATE NOCASE"
+          "SELECT username, name, token_version, is_admin, is_owner, list_id FROM users WHERE email = ?1 COLLATE NOCASE"
         ).bind(email).first();
         if (row) {
           // First time this existing (password) account signs in with Google —
           // link it so future Google sign-ins match directly by google_sub.
           await env.DB.prepare("UPDATE users SET google_sub = ?1 WHERE username = ?2 COLLATE NOCASE")
             .bind(payload.sub, row.username).run();
+          // Seed the display name from Google once, only if the account
+          // doesn't already have one — never overwrites a local edit.
+          if (!row.name && payload.name) {
+            const seeded = sanitizeDisplayName(payload.name);
+            if (seeded) {
+              await env.DB.prepare("UPDATE users SET name = ?1 WHERE username = ?2 COLLATE NOCASE")
+                .bind(seeded, row.username).run();
+              row.name = seeded;
+            }
+          }
         }
       }
 
@@ -1253,26 +1277,20 @@ export default {
           return json({ error: "For mange registreringsforsøk. Prøv igjen senere." }, 429);
         }
         await recordAttempt(env, ip, "register");
-        const uname = cleanUsername(email.split("@")[0]) || `bruker${Date.now()}`;
-        // Google's sub is globally unique per account, unlike a username derived
-        // from the email's local part — fall back to appending digits on clash.
-        let finalUname = uname;
-        for (let i = 0; i < 5; i++) {
-          const clash = await env.DB.prepare(
-            "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
-          ).bind(finalUname).first();
-          if (!clash) break;
-          finalUname = `${uname}${Math.floor(Math.random() * 10000)}`;
-        }
+        // Username is always the e-mail (see TODO #17) — email is already
+        // guaranteed fresh here (no row matched google_sub or email above),
+        // so there's no clash to resolve like the old local-part-derived
+        // username needed.
+        const displayName = sanitizeDisplayName(payload.name) || email.split("@")[0];
         // No password is ever handed to the user for a Google-only account —
         // stored as a hash of unknown random bytes so /login always fails
         // safely until they run /forgot-password on this same verified email.
         const hash = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
         const listId = await createList(env, (body.list_name || "").trim() || null);
         await env.DB.prepare(
-          "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, google_sub) VALUES (?1, ?2, 1, 0, 1, ?3, 'google', ?4, ?5)"
-        ).bind(finalUname, hash, listId, email, payload.sub).run();
-        row = { username: finalUname, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
+          "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, google_sub, name) VALUES (?1, ?2, 1, 0, 1, ?3, 'google', ?4, ?5, ?6)"
+        ).bind(email, hash, listId, email, payload.sub, displayName).run();
+        row = { username: email, name: displayName, token_version: 1, is_admin: 0, is_owner: 1, list_id: listId };
       }
 
       return json(await authResponse(row, env));
@@ -1339,7 +1357,7 @@ export default {
       if (!reset) return json({ error: "Ugyldig eller utløpt lenke" }, 400);
 
       const userRow = await env.DB.prepare(
-        "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+        "SELECT username, name, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(reset.username).first();
       if (!userRow) return json({ error: "Fant ikke bruker" }, 404);
 
@@ -1403,12 +1421,25 @@ export default {
       return json({ ok: true, token: tokenAfter });
     }
 
-    // ===== ACCOUNT (email, used for Google sign-in linking + password recovery) =====
+    // ===== ACCOUNT (name/email; email doubles as username, see TODO #17) =====
     if (path === "/account" && method === "GET") {
       const row = await env.DB.prepare(
-        "SELECT email FROM users WHERE username = ?1 COLLATE NOCASE"
+        "SELECT email, name FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(user.username).first();
-      return authedJson({ email: row.email || null });
+      return authedJson({ email: row.email || null, name: row.name || user.username, username: user.username });
+    }
+
+    // Display name only — unlike email/password, this isn't security-sensitive
+    // (not used to log in or recover the account), so no current_password
+    // check is required.
+    if (path === "/change-name" && method === "POST") {
+      const body = await readJson(request);
+      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const cleanName = sanitizeDisplayName(body.name);
+      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
+      await env.DB.prepare("UPDATE users SET name = ?1 WHERE username = ?2 COLLATE NOCASE")
+        .bind(cleanName, user.username).run();
+      return authedJson({ ok: true, name: cleanName });
     }
 
     if (path === "/change-email" && method === "POST") {
@@ -1437,12 +1468,21 @@ export default {
         return json({ error: "Feil passord" }, 401);
       }
       const clash = await env.DB.prepare(
-        "SELECT 1 FROM users WHERE email = ?1 COLLATE NOCASE AND username != ?2 COLLATE NOCASE"
+        "SELECT 1 FROM users WHERE (email = ?1 COLLATE NOCASE OR username = ?1 COLLATE NOCASE) AND username != ?2 COLLATE NOCASE"
       ).bind(cleanEmail, user.username).first();
       if (clash) return json({ error: "E-posten er allerede i bruk av en annen konto" }, 409);
-      await env.DB.prepare("UPDATE users SET email = ?1 WHERE username = ?2 COLLATE NOCASE")
-        .bind(cleanEmail, user.username).run();
-      return authedJson({ ok: true, email: cleanEmail });
+      // Username always mirrors email (see TODO #17) — renaming cascades into
+      // every other table that stores it by value, so this isn't a plain
+      // single-column UPDATE. The caller's current JWT becomes stale the
+      // instant the rename lands (its `sub` is the old username), same as
+      // /change-password's token_version bump — return a fresh token in the
+      // body rather than relying on this request's X-Refresh-Token header,
+      // which was minted from the pre-rename username and is unusable.
+      if (cleanEmail !== user.username.toLowerCase()) {
+        await renameUsername(env, user.username, cleanEmail);
+      }
+      const token = await mintToken({ ...user, username: cleanEmail }, env);
+      return json({ ok: true, email: cleanEmail, username: cleanEmail, token });
     }
 
     // Self-service account deletion (phase 1 of TODO's account-lifecycle
@@ -1554,26 +1594,28 @@ export default {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const uname = cleanUsername(body.username);
-      if (!uname) return authedJson({ error: "Ugyldig brukernavn" }, 400);
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) return authedJson({ error: "Ugyldig e-post" }, 400);
+      const cleanName = sanitizeDisplayName(body.name);
+      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
       const exists = await env.DB.prepare(
-        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
-      ).bind(uname).first();
-      if (exists) return authedJson({ error: "Brukernavnet er opptatt" }, 409);
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
+      ).bind(cleanEmail).first();
+      if (exists) return authedJson({ error: "E-posten er allerede i bruk" }, 409);
       const password = genPassword();
       const hash = await hashPassword(password);
       const listId = await createList(env);
       await env.DB.prepare(
-        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, 0, 1, ?3, ?4)"
-      ).bind(uname, hash, listId, user.username).run();
-      return authedJson({ username: uname, password });
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, name) VALUES (?1, ?2, 1, 0, 1, ?3, ?4, ?5, ?6)"
+      ).bind(cleanEmail, hash, listId, user.username, cleanEmail, cleanName).run();
+      return authedJson({ username: cleanEmail, password });
     }
 
     // Every user in the system (across all lists) with their flags.
     if (path === "/admin/users" && method === "GET") {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
       const { results } = await env.DB.prepare(
-        "SELECT username, is_admin, is_owner, list_id, created_by FROM users ORDER BY list_id, username"
+        "SELECT username, name, is_admin, is_owner, list_id, created_by FROM users ORDER BY list_id, username"
       ).all();
       return authedJson(results);
     }
@@ -1764,7 +1806,7 @@ export default {
     // list (used to populate the meal-responsible dropdown).
     if (path === "/list-users" && method === "GET") {
       const { results } = await env.DB.prepare(
-        "SELECT username, is_admin, is_owner FROM users WHERE list_id = ?1 ORDER BY username"
+        "SELECT username, name, is_admin, is_owner FROM users WHERE list_id = ?1 ORDER BY username"
       ).bind(user.list_id).all();
       return authedJson(results);
     }
@@ -1774,24 +1816,26 @@ export default {
       if (!user.is_owner) return authedJson({ error: "Krever eier" }, 403);
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const uname = cleanUsername(body.username);
-      if (!uname) return authedJson({ error: "Ugyldig brukernavn" }, 400);
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) return authedJson({ error: "Ugyldig e-post" }, 400);
+      const cleanName = sanitizeDisplayName(body.name);
+      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
       const c = await env.DB.prepare(
         "SELECT COUNT(*) AS n FROM users WHERE list_id = ?1"
       ).bind(user.list_id).first();
       if (c.n >= 10) return authedJson({ error: "Listen er full (maks 10 brukere)" }, 400);
       const exists = await env.DB.prepare(
-        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE"
-      ).bind(uname).first();
-      if (exists) return authedJson({ error: "Brukernavnet er opptatt" }, 409);
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
+      ).bind(cleanEmail).first();
+      if (exists) return authedJson({ error: "E-posten er allerede i bruk" }, 409);
       const password = genPassword();
       const hash = await hashPassword(password);
       // is_admin/is_owner are hardcoded 0 — never taken from the request body,
       // so an owner can't self-escalate a member into an admin/owner.
       await env.DB.prepare(
-        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by) VALUES (?1, ?2, 1, 0, 0, ?3, ?4)"
-      ).bind(uname, hash, user.list_id, user.username).run();
-      return authedJson({ username: uname, password });
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, name) VALUES (?1, ?2, 1, 0, 0, ?3, ?4, ?5, ?6)"
+      ).bind(cleanEmail, hash, user.list_id, user.username, cleanEmail, cleanName).run();
+      return authedJson({ username: cleanEmail, password });
     }
 
     // Remove a member from the caller's list (owner only).

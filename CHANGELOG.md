@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.23.0] — 2026-07-16
+
+### Added
+- **Every account now has a Name, e-mail, and username, editable in
+  Settings — and the username always mirrors the e-mail.** Settings → "Meg
+  & min app" gained a "Navn" field (`POST /change-name`), shown as
+  "Innlogget som" throughout the app (shopping-list "lagt til av", meal
+  responsible avatars/dropdowns, member lists) instead of the raw
+  username/e-mail. Signing in with Google now seeds Name/e-mail from your
+  Google profile the first time (never overwriting a later local edit).
+  Changing your e-mail (`POST /change-email`) now renames your username to
+  match everywhere it's stored (shopping items, meal-plan responsibility,
+  recurring schedule) and signs you into a fresh session automatically.
+  Adding a household member or a new owner (Settings → "Legg til
+  medlem"/"Opprett eier") now asks for their name and e-mail instead of a
+  freeform username. Existing accounts whose username didn't already match
+  their e-mail were migrated directly in production.
+
 ## [1.22.7] — 2026-07-16
 
 ### Changed

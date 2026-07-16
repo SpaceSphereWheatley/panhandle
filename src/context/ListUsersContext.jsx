@@ -26,8 +26,18 @@ export function ListUsersProvider({ children }) {
 
   const people = listUsers.map((u) => u.username);
 
+  // Resolves a stored username (list_items.added_by, meal_plan.responsible,
+  // recurring_schedule.responsible — all still keyed by username, see
+  // CLAUDE.md's Auth model) to that member's display name for the UI, falling
+  // back to the raw value for anything that isn't a current list member (a
+  // free-typed "Annet" responsible person, or a since-removed member).
+  const nameFor = useCallback(
+    (username) => listUsers.find((u) => u.username === username)?.name || username,
+    [listUsers]
+  );
+
   return (
-    <ListUsersContext.Provider value={{ listUsers, people, refresh }}>
+    <ListUsersContext.Provider value={{ listUsers, people, nameFor, refresh }}>
       {children}
     </ListUsersContext.Provider>
   );

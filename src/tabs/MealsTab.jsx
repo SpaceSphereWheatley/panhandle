@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
+import { useListUsers } from "../context/ListUsersContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
@@ -40,6 +41,7 @@ function avatarColorFor(name) {
 export function MealsTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const { schedule, ensureLoaded } = useRecurring();
+  const { nameFor } = useListUsers();
   const intensity = useDesignIntensity();
   const { shouldAnimate, transition } = useMotionConfig();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -233,7 +235,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                   {p?.responsible ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
                       <Avatar
-                        name={p.responsible}
+                        name={nameFor(p.responsible)}
                         color={isToday ? "var(--md-inverse-primary)" : avatarColorFor(p.responsible)}
                         size={isToday ? 40 : 32}
                       />
@@ -245,12 +247,12 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                           color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
                         }}
                       >
-                        {p.responsible}
+                        {nameFor(p.responsible)}
                       </span>
                     </div>
                   ) : recurring ? (
                     <div style={{ marginTop: 6 }}>
-                      <Tag tone="neutral">Fast: {recurring}</Tag>
+                      <Tag tone="neutral">Fast: {nameFor(recurring)}</Tag>
                     </div>
                   ) : null}
                 </div>

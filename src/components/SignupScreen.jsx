@@ -7,7 +7,7 @@ import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 export function SignupScreen({ onBack }) {
   const { register, loginWithGoogle } = useAuth();
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -29,7 +29,7 @@ export function SignupScreen({ onBack }) {
     setBusy(true);
     try {
       const { error } = await register({
-        username: username.trim(),
+        name: name.trim(),
         email: email.trim(),
         password,
         list_name: listName.trim() || undefined,
@@ -83,7 +83,7 @@ export function SignupScreen({ onBack }) {
         Opprett ny husstand
       </h1>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Brukernavn" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <Input placeholder="Navn" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
         <Input placeholder="E-post" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />

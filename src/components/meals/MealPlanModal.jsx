@@ -14,7 +14,7 @@ import { useConfirm } from "../../context/ConfirmContext.jsx";
 // Plans/edits a single day: meal name (with a dropdown of known meals),
 // ingredients, and a responsible person (list member, or free-text "Annet").
 export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpenIngredientPicker }) {
-  const { people } = useListUsers();
+  const { people, nameFor } = useListUsers();
   const { schedule, ensureLoaded } = useRecurring();
   const toast = useToast();
   const confirm = useConfirm();
@@ -212,7 +212,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
         <option value="">Ingen</option>
         {people.map((p) => (
-          <option value={p} key={p}>{p}</option>
+          <option value={p} key={p}>{nameFor(p)}</option>
         ))}
         <option value="__other__">Annet...</option>
       </select>

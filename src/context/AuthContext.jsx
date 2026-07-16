@@ -7,6 +7,7 @@ function readStoredAuth() {
   return {
     token: localStorage.getItem("ph_token"),
     user: localStorage.getItem("ph_user"),
+    name: localStorage.getItem("ph_name"),
     isAdmin: localStorage.getItem("ph_is_admin") === "1",
     isOwner: localStorage.getItem("ph_is_owner") === "1",
     isSuperAdmin: localStorage.getItem("ph_is_superadmin") === "1",
@@ -17,6 +18,7 @@ function persistAuth(auth) {
   if (auth.token == null) {
     localStorage.removeItem("ph_token");
     localStorage.removeItem("ph_user");
+    localStorage.removeItem("ph_name");
     localStorage.removeItem("ph_is_admin");
     localStorage.removeItem("ph_is_owner");
     localStorage.removeItem("ph_is_superadmin");
@@ -24,6 +26,7 @@ function persistAuth(auth) {
   }
   localStorage.setItem("ph_token", auth.token);
   localStorage.setItem("ph_user", auth.user);
+  localStorage.setItem("ph_name", auth.name || auth.user);
   localStorage.setItem("ph_is_admin", auth.isAdmin ? "1" : "0");
   localStorage.setItem("ph_is_owner", auth.isOwner ? "1" : "0");
   localStorage.setItem("ph_is_superadmin", auth.isSuperAdmin ? "1" : "0");
@@ -38,7 +41,7 @@ export function AuthProvider({ children }) {
   authRef.current = auth;
 
   function logout(reason) {
-    const cleared = { token: null, user: null, isAdmin: false, isOwner: false, isSuperAdmin: false };
+    const cleared = { token: null, user: null, name: null, isAdmin: false, isOwner: false, isSuperAdmin: false };
     authRef.current = cleared;
     setAuth(cleared);
     persistAuth(cleared);
@@ -73,10 +76,21 @@ export function AuthProvider({ children }) {
     const next = {
       token: data.token,
       user: data.user,
+      name: data.name || data.user,
       isAdmin: !!data.is_admin,
       isOwner: !!data.is_owner,
       isSuperAdmin: !!data.is_superadmin,
     };
+    authRef.current = next;
+    setAuth(next);
+    persistAuth(next);
+  }
+
+  // Merges a partial identity update (token/user/name) into the current
+  // session without a full re-login — used after /change-email (username
+  // changes, since it always mirrors the e-mail) and /change-name.
+  function updateIdentity(patch) {
+    const next = { ...authRef.current, ...patch };
     authRef.current = next;
     setAuth(next);
     persistAuth(next);
@@ -108,7 +122,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ ...auth, login, register, loginWithGoogle, completeAuth, logout, expiredReason }}
+      value={{ ...auth, login, register, loginWithGoogle, completeAuth, updateIdentity, logout, expiredReason }}
     >
       {children}
     </AuthContext.Provider>

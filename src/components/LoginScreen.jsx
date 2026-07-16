@@ -67,7 +67,8 @@ export function LoginScreen({ onSignup, onForgot }) {
       </h1>
       <div style={{ width: "100%", maxWidth: 320 }}>
         <Input
-          placeholder="Brukernavn"
+          type="email"
+          placeholder="E-post"
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}

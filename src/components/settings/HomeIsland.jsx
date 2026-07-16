@@ -5,9 +5,12 @@ import { RecurringIsland } from "./RecurringIsland.jsx";
 import { SectionHeader } from "./SectionHeader.jsx";
 import { AccordionGroup } from "./AccordionGroup.jsx";
 
-// Island 2 — "Vårt Hjem": Medlemmer and Ukentlig matansvar merged into a
-// single visual container, per the spec's "4 distinct visual container
-// islands." Owners see both sections divided inside one card; non-owner
+// Island 3 — "Vårt Hjem": Medlemmer and Ukentlig matansvar merged into a
+// single visual container, per the spec's push toward a small number of
+// distinct visual container islands (the total has since grown as new
+// Settings content was added, but Members+Recurring specifically stay
+// merged — they're a natural pair, not two independent concerns). Owners
+// see both sections divided inside one card; non-owner
 // members (no Medlemmer access) just get Recurring's content in the card.
 // Reads isOwner itself via useAuth() (rather than taking it as a prop),
 // matching AdminIsland's self-contained permission check. No manual divider

@@ -2,45 +2,29 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { api } from "../../lib/api.js";
-import { currentTheme, setTheme } from "../../lib/theme.js";
-import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Button, Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
+import { Button, Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { AccordionGroup } from "./AccordionGroup.jsx";
 import { SectionHeader } from "./SectionHeader.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 
-function hapticsEnabled() {
-  return localStorage.getItem("ph_haptics") !== "0";
-}
-
-const THEME_OPTIONS = [
-  { value: "light", label: "Lys" },
-  { value: "dark", label: "Mørk" },
-  { value: "system", label: "Følg systemet" },
-];
-
-const INTENSITY_OPTIONS = [
-  { value: "expressive", label: "Ekspressiv" },
-  { value: "muted", label: "Dempet" },
-  { value: "classic", label: "Klassisk" },
-];
-
-// Island 1 — "Meg & Min App": identity, Designintensitet + Tema + Vibrasjon,
-// and (accordioned) password change + logout. The PWA install highlight is
-// its own standalone CTA — see PwaInstallCTA.jsx — rendered as a sibling
-// after this card rather than a row nested inside it.
+// Island 1 — "Konto": identity display, then accordioned Navn/E-post/Bytt
+// passord/Logg ut/Slett konto. Device/app-level prefs (Designintensitet,
+// Tema, Vibrasjon) are their own separate island — see AppSettingsIsland.jsx
+// — matching every other Settings section being one Card with one
+// SectionHeader (see HomeIsland.jsx's comment on the visual-container-island
+// spec). The PWA install highlight is its own standalone CTA — see
+// PwaInstallCTA.jsx — rendered as a sibling after this card rather than a
+// row nested inside it.
 export function ProfileIsland() {
-  const { user, isOwner, logout } = useAuth();
+  const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
   const toast = useToast();
   const confirm = useConfirm();
-  const [theme, setThemeState] = useState(currentTheme());
-  const [intensity, setIntensityState] = useState(currentIntensity());
-  const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
+  const [nameInput, setNameInput] = useState(name || user || "");
   const [email, setEmail] = useState(null);
   const [emailInput, setEmailInput] = useState("");
   const [emailPw, setEmailPw] = useState("");
@@ -52,8 +36,26 @@ export function ProfileIsland() {
       if (res.error) return;
       setEmail(res.email);
       setEmailInput(res.email || "");
+      setNameInput(res.name || user || "");
     });
   }, []);
+
+  async function saveName() {
+    try {
+      const res = await api("/change-name", {
+        method: "POST",
+        body: JSON.stringify({ name: nameInput.trim() }),
+      });
+      if (res.error) {
+        toast(res.error, { error: true });
+        return;
+      }
+      updateIdentity({ name: res.name });
+      toast("Navn lagret.");
+    } catch {
+      toast("Noe gikk galt", { error: true });
+    }
+  }
 
   async function saveEmail() {
     try {
@@ -67,26 +69,14 @@ export function ProfileIsland() {
       }
       setEmail(res.email);
       setEmailPw("");
+      // Username always mirrors e-mail (see TODO #17) — the response carries
+      // a fresh token/username since the old one's `sub` no longer matches
+      // any row after the rename.
+      updateIdentity({ token: res.token, user: res.username });
       toast("E-post lagret.");
     } catch {
       toast("Noe gikk galt", { error: true });
     }
-  }
-
-  function onSetTheme(t) {
-    setTheme(t);
-    setThemeState(t);
-  }
-
-  function onSetIntensity(v) {
-    setIntensity(v);
-    setIntensityState(v);
-  }
-
-  function onSetHaptics(on) {
-    localStorage.setItem("ph_haptics", on ? "1" : "0");
-    setHapticsState(on);
-    if (on && navigator.vibrate) navigator.vibrate(10);
   }
 
   async function changePassword() {
@@ -116,7 +106,7 @@ export function ProfileIsland() {
 
   async function deleteAccount() {
     const soleOwner = isOwner && listUsers.filter((u) => u.is_owner).length <= 1;
-    const otherMembers = listUsers.filter((u) => u.username !== user).map((u) => u.username);
+    const otherMembers = listUsers.filter((u) => u.username !== user).map((u) => u.name || u.username);
     const message = !soleOwner
       ? "Kontoen din slettes for godt og du mister tilgang til listen. Dette kan ikke angres."
       : otherMembers.length > 0
@@ -143,28 +133,29 @@ export function ProfileIsland() {
 
   return (
     <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
-      <SectionHeader>Meg &amp; min app</SectionHeader>
+      <SectionHeader>Konto</SectionHeader>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
-      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, marginBottom: 18, color: "var(--text-primary)" }}>{user}</div>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
-        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Tema</div>
-        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
-      </div>
-
-      <div style={{ marginBottom: 4 }}>
-        <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
-      </div>
+      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
+      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginBottom: 18 }}>{user}</div>
 
       <AccordionGroup>
+        <AccordionRow label="Navn">
+          <label htmlFor="profile-name" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Navn
+          </label>
+          <Input
+            id="profile-name"
+            placeholder="Navn"
+            style={{ marginBottom: 8 }}
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+          />
+          <button onClick={saveName} className="btn-primary">Lagre navn</button>
+        </AccordionRow>
+
         <AccordionRow label={email ? "E-post" : "Legg til e-post"}>
           <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
-            Brukes til Google-innlogging og for å tilbakestille passord hvis du glemmer det.
+            Brukes til innlogging, Google-innlogging og for å tilbakestille passord hvis du glemmer det. Endrer du e-posten, logges andre enheter ut.
           </div>
           <label htmlFor="profile-email" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
             E-post

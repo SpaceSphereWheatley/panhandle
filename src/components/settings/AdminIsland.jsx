@@ -17,7 +17,7 @@ import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
 const MotionRow = motion.div;
 
-// Island 3 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
+// Island 4 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
 // dashboard, then the heavier management tools accordioned.
 export function AdminIsland() {
   const { user: currentUser, isSuperAdmin } = useAuth();
@@ -34,6 +34,7 @@ export function AdminIsland() {
   const [iconGaps, setIconGaps] = useState([]);
   const [users, setUsers] = useState([]);
   const [newOwnerName, setNewOwnerName] = useState("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
   const [creds, setCreds] = useState(null);
 
   async function loadCounts() {
@@ -144,16 +145,22 @@ export function AdminIsland() {
 
   async function createOwner() {
     const name = newOwnerName.trim();
+    const email = newOwnerEmail.trim();
     if (!name) {
-      toast("Skriv inn et brukernavn", { error: true });
+      toast("Skriv inn et navn", { error: true });
       return;
     }
-    const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ username: name }) });
+    if (!email) {
+      toast("Skriv inn en e-post", { error: true });
+      return;
+    }
+    const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
       toast(res.error, { error: true });
       return;
     }
     setNewOwnerName("");
+    setNewOwnerEmail("");
     loadAllUsers();
     setCreds({ username: res.username, password: res.password });
   }
@@ -185,12 +192,21 @@ export function AdminIsland() {
         </AccordionRow>
 
         <AccordionRow label="Opprett eier (ny liste)">
-          <label htmlFor="admin-new-owner" className="sr-only">Brukernavn for ny eier</label>
+          <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
           <Input
-            id="admin-new-owner"
-            placeholder="Brukernavn for ny eier"
+            id="admin-new-owner-name"
+            placeholder="Navn"
             value={newOwnerName}
             onChange={(e) => setNewOwnerName(e.target.value)}
+            style={{ marginBottom: 8 }}
+          />
+          <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
+          <Input
+            id="admin-new-owner-email"
+            type="email"
+            placeholder="E-post"
+            value={newOwnerEmail}
+            onChange={(e) => setNewOwnerEmail(e.target.value)}
           />
           <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
         </AccordionRow>
@@ -213,8 +229,11 @@ export function AdminIsland() {
                     exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
                   >
                     <div className="who">
-                      <div className="uname">{u.username}</div>
-                      <div className="sub">{u.username === currentUser ? "deg" : u.created_by ? "av " + u.created_by : " "}</div>
+                      <div className="uname">{u.name || u.username}</div>
+                      <div className="sub">
+                        {u.username}
+                        {u.username === currentUser ? " · deg" : u.created_by ? " · av " + u.created_by : ""}
+                      </div>
                     </div>
                     <div className="acts">
                       <label className="flag">
