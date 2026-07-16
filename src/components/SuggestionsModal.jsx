@@ -1,5 +1,5 @@
 import { Modal } from "./Modal.jsx";
-import { IconButton, EmptyState } from "../design-system/index.js";
+import { Button, IconButton, EmptyState } from "../design-system/index.js";
 import { cap } from "../lib/shoppingUtils.js";
 
 export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
@@ -29,16 +29,17 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
           ))
         )}
       </div>
-      <button
-        className="meal-browse-add"
-        style={{ background: "var(--surface-sunken)", color: "var(--text-primary)" }}
-        onClick={() => {
-          onClose();
-          onFocusAdd();
-        }}
-      >
-        Legg til annen vare
-      </button>
+      <div className="actions">
+        <Button
+          variant="outline"
+          onClick={() => {
+            onClose();
+            onFocusAdd();
+          }}
+        >
+          Legg til annen vare
+        </Button>
+      </div>
     </Modal>
   );
 }
