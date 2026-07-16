@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.23.8] — 2026-07-16
+
+### Fixed
+- **Tightened-up spacing and copy in the "Sannsynligvis tom for" FAB modal.**
+  The stats line sat only 2px below the item name — below the design
+  system's 4px base spacing unit — while the equivalent secondary-line
+  pattern elsewhere (`.meta`, `.setrow .v`) uses 4px; `.meal-browse-row
+  .stats` now uses `var(--space-1)` to match. Also simplified the stats
+  copy from "Sist kjøpt for 12 dager siden · vanligvis hver 7. dag" to
+  "12 dager siden · Ca hver 7. dag".
+
 ## [1.23.7] — 2026-07-16
 
 ### Fixed

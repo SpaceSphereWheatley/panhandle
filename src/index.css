@@ -98,7 +98,7 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .meal-browse-row .info { flex: 1; min-width: 0; }
 .meal-browse-row .name { font-size: var(--text-sm); font-weight: 600; word-break: break-word; color: var(--text-primary); }
-.meal-browse-row .stats { font-size: var(--text-2xs); color: var(--text-tertiary); margin-top: 2px; }
+.meal-browse-row .stats { font-size: var(--text-2xs); color: var(--text-tertiary); margin-top: var(--space-1); }
 .meal-browse-row .labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .label-chip {
   background: var(--accent-secondary); color: var(--text-on-accent); border-radius: var(--radius-pill);

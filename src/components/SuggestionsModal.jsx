@@ -14,8 +14,7 @@ export function SuggestionsModal({ suggestions, onAdd, onClose, onFocusAdd }) {
               <span className="info">
                 <span className="name">{cap(it.name)}</span>
                 <span className="stats">
-                  Sist kjøpt for {Math.round(it.days_since)} dager siden · vanligvis hver{" "}
-                  {Math.round(it.avg_interval_days)}. dag
+                  {Math.round(it.days_since)} dager siden · Ca hver {Math.round(it.avg_interval_days)}. dag
                 </span>
               </span>
               <IconButton
