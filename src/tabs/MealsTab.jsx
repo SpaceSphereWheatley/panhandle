@@ -6,6 +6,7 @@ import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
 import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
+import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
@@ -16,27 +17,6 @@ import { Card, Avatar, Tag, Button, FabMenu, LoadingState } from "../design-syst
 
 const POLL_MS = 7000;
 const MotionCard = motion(Card);
-
-// Deterministic-but-varied avatar color per person, since the real data
-// model (unlike the design project's toy fake cooks) has no fixed
-// per-person color assigned. Drawn from the shopping-list cluster "on"
-// tones for more distinct, higher-contrast per-person colors than a small
-// hand-picked palette gives.
-const AVATAR_COLORS = [
-  "var(--accent-primary)",
-  "var(--cluster-meat-on)",
-  "var(--cluster-drinks-on)",
-  "var(--cluster-care-on)",
-  "var(--cluster-snacks-on)",
-  "var(--cluster-frozen-on)",
-  "var(--cluster-bakery-on)",
-  "var(--cluster-household-on)",
-];
-function avatarColorFor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 export function MealsTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();

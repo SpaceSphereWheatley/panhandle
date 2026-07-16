@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
+import { useListUsers } from "../context/ListUsersContext.jsx";
 import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
+import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
@@ -11,7 +13,7 @@ import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
+import { Input, Avatar, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 // Fallback hold before a checked-off item re-sorts into "Nylig kjøpt" when
@@ -33,8 +35,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
   const { shouldAnimate } = useMotionConfig();
+  const { nameFor } = useListUsers();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
+  // Other members who've polled the list in the last ~20s (see POST
+  // /presence) — usernames, resolved to display names/colors for the avatar
+  // row below the summary line.
+  const [presentUsers, setPresentUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
@@ -72,6 +79,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       setSuggestedItems(await api("/catalogue/suggestions"));
     } catch {
       setSuggestedItems([]);
+    }
+    try {
+      setPresentUsers(await api("/presence", { method: "POST" }));
+    } catch {
+      /* non-critical, keep whatever we had */
     }
   }
 
@@ -346,7 +358,21 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", minHeight: 16 }}>{summary}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 16 }}>
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
+          {presentUsers.length > 0 && (
+            <div
+              style={{ display: "flex", alignItems: "center" }}
+              title={`${presentUsers.map(nameFor).join(", ")} er også her akkurat nå`}
+            >
+              {presentUsers.map((u, i) => (
+                <div key={u} style={{ marginLeft: i === 0 ? 0 : -8, border: "2px solid var(--surface-page)", borderRadius: "50%" }}>
+                  <Avatar name={nameFor(u)} color={avatarColorFor(u)} size={20} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div
           style={{
             position: "relative",
