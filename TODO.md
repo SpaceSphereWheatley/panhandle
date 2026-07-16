@@ -67,19 +67,6 @@ details live in `CHANGELOG.md`, not here.
     page on the landing site) for detail.
     _Value: Low · Importance: Low · Type: UI / Polish_
 
-9. Make the install button smaller (less prominent) if the app is already
-   installed. `PwaInstallCTA.jsx` already hides itself when
-   `isStandalone()` is true (launched from the home-screen icon) or
-   `installed` is set — but `installed` (`InstallPromptContext.jsx`) only
-   ever flips true via the `appinstalled` event firing *in that page
-   load*. A user who installed previously but opens the site in an
-   ordinary browser tab (not the installed app) gets no signal they're
-   already installed, so the full-prominence CTA keeps showing every
-   time. Needs a persisted "already installed" flag (e.g. set in
-   `localStorage` on `appinstalled` and read on load) instead of relying
-   on session-only state.
-   _Value: Low · Importance: Low · Type: UI / Polish_
-
 13. Create more icons. `src/lib/itemIcons.js`'s `MAP` currently maps
     ~500 of the 710 `COMMON_ITEMS` catalogue entries to a drawn icon —
     the rest fall back to the plain first-letter badge in grid view.
@@ -102,6 +89,14 @@ details live in `CHANGELOG.md`, not here.
 
 
 ## Done
+- [x] (9) Made the "Installer Panhandle" install CTA in Settings demote
+      instead of staying full-size forever: a persisted `installed` flag
+      (`localStorage`, surviving reloads) now demotes it to a compact pill,
+      and a new dismiss button demotes it further to a plain text row —
+      both quieter-but-still-visible states rather than fully hiding, since
+      the underlying signals (a stale `appinstalled`/dismiss flag after an
+      uninstall) can't be verified. The full hero CTA stays the default for
+      anyone who hasn't installed or dismissed it. (1.22.6)
 - [x] Removed the `/seed` bootstrap endpoint (and its `SEED_SECRET`-gated
       code path, `public/seed.html` form, and all references in
       `wrangler.toml`/`README.md`/`CLAUDE.md`/service worker) now that
