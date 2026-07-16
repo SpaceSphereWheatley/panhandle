@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.23.2] — 2026-07-16
+
+### Fixed
+- **Member list in Settings showed a stray "0 0" next to non-admin,
+  non-owner members** (e.g. "Saffa 0 0"). The Eier/Admin badges were
+  gated with `u.is_owner && <Badge>`/`u.is_admin && <Badge>` — since the
+  API returns these as `0`/`1` integers rather than booleans, `0 && x`
+  evaluates to `0`, and React renders that literal `0` instead of
+  nothing. Coerced both to booleans (`!!u.is_owner`/`!!u.is_admin`) so a
+  member with neither flag shows just their name.
+
 ## [1.23.1] — 2026-07-16
 
 ### Added
