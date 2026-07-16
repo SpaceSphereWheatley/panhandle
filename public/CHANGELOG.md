@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.23.7] — 2026-07-16
+
+### Fixed
+- **"Sannsynligvis tom for" FAB modal now follows the design system.** Its
+  "Legg til annen vare" action was a raw `<button>` with hand-rolled inline
+  styles overriding the shared `.meal-browse-add` class, instead of the
+  `Button` component every other modal footer uses — it now sits in a
+  standard `.actions` row as an `outline`-variant `Button`, matching
+  siblings like `WeekIngredientsModal`.
+
 ## [1.23.6] — 2026-07-16
 
 ### Fixed
