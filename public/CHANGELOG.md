@@ -3,6 +3,20 @@
 ## [1.23.8] — 2026-07-16
 
 ### Fixed
+- **Sheets and the FAB menu now use a real focus-trap library instead of
+  hand-rolled Tab-cycling.** Every modal (via `Sheet`) and the shopping/meal
+  FAB speed-dial menu now trap keyboard focus with `focus-trap-react`
+  (replacing two separate hand-written implementations), and background page
+  scroll is now locked while a sheet is open — previously the page behind an
+  open sheet could still be scrolled.
+- **Checked-off shopping items now re-sort into "Nylig kjøpt" in sync with
+  the real animation, not a hand-tuned timer.** Previously a fixed 400ms
+  `setTimeout` (manually tuned to approximate the strike-through+fade) drove
+  when an item left the unbought list; it now waits for Framer Motion's own
+  `onAnimationComplete` when the pop animation is actually playing, falling
+  back to the fixed timer only when animations are off (reduced motion /
+  "classic" intensity), where there's no animation to key off in the first
+  place.
 - **Tightened-up spacing and copy in the "Sannsynligvis tom for" FAB modal.**
   The stats line sat only 2px below the item name — below the design
   system's 4px base spacing unit — while the equivalent secondary-line

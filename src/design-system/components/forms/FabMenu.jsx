@@ -1,4 +1,5 @@
 import React from 'react';
+import FocusTrap from 'focus-trap-react';
 import { Fab } from './Fab.jsx';
 import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 
@@ -26,7 +27,6 @@ const FAB_RIGHT = 'max(16px, calc(50vw - 224px))';
  */
 export function FabMenu({ icon = 'plus', label, badge = null, actions = [], haptic }) {
   const [open, setOpen] = React.useState(false);
-  const firstItemRef = React.useRef(null);
 
   const close = React.useCallback(() => setOpen(false), []);
 
@@ -47,8 +47,6 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [], hapt
       }
     }
     window.addEventListener('keydown', onKey);
-    // Move focus to the first (nearest the FAB) action for keyboard users.
-    firstItemRef.current?.focus();
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
@@ -75,53 +73,61 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [], hapt
         }}
       />
 
-      {/* Action stack — above the FAB, right-aligned, nearest action lowest. */}
-      <div
-        role="menu"
-        aria-hidden={!open}
-        style={{
-          position: 'fixed',
-          right: FAB_RIGHT,
-          bottom: `calc(${FAB_BOTTOM} + 68px)`,
-          display: 'flex',
-          flexDirection: 'column-reverse',
-          alignItems: 'flex-end',
-          gap: 12,
-          zIndex: 12,
-          pointerEvents: open ? 'auto' : 'none',
-        }}
-      >
-        {actions.map((action, i) => (
-          <FabMenuItem
-            key={action.label || i}
-            ref={i === 0 ? firstItemRef : null}
-            action={action}
-            open={open}
-            // Nearest-the-FAB item (index 0) leads on open; no delay on close.
-            delay={open ? i * 40 : 0}
-            onRun={() => runAction(action)}
-          />
-        ))}
-      </div>
+      {/* Traps Tab within the action stack + FAB while open (so keyboard focus
+          can't wander into whatever's behind the scrim) and returns focus to
+          the FAB on close — same primitive Sheet.jsx uses, in place of two
+          separate hand-rolled implementations. Escape stays handled by our
+          own listener above, which needs to fire regardless of where focus
+          currently is. */}
+      <FocusTrap active={open} focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false }}>
+        <div>
+          {/* Action stack — above the FAB, right-aligned, nearest action lowest. */}
+          <div
+            role="menu"
+            aria-hidden={!open}
+            style={{
+              position: 'fixed',
+              right: FAB_RIGHT,
+              bottom: `calc(${FAB_BOTTOM} + 68px)`,
+              display: 'flex',
+              flexDirection: 'column-reverse',
+              alignItems: 'flex-end',
+              gap: 12,
+              zIndex: 12,
+              pointerEvents: open ? 'auto' : 'none',
+            }}
+          >
+            {actions.map((action, i) => (
+              <FabMenuItem
+                key={action.label || i}
+                action={action}
+                open={open}
+                // Nearest-the-FAB item (index 0) leads on open; no delay on close.
+                delay={open ? i * 40 : 0}
+                onRun={() => runAction(action)}
+              />
+            ))}
+          </div>
 
-      <Fab
-        icon={icon}
-        active={open}
-        label={open ? 'Lukk meny' : label}
-        badge={open ? null : badge}
-        onClick={toggle}
-      />
+          <Fab
+            icon={icon}
+            active={open}
+            label={open ? 'Lukk meny' : label}
+            badge={open ? null : badge}
+            onClick={toggle}
+          />
+        </div>
+      </FocusTrap>
     </>
   );
 }
 
-const FabMenuItem = React.forwardRef(function FabMenuItem({ action, open, delay, onRun }, ref) {
+function FabMenuItem({ action, open, delay, onRun }) {
   const [press, setPress] = React.useState(false);
   const { ripples, spawn } = useRipple();
 
   return (
     <button
-      ref={ref}
       type="button"
       role="menuitem"
       tabIndex={open ? 0 : -1}
@@ -184,4 +190,4 @@ const FabMenuItem = React.forwardRef(function FabMenuItem({ action, open, delay,
       ) : null}
     </button>
   );
-});
+}

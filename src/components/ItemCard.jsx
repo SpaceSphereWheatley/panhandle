@@ -22,7 +22,7 @@ const STAGGER_CAP = 10;
 // `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
 // badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
 // not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, clusterBg, viewMode = "list", index = 0 }) {
+export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0 }) {
   const isGrid = viewMode === "grid";
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
@@ -48,6 +48,12 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
   // CSS `animation`) so a single engine owns transform/opacity on this node —
   // mixing a native CSS animation with Framer's motion values on the same
   // element is an unstable combination.
+  //
+  // ShoppingListTab holds a checked-off item in place (via `resolving`) until
+  // it's told to let go. Rather than that caller guessing how long this pop
+  // animation takes, onAnimationComplete reports the real finish back to it —
+  // the `resolving` check guards against firing for the plain enter/settle
+  // animation too, since that one shares this same callback.
   const motionProps = shouldAnimate
     ? {
         layout: true,
@@ -57,6 +63,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, clusterOn, cluster
           ? { opacity: 0.55, scale: [1, 1.05, 1], y: 0, transition: { duration: 0.3, ease: "easeOut" } }
           : { opacity: 1, scale: 1, y: 0 },
         exit: { opacity: 0, scale: 0.9 },
+        onAnimationComplete: () => { if (resolving) onResolved?.(item.id); },
       }
     : {};
   // The icon badge and text block track their own position/size within the

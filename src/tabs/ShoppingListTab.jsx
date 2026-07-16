@@ -5,6 +5,7 @@ import { useToast } from "../context/ToastContext.jsx";
 import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
@@ -13,8 +14,13 @@ import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.j
 import { Input, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
-// Total resolve window ≈ 150ms strike-through delay + 200ms fade + buffer.
-const RESOLVE_MS = 400;
+// Fallback hold before a checked-off item re-sorts into "Nylig kjøpt" when
+// Framer's animation is off (reduced motion, or "classic" intensity) — there's
+// no pop animation to key off in that case, so this is a deliberately fixed,
+// standalone pause, not tied to any animation's duration. When Framer IS
+// animating the card (see ItemCard's onAnimationComplete), the resolve fires
+// off the real animation finishing instead of this constant.
+const FALLBACK_RESOLVE_MS = 400;
 
 // Cap track width at 1/3 of the row (minus the two 8px gaps) so auto-fit
 // never lays out more than 3 columns, while still stretching a short last
@@ -26,6 +32,7 @@ const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
+  const { shouldAnimate } = useMotionConfig();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,8 +174,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     loadList();
   }
 
-  // Starts the timer that moves a checked-off item out of the array.
+  // Starts the fallback timer that moves a checked-off item out of the array
+  // when there's no Framer animation to key off (see FALLBACK_RESOLVE_MS).
+  // When Framer is animating the card, ItemCard calls clearResolving itself
+  // once the real pop animation completes, and this timer never fires.
   function scheduleResolve(id) {
+    if (shouldAnimate) return;
     const existing = resolveTimers.current.get(id);
     if (existing) clearTimeout(existing);
     resolveTimers.current.set(
@@ -180,7 +191,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           next.delete(id);
           return next;
         });
-      }, RESOLVE_MS)
+      }, FALLBACK_RESOLVE_MS)
     );
   }
 
@@ -392,7 +403,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -426,7 +437,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving)}
             </div>
           )}
         </>
@@ -515,7 +526,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration, onResolved) {
   return (
     <div key={renderGeneration} style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false} mode="popLayout">
@@ -530,6 +541,7 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, ren
               resolving={!!resolvingIds?.has(item.id)}
               onToggle={onToggle}
               onEdit={onEdit}
+              onResolved={onResolved}
               viewMode={viewMode}
               index={index}
             />
