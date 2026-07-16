@@ -1515,6 +1515,15 @@ export default {
         return json({ error: "Feil passord" }, 401);
       }
 
+      // Superadmin accounts can never be self-deleted, full stop — no count
+      // check, no override flag. Status comes solely from being named in
+      // env.SUPERADMIN_USERNAMES (a Worker dashboard variable this code has
+      // no way to edit), so deleting the row is one-way: the only path back
+      // is a developer editing that variable by hand.
+      if (isSuperAdmin(user.username, env)) {
+        return json({ error: "Kan ikke slette en app-eier-konto" }, 400);
+      }
+
       let listDeleted = false;
       if (user.is_owner) {
         const c = await env.DB.prepare(
@@ -1696,6 +1705,12 @@ export default {
         "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
       if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      // Same unconditional guard as DELETE /account's self-delete path —
+      // superadmins can't delete each other's accounts either, even here on
+      // the superadmin-only force-delete endpoint. See that guard's comment.
+      if (isSuperAdmin(row.username, env)) {
+        return authedJson({ error: "Kan ikke slette en app-eier-konto" }, 400);
+      }
       if (row.is_admin === 1) {
         const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").first();
         if (c.n <= 1) return authedJson({ error: "Kan ikke slette siste admin" }, 400);
