@@ -20,6 +20,7 @@ The Vite entry is named `app.html` (not `index.html`) specifically so it builds 
 - `0008_meal_plan_nullable_meal.sql`/`0009_meal_plan_set_null.sql` make `meal_plan.meal_id` nullable and change its FK from `ON DELETE CASCADE` to `ON DELETE SET NULL`, so deleting a catalogue meal unassigns it from planned days instead of deleting the whole plan-day row.
 - `0010_signup_and_recovery.sql` adds `users.email`/`google_sub`, `lists.name`, and the `password_resets`/`rate_limit_attempts` tables backing self-service signup/Google sign-in/password recovery.
 - `0011_user_display_name.sql` adds `users.name` (a display name, separate from username/e-mail).
+- `0012_push_notifications.sql` adds `push_subscriptions`, `notification_settings`, and `notification_log` (see Push notifications in `CLAUDE.md`).
 
 ## Auth: extra detail
 
