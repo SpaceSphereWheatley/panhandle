@@ -21,6 +21,7 @@ The Vite entry is named `app.html` (not `index.html`) specifically so it builds 
 - `0010_signup_and_recovery.sql` adds `users.email`/`google_sub`, `lists.name`, and the `password_resets`/`rate_limit_attempts` tables backing self-service signup/Google sign-in/password recovery.
 - `0011_user_display_name.sql` adds `users.name` (a display name, separate from username/e-mail).
 - `0012_push_notifications.sql` adds `push_subscriptions`, `notification_settings`, and `notification_log` (see Push notifications in `CLAUDE.md`).
+- `0014_notification_phase2.sql` adds `notification_settings.weekly_reminder_enabled`/`weekly_reminder_time` and the `notification_state` table (see Push notifications in `CLAUDE.md`).
 
 ## Auth: extra detail
 

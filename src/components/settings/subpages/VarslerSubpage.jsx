@@ -14,22 +14,28 @@ function isStandalone() {
   return window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
-// Varsler subpage — Web Push opt-in, plus the shared household setting for
-// the "no meal planned for tomorrow" reminder (TODO #7 phase 1). The
-// reminder setting is list-wide (see /notification-settings, same
-// permission level as /recurring), so any member changes it for everyone.
+// Varsler subpage — Web Push opt-in, plus the shared household settings for
+// the "no meal planned for tomorrow" reminder (TODO #7 phase 1) and the
+// weekly meal-plan reminder (phase 2, fixed to Sunday evening — see
+// checkWeeklyReminders in worker/index.js). Both reminder settings are
+// list-wide (see /notification-settings, same permission level as
+// /recurring), so any member changes them for everyone.
 export function VarslerSubpage() {
   const { supported, subscribed, subscribe, unsubscribe } = usePush();
   const toast = useToast();
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderTime, setReminderTime] = useState("18:00");
+  const [mealReminderEnabled, setMealReminderEnabled] = useState(true);
+  const [mealReminderTime, setMealReminderTime] = useState("18:00");
+  const [weeklyReminderEnabled, setWeeklyReminderEnabled] = useState(true);
+  const [weeklyReminderTime, setWeeklyReminderTime] = useState("18:00");
   const iosNeedsInstall = isIOS() && !isStandalone();
 
   useEffect(() => {
     api("/notification-settings").then((res) => {
       if (res.error) return;
-      setReminderEnabled(res.meal_reminder_enabled);
-      setReminderTime(res.meal_reminder_time);
+      setMealReminderEnabled(res.meal_reminder_enabled);
+      setMealReminderTime(res.meal_reminder_time);
+      setWeeklyReminderEnabled(res.weekly_reminder_enabled);
+      setWeeklyReminderTime(res.weekly_reminder_time);
     });
   }, []);
 
@@ -42,11 +48,18 @@ export function VarslerSubpage() {
     }
   }
 
-  async function saveSettings(enabled, time) {
+  // The endpoint upserts all four fields together, so every save sends the
+  // full current state, not just whichever control changed.
+  async function saveSettings(next) {
     try {
       const res = await api("/notification-settings", {
         method: "POST",
-        body: JSON.stringify({ meal_reminder_enabled: enabled, meal_reminder_time: time }),
+        body: JSON.stringify({
+          meal_reminder_enabled: next.mealReminderEnabled,
+          meal_reminder_time: next.mealReminderTime,
+          weekly_reminder_enabled: next.weeklyReminderEnabled,
+          weekly_reminder_time: next.weeklyReminderTime,
+        }),
       });
       if (res.error) toast(res.error, { error: true });
     } catch {
@@ -54,16 +67,28 @@ export function VarslerSubpage() {
     }
   }
 
-  function onToggleReminder(on) {
-    setReminderEnabled(on);
-    saveSettings(on, reminderTime);
+  function onToggleMealReminder(on) {
+    setMealReminderEnabled(on);
+    saveSettings({ mealReminderEnabled: on, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime });
   }
 
-  function onChangeTime(e) {
+  function onChangeMealTime(e) {
     const time = e.target.value;
     if (!time) return;
-    setReminderTime(time);
-    saveSettings(reminderEnabled, time);
+    setMealReminderTime(time);
+    saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime });
+  }
+
+  function onToggleWeeklyReminder(on) {
+    setWeeklyReminderEnabled(on);
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled: on, weeklyReminderTime });
+  }
+
+  function onChangeWeeklyTime(e) {
+    const time = e.target.value;
+    if (!time) return;
+    setWeeklyReminderTime(time);
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time });
   }
 
   return (
@@ -87,26 +112,53 @@ export function VarslerSubpage() {
 
       <div style={{ marginBottom: 14 }}>
         <Switch
-          checked={reminderEnabled}
-          onChange={onToggleReminder}
+          checked={mealReminderEnabled}
+          onChange={onToggleMealReminder}
           label="Påminnelse om middag ikke planlagt i morgen"
         />
       </div>
 
-      {reminderEnabled && (
-        <div>
+      {mealReminderEnabled && (
+        <div style={{ marginBottom: 14 }}>
           <label
-            htmlFor="reminder-time"
+            htmlFor="meal-reminder-time"
             style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
           >
             Tidspunkt for påminnelse
           </label>
           <Input
-            id="reminder-time"
+            id="meal-reminder-time"
             type="time"
             step={900}
-            value={reminderTime}
-            onChange={onChangeTime}
+            value={mealReminderTime}
+            onChange={onChangeMealTime}
+            style={{ maxWidth: 160 }}
+          />
+        </div>
+      )}
+
+      <div style={{ marginBottom: 14 }}>
+        <Switch
+          checked={weeklyReminderEnabled}
+          onChange={onToggleWeeklyReminder}
+          label="Ukentlig påminnelse om å planlegge middager"
+        />
+      </div>
+
+      {weeklyReminderEnabled && (
+        <div>
+          <label
+            htmlFor="weekly-reminder-time"
+            style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
+          >
+            Tidspunkt på søndag
+          </label>
+          <Input
+            id="weekly-reminder-time"
+            type="time"
+            step={900}
+            value={weeklyReminderTime}
+            onChange={onChangeWeeklyTime}
             style={{ maxWidth: 160 }}
           />
         </div>

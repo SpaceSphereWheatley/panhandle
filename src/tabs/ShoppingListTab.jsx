@@ -231,6 +231,25 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
   }
 
+  // On-demand "get the other person's attention" ping (TODO #7 phase 2) —
+  // pushes to every other subscribed device on the list. The backend
+  // enforces a 2-minute per-list cooldown (429), surfaced here as a toast
+  // rather than disabling the button, since there's no cheap way to know
+  // client-side whether the cooldown is currently active.
+  async function pingHousehold() {
+    haptic();
+    try {
+      const res = await api("/push/ping", { method: "POST" });
+      if (res.error) {
+        toast(res.error, { error: true });
+        return;
+      }
+      toast("Varsel sendt.");
+    } catch {
+      toast("Noe gikk galt", { error: true });
+    }
+  }
+
   function clearResolving(id) {
     const t = resolveTimers.current.get(id);
     if (t) {
@@ -483,6 +502,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             label: "Forslag",
             badge: suggestedItems.length || null,
             onClick: () => setModal({ type: "suggestions" }),
+          },
+          {
+            icon: "bell-ringing",
+            label: "Gi beskjed",
+            onClick: pingHousehold,
           },
         ]}
         badge={

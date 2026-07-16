@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.27.0] — 2026-07-16
+
+### Added
+- **Push notifications, phase 2 (TODO #7): a weekly meal-plan reminder and
+  an on-demand "get the other person's attention" ping.** Settings →
+  "Varsler" gained a second reminder toggle+time for a Sunday-evening nudge
+  that only fires if the upcoming week has *no* meals planned at all (not
+  "few" — an unambiguous "planning hasn't started" signal, avoiding a nag
+  threshold). The shopping list's FAB menu gained a "Gi beskjed" action
+  (`POST /push/ping`) that pushes every other subscribed device on the list
+  a fixed "trenger oppmerksomheten din" notification, rate-limited to once
+  per 2 minutes per list (`notification_state`, new table) so repeated taps
+  can't spam the household. Both reuse phase 1's subscribe/settings
+  infrastructure; the cron dispatcher was split into independently testable
+  per-type checks (`checkMealReminders`/`checkWeeklyReminders`) behind a
+  shared `sendPushToList` fan-out helper.
+
 ## [1.26.0] — 2026-07-16
 
 ### Changed
