@@ -1,36 +1,20 @@
 # TODO
 
-Open items, numbered and grouped by theme; within each group, sorted by
-value (highest-value first). Numbers are stable IDs for reference in
-commits/discussion — don't renumber when items are completed, just strike
-them and move to Done; re-pack (renumber) only when the open list gets
-sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
+Open items, numbered and sorted by value (highest-value first). Numbers are
+stable IDs for reference in commits/discussion — don't renumber when items
+are completed, just strike them and move to Done; re-pack (renumber) only
+when the open list gets sparse, as just happened here. Full "fixed in"
+details live in `CHANGELOG.md`, not here.
 
-**Group priority** (highest to lowest, reassessed 2026-07-16):
-1. **Notifications (#7)** — the single highest-value item open: no
-   notification code exists at all today, and it's the one gap that
-   actually affects daily use of a 2-person household app. Biggest lift
-   here too, so worth scoping into phases (e.g. ship the "no meal planned
-   for tomorrow" cron-driven push before the full batched-items/custom-ping
-   set) rather than treating it as one big-bang effort.
-2. **Tech debt / docs (#3)** — low-risk, ongoing, keeps drift from
-   compounding; cheap to pick up opportunistically between other work.
-3. **Small UI/polish items (#10, #13, #6, #5)** — low value individually
-   but also low risk/effort; good filler work alongside bigger items,
-   not worth blocking on.
-4. **Multi-list data model (#1)** — high ceiling if this app ever needs
-   more than one household/list, but nothing today needs it (still just
-   2 users, 1 list) and it's a real schema/data-model change, not a small
-   one. Correctly deferred; revisit only if a concrete second-list need
-   shows up.
-5. **i18n (#15)** — largest effort of anything open (touches nearly every
-   component) with no expressed need (household is Norwegian-only);
-   lowest priority despite medium value.
-6. **TODO housekeeping (#16)** — meta, not user-facing; cheap enough to
-   fold into whatever session next touches this file rather than
-   scheduling separately.
-
-## Feature
+1. Let a user exist without a list, and let anyone create lists, be members
+   of multiple lists, and choose between them (phase 2 of the account-
+   lifecycle item — phase 1, self-delete under the one-list-per-user model,
+   shipped in 1.21.0). Every user today is still tied to exactly one
+   `list_id` (see CLAUDE.md's multi-tenant model); this phase is the actual
+   data-model change (nullable list membership, an N:N user↔list join
+   instead of a single FK, a "choose/create list" UI) that phase 1
+   deliberately deferred.
+   _Value: High · Importance: Low · Type: Data model / Account lifecycle_
 
 7. Enable notifications properly. Possible notifications: items added to
    the list (batched), no meal planned for tomorrow, a weekly reminder to
@@ -46,31 +30,6 @@ sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
    2-person household.
    _Value: High · Importance: Low · Type: Feature_
 
-15. Add language support (i18n). The UI is currently 100% hardcoded
-    Norwegian strings across every tab/component/modal — no translation
-    layer, no string-key extraction, no language switcher. Needs a
-    translation infrastructure decision (a lightweight locale →
-    string-map approach fits this app's size better than pulling in a
-    full i18n library), a language switcher (Settings, persisted
-    per-device like theme), then extracting/translating every existing
-    string. Large, cross-cutting effort — touches nearly every component,
-    not a contained feature.
-    _Value: Medium · Importance: Low · Type: Feature / i18n_
-
-## Data model / Account lifecycle
-
-1. Let a user exist without a list, and let anyone create lists, be members
-   of multiple lists, and choose between them (phase 2 of the account-
-   lifecycle item — phase 1, self-delete under the one-list-per-user model,
-   shipped in 1.21.0). Every user today is still tied to exactly one
-   `list_id` (see CLAUDE.md's multi-tenant model); this phase is the actual
-   data-model change (nullable list membership, an N:N user↔list join
-   instead of a single FK, a "choose/create list" UI) that phase 1
-   deliberately deferred.
-   _Value: High · Importance: Low · Type: Data model / Account lifecycle_
-
-## Tech debt / Docs
-
 3. Go through the whole repo to clean up the code, remove stale/old code
    and files, and restructure if needed. A lot of this already happens
    incrementally (dead CSS/comments removed across 1.18.x–1.19.x, the old
@@ -82,11 +41,16 @@ sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
    as much as code.
    _Value: Medium · Importance: Low · Type: Tech debt / Docs_
 
-16. Move all completed items to Todo_done.md. Expose the item numbers so
-    they can be viewed through md, and sort the items.
-    _Value: Low · Importance: Low · Type: Tech debt / Meta_
-
-## Performance
+15. Add language support (i18n). The UI is currently 100% hardcoded
+    Norwegian strings across every tab/component/modal — no translation
+    layer, no string-key extraction, no language switcher. Needs a
+    translation infrastructure decision (a lightweight locale →
+    string-map approach fits this app's size better than pulling in a
+    full i18n library), a language switcher (Settings, persisted
+    per-device like theme), then extracting/translating every existing
+    string. Large, cross-cutting effort — touches nearly every component,
+    not a contained feature.
+    _Value: Medium · Importance: Low · Type: Feature / i18n_
 
 5. Poll interval is a fixed 7s with no backoff when the tab is idle (no
    interaction for a while) but visible. At 2 users on D1 this costs
@@ -95,8 +59,6 @@ sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-
-## UI / Polish
 
 10. Simplify the in-app changelog. `ChangelogModal.jsx` currently just
     fetches raw `/CHANGELOG.md` and dumps it verbatim into a `<pre>` —
@@ -121,6 +83,8 @@ sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
    two-pane or sidebar layout), not just raising the cap; low priority
    since this is a 2-person app used mostly on phones.
    _Value: Low · Importance: Low · Type: UI / Layout_
+
+16. Move all completed items to Todo_done.md. Expose the item numbers so they can be viewed through md, and sort the items.
 
 
 
