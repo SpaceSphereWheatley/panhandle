@@ -18,6 +18,13 @@ binding = "DB"
 database_name = "panhandle"
 database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 
+# Drives runReminderPass (worker/index.js) — the "no meal planned for
+# tomorrow" push notification (TODO #7 phase 1). 15-minute granularity
+# matches the 15-min steps notification_settings.meal_reminder_time is
+# snapped to in the frontend's time picker.
+[triggers]
+crons = ["*/15 * * * *"]
+
 # Custom domain: shopping.mohibb.com (set under Worker -> Settings -> Domains & Routes).
 # The Worker proxies frontend requests to the Pages project URL.
 
@@ -25,6 +32,8 @@ database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 #   JWT_SECRET            - long random string, signs login tokens
 #   TURNSTILE_SECRET_KEY  - Cloudflare Turnstile secret key (Turnstile dashboard, separate from Workers)
 #   RESEND_API_KEY        - Resend API key, needs a DNS-verified sending domain first (resend.com dashboard)
+#   VAPID_PUBLIC_KEY      - Web Push VAPID public key (base64url), generate via `npx @pushforge/builder vapid`
+#   VAPID_PRIVATE_KEY     - matching VAPID private key, JSON-serialized JWK from the same command
 # GOOGLE_CLIENT_ID (worker/index.js) is not secret (shipped in frontend JS
 # too) - update the hardcoded constant there directly after creating an OAuth
 # client in Google Cloud Console, no dashboard variable needed.

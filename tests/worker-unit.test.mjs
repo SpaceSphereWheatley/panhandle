@@ -9,6 +9,7 @@ import {
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
   isSuperAdmin, escapeHtml, COMMON_ITEMS,
+  osloLocalDateParts, isReminderDue,
 } from "../worker/index.js";
 import { CATEGORIES } from "../shared/categories.js";
 
@@ -293,6 +294,40 @@ describe("escapeHtml", () => {
     const escaped = escapeHtml(malicious);
     assert.ok(!escaped.includes("<img"), "raw tag must not survive escaping");
     assert.equal(escaped, "&lt;/p&gt;&lt;img src=x onerror=alert(1)&gt;&lt;p&gt;");
+  });
+});
+
+describe("osloLocalDateParts", () => {
+  test("converts a winter (CET, UTC+1) timestamp to local hhmm/today/tomorrow", () => {
+    const nowMs = Date.parse("2026-01-15T12:00:00Z");
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "13:00", today: "2026-01-15", tomorrow: "2026-01-16" });
+  });
+
+  test("converts a summer (CEST, UTC+2) timestamp to local hhmm/today/tomorrow", () => {
+    const nowMs = Date.parse("2026-07-15T12:00:00Z");
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "14:00", today: "2026-07-15", tomorrow: "2026-07-16" });
+  });
+
+  test("rolls 'today'/'tomorrow' onto the Oslo-local calendar date, not the UTC one, near midnight", () => {
+    // 22:30 UTC in summer is 00:30 the *next* day in Oslo (UTC+2).
+    const nowMs = Date.parse("2026-07-15T22:30:00Z");
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "00:30", today: "2026-07-16", tomorrow: "2026-07-17" });
+  });
+
+  test("rolls 'tomorrow' across a month boundary", () => {
+    const nowMs = Date.parse("2026-01-31T20:00:00Z"); // 21:00 CET
+    assert.deepEqual(osloLocalDateParts(nowMs), { hhmm: "21:00", today: "2026-01-31", tomorrow: "2026-02-01" });
+  });
+});
+
+describe("isReminderDue", () => {
+  test("true when hhmm matches the configured time exactly", () => {
+    assert.equal(isReminderDue("18:00", "18:00"), true);
+  });
+
+  test("false when hhmm differs from the configured time", () => {
+    assert.equal(isReminderDue("18:15", "18:00"), false);
+    assert.equal(isReminderDue("6:00", "06:00"), false);
   });
 });
 

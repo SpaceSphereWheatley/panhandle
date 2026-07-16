@@ -1,6 +1,7 @@
 import { useAuth } from "../context/AuthContext.jsx";
 import { ProfileIsland } from "../components/settings/ProfileIsland.jsx";
 import { AppSettingsIsland } from "../components/settings/AppSettingsIsland.jsx";
+import { NotificationsIsland } from "../components/settings/NotificationsIsland.jsx";
 import { PwaInstallCTA } from "../components/settings/PwaInstallCTA.jsx";
 import { HomeIsland } from "../components/settings/HomeIsland.jsx";
 import { AdminIsland } from "../components/settings/AdminIsland.jsx";
@@ -27,6 +28,10 @@ export function SettingsTab() {
 
       <div style={{ marginBottom: 24 }}>
         <AppSettingsIsland />
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <NotificationsIsland />
       </div>
 
       <div style={{ marginBottom: 24 }}>
