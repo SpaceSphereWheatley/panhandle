@@ -2,38 +2,19 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { api } from "../../lib/api.js";
-import { currentTheme, setTheme } from "../../lib/theme.js";
-import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { Button, Card, Input, SegmentedControl, Switch } from "../../design-system/index.js";
+import { Button, Card, Input } from "../../design-system/index.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 import { AccordionGroup } from "./AccordionGroup.jsx";
 import { SectionHeader } from "./SectionHeader.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 
-function hapticsEnabled() {
-  return localStorage.getItem("ph_haptics") !== "0";
-}
-
-const THEME_OPTIONS = [
-  { value: "light", label: "Lys" },
-  { value: "dark", label: "Mørk" },
-  { value: "system", label: "Følg systemet" },
-];
-
-const INTENSITY_OPTIONS = [
-  { value: "expressive", label: "Ekspressiv" },
-  { value: "muted", label: "Dempet" },
-  { value: "classic", label: "Klassisk" },
-];
-
-// Island 1 — one Card split into two labeled subsections via SectionHeader:
-// "Konto" (identity display, then accordioned Navn/E-post/Bytt passord/
-// Logg ut/Slett konto) and "Appinnstillinger" (Designintensitet, Tema,
-// Vibrasjon). Two headers in one Card rather than two separate Card islands
-// — keeps the extra chrome/padding down on an already-long Settings tab
-// (same reasoning as HomeIsland merging MembersIsland/RecurringIsland).
-// The PWA install highlight is its own standalone CTA — see
+// Island 1 — "Konto": identity display, then accordioned Navn/E-post/Bytt
+// passord/Logg ut/Slett konto. Device/app-level prefs (Designintensitet,
+// Tema, Vibrasjon) are their own separate island — see AppSettingsIsland.jsx
+// — matching every other Settings section being one Card with one
+// SectionHeader (see HomeIsland.jsx's comment on the visual-container-island
+// spec). The PWA install highlight is its own standalone CTA — see
 // PwaInstallCTA.jsx — rendered as a sibling after this card rather than a
 // row nested inside it.
 export function ProfileIsland() {
@@ -41,9 +22,6 @@ export function ProfileIsland() {
   const { listUsers } = useListUsers();
   const toast = useToast();
   const confirm = useConfirm();
-  const [theme, setThemeState] = useState(currentTheme());
-  const [intensity, setIntensityState] = useState(currentIntensity());
-  const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [nameInput, setNameInput] = useState(name || user || "");
@@ -99,22 +77,6 @@ export function ProfileIsland() {
     } catch {
       toast("Noe gikk galt", { error: true });
     }
-  }
-
-  function onSetTheme(t) {
-    setTheme(t);
-    setThemeState(t);
-  }
-
-  function onSetIntensity(v) {
-    setIntensity(v);
-    setIntensityState(v);
-  }
-
-  function onSetHaptics(on) {
-    localStorage.setItem("ph_haptics", on ? "1" : "0");
-    setHapticsState(on);
-    if (on && navigator.vibrate) navigator.vibrate(10);
   }
 
   async function changePassword() {
@@ -268,22 +230,6 @@ export function ProfileIsland() {
           <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
         </AccordionRow>
       </AccordionGroup>
-
-      <SectionHeader style={{ margin: "18px -24px 18px" }}>Appinnstillinger</SectionHeader>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Designintensitet</div>
-        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Tema</div>
-        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
-      </div>
-
-      <div>
-        <Switch checked={haptics} onChange={onSetHaptics} label="Vibrasjon ved handling" />
-      </div>
     </Card>
   );
 }

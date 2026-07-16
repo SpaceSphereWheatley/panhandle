@@ -6,12 +6,7 @@
 // shape at the default design intensity, which can't be recomposed into a
 // top-corners-only shorthand. The parent Card must set overflow: "hidden"
 // so this bleed gets clipped to whatever shape the card actually has.
-//
-// `style` lets a caller override the default top-of-card margin (e.g. a
-// second header used as a mid-card divider between two grouped subsections,
-// like ProfileIsland's "Konto"/"Appinnstillinger" split) while keeping the
-// same left/right bleed and visual treatment.
-export function SectionHeader({ children, style }) {
+export function SectionHeader({ children }) {
   return (
     <div
       style={{
@@ -24,7 +19,6 @@ export function SectionHeader({ children, style }) {
         fontWeight: 700,
         color: "var(--text-primary)",
         letterSpacing: "var(--tracking-wide)",
-        ...style,
       }}
     >
       {children}

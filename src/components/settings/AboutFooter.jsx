@@ -6,7 +6,7 @@ import logoMark from "../../design-system/assets/logo/panhandle-mark.svg";
 
 const linkStyle = { background: "none", border: "none", color: "var(--text-link)", font: "inherit", fontSize: "var(--text-xs)", cursor: "pointer", padding: 0 };
 
-// Island 4 — "Om Appen": deliberately not a Card. Low-priority, flat
+// Island 5 — "Om Appen": deliberately not a Card. Low-priority, flat
 // utility text at the very bottom, no elevated backdrop.
 export function AboutFooter() {
   const [showChangelog, setShowChangelog] = useState(false);

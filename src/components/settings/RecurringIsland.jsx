@@ -6,7 +6,7 @@ import { Input } from "../../design-system/index.js";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 import { AccordionRow } from "./AccordionRow.jsx";
 
-// Island 2 (part 2) — "Vårt Hjem": weekly recurring meal responsibility,
+// Island 3 (part 2) — "Vårt Hjem": weekly recurring meal responsibility,
 // minimizable like MembersIsland's sub-sections. Content-only — no own
 // Card wrapper, see MembersIsland.jsx / HomeIsland.jsx.
 export function RecurringIsland() {

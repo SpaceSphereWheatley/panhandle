@@ -17,7 +17,7 @@ import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
 const MotionRow = motion.div;
 
-// Island 3 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
+// Island 4 — "Administrasjon" (admin-only): a directly-visible 2x2 stats
 // dashboard, then the heavier management tools accordioned.
 export function AdminIsland() {
   const { user: currentUser, isSuperAdmin } = useAuth();
