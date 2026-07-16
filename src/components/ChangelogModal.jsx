@@ -3,7 +3,7 @@ import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { parseChangelog } from "../lib/changelogUtils.js";
 
-const FULL_CHANGELOG_URL = "https://github.com/SpaceSphereWheatley/panhandle/blob/main/CHANGELOG.md";
+const FULL_CHANGELOG_URL = "/changelog.html";
 
 export function ChangelogModal({ onClose }) {
   const [entries, setEntries] = useState(null);
@@ -45,7 +45,7 @@ export function ChangelogModal({ onClose }) {
         target="_blank"
         rel="noreferrer"
       >
-        Se hele endringsloggen på GitHub
+        Se hele endringsloggen
       </a>
       <div className="actions">
         <Button variant="primary" onClick={onClose}>Lukk</Button>

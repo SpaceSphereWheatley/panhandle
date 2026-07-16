@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="author" content="Mohibb Malik">
 <meta name="theme-color" content="#C1592A">
-<meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for to.">
+<meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for husstanden.">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -271,6 +271,8 @@
     border-top: 1px solid var(--border-default); padding: 28px 0; text-align: center;
     color: var(--text-tertiary); font-size: var(--text-xs);
   }
+  footer.site a { text-decoration: underline; text-underline-offset: 2px; }
+  footer.site a:hover { color: var(--text-link-hover); }
 </style>
 </head>
 <body>
@@ -290,12 +292,12 @@
 
 <section class="hero">
   <div class="wrap">
-    <span class="eyebrow">for dere to</span>
+    <span class="eyebrow">for husstanden</span>
     <h1>Planlegg middager.<br>Hold handlelisten <span>i synk.</span></h1>
     <p class="lead">
       Panhandle kobler ukeplanen for middager til en delt handleliste —
       legg en middag inn i kalenderen, skriv inn ingrediensene, og de dukker opp
-      på listen til dere. Begge ser samme liste i sanntid, fra hver sin telefon.
+      på listen til husstanden. Alle ser samme liste i sanntid, fra hver sin telefon.
     </p>
     <div class="cta-row">
       <a class="btn btn-primary lg" href="/app.html?signup=1">Registrer deg</a>
@@ -379,12 +381,12 @@
       <div class="feature">
         <span class="ico terracotta"><i class="ph ph-cooking-pot"></i></span>
         <h3>Ukeplan for middager</h3>
-        <p>Sett opp hvem som lager hva og når, sammen med den andre — ingen flere meldinger om middag.</p>
+        <p>Sett opp hvem som lager hva og når, sammen med resten av husstanden — ingen flere meldinger om middag.</p>
       </div>
       <div class="feature">
         <span class="ico sage"><i class="ph ph-shopping-cart-simple"></i></span>
         <h3>Delt handleliste, live</h3>
-        <p>Begge ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
+        <p>Alle ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
       </div>
       <div class="feature">
         <span class="ico terracotta"><i class="ph ph-magic-wand"></i></span>
@@ -396,7 +398,7 @@
 </section>
 
 <footer class="site">
-  <div class="wrap">© Panhandle</div>
+  <div class="wrap">© Panhandle · <a href="/changelog.html">Endringslogg</a></div>
 </footer>
 
 </body>

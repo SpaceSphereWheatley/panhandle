@@ -1,6 +1,6 @@
 # Panhandle
 
-A shared shopping list and meal planner PWA for two people, built on Cloudflare (Pages + Worker + D1).
+A shared shopping list and meal planner PWA for a household (works solo, or shared by up to 10 people), built on Cloudflare (Pages + Worker + D1).
 
 **Live:** https://shopping.mohibb.com
 
