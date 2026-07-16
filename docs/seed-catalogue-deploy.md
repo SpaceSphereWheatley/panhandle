@@ -1,5 +1,12 @@
 # Deploy: reset categories + seed 500 catalogue items
 
+> **Historical.** This one-time, destructive reset-and-reseed deploy has
+> already happened. The seed migration it describes no longer exists under
+> that name/number — the catalogue seed is now the non-destructive, re-runnable
+> upserts in `migrations/0002_seed_catalogue.sql`/`0003_expand_catalogue.sql`
+> (710 items, never wiping data; see `CLAUDE.md`'s Architecture section). Kept
+> only as a record.
+
 Step-by-step to get the new 13-category scheme and the 500-item Norwegian
 catalogue (`migrations/0004_seed_catalogue.sql`) live.
 

@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.22.7] — 2026-07-16
+
+### Changed
+- **The in-app changelog ("Hva er nytt") now shows entry titles only, not the
+  full text of every release.** `ChangelogModal.jsx` previously fetched raw
+  `CHANGELOG.md` and dumped it verbatim into a scrollable `<pre>` block. It
+  now parses out just each version's lead sentence per entry
+  (`src/lib/changelogUtils.js`) and links out to the full changelog on GitHub
+  for anyone who wants the complete description.
+
+### Docs
+- **`TODO.md`'s completed-items log moved to a new `Todo_done.md`**, numbered
+  sequentially (oldest to newest) instead of being an unnumbered flat list;
+  `TODO.md`'s open items are now grouped into themed sections (Feature, Data
+  model, Performance, UI/Polish) with an explicit priority ranking instead of
+  one flat value-sorted list.
+- **Repo cleanup pass**: fixed stale claims in `README.md` (offline
+  mode/service worker were listed as missing/future despite `public/sw.js`
+  already shipping real offline app-shell caching), added "Historical"
+  banners to three docs (`docs/multi-tenant-plan.md`,
+  `docs/multi-tenant-migration-log.md`, `docs/seed-catalogue-deploy.md`)
+  describing already-shipped one-time work, corrected a stale migration
+  filename reference, documented `scripts/compute-icon-offsets.mjs` in
+  `CLAUDE.md`, and removed one dead CSS rule (`src/index.css`'s `#allUsers`
+  selector, which targeted a nonexistent element).
+
+## [1.22.6] — 2026-07-16
+
+### Changed
+- **The "Installer Panhandle" install CTA in Settings no longer stays at full
+  size forever.** It previously showed the same large, high-contrast hero
+  block on every visit until the browser's `appinstalled` event fired in
+  that exact page load — so a user who'd already installed but opened the
+  site in an ordinary browser tab (not the installed app) kept seeing the
+  full prompt every time, and the "installed" signal itself was never
+  persisted across reloads. Now: the full CTA (unchanged) is still the
+  default for anyone who hasn't installed or interacted with it — its job is
+  to actually drive installs, so it stays maximally prominent there. Once
+  installed (now persisted in `localStorage`, surviving reloads) it demotes
+  to a compact filled pill rather than disappearing outright, since that
+  signal can go stale after an uninstall and a demoted-but-visible CTA is a
+  safer failure mode than a vanished one. A new dismiss ("×") button on the
+  full CTA demotes it further, to a plain text row, since an explicit
+  "not now" is a stronger signal than an inferred one.
+
 ## [1.22.5] — 2026-07-15
 
 ### Security

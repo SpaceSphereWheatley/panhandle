@@ -57,13 +57,11 @@ Both halves deploy automatically on push to `main`:
 ## Known Limitations
 
 - Sync is polling-based (every 7 seconds), not real-time push
-- No offline mode (PWA requires network)
 - No built-in backup (D1 is your source of truth)
 
 ## Future Ideas
 
 - Add ingredients per meal, auto-push to list
-- Service worker for offline support
 - Custom categories (editable in-app)
 - Expense tracking or note-taking
 

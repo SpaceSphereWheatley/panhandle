@@ -1,5 +1,13 @@
 # Multi-tenant Panhandle: owners, members, admin-created accounts
 
+> **Historical.** This is the original design doc for the multi-tenant rollout,
+> written against the pre-cutover codebase (hardcoded two-user global tables,
+> `public/index.html` as the app itself). It has already shipped — the schema
+> it describes (`migrations/0004_multi_tenant.sql`) was later squashed into
+> `migrations/0001_init.sql`, and the frontend was rewritten to Vite + React
+> (`src/`). Kept only as a record of the original design reasoning; for
+> current architecture, see `CLAUDE.md`.
+
 ## Context
 
 Panhandle currently hardcodes exactly two users ("Mohibb", "Saffa") sharing one global shopping list and one global meal plan. There is no `list_id` anywhere in the schema — `list_items`, `meal_plan`, `item_catalogue`, and `meal_catalogue` are all unscoped, global tables, and every worker query (`GET /list`, `POST /list`, `GET /plan`, `POST /plan`, etc.) returns/affects all rows with no `WHERE` filtering by user (confirmed via full read of `worker/index.js`, `public/index.html`, and `migrations/0001_init.sql` / `0002_users.sql`).
