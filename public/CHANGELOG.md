@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.27.1] — 2026-07-16
+
+### Fixed
+- **Made the Settings subpages consistent with each other.** Konto and
+  Varsler — the two subpages showing direct fields rather than accordions —
+  now share one `SubpageSection` block (divider + heading, the same chrome
+  `AccordionRow` already uses) instead of Konto's ad-hoc bold-label-and-
+  divider styling versus Varsler's unlabeled, undivided switches. Also fixed
+  Administrasjon's "Statistikk" row, which sat visibly indented relative to
+  the `AccordionRow`s above it (a leftover `SettingsRow` icon-chip layout
+  meant for the Settings root, not a subpage).
+
 ## [1.27.0] — 2026-07-16
 
 ### Added

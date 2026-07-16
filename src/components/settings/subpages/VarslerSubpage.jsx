@@ -3,6 +3,7 @@ import { usePush } from "../../../context/PushContext.jsx";
 import { api } from "../../../lib/api.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { Card, Switch, Input } from "../../../design-system/index.js";
+import { SubpageSection } from "../SubpageSection.jsx";
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -91,78 +92,69 @@ export function VarslerSubpage() {
     saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time });
   }
 
+  const pushDescription = !supported
+    ? "Nettleseren din støtter ikke push-varsler."
+    : iosNeedsInstall
+      ? "På iPhone/iPad må appen legges til på Hjem-skjermen (Del → Legg til på Hjem-skjermen) før varsler kan aktiveres."
+      : null;
+
   return (
-    <Card padding="lg">
-      {!supported && (
-        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 12 }}>
-          Nettleseren din støtter ikke push-varsler.
-        </div>
-      )}
-
-      {iosNeedsInstall && (
-        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 12 }}>
-          På iPhone/iPad må appen legges til på Hjem-skjermen (Del → Legg til på
-          Hjem-skjermen) før varsler kan aktiveres.
-        </div>
-      )}
-
-      <div style={{ marginBottom: 14 }}>
+    <Card padding="lg" style={{ overflow: "hidden" }}>
+      <SubpageSection label="Push-varsler" description={pushDescription}>
         <Switch checked={subscribed} onChange={onToggleNotifications} label="Aktiver varsler" />
-      </div>
+      </SubpageSection>
 
-      <div style={{ marginBottom: 14 }}>
+      <SubpageSection label="Middag ikke planlagt">
         <Switch
           checked={mealReminderEnabled}
           onChange={onToggleMealReminder}
           label="Påminnelse om middag ikke planlagt i morgen"
         />
-      </div>
+        {mealReminderEnabled && (
+          <div style={{ marginTop: 10 }}>
+            <label
+              htmlFor="meal-reminder-time"
+              style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
+            >
+              Tidspunkt for påminnelse
+            </label>
+            <Input
+              id="meal-reminder-time"
+              type="time"
+              step={900}
+              value={mealReminderTime}
+              onChange={onChangeMealTime}
+              style={{ maxWidth: 160 }}
+            />
+          </div>
+        )}
+      </SubpageSection>
 
-      {mealReminderEnabled && (
-        <div style={{ marginBottom: 14 }}>
-          <label
-            htmlFor="meal-reminder-time"
-            style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
-          >
-            Tidspunkt for påminnelse
-          </label>
-          <Input
-            id="meal-reminder-time"
-            type="time"
-            step={900}
-            value={mealReminderTime}
-            onChange={onChangeMealTime}
-            style={{ maxWidth: 160 }}
-          />
-        </div>
-      )}
-
-      <div style={{ marginBottom: 14 }}>
+      <SubpageSection label="Ukentlig planleggingspåminnelse">
         <Switch
           checked={weeklyReminderEnabled}
           onChange={onToggleWeeklyReminder}
           label="Ukentlig påminnelse om å planlegge middager"
         />
-      </div>
-
-      {weeklyReminderEnabled && (
-        <div>
-          <label
-            htmlFor="weekly-reminder-time"
-            style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
-          >
-            Tidspunkt på søndag
-          </label>
-          <Input
-            id="weekly-reminder-time"
-            type="time"
-            step={900}
-            value={weeklyReminderTime}
-            onChange={onChangeWeeklyTime}
-            style={{ maxWidth: 160 }}
-          />
-        </div>
-      )}
+        {weeklyReminderEnabled && (
+          <div style={{ marginTop: 10 }}>
+            <label
+              htmlFor="weekly-reminder-time"
+              style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
+            >
+              Tidspunkt på søndag
+            </label>
+            <Input
+              id="weekly-reminder-time"
+              type="time"
+              step={900}
+              value={weeklyReminderTime}
+              onChange={onChangeWeeklyTime}
+              style={{ maxWidth: 160 }}
+            />
+          </div>
+        )}
+      </SubpageSection>
     </Card>
   );
 }

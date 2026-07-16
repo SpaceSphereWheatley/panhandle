@@ -5,16 +5,17 @@ import { api } from "../../../lib/api.js";
 import { Button, Card, Input } from "../../../design-system/index.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
+import { SubpageSection } from "../SubpageSection.jsx";
 
 const fieldLabelStyle = { fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 };
-const dividerStyle = { borderTop: "1px solid var(--border-default)", marginTop: 16, paddingTop: 16 };
 
 // Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are
 // direct fields rather than accordioned (contrast with the old
 // ProfileIsland, which hid them behind AccordionRows on the shared root
-// scroll). Logg ut / Slett konto are pulled into their own visually
-// distinct danger-zone block below, instead of one more accordion a casual
-// tap could stumble into.
+// scroll), each in a SubpageSection sharing AccordionRow's divider/heading
+// chrome so every subpage's labeled blocks look like one system. Logg ut /
+// Slett konto are pulled into their own visually distinct danger-zone block
+// below, instead of one more section a casual tap could stumble into.
 export function KontoSubpage() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
@@ -131,37 +132,34 @@ export function KontoSubpage() {
         <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
         <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{user}</div>
 
-        <div style={dividerStyle}>
-          <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text-primary)" }}>Navn</div>
+        <SubpageSection label="Navn">
           <label htmlFor="profile-name" style={fieldLabelStyle}>Navn</label>
           <Input id="profile-name" placeholder="Navn" style={{ marginBottom: 8 }} value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
           <button onClick={saveName} className="btn-primary">Lagre navn</button>
-        </div>
+        </SubpageSection>
 
-        <div style={dividerStyle}>
-          <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text-primary)" }}>{email ? "E-post" : "Legg til e-post"}</div>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
-            Brukes til innlogging, Google-innlogging og for å tilbakestille passord hvis du glemmer det. Endrer du e-posten, logges andre enheter ut.
-          </div>
+        <SubpageSection
+          label={email ? "E-post" : "Legg til e-post"}
+          description="Brukes til innlogging, Google-innlogging og for å tilbakestille passord hvis du glemmer det. Endrer du e-posten, logges andre enheter ut."
+        >
           <label htmlFor="profile-email" style={fieldLabelStyle}>E-post</label>
           <Input id="profile-email" type="email" placeholder="E-post" style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
           <label htmlFor="profile-email-pw" style={fieldLabelStyle}>Nåværende passord</label>
           <Input id="profile-email-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
           <button onClick={saveEmail} className="btn-primary">Lagre e-post</button>
-        </div>
+        </SubpageSection>
 
-        <div style={dividerStyle}>
-          <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text-primary)" }}>Bytt passord</div>
+        <SubpageSection label="Bytt passord">
           <label htmlFor="profile-pw-current" style={fieldLabelStyle}>Nåværende passord</label>
           <Input id="profile-pw-current" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
           <label htmlFor="profile-pw-new" style={fieldLabelStyle}>Nytt passord (min. 6 tegn)</label>
           <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 6 tegn)" style={{ marginBottom: 8 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
           <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
-        </div>
+        </SubpageSection>
 
-        <div style={dividerStyle}>
+        <SubpageSection>
           <button className="logout" onClick={() => logout()}>Logg ut</button>
-        </div>
+        </SubpageSection>
       </Card>
 
       <Card padding="lg" style={{ background: "var(--status-danger-subtle)" }}>

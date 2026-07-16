@@ -9,7 +9,7 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 import { Card, Input } from "../../../design-system/index.js";
 import { AccordionRow } from "../AccordionRow.jsx";
 import { AccordionGroup } from "../AccordionGroup.jsx";
-import { SettingsRow } from "../SettingsRow.jsx";
+import { UiIcon } from "../../UiIcon.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
@@ -263,14 +263,27 @@ export function AdminSubpage({ onNavigate }) {
       </AccordionGroup>
 
       {isSuperAdmin && (
-        <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 4 }}>
-          <SettingsRow
-            icon="chart-bar"
-            tone="secondary"
-            label="Statistikk"
-            supportingText="Bruksdata for alle lister"
+        <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 12 }}>
+          <button
             onClick={() => onNavigate(["admin", "statistikk"])}
-          />
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>Statistikk</div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>Bruksdata for alle lister</div>
+            </div>
+            <UiIcon name="caretRight" size={16} style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
+          </button>
         </div>
       )}
 
