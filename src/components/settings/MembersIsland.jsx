@@ -80,8 +80,8 @@ export function MembersIsland() {
               <div className="who">
                 <div className="uname">
                   {u.name || u.username}{" "}
-                  {u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
-                  {u.is_admin && <Badge tone="primary">Admin</Badge>}
+                  {!!u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
+                  {!!u.is_admin && <Badge tone="primary">Admin</Badge>}
                 </div>
                 <div className="sub">{u.username === currentUser ? "deg" : u.username}</div>
               </div>
