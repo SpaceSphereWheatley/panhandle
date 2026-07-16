@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.23.4] — 2026-07-16
+
+### Changed
+- **Trimmed `CLAUDE.md` by about half** to cut token spend on every new
+  Claude Code session. Detailed reference material that isn't needed
+  turn-to-turn — the per-migration history, the `app.html`-naming
+  rationale, and a few auth/changelog implementation asides — moved to
+  a new `docs/architecture-notes.md`, read on demand instead of always
+  preloaded. No functional change.
+
 ## [1.23.3] — 2026-07-16
 
 ### Fixed
