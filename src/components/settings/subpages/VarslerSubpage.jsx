@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { usePush } from "../../context/PushContext.jsx";
-import { api } from "../../lib/api.js";
-import { useToast } from "../../context/ToastContext.jsx";
-import { Card, Switch, Input } from "../../design-system/index.js";
-import { SectionHeader } from "./SectionHeader.jsx";
+import { usePush } from "../../../context/PushContext.jsx";
+import { api } from "../../../lib/api.js";
+import { useToast } from "../../../context/ToastContext.jsx";
+import { Card, Switch, Input } from "../../../design-system/index.js";
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -15,11 +14,11 @@ function isStandalone() {
   return window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
-// Island — "Varsler": Web Push opt-in, plus the shared household setting for
+// Varsler subpage — Web Push opt-in, plus the shared household setting for
 // the "no meal planned for tomorrow" reminder (TODO #7 phase 1). The
 // reminder setting is list-wide (see /notification-settings, same
 // permission level as /recurring), so any member changes it for everyone.
-export function NotificationsIsland() {
+export function VarslerSubpage() {
   const { supported, subscribed, subscribe, unsubscribe } = usePush();
   const toast = useToast();
   const [reminderEnabled, setReminderEnabled] = useState(true);
@@ -68,9 +67,7 @@ export function NotificationsIsland() {
   }
 
   return (
-    <Card padding="lg" style={{ marginBottom: 16, overflow: "hidden" }}>
-      <SectionHeader>Varsler</SectionHeader>
-
+    <Card padding="lg">
       {!supported && (
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 12 }}>
           Nettleseren din støtter ikke push-varsler.

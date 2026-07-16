@@ -12,9 +12,9 @@ import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
 const MotionRow = motion.div;
 
-// Island 3 (part 1) — "Vårt Hjem": member list + add member, each in its own
+// "Vårt hjem" subpage, part 1: member list + add member, each in its own
 // accordion per the spec ("Se nåværende, legg til"). Content-only — no own
-// Card wrapper, since HomeIsland.jsx merges this with RecurringIsland into
+// Card wrapper, since HjemSubpage.jsx merges this with RecurringIsland into
 // one shared container.
 export function MembersIsland() {
   const { user: currentUser } = useAuth();
