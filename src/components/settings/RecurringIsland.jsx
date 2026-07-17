@@ -4,11 +4,12 @@ import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { Input } from "../../design-system/index.js";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
-import { AccordionRow } from "./AccordionRow.jsx";
+import { SubpageSection } from "./SubpageSection.jsx";
 
 // "Vårt hjem" subpage, part 2: weekly recurring meal responsibility,
-// minimizable like MembersIsland's sub-sections. Content-only — no own
-// Card wrapper, see MembersIsland.jsx / HjemSubpage.jsx.
+// always-open like MembersIsland's sub-sections (no accordions — see
+// SubpageSection.jsx). Content-only — no own Card wrapper, see
+// MembersIsland.jsx / HjemSubpage.jsx.
 export function RecurringIsland() {
   const { people, nameFor, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
@@ -48,7 +49,7 @@ export function RecurringIsland() {
   }
 
   return (
-    <AccordionRow label="Fast ansvarlig per ukedag">
+    <SubpageSection label="Fast ansvarlig per ukedag">
       <div style={{ fontSize: 13, color: "var(--text-tertiary)", margin: "0 0 12px" }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
         og du kan alltid endre det for en enkelt dag.
@@ -87,6 +88,6 @@ export function RecurringIsland() {
           );
         })}
       </div>
-    </AccordionRow>
+    </SubpageSection>
   );
 }

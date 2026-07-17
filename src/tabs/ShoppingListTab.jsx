@@ -505,7 +505,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           },
           {
             icon: "bell-ringing",
-            label: "Gi beskjed",
+            label: "Varsle husstanden",
             onClick: pingHousehold,
           },
         ]}
