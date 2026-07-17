@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.29.1] — 2026-07-17
+
+### Docs
+- **Reconciled `TODO.md`/`Todo_done.md` with what's actually shipped.**
+  `TODO.md`'s `#7` (notifications) still described "no notification code
+  exists at all today" and ranked itself the single highest-priority open
+  item, even though phases 1–2 (Web Push infra, the meal-plan and
+  weekly-planning reminders, the "get the other person's attention" ping)
+  shipped in 1.24.0/1.27.0. Moved that shipped work to `Todo_done.md`,
+  shrank `#7` to its one remaining phase (batched item-added
+  notifications), and re-ranked the open-item group priorities to match.
+
 ## [1.29.0] — 2026-07-17
 
 ### Added

@@ -7,13 +7,17 @@ them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-16):
-1. **Notifications (#7)** — the single highest-value item open: no
-   notification code exists at all today, and it's the one gap that
-   actually affects daily use of a 2-person household app. Biggest lift
-   here too, so worth scoping into phases (e.g. ship the "no meal planned
-   for tomorrow" cron-driven push before the full batched-items/custom-ping
-   set) rather than treating it as one big-bang effort.
+**Group priority** (highest to lowest, reassessed 2026-07-17):
+1. **#7's last remaining phase — batched item-added notifications.**
+   Downgraded from its previous #1 spot ("no notification code exists at
+   all") now that phases 1–2 shipped 2026-07-16 (Web Push infra + "no meal
+   planned for tomorrow" cron reminder in 1.24.0, then the weekly reminder
+   + on-demand ping in 1.27.0 — see `Todo_done.md`). What's left is small:
+   the subscribe/fan-out infrastructure (`push_subscriptions`,
+   `sendPushToList`, `notification_settings`) already exists, so this is
+   "add a batching trigger + a new notification type," not new plumbing —
+   still the best value-for-effort open item, just for a smaller reason
+   than before.
 2. **Small UI/polish items — low value, low risk, good filler:**
    - **#13** Add ~200 more catalogue icons
    - **#6** Proper desktop layout (not just raising the width cap)
@@ -30,19 +34,19 @@ Completed items live in `Todo_done.md`, not below.
 
 ## Feature
 
-7. Enable notifications properly. Possible notifications: items added to
-   the list (batched), no meal planned for tomorrow, a weekly reminder to
-   plan meals, a custom "get the other person's attention" ping, etc.
-   Currently there's no notification code at all — `public/sw.js` only
-   does app-shell caching (no `push`/`notificationclick` listeners), and
-   no subscription endpoint exists in `worker/index.js`. Needs Web Push
-   infrastructure end-to-end: VAPID keys, a `push_subscriptions` table/
-   migration, a subscribe flow in the frontend, and a Worker-side trigger
-   per notification type — the "no meal planned"/"weekly reminder" ones
-   also need a cron trigger, which the Worker doesn't have today. The
-   biggest lift of any item here, but meaningfully useful for a
-   2-person household.
-   _Value: High · Importance: Low · Type: Feature_
+7. Enable notifications properly — one remaining phase: batched "items
+   added to the list" pushes. Phases 1 and 2 already shipped (1.24.0,
+   1.27.0 — see `Todo_done.md`): Web Push subscribe infrastructure, VAPID
+   keys, the `push_subscriptions` table, the cron-driven "no meal planned
+   for tomorrow" reminder, the weekly Sunday-evening "nothing planned at
+   all" reminder, and the on-demand "get the other person's attention"
+   ping. What's left is notifying the other list member(s) when items are
+   added to the shopping list, batched (not one push per item, so adding
+   five things doesn't fire five notifications) — a new notification type
+   plus a batching trigger on top of infrastructure
+   (`push_subscriptions`, `sendPushToList`, `notification_settings`) that
+   already exists, not new plumbing.
+   _Value: Medium · Importance: Low · Type: Feature_
 
 15. Add language support (i18n). The UI is currently 100% hardcoded
     Norwegian strings across every tab/component/modal — no translation
