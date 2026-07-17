@@ -33,6 +33,15 @@ body {
 
 main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
+/* Tab-switch enter animation — see AppShell.jsx's pane-ref effect. --pane-dir
+   is set to 1 (tab moved right, e.g. list -> meals) or -1 (moved left) right
+   before this animation restarts, so the incoming pane always slides in from
+   the side matching the tab it came from. */
+@keyframes ph-pane-enter {
+  from { transform: translateX(calc(var(--pane-dir, 1) * 18px)); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
 /* Desktop framing: the layout (Header/main/TabBar) is already centered at
    480px, but on a wide viewport it just floats on a body of the same
    background as the app itself, with no visible edge. Above a phone/tablet
