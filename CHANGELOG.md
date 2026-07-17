@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.32.1] — 2026-07-17
+
+### Fixed
+- **Meal-week swipe didn't actually slide, and could open the wrong day.**
+  The drag gesture was constrained back to its starting position, so a swipe
+  only ever rubber-banded a few pixels before the new week's cards popped in
+  abruptly instead of sliding over. Because the card barely moved, releasing
+  the drag also frequently left the pointer on top of a day card, which fired
+  its tap handler and opened that day's edit modal — bound to the day from
+  *before* the swipe, so saving it could silently write to the wrong date,
+  and the full-screen modal covered the tab bar underneath, reading as it
+  "disappearing." Swiping now plays a real calendar-style slide (the current
+  week moves fully off-screen as the target week slides in from the correct
+  edge, showing a brief skeleton if its data hasn't arrived yet), and the
+  drag gesture no longer lets a release-on-card fire that card's tap.
+
 ## [1.32.0] — 2026-07-17
 
 ### Added

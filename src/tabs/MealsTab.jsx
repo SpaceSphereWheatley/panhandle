@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
@@ -18,6 +18,17 @@ import { readCache, writeCache } from "../lib/localCache.js";
 
 const POLL_MS = 7000;
 const MotionCard = motion(Card);
+// Direction-aware slide for the week pane (AnimatePresence's `custom`):
+// entering from the edge the swipe/button came from, exiting fully past the
+// opposite edge — a real calendar-style page turn instead of a rubber-band
+// drag that springs back to the same spot. `direction` is 0 on first mount
+// (no prior week to compare against), which enter/exit below treat the same
+// as `1` since it's never actually used for an animated transition then.
+const weekSlideVariants = {
+  enter: (direction) => ({ x: direction < 0 ? "-100%" : "100%" }),
+  center: { x: 0 },
+  exit: (direction) => ({ x: direction < 0 ? "100%" : "-100%" }),
+};
 // Last-fetched current week's plan, hydrated on mount so a returning user
 // sees real days instead of a skeleton/spinner (or worse, days that briefly
 // render as "unplanned" before the fetch resolves) on every cold open.
@@ -53,6 +64,19 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const weekOffsetRef = useRef(weekOffset);
   weekOffsetRef.current = weekOffset;
+  // Which edge the next/previous week should slide in from — set alongside
+  // weekOffset so the AnimatePresence transition below always knows which
+  // way to animate, independent of when loadPlan's fetch actually resolves.
+  const [direction, setDirection] = useState(0);
+  // Distinguishes a genuine swipe from a tap-with-negligible-movement on the
+  // draggable week stack: without this, releasing a drag on top of a day
+  // card fires that card's native onClick (Framer's drag gesture doesn't
+  // suppress it), popping open that day's edit modal — bound to the iso
+  // captured before the swipe, so it can end up editing/saving onto the
+  // wrong day. Set in onWeekDragEnd, cleared on the next tick (after the
+  // resulting click, if any, has already been checked and ignored).
+  const dragActiveRef = useRef(false);
+  const suppressClickRef = useRef(false);
   const [plan, setPlan] = useState(() => cachedCurrentWeekPlan() || {}); // iso -> plan row
   // Only true for a genuine cold load with no matching cached week yet —
   // once hydrated from PLAN_CACHE_KEY, subsequent fetches are silent
@@ -147,6 +171,8 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
 
   function shiftWeek(delta) {
     const next = delta === 0 ? 0 : Math.max(WEEK_MIN, Math.min(WEEK_MAX, weekOffset + delta));
+    if (next === weekOffset) return;
+    setDirection(delta === 0 ? (weekOffset > 0 ? -1 : 1) : Math.sign(delta));
     setWeekOffset(next);
     loadPlan(next);
   }
@@ -158,15 +184,47 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // rubber-band visual, not the gesture itself). Guarded against WEEK_MIN/MAX
   // here (rather than relying on shiftWeek's own clamping) so swiping past
   // the edge just springs back instead of firing a same-week reload.
+  function onWeekDragStart() {
+    dragActiveRef.current = false;
+  }
+
+  // The browser's native `click` on whatever's under the pointer at release
+  // fires before Framer gets to call onDragEnd below (it defers that a
+  // frame to finish resolving the gesture) — so setting suppressClickRef
+  // there is always too late. Setting it here instead, the moment the drag
+  // is unambiguously real, guarantees it's already true by release.
+  function onWeekDrag(_event, info) {
+    if (Math.abs(info.offset.x) > 5) {
+      dragActiveRef.current = true;
+      suppressClickRef.current = true;
+    }
+  }
+
   function onWeekDragEnd(_event, info) {
     const DISTANCE = 60;
     const VELOCITY = 500;
+    if (dragActiveRef.current) {
+      // Cleared a tick later so the click that follows this release (if
+      // any) still sees it as suppressed.
+      setTimeout(() => { suppressClickRef.current = false; }, 0);
+    }
     if ((info.offset.x < -DISTANCE || info.velocity.x < -VELOCITY) && weekOffset < WEEK_MAX) {
       shiftWeek(1);
     } else if ((info.offset.x > DISTANCE || info.velocity.x > VELOCITY) && weekOffset > WEEK_MIN) {
       shiftWeek(-1);
     }
   }
+
+  // The week the header/animated pane should reflect right now — driven by
+  // weekOffset (updates the instant a swipe/button commits), not `monday`
+  // (which only catches up once that week's plan has finished loading). Kept
+  // separate so the transition and header date range never lag a week behind
+  // a fast swipe that's still waiting on the network.
+  const targetMonday = mondayOf(new Date());
+  targetMonday.setDate(targetMonday.getDate() + weekOffset * 7);
+  const targetSunday = new Date(targetMonday);
+  targetSunday.setDate(targetSunday.getDate() + 6);
+  const isWeekLoaded = localIso(monday) === localIso(targetMonday);
 
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
@@ -209,8 +267,8 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
         <button disabled={weekOffset <= WEEK_MIN} style={{ ...weekNavBtnStyle, opacity: weekOffset <= WEEK_MIN ? 0.4 : 1 }} onClick={() => shiftWeek(-1)}>‹ Forrige</button>
         <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-tertiary)", textAlign: "center", flex: 1 }}>
-          {monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – {" "}
-          {sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}
+          {targetMonday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – {" "}
+          {targetSunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}
         </span>
         <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>Denne uken</button>
         <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>Neste ›</button>
@@ -227,16 +285,43 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       {loading ? (
         <MealsSkeleton stackStyle={stackStyle} />
       ) : (
+      // Clips the outgoing/incoming week to the pane's own width while they
+      // overlap mid-swipe, and gives AnimatePresence's `popLayout` mode (see
+      // below) a positioned ancestor to place the exiting pane against.
+      <div style={{ position: "relative", overflow: "hidden" }}>
+      <AnimatePresence initial={false} custom={direction} mode="popLayout">
       <motion.div
+        key={weekOffset}
+        custom={direction}
+        variants={weekSlideVariants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={transition}
         drag="x"
+        // dragElastic 1 (vs. a fractional value) with constraints locked to
+        // {0,0} makes the pane follow the pointer with no resistance during
+        // the drag itself — the actual "did this cross into the next/previous
+        // week" decision happens in onWeekDragEnd below, not from the
+        // constraint boundary. A released drag that didn't cross the
+        // threshold still snaps back to 0 on its own (Framer's default
+        // behaviour for a constrained draggable); one that did commits to a
+        // new `weekOffset`/key, and AnimatePresence's `exit` variant takes
+        // over from there instead of the snap-back.
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={shouldAnimate ? 0.3 : 0}
+        dragElastic={shouldAnimate ? 1 : 0}
+        onDragStart={onWeekDragStart}
+        onDrag={onWeekDrag}
         onDragEnd={onWeekDragEnd}
         // pan-y so a vertical scroll gesture starting on the stack still
         // scrolls the page instead of being captured by the x-axis drag.
         style={{ ...stackStyle, touchAction: "pan-y" }}
       >
-        {days.map((d) => {
+        {!isWeekLoaded
+          ? Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} height={i === 0 ? 88 : 56} radius={16} />
+            ))
+          : days.map((d) => {
           const iso = localIso(d);
           const p = plan[iso];
           const isToday = iso === today;
@@ -259,7 +344,13 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
               key={iso}
               {...motionProps}
               interactive
-              onClick={() => setModal({ type: "plan", iso })}
+              onClick={() => {
+                // A released swipe can leave the pointer sitting on top of
+                // whatever card is now underneath it, which fires this as a
+                // genuine click — see dragActiveRef/suppressClickRef above.
+                if (suppressClickRef.current) return;
+                setModal({ type: "plan", iso });
+              }}
               aria-label={`${p?.meal_name ? "Endre" : "Legg til"} måltid, ${dayName}`}
               // Non-today cards are more compact (smaller padding, tighter
               // title margin below) so the whole week takes up less vertical
@@ -401,6 +492,8 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           );
         })}
       </motion.div>
+      </AnimatePresence>
+      </div>
       )}
 
       <FabMenu
