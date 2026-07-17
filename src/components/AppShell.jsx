@@ -28,7 +28,11 @@ export function AppShell() {
   // Tabs are mounted once (on first visit) and then kept alive, hidden via
   // CSS, so switching panes never re-fetches from an empty state — see
   // src/tabs/ShoppingListTab.jsx and MealsTab.jsx's `active`-driven effects.
-  const [visited, setVisited] = useState({ list: true });
+  // Handleliste and Måltider both mount at app open (not just the active
+  // one) so Måltider's data is already loading by the time the user
+  // switches to it, instead of only starting then — Settings stays lazy,
+  // there's no equivalent "check it right away" need for it.
+  const [visited, setVisited] = useState({ list: true, meals: true });
   const [sync, setSync] = useState({ text: "", offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
   // Nav stack for the Settings tab only (e.g. [], ["konto"],

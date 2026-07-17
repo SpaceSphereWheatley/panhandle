@@ -13,9 +13,14 @@ import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, Avatar, FabMenu, LoadingState, EmptyState } from "../design-system/index.js";
+import { Input, Avatar, FabMenu, Skeleton, EmptyState } from "../design-system/index.js";
+import { readCache, writeCache } from "../lib/localCache.js";
 
 const POLL_MS = 7000;
+// Last-fetched list, hydrated on mount so a returning user sees real items
+// instantly instead of a skeleton/spinner on every cold open — see
+// loadList()/CLAUDE.md's loading-UI notes.
+const ITEMS_CACHE_KEY = "ph_cache_items_v1";
 // Fallback hold before a checked-off item re-sorts into "Nylig kjøpt" when
 // Framer's animation is off (reduced motion, or "classic" intensity) — there's
 // no pop animation to key off in that case, so this is a deliberately fixed,
@@ -31,18 +36,43 @@ const FALLBACK_RESOLVE_MS = 400;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 };
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 
+// Cold-load placeholder, shaped like a couple of categories worth of items —
+// a category label bar plus a handful of item-card-shaped blocks — so first
+// paint reserves roughly the real layout instead of a spinner with nothing
+// underneath it.
+function ShoppingListSkeleton({ viewMode }) {
+  const groups = [3, 2];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {groups.map((count, i) => (
+        <div key={i}>
+          <Skeleton width={100} height={11} radius={4} style={{ marginBottom: 8 }} />
+          <div style={viewMode === "grid" ? gridStyle : listStyle}>
+            {Array.from({ length: count }).map((_, j) => (
+              <Skeleton key={j} height={viewMode === "grid" ? 64 : 44} radius={12} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
   const { shouldAnimate } = useMotionConfig();
   const { nameFor } = useListUsers();
   const [catalogue, setCatalogue] = useState([]);
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
   // Other members who've polled the list in the last ~20s (see POST
   // /presence) — usernames, resolved to display names/colors for the avatar
   // row below the summary line.
   const [presentUsers, setPresentUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Only true for a genuine cold load with nothing cached yet — once
+  // hydrated from ITEMS_CACHE_KEY, subsequent fetches are silent background
+  // refreshes rather than a loading state.
+  const [loading, setLoading] = useState(() => readCache(ITEMS_CACHE_KEY, null) === null);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -79,6 +109,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       return;
     }
     setItems(fetched);
+    writeCache(ITEMS_CACHE_KEY, fetched);
     try {
       setSuggestedItems(await api("/catalogue/suggestions"));
     } catch {
@@ -450,7 +481,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       </div>
 
       {loading ? (
-        <LoadingState label="Laster handleliste..." />
+        <ShoppingListSkeleton viewMode={effectiveViewMode} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="shopping-cart-simple"

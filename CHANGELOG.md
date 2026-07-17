@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.31.0] — 2026-07-17
+
+### Added
+- **Instant loading for Handleliste and Måltider.** Both tabs now hydrate
+  from the last-fetched data cached in `localStorage` the moment the app
+  opens, instead of always starting blank and waiting on the network — a
+  returning user sees their real list/week plan immediately, silently
+  refreshed in the background. A genuine first-ever load (nothing cached
+  yet) now shows a shimmering skeleton shaped like the real rows/day-cards
+  in place of the old generic spinner, so first paint doesn't jump. Måltider
+  also starts loading its data as soon as the app opens rather than only
+  once you switch to that tab, fixing the days briefly rendering as
+  "unplanned" before the fetch had a chance to resolve.
+
 ## [1.30.1] — 2026-07-17
 
 ### Changed

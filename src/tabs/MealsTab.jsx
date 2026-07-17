@@ -13,10 +13,36 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, FabMenu, LoadingState } from "../design-system/index.js";
+import { Card, Avatar, Tag, FabMenu, Skeleton } from "../design-system/index.js";
+import { readCache, writeCache } from "../lib/localCache.js";
 
 const POLL_MS = 7000;
 const MotionCard = motion(Card);
+// Last-fetched current week's plan, hydrated on mount so a returning user
+// sees real days instead of a skeleton/spinner (or worse, days that briefly
+// render as "unplanned" before the fetch resolves) on every cold open.
+// Keyed by that week's Monday so a stale cache from a previous week is never
+// mistaken for the current one — see loadPlan()/CLAUDE.md's loading-UI notes.
+const PLAN_CACHE_KEY = "ph_cache_plan_v1";
+
+function cachedCurrentWeekPlan() {
+  const cached = readCache(PLAN_CACHE_KEY, null);
+  const currentMonday = localIso(mondayOf(new Date()));
+  return cached && cached.monday === currentMonday ? cached.plan : null;
+}
+
+// Cold-load placeholder shaped like a week of day cards, so first paint
+// reserves the real layout instead of a spinner (and never reads as "every
+// day is unplanned", which a blank/empty plan would).
+function MealsSkeleton({ stackStyle }) {
+  return (
+    <div style={stackStyle}>
+      {Array.from({ length: 7 }).map((_, i) => (
+        <Skeleton key={i} height={i === 0 ? 88 : 56} radius={16} />
+      ))}
+    </div>
+  );
+}
 
 export function MealsTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
@@ -27,8 +53,11 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const weekOffsetRef = useRef(weekOffset);
   weekOffsetRef.current = weekOffset;
-  const [plan, setPlan] = useState({}); // iso -> plan row
-  const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState(() => cachedCurrentWeekPlan() || {}); // iso -> plan row
+  // Only true for a genuine cold load with no matching cached week yet —
+  // once hydrated from PLAN_CACHE_KEY, subsequent fetches are silent
+  // background refreshes rather than a loading state.
+  const [loading, setLoading] = useState(() => cachedCurrentWeekPlan() === null);
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   // Single active modal for the whole tab, mirroring the vanilla app's one
   // #modalRoot swapping content: { type: "plan"|"browse"|"edit"|"ingredients", ... } | null
@@ -51,6 +80,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     const byDate = {};
     for (const p of rows) byDate[p.plan_date] = p;
     setPlan(byDate);
+    if (offset === 0) writeCache(PLAN_CACHE_KEY, { monday: localIso(m), plan: byDate });
   }
 
   // Optimistic, matching the shopping-list toggle pattern: update local
@@ -87,13 +117,24 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     }
   }
 
+  // Loads once on mount regardless of `active` — both tabs are now mounted
+  // together at app open (see AppShell.jsx's `visited` seed), so Måltider's
+  // data is ready by the time the user switches to it instead of only
+  // starting the fetch at that point. Reactivation (switching back to an
+  // already-loaded tab) still triggers its own refresh + polling below.
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      ensureLoaded();
+      // Reload whatever week was last open, not the current week — the tab
+      // stays mounted (hidden via CSS) across pane switches now, see
+      // AppShell.jsx, so weekOffset persists and shouldn't reset on reactivation.
+      loadPlan(weekOffsetRef.current).finally(() => setLoading(false));
+    } else if (active) {
+      loadPlan(weekOffsetRef.current);
+    }
     if (!active) return;
-    ensureLoaded();
-    // Reload whatever week was last open, not the current week — the tab
-    // stays mounted (hidden via CSS) across pane switches now, see
-    // AppShell.jsx, so weekOffset persists and shouldn't reset on reactivation.
-    loadPlan(weekOffsetRef.current).finally(() => setLoading(false));
     const timer = setInterval(() => {
       if (!document.hidden) loadPlan(weekOffsetRef.current);
     }, POLL_MS);
@@ -163,7 +204,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       </div>
 
       {loading ? (
-        <LoadingState label="Laster ukeplan..." />
+        <MealsSkeleton stackStyle={stackStyle} />
       ) : (
       <div style={stackStyle}>
         {days.map((d) => {
