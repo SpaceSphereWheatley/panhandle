@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.32.2] — 2026-07-17
+
+### Fixed
+- **Meal-week swipe only revealed the next week after releasing, not during
+  the drag.** The previous fix gave the swipe a real slide, but the
+  neighbouring week didn't exist in the page until the gesture committed, so
+  dragging just moved the current week aside and revealed blank background
+  underneath — the new week only appeared once you let go. All navigable
+  weeks are now laid out side by side in one row, with the current and
+  immediate neighbouring weeks' real data kept fetched, so dragging reveals
+  the adjacent week's actual cards sliding into place as you go, the same way
+  it moves out — not just after release.
+
 ## [1.32.1] — 2026-07-17
 
 ### Fixed
