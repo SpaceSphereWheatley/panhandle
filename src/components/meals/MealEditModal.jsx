@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { Button, Input } from "../../design-system/index.js";
+import { TokenInput } from "./TokenInput.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
@@ -13,21 +14,23 @@ export function MealEditModal({ id, onClose, onSaved }) {
   const confirm = useConfirm();
   const toast = useToast();
   const [catalogue, setCatalogue] = useState([]);
+  const [itemNames, setItemNames] = useState([]);
   const [name, setName] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [labels, setLabels] = useState("");
+  const [ingredients, setIngredients] = useState([]);
+  const [labels, setLabels] = useState([]);
   const [similarNote, setSimilarNote] = useState({ text: "", danger: false });
 
   useEffect(() => {
     (async () => {
-      const rows = await api("/meals");
+      const [rows, items] = await Promise.all([api("/meals"), api("/catalogue").catch(() => [])]);
       const sorted = [...rows].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name));
       setCatalogue(sorted);
+      setItemNames(items.map((it) => it.name));
       const meal = id ? sorted.find((m) => m.id === id) : null;
       if (meal) {
         setName(meal.name);
-        setIngredients(parseIngredients(meal.ingredients).join(", "));
-        setLabels(parseIngredients(meal.labels).join(", "));
+        setIngredients(parseIngredients(meal.ingredients));
+        setLabels(parseIngredients(meal.labels));
       }
     })();
   }, [id]);
@@ -70,11 +73,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
       toast("Tomt navn", { error: true });
       return;
     }
-    const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
-    const lbl = labels.split(",").map((s) => s.trim()).filter(Boolean);
     const res = id
-      ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) })
-      : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients: ing, labels: lbl }) });
+      ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
+      : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
     if (res.error) {
       toast(res.error, { error: true });
       return;
@@ -108,15 +109,22 @@ export function MealEditModal({ id, onClose, onSaved }) {
       <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--status-danger)" : "var(--text-tertiary)" }}>
         {similarNote.text}
       </div>
-      <label htmlFor="meal-edit-ingredients">Ingredienser (kommaseparert)</label>
-      <Input id="meal-edit-ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="F.eks. Kjøttdeig, Tortilla, Ost" />
-      <label htmlFor="meal-edit-labels">Etiketter (kommaseparert)</label>
-      <Input id="meal-edit-labels" list="mealLabelOptions" value={labels} onChange={(e) => setLabels(e.target.value)} placeholder="F.eks. Middag, Vegetar" />
-      <datalist id="mealLabelOptions">
-        {knownLabels.map((l) => (
-          <option value={l} key={l} />
-        ))}
-      </datalist>
+      <label htmlFor="meal-edit-ingredients">Ingredienser</label>
+      <TokenInput
+        id="meal-edit-ingredients"
+        value={ingredients}
+        onChange={setIngredients}
+        suggestions={itemNames}
+        placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
+      />
+      <label htmlFor="meal-edit-labels">Etiketter</label>
+      <TokenInput
+        id="meal-edit-labels"
+        value={labels}
+        onChange={setLabels}
+        suggestions={knownLabels}
+        placeholder="F.eks. Middag, Vegetar"
+      />
       <div className="actions">
         <Button variant="outline" onClick={onClose}>Avbryt</Button>
         <Button variant="primary" onClick={save}>Lagre</Button>

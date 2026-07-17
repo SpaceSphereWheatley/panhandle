@@ -33,12 +33,18 @@ export function RecurringIsland() {
     });
     const res = await saveDay(dow, value);
     if (res.error) toast(res.error, { error: true });
+    else toast("Lagret.");
   }
 
   async function onOtherBlur(dow, value) {
     const val = value.trim();
+    // Blur fires on every focus loss, not just an edit — skip the round trip
+    // (and the new "Lagret." toast) when nothing actually changed, so tabbing
+    // through the field without typing doesn't spam a confirmation.
+    if (val === (schedule[dow] || "")) return;
     const res = await saveDay(dow, val || "");
     if (res.error) toast(res.error, { error: true });
+    else toast("Lagret.");
     if (!val) {
       setOtherDrafts((prev) => {
         const next = { ...prev };

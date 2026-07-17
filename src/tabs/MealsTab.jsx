@@ -4,7 +4,7 @@ import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { localIso, mondayOf, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
+import { localIso, mondayOf, parseIngredients, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
@@ -114,6 +114,24 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
     days.push(d);
+  }
+
+  // "Cook again" (U26): one-tap re-plan of a catalogue meal onto the next
+  // unplanned day of the *currently visible* week, rather than a day picker —
+  // keeps the affordance to a single tap and the placement predictable (you
+  // can see the week you're planning into).
+  async function planAgain(meal) {
+    const targetIso = days.map(localIso).find((iso) => !plan[iso]?.meal_name);
+    if (!targetIso) {
+      toast("Alle dagene denne uken er allerede planlagt");
+      return;
+    }
+    const dow = (new Date(targetIso).getDay() + 6) % 7;
+    const responsible = plan[targetIso]?.responsible || schedule[dow] || "";
+    const dayLabel = new Date(targetIso).toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
+    setModal(null);
+    await savePlanDay(targetIso, { meal_name: meal.name, responsible, ingredients: parseIngredients(meal.ingredients) });
+    toast(`«${meal.name}» planlagt til ${dayLabel}`, { undoFn: () => deletePlanDay(targetIso) });
   }
 
   // Classic intensity is a plain linear list; expressive/muted use an
@@ -232,7 +250,10 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                     </div>
                   ) : recurring ? (
                     <div style={{ marginTop: 6 }}>
-                      <Tag tone="neutral">Fast: {nameFor(recurring)}</Tag>
+                      <Tag tone="primary">
+                        <i className="ph ph-repeat" style={{ marginRight: 4 }} aria-hidden="true" />
+                        Fast: {nameFor(recurring)}
+                      </Tag>
                     </div>
                   ) : null}
                 </div>
@@ -276,6 +297,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         <MealCatalogueBrowseModal
           onClose={() => setModal(null)}
           onOpenEdit={(id) => setModal({ type: "edit", id })}
+          onPlanAgain={planAgain}
         />
       )}
       {modal?.type === "edit" && (
