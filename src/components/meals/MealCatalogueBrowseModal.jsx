@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
+import { Button, IconButton, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 
 // Browse of every saved meal (meal_catalogue), with usage stats and a
 // client-side name + label filter — there's no server-side search endpoint
 // since the whole catalogue is already fetched by GET /meals for the
-// planner's dropdown. Clicking a row opens it in the editor.
-export function MealCatalogueBrowseModal({ onClose, onOpenEdit }) {
+// planner's dropdown. Clicking a row opens it in the editor; the calendar
+// icon (U26, "cook again") re-plans it onto the next open day instead.
+export function MealCatalogueBrowseModal({ onClose, onOpenEdit, onPlanAgain }) {
   const [meals, setMeals] = useState(null);
   const [filter, setFilter] = useState("");
   const [labelFilter, setLabelFilter] = useState("");
@@ -65,19 +66,28 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit }) {
               ? new Date(m.last_planned).toLocaleDateString("no-NO", { day: "numeric", month: "short", year: "numeric" })
               : "Aldri";
             return (
-              <button type="button" className="meal-browse-row" key={m.id} onClick={() => onOpenEdit(m.id)}>
-                <span className="info">
-                  <span className="name">{m.name}</span>
-                  <span className="stats">{m.times_planned}× planlagt · sist {last} · {count} ingredienser</span>
-                  {labels.length > 0 && (
-                    <span className="labels">
-                      {labels.map((l) => (
-                        <span className="label-chip" key={l}>{l}</span>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              </button>
+              <div className="meal-browse-row" key={m.id}>
+                <button type="button" className="meal-browse-row-main" onClick={() => onOpenEdit(m.id)}>
+                  <span className="info">
+                    <span className="name">{m.name}</span>
+                    <span className="stats">{m.times_planned}× planlagt · sist {last} · {count} ingredienser</span>
+                    {labels.length > 0 && (
+                      <span className="labels">
+                        {labels.map((l) => (
+                          <span className="label-chip" key={l}>{l}</span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
+                </button>
+                <IconButton
+                  icon="calendar-plus"
+                  size="md"
+                  variant="subtle"
+                  label={`Planlegg «${m.name}» igjen`}
+                  onClick={() => onPlanAgain(m)}
+                />
+              </div>
             );
           })
         )}

@@ -92,9 +92,12 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
 /* "Alle måltider" browse modal + purchase-suggestion rows */
 .meal-browse-row {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surface-sunken); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 6px;
-  border: none; width: 100%; text-align: left; font-family: var(--font-sans); cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface-sunken); border-radius: var(--radius-md); padding: 6px 6px 6px 12px; margin-bottom: 6px;
+}
+.meal-browse-row-main {
+  flex: 1; min-width: 0; display: flex; padding: 4px 0;
+  border: none; background: none; text-align: left; font-family: var(--font-sans); color: inherit; cursor: pointer;
 }
 .meal-browse-row .info { flex: 1; min-width: 0; }
 .meal-browse-row .name { font-size: var(--text-sm); font-weight: 600; word-break: break-word; color: var(--text-primary); }
@@ -224,6 +227,39 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 .meal-name-option { padding: 12px 14px; cursor: pointer; color: var(--text-primary); }
 .meal-name-option:active { background: var(--surface-sunken); }
 .meal-name-option.meal-name-empty { color: var(--text-tertiary); cursor: default; font-style: italic; }
+
+/* Chip/token editor (TokenInput.jsx) — replaces plain comma-separated text
+   inputs for meal ingredients & labels with removable chips + a typeahead
+   dropdown, reusing the meal-name field's dropdown look above. */
+.token-input { position: relative; }
+.token-input-chips {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  width: 100%; padding: 7px 10px; border-radius: var(--radius-md); border: 1px solid var(--border-default);
+  background: var(--surface-sunken);
+}
+.token-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--accent-primary-subtle); color: var(--accent-primary-press);
+  border-radius: var(--radius-pill); padding: 4px 4px 4px 10px; font-size: var(--text-xs); font-weight: 600;
+  white-space: nowrap;
+}
+.token-chip button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; border: none; background: none; color: inherit;
+  cursor: pointer; padding: 0; font-size: 12px; flex-shrink: 0;
+}
+.token-chip button:active { background: rgba(0, 0, 0, 0.12); }
+.token-input .token-input-field {
+  flex: 1; min-width: 80px; border: none; background: none; outline: none; width: auto;
+  padding: 4px 2px; font-size: var(--text-md); font-family: var(--font-sans); color: var(--text-primary);
+}
+.token-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface-card);
+  border: 1px solid var(--border-default); border-radius: var(--radius-md); z-index: 20;
+  max-height: 180px; overflow-y: auto; box-shadow: var(--shadow-raised);
+}
+.token-dropdown-option { padding: 10px 14px; cursor: pointer; color: var(--text-primary); font-size: var(--text-sm); }
+.token-dropdown-option:active { background: var(--surface-sunken); }
 
 /* Button variants (About/misc settings actions not yet on design-system Button) */
 .btn-primary {

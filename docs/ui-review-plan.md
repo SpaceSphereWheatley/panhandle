@@ -110,10 +110,12 @@ destructive action, and several controls have no button chrome or press state.*
 - [ ] **U17** — **Make sync status legible.** "Oppdatert HH:MM" is 11px muted in
   the header; for two people editing live, currency matters. Give it more weight
   and an explicit "Synkroniserer…" state.
-- [ ] **U18** — **Strengthen the recurring hint + add save confirmation.** The
+- [x] **U18** — **Strengthen the recurring hint + add save confirmation.** The
   "Fast ansvarlig" line is 50% opacity italic (easy to miss); recurring-day
   changes save silently (toast only on error). Firm up the hint and confirm
-  saves.
+  saves. *Shipped 1.28.0: the week view's "Fast: {name}" tag uses a primary
+  tone + repeat icon, and RecurringIsland now toasts "Lagret." on an actual
+  change.*
 
 ### P5 — Forms & small UX
 - [ ] **U19** — **Confirm-password field on change-password.** Only a 6-char
@@ -121,10 +123,12 @@ destructive action, and several controls have no button chrome or press state.*
   confirm field (and optionally a strength hint).
 - [ ] **U20** — **Per-category counts + collapse/expand-all.** Category headers
   are collapsible but show no item count and there's no bulk toggle.
-- [ ] **U21** — **Chip/token editor for meal ingredients & labels.** Both are
+- [x] **U21** — **Chip/token editor for meal ingredients & labels.** Both are
   comma-separated free-text inputs (fiddly on a phone keyboard, no dedupe
   feedback). Move to token editors with catalogue-backed autocomplete so
   ingredients map cleanly to catalogue names for the "add to list" flow.
+  *Shipped 1.28.0: `TokenInput.jsx`, wired into the meal-plan and meal-edit
+  modals.*
 - [ ] **U22** — **Human-readable admin list labels.** The admin "Alle brukere"
   panel groups by raw `Liste {id}`; show the owner's name (or a label) instead.
 - [ ] **U23** — **Nudge seeded accounts to change their password.** The invite
@@ -139,8 +143,10 @@ destructive action, and several controls have no button chrome or press state.*
   this revisits it, so confirm before building.*
 - [ ] **U25** — **"Shopping mode."** Hide bought items, large high-contrast
   text, keep-screen-awake — a mode tuned for actually walking the store.
-- [ ] **U26** — **Cook-again / repeat a past meal** — one-tap re-plan of a
-  previous meal; complements the labels filter.
+- [x] **U26** — **Cook-again / repeat a past meal** — one-tap re-plan of a
+  previous meal; complements the labels filter. *Shipped 1.28.0: a "plan
+  again" icon on each row of "Alle måltider" assigns it to the next
+  unplanned day of the visible week.*
 - [ ] **U27** — **Multi-week / month meal overview** for planning past the
   current one-week strip (`weekOffset` is `[-1, 4]`).
 

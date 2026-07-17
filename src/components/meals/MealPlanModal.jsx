@@ -4,6 +4,7 @@ import { Button } from "../../design-system/components/forms/Button.jsx";
 import { Input } from "../../design-system/components/forms/Input.jsx";
 import { IconButton } from "../../design-system/components/forms/IconButton.jsx";
 import { LoadingState } from "../../design-system/components/data-display/Spinner.jsx";
+import { TokenInput } from "./TokenInput.jsx";
 import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
@@ -20,10 +21,11 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [mealCatalogue, setMealCatalogue] = useState([]);
+  const [itemNames, setItemNames] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [current, setCurrent] = useState({});
   const [mealName, setMealName] = useState("");
-  const [ingredients, setIngredients] = useState("");
+  const [ingredients, setIngredients] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [respSelect, setRespSelect] = useState("");
   const [respOther, setRespOther] = useState("");
@@ -32,12 +34,13 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   useEffect(() => {
     (async () => {
       await ensureLoaded();
-      let meals, plan, sugg;
+      let meals, plan, sugg, items;
       try {
-        [meals, plan, sugg] = await Promise.all([
+        [meals, plan, sugg, items] = await Promise.all([
           api("/meals"),
           api(`/plan?from=${iso}&to=${iso}`),
           api("/meals/suggestions").catch(() => []),
+          api("/catalogue").catch(() => []),
         ]);
       } catch {
         toast("Kunne ikke laste – sjekk nettforbindelsen", { error: true });
@@ -45,11 +48,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
         return;
       }
       setMealCatalogue(meals);
+      setItemNames(items.map((it) => it.name));
       setSuggestions(sugg);
       const cur = plan[0] || {};
       setCurrent(cur);
       setMealName(cur.meal_name || "");
-      setIngredients(parseIngredients(cur.ingredients).join(", "));
+      setIngredients(parseIngredients(cur.ingredients));
       const dow = (new Date(iso).getDay() + 6) % 7;
       const def = !cur.responsible ? schedule[dow] || "" : "";
       const resp = cur.responsible || "";
@@ -75,13 +79,13 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   function onMealNameChange(v) {
     setMealName(v);
     const match = mealCatalogue.find((m) => m.name.toLowerCase() === v.trim().toLowerCase());
-    setIngredients(match ? parseIngredients(match.ingredients).join(", ") : ingredients);
+    if (match) setIngredients(parseIngredients(match.ingredients));
     setShowDropdown(true);
   }
 
   function pickMeal(m) {
     setMealName(m.name);
-    setIngredients(parseIngredients(m.ingredients).join(", "));
+    setIngredients(parseIngredients(m.ingredients));
     setShowDropdown(false);
   }
 
@@ -93,13 +97,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   function savePlan() {
     const name = mealName.trim();
     const responsible = getResp();
-    const ing = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
     if (!name && !responsible) {
       onClose();
       return;
     }
     onClose();
-    onSavePlan(iso, { meal_name: name || null, responsible, ingredients: ing });
+    onSavePlan(iso, { meal_name: name || null, responsible, ingredients });
   }
 
   async function deletePlanDay() {
@@ -113,8 +116,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   // the ingredient picker.
   async function pickIngredients() {
     const name = mealName.trim();
-    const rawIng = ingredients.split(",").map((s) => s.trim()).filter(Boolean);
-    if (!rawIng.length) {
+    if (!ingredients.length) {
       toast("Legg inn ingredienser først");
       return;
     }
@@ -122,14 +124,14 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       try {
         await api("/plan", {
           method: "POST",
-          body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients: rawIng }),
+          body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients }),
         });
       } catch {
         toast("Kunne ikke lagre måltidet – sjekk nettforbindelsen", { error: true });
         return;
       }
     }
-    onOpenIngredientPicker(rawIng, iso);
+    onOpenIngredientPicker(ingredients, iso);
   }
 
   if (loading) {
@@ -195,11 +197,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
           )}
         </div>
       </div>
-      <label htmlFor="meal-plan-ingredients">Ingredienser (kommaseparert)</label>
-      <input
+      <label htmlFor="meal-plan-ingredients">Ingredienser</label>
+      <TokenInput
         id="meal-plan-ingredients"
         value={ingredients}
-        onChange={(e) => setIngredients(e.target.value)}
+        onChange={setIngredients}
+        suggestions={itemNames}
         placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
       />
       <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>

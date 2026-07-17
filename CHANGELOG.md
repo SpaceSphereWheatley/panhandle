@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.28.0] — 2026-07-17
+
+### Added
+- **Chip/token editor for meal ingredients and labels** (`docs/ui-review-plan.md` U21). The
+  meal-plan and meal-edit modals' ingredients field, and the meal-edit
+  modal's labels field, are no longer plain comma-separated text inputs —
+  each entry is now a removable chip, added by typing + Enter (or comma) or
+  picked from a dropdown. Ingredient suggestions are backed by the shopping
+  list's item catalogue, so ingredients map cleanly onto catalogue names for
+  the "add to shopping list" flow; label suggestions are backed by every
+  label already used across the meal catalogue.
+- **"Plan again" one-tap re-plan from the meal catalogue** (U26). Each row in
+  "Alle måltider" now has a calendar icon next to it — tapping it assigns
+  that meal to the next unplanned day in the week you're currently viewing
+  (defaulting the responsible person to that day's recurring default) and
+  confirms with an undoable toast, instead of requiring you to open a day,
+  search the meal-name dropdown, and save.
+
+### Changed
+- **Strengthened the recurring-schedule ("Fast ansvarlig") hint and added a
+  save confirmation** (U18). The "Fast: {name}" tag shown on unplanned days
+  in the Måltider week view now uses a more visible primary tone with a
+  repeat icon instead of a plain neutral tag. Saving a day's recurring
+  responsible person in Settings → Vårt hjem now confirms with a "Lagret."
+  toast instead of only surfacing feedback on error.
+
 ## [1.27.3] — 2026-07-16
 
 ### Changed
