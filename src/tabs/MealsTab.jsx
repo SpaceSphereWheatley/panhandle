@@ -68,7 +68,6 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     m.setDate(m.getDate() + offset * 7);
     const sunday = new Date(m);
     sunday.setDate(sunday.getDate() + 6);
-    setMonday(m);
     let rows;
     try {
       rows = await api(`/plan?from=${localIso(m)}&to=${localIso(sunday)}`);
@@ -79,6 +78,11 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     }
     const byDate = {};
     for (const p of rows) byDate[p.plan_date] = p;
+    // `monday` and `plan` update together (same tick, batched by React) so a
+    // week change never renders the new week's dates against the still-old
+    // `plan` data — which would look up nothing for those dates and flash
+    // every day as "unplanned" until the fetch resolves.
+    setMonday(m);
     setPlan(byDate);
     if (offset === 0) writeCache(PLAN_CACHE_KEY, { monday: localIso(m), plan: byDate });
   }
