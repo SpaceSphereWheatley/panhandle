@@ -15,6 +15,7 @@ export { ListItem } from './components/data-display/ListItem.jsx';
 export { Avatar } from './components/data-display/Avatar.jsx';
 export { Badge } from './components/data-display/Badge.jsx';
 export { Spinner, LoadingState } from './components/data-display/Spinner.jsx';
+export { Skeleton } from './components/data-display/Skeleton.jsx';
 export { EmptyState } from './components/data-display/EmptyState.jsx';
 export { Header } from './components/navigation/Header.jsx';
 export { TabBar } from './components/navigation/TabBar.jsx';
