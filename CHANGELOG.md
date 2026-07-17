@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.29.0] — 2026-07-17
+
+### Added
+- **Stale-item marker on the shopping list.** Unbought items that have sat
+  on the list longer than a configurable number of days (default 7) now get
+  a small discreet dot on their icon, computed purely client-side from the
+  item's existing `added_at` timestamp — no new notification, push, or cron
+  involved. The threshold is a shared household setting, editable from
+  Settings → Varsler ("Gamle varer på handlelisten").
+
 ## [1.28.1] — 2026-07-17
 
 ### Fixed
