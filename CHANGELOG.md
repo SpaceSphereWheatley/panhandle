@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.28.1] — 2026-07-17
+
+### Fixed
+- **Fixed a crash (blank white screen) when opening the meal-plan modal
+  ("Legg til"/"Endre" on any day in Måltider).** The modal briefly renders
+  only a loading spinner while its data loads, and the app's focus-trap
+  library throws if a dialog has no focusable element at all — which then
+  unmounted the whole app since there's no error boundary. `Sheet.jsx` (the
+  shared bottom-sheet primitive behind every modal) now gives focus-trap a
+  `fallbackFocus` target (the dialog container itself), so a loading modal
+  with no other tabbable content no longer crashes.
+
 ## [1.28.0] — 2026-07-17
 
 ### Added
