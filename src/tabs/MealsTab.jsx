@@ -75,8 +75,17 @@ function MealsSkeleton({ stackStyle }) {
 // actually swipe to them.
 function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, stackStyle, paneWidth }) {
   const days = weekDays(monday);
+  // Horizontal padding, box-sizing:border-box so it insets the cards rather
+  // than widening the pane itself — the row's drag math treats `paneWidth`
+  // as an exact one-week pitch, so the pane's *outer* size can't change.
+  // Without this, two adjacent weeks' cards touch with zero gap at the seam
+  // while cards within a week keep their usual gap, which reads as one
+  // merged card rather than two separate pages while peeking mid-swipe.
+  // Half the intra-week gap on each side keeps the rhythm the same as
+  // everywhere else instead of an arbitrary gutter width.
+  const gutter = (stackStyle.gap || 12) / 2;
   return (
-    <div style={{ ...stackStyle, width: paneWidth, flexShrink: 0 }}>
+    <div style={{ ...stackStyle, width: paneWidth, flexShrink: 0, boxSizing: "border-box", padding: `0 ${gutter}px` }}>
       {!byDate
         ? Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} height={i === 0 ? 88 : 56} radius={16} />
