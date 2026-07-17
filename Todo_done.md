@@ -1,12 +1,30 @@
 # Done
 
-Completed TODO items, numbered 75 (oldest) to 1 (most recent) — these are a
+Completed TODO items, numbered 1 (oldest) to 77 (most recent) — these are a
 separate, sequential log distinct from the open-item IDs in `TODO.md` (a
 parenthetical like "(9)" inside an entry below instead refers to that entry
 having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+77. (7) Closed out push notifications. Phase 1: Web Push subscribe/
+    unsubscribe infrastructure end-to-end — VAPID keys, the
+    `push_subscriptions` table, a Settings → "Varsler" enable-notifications
+    toggle, and a `*/15 * * * *` cron-driven "no meal planned for
+    tomorrow" reminder, deduped per list/day (`notification_log`). Phase
+    2: a weekly Sunday-evening reminder that fires only if the upcoming
+    week has *zero* planned meals at all (not "few," to avoid an arbitrary
+    nag threshold), and an on-demand "get the other person's attention"
+    ping (shopping list FAB → "Varsle husstanden", `POST /push/ping`)
+    fanned out to every other subscribed device on the list, rate-limited
+    to once per 2 minutes per list (`notification_state`). Web Push on iOS
+    only works for the PWA installed to the Home Screen (16.4+), not an
+    ordinary Safari tab — `VarslerSubpage` shows a hint when that's the
+    case. (1.24.0, 1.27.0) Batched item-added notifications — the one
+    remaining phase the original item scoped out — were considered and
+    declined: the on-demand ping already covers "get my attention," and a
+    2-person household doesn't need a third automated notification type
+    on top of the two reminders. #7 is fully closed, not deferred.
 76. (17) Restructured user identity around three editable fields — **Name**
     (display name, shown throughout the UI), **e-mail**, and **username**,
     where username always mirrors the e-mail. New `users.name` column
