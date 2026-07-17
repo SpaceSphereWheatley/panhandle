@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.31.1] — 2026-07-17
+
+### Fixed
+- **Meals briefly showing as unplanned when switching weeks.** Navigating
+  Måltider to a different week updated the visible date range before that
+  week's plan had finished loading, so for an instant every day flashed as
+  unplanned against the still-loading data. The date range and plan data now
+  update together once the fetch resolves.
+
 ## [1.31.0] — 2026-07-17
 
 ### Added
