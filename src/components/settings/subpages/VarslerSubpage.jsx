@@ -20,7 +20,10 @@ function isStandalone() {
 // weekly meal-plan reminder (phase 2, fixed to Sunday evening — see
 // checkWeeklyReminders in worker/index.js). Both reminder settings are
 // list-wide (see /notification-settings, same permission level as
-// /recurring), so any member changes them for everyone.
+// /recurring), so any member changes them for everyone. Also holds the
+// stale-item marker threshold — not a push reminder (it's a purely visual
+// ShoppingListTab indicator), just riding along on the same settings
+// row/endpoint since it's the app's only per-list preferences store.
 export function VarslerSubpage() {
   const { supported, subscribed, subscribe, unsubscribe } = usePush();
   const toast = useToast();
@@ -28,6 +31,7 @@ export function VarslerSubpage() {
   const [mealReminderTime, setMealReminderTime] = useState("18:00");
   const [weeklyReminderEnabled, setWeeklyReminderEnabled] = useState(true);
   const [weeklyReminderTime, setWeeklyReminderTime] = useState("18:00");
+  const [staleItemDays, setStaleItemDays] = useState(7);
   const iosNeedsInstall = isIOS() && !isStandalone();
 
   useEffect(() => {
@@ -37,6 +41,7 @@ export function VarslerSubpage() {
       setMealReminderTime(res.meal_reminder_time);
       setWeeklyReminderEnabled(res.weekly_reminder_enabled);
       setWeeklyReminderTime(res.weekly_reminder_time);
+      setStaleItemDays(res.stale_item_days);
     });
   }, []);
 
@@ -49,7 +54,7 @@ export function VarslerSubpage() {
     }
   }
 
-  // The endpoint upserts all four fields together, so every save sends the
+  // The endpoint upserts all five fields together, so every save sends the
   // full current state, not just whichever control changed.
   async function saveSettings(next) {
     try {
@@ -60,6 +65,7 @@ export function VarslerSubpage() {
           meal_reminder_time: next.mealReminderTime,
           weekly_reminder_enabled: next.weeklyReminderEnabled,
           weekly_reminder_time: next.weeklyReminderTime,
+          stale_item_days: next.staleItemDays,
         }),
       });
       if (res.error) toast(res.error, { error: true });
@@ -70,26 +76,33 @@ export function VarslerSubpage() {
 
   function onToggleMealReminder(on) {
     setMealReminderEnabled(on);
-    saveSettings({ mealReminderEnabled: on, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled: on, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, staleItemDays });
   }
 
   function onChangeMealTime(e) {
     const time = e.target.value;
     if (!time) return;
     setMealReminderTime(time);
-    saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime, staleItemDays });
   }
 
   function onToggleWeeklyReminder(on) {
     setWeeklyReminderEnabled(on);
-    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled: on, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled: on, weeklyReminderTime, staleItemDays });
   }
 
   function onChangeWeeklyTime(e) {
     const time = e.target.value;
     if (!time) return;
     setWeeklyReminderTime(time);
-    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time });
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time, staleItemDays });
+  }
+
+  function onChangeStaleItemDays(e) {
+    const days = Number(e.target.value);
+    if (!Number.isInteger(days) || days < 1 || days > 90) return;
+    setStaleItemDays(days);
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, staleItemDays: days });
   }
 
   const pushDescription = !supported
@@ -154,6 +167,26 @@ export function VarslerSubpage() {
             />
           </div>
         )}
+      </SubpageSection>
+
+      <SubpageSection label="Gamle varer på handlelisten" description="Varer som har ligget ukjøpt lenger enn dette får en diskré markering i handlelisten.">
+        <div style={{ marginTop: 2 }}>
+          <label
+            htmlFor="stale-item-days"
+            style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}
+          >
+            Antall dager
+          </label>
+          <Input
+            id="stale-item-days"
+            type="number"
+            min={1}
+            max={90}
+            value={staleItemDays}
+            onChange={onChangeStaleItemDays}
+            style={{ maxWidth: 100 }}
+          />
+        </div>
       </SubpageSection>
     </Card>
   );

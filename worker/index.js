@@ -939,6 +939,11 @@ export function sanitizeLabels(labels) {
 // simply never fire.
 const REMINDER_TIME_RE = /^([01]\d|2[0-3]):(00|15|30|45)$/;
 
+// Bounds for the shopping list's stale-item marker threshold (days) — not a
+// push reminder, just a sanity range for the client-side visual indicator.
+const STALE_ITEM_DAYS_MIN = 1;
+const STALE_ITEM_DAYS_MAX = 90;
+
 // Computes the current Europe/Oslo local wall-clock time plus "today"/
 // "tomorrow" calendar dates from a UTC timestamp, via Intl's IANA tz
 // database rather than manual UTC-offset math — this correctly follows
@@ -2507,13 +2512,14 @@ export default {
     // defaults rather than requiring a seeded row per list.
     if (path === "/notification-settings" && method === "GET") {
       const row = await env.DB.prepare(
-        "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time FROM notification_settings WHERE list_id = ?1"
+        "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time, stale_item_days FROM notification_settings WHERE list_id = ?1"
       ).bind(user.list_id).first();
       return authedJson({
         meal_reminder_enabled: row ? !!row.meal_reminder_enabled : true,
         meal_reminder_time: row?.meal_reminder_time || "18:00",
         weekly_reminder_enabled: row ? !!row.weekly_reminder_enabled : true,
         weekly_reminder_time: row?.weekly_reminder_time || "18:00",
+        stale_item_days: row?.stale_item_days ?? 7,
       });
     }
 
@@ -2528,18 +2534,23 @@ export default {
       if (!REMINDER_TIME_RE.test(body.weekly_reminder_time || "")) {
         return authedJson({ error: "Ugyldig tidspunkt" }, 400);
       }
+      const staleItemDays = Number(body.stale_item_days);
+      if (!Number.isInteger(staleItemDays) || staleItemDays < STALE_ITEM_DAYS_MIN || staleItemDays > STALE_ITEM_DAYS_MAX) {
+        return authedJson({ error: "Ugyldig antall dager" }, 400);
+      }
       await env.DB.prepare(`
-        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time)
-        VALUES (?1, ?2, ?3, ?4, ?5)
+        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time, stale_item_days)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
         ON CONFLICT(list_id) DO UPDATE SET
           meal_reminder_enabled = excluded.meal_reminder_enabled,
           meal_reminder_time = excluded.meal_reminder_time,
           weekly_reminder_enabled = excluded.weekly_reminder_enabled,
           weekly_reminder_time = excluded.weekly_reminder_time,
+          stale_item_days = excluded.stale_item_days,
           updated_at = datetime('now')
       `).bind(
         user.list_id, body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time,
-        body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time
+        body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time, staleItemDays
       ).run();
       return authedJson({ ok: true });
     }

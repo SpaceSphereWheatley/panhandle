@@ -22,8 +22,15 @@ const STAGGER_CAP = 10;
 // `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
 // badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
 // not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0 }) {
+export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
   const isGrid = viewMode === "grid";
+  // Discreet "been on the list a while" marker — purely visual, computed from
+  // added_at (see /notification-settings' stale_item_days, VarslerSubpage.jsx),
+  // never shown once the item's bought.
+  const isStale =
+    !item.bought &&
+    !!staleItemDays &&
+    Date.now() - new Date(item.added_at).getTime() > staleItemDays * 24 * 60 * 60 * 1000;
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const intensity = useDesignIntensity();
@@ -108,6 +115,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
         {...contentMotionProps}
         className={isGrid ? "grid-badge" : "item-badge"}
         style={{
+          position: "relative",
           width: isGrid ? 48 : 40,
           height: isGrid ? 48 : 40,
           borderRadius: "var(--radius-pill)",
@@ -122,6 +130,21 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
         }}
       >
         <ItemIcon name={item.name} />
+        {isStale ? (
+          <span
+            title={`På listen i over ${staleItemDays} dager`}
+            style={{
+              position: "absolute",
+              top: -1,
+              right: -1,
+              width: 9,
+              height: 9,
+              borderRadius: "50%",
+              background: "var(--text-tertiary)",
+              border: "1.5px solid var(--surface-card)",
+            }}
+          />
+        ) : null}
       </ContentWrapper>
       <ContentWrapper
         {...contentMotionProps}

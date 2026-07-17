@@ -57,6 +57,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // Items mid "checked-off" animation: still rendered in their category, struck
   // through and fading out, before they re-sort into "Nylig kjøpt".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
+  // Stale-item marker threshold (days), a per-list preference — see
+  // /notification-settings and VarslerSubpage.jsx. Falls back to the app
+  // default until the first fetch resolves.
+  const [staleItemDays, setStaleItemDays] = useState(7);
 
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
@@ -123,6 +127,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       if (!document.hidden) loadList();
     }, POLL_MS);
     return () => clearInterval(timer);
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+    api("/notification-settings").then((res) => {
+      if (!res.error) setStaleItemDays(res.stale_item_days);
+    });
   }, [active]);
 
   function setView(mode) {
@@ -448,7 +459,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving, staleItemDays)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -576,7 +587,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration, onResolved) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration, onResolved, staleItemDays) {
   return (
     <div key={renderGeneration} style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false} mode="popLayout">
@@ -594,6 +605,7 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, ren
               onResolved={onResolved}
               viewMode={viewMode}
               index={index}
+              staleItemDays={staleItemDays}
             />
           );
         })}
