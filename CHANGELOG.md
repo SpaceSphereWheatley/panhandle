@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.32.0] — 2026-07-17
+
+### Added
+- **Swipe between weeks in Måltider.** The day-card stack can now be dragged
+  left/right, as an alternative to the ‹ Forrige/Neste › buttons, to move
+  between weeks.
+
+### Fixed
+- **FAB briefly mispositioned when switching tabs.** Handleliste's and
+  Måltider's floating action button (and its menu scrim) could flash into
+  the wrong place for the duration of the tab-switch slide animation. The
+  animation moved the whole tab pane with a CSS `transform`, which — per the
+  CSS spec — makes `position: fixed` descendants (the FAB) position
+  themselves relative to that pane instead of the viewport for as long as
+  the transform is applied. Switched the slide to animate `left` instead,
+  which doesn't have that effect.
+
 ## [1.31.1] — 2026-07-17
 
 ### Fixed
