@@ -151,6 +151,23 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     loadPlan(next);
   }
 
+  // Horizontal swipe on the day-card stack as an alternate to the ‹
+  // Forrige/Neste › buttons. `info.offset`/`info.velocity` reflect the
+  // pointer's actual travel, independent of `dragElastic`, so this keeps
+  // working even under reduced motion (dragElastic 0 there just removes the
+  // rubber-band visual, not the gesture itself). Guarded against WEEK_MIN/MAX
+  // here (rather than relying on shiftWeek's own clamping) so swiping past
+  // the edge just springs back instead of firing a same-week reload.
+  function onWeekDragEnd(_event, info) {
+    const DISTANCE = 60;
+    const VELOCITY = 500;
+    if ((info.offset.x < -DISTANCE || info.velocity.x < -VELOCITY) && weekOffset < WEEK_MAX) {
+      shiftWeek(1);
+    } else if ((info.offset.x > DISTANCE || info.velocity.x > VELOCITY) && weekOffset > WEEK_MIN) {
+      shiftWeek(-1);
+    }
+  }
+
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
   const today = localIso(new Date());
@@ -210,7 +227,15 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       {loading ? (
         <MealsSkeleton stackStyle={stackStyle} />
       ) : (
-      <div style={stackStyle}>
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={shouldAnimate ? 0.3 : 0}
+        onDragEnd={onWeekDragEnd}
+        // pan-y so a vertical scroll gesture starting on the stack still
+        // scrolls the page instead of being captured by the x-axis drag.
+        style={{ ...stackStyle, touchAction: "pan-y" }}
+      >
         {days.map((d) => {
           const iso = localIso(d);
           const p = plan[iso];
@@ -375,7 +400,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
             </CardComponent>
           );
         })}
-      </div>
+      </motion.div>
       )}
 
       <FabMenu

@@ -36,10 +36,16 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 /* Tab-switch enter animation — see AppShell.jsx's pane-ref effect. --pane-dir
    is set to 1 (tab moved right, e.g. list -> meals) or -1 (moved left) right
    before this animation restarts, so the incoming pane always slides in from
-   the side matching the tab it came from. */
+   the side matching the tab it came from. Animates `left` on a `position:
+   relative` pane (see AppShell.jsx), not `transform`: a non-none `transform`
+   on an ancestor creates a new containing block for `position: fixed`
+   descendants, which would hijack ShoppingListTab/MealsTab's fixed-positioned
+   FabMenu (and its scrim) into being positioned relative to this pane for the
+   animation's duration instead of the viewport — visibly mispositioning the
+   FAB on every tab switch. `left` doesn't have that effect. */
 @keyframes ph-pane-enter {
-  from { transform: translateX(calc(var(--pane-dir, 1) * 18px)); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+  from { left: calc(var(--pane-dir, 1) * 18px); opacity: 0; }
+  to   { left: 0; opacity: 1; }
 }
 
 /* Desktop framing: the layout (Header/main/TabBar) is already centered at

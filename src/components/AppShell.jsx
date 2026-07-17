@@ -57,7 +57,13 @@ export function AppShell() {
   // above). Timing/easing come from --spring-duration-soft/--ease-spring-soft
   // (design-intensity.css), so "muted"/"classic" and prefers-reduced-motion
   // all collapse this the same way they already collapse TabBar's own
-  // indicator — no extra branching needed here.
+  // indicator — no extra branching needed here. The animation itself
+  // (index.css's ph-pane-enter) slides via `left`, not `transform`, and each
+  // pane below is `position: relative` to give that `left` an effect —
+  // ShoppingListTab/MealsTab each render a `position: fixed` FabMenu, and a
+  // `transform` on this wrapper would hijack it into being positioned
+  // relative to the pane instead of the viewport for the animation's
+  // duration, visibly mispositioning the FAB on every tab switch.
   const paneRefs = useRef({});
   const prevTabRef = useRef(tab);
   useEffect(() => {
@@ -149,7 +155,7 @@ export function AppShell() {
           <div
             ref={(el) => { paneRefs.current.list = el; }}
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
-            style={{ display: tab === "list" ? "block" : "none" }}
+            style={{ display: tab === "list" ? "block" : "none", position: "relative" }}
           >
             <ShoppingListTab active={tab === "list"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
@@ -158,7 +164,7 @@ export function AppShell() {
           <div
             ref={(el) => { paneRefs.current.meals = el; }}
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
-            style={{ display: tab === "meals" ? "block" : "none" }}
+            style={{ display: tab === "meals" ? "block" : "none", position: "relative" }}
           >
             <MealsTab active={tab === "meals"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
@@ -167,7 +173,7 @@ export function AppShell() {
           <div
             ref={(el) => { paneRefs.current.settings = el; }}
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
-            style={{ display: tab === "settings" ? "block" : "none" }}
+            style={{ display: tab === "settings" ? "block" : "none", position: "relative" }}
           >
             <SettingsTab settingsPath={settingsPath} onNavigate={pushSettingsPath} />
           </div>
