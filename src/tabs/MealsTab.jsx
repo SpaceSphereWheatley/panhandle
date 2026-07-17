@@ -13,7 +13,7 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, Button, FabMenu, LoadingState } from "../design-system/index.js";
+import { Card, Avatar, Tag, FabMenu, LoadingState } from "../design-system/index.js";
 
 const POLL_MS = 7000;
 const MotionCard = motion(Card);
@@ -188,6 +188,9 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
             <CardComponent
               key={iso}
               {...motionProps}
+              interactive
+              onClick={() => setModal({ type: "plan", iso })}
+              aria-label={`${p?.meal_name ? "Endre" : "Legg til"} måltid, ${dayName}`}
               // Non-today cards are more compact (smaller padding, tighter
               // title margin below) so the whole week takes up less vertical
               // space — today's card keeps the full-size prominent treatment.
@@ -257,17 +260,25 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                     </div>
                   ) : null}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModal({ type: "plan", iso })}
-                  // `outline`'s color/border tokens follow the ambient theme, but
-                  // today's card flips to an inverse surface above — override to
-                  // the matching inverse tokens so the button stays readable.
-                  style={isToday ? { color: "var(--md-inverse-on-surface)", border: "1.5px solid var(--md-inverse-on-surface)" } : undefined}
+                {/* The card itself is the tap target now (see `interactive`
+                    above) — this is a quiet label, not a second control, so
+                    it can't nest inside the card's own button semantics. */}
+                <span
+                  style={{
+                    position: "relative",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--text-xs)",
+                    fontWeight: 600,
+                    color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 80%, transparent)" : "var(--text-tertiary)",
+                  }}
                 >
                   {p?.meal_name ? "Endre" : "Legg til"}
-                </Button>
+                  <i className="ph ph-caret-right" style={{ fontSize: "0.95em" }} aria-hidden="true" />
+                </span>
               </div>
             </CardComponent>
           );

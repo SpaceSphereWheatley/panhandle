@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.30.0] — 2026-07-17
+
+### Added
+- **Shared-axis slide when switching tabs.** Handleliste/Måltider/Innstillinger
+  used to swap with an instant `display` cut; the tab you switch to now
+  slides and fades in from the direction you came from, riding the same
+  spring the tab bar's own sliding indicator already used. Only the incoming
+  pane animates (panes have independent heights and the page itself
+  scrolls, so animating an outgoing pane out too would risk a layout jump
+  for little payoff) — panes stay mounted exactly as before, so switching
+  tabs still doesn't re-fetch. "Dempet"/"Klassisk" design intensity and
+  `prefers-reduced-motion` collapse it the same way they already collapse
+  everything else driven by these motion tokens, with no extra branching.
+- **Whole-card tap target for meal day cards.** Each day in Måltider used to
+  require hitting a small "Endre"/"Legg til" button in the corner; the
+  entire card is now the tap target, with a colour wash + ripple while held
+  so it's clear the card itself — not just the corner — is interactive. The
+  old button is now a quiet trailing label next to a chevron.
+
 ## [1.29.0] — 2026-07-17
 
 ### Added
