@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.30.1] — 2026-07-17
+
+### Changed
+- **Clearer empty-day cards in Måltider.** An unplanned day used to look like
+  every other day's card, just with muted italic text ("Ingen måltid
+  planlagt") inside the same solid fill. It's now a dashed, unfilled outline
+  — a card with nothing in it shouldn't be styled like one with something in
+  it — with an active "Legg til måltid" prompt in the accent colour and a
+  small plus icon, instead of a passive statement in a colour that read as
+  disabled.
+
 ## [1.30.0] — 2026-07-17
 
 ### Added

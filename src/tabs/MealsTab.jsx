@@ -203,7 +203,17 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                       borderRadius: "var(--radius-card)",
                       boxShadow: "var(--elevation-shadow-3)",
                     }
-                  : { borderRadius: "var(--radius-md)" }
+                  : p?.meal_name
+                    ? { borderRadius: "var(--radius-md)" }
+                    // Unplanned, non-today: an empty slot, not a card with muted
+                    // text in it — drop the fill for a dashed outline instead of
+                    // reusing the same solid surface every other day gets.
+                    : {
+                        borderRadius: "var(--radius-md)",
+                        background: "transparent",
+                        boxShadow: "none",
+                        border: "1.5px dashed var(--border-default)",
+                      }
               }
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -220,19 +230,53 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                   >
                     {isToday ? "I dag" : dayName}
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
-                      lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
-                      fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
-                      color: p?.meal_name ? (isToday ? "var(--md-inverse-on-surface)" : "var(--text-primary)") : "var(--text-tertiary)",
-                      fontStyle: p?.meal_name ? "normal" : "italic",
-                      margin: isToday ? "4px 0" : "2px 0",
-                    }}
-                  >
-                    {p?.meal_name || "Ingen måltid planlagt"}
-                  </div>
+                  {p?.meal_name ? (
+                    <div
+                      style={{
+                        fontFamily: "var(--font-sans)",
+                        fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
+                        lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
+                        fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
+                        color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-primary)",
+                        margin: isToday ? "4px 0" : "2px 0",
+                      }}
+                    >
+                      {p.meal_name}
+                    </div>
+                  ) : (
+                    // Unplanned: an active invite ("Legg til måltid" + a plus
+                    // chip), not a passive statement in muted italic — italic
+                    // reads as disabled, not tappable, and this card is now a
+                    // tap target in its own right (see `interactive` above).
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: isToday ? "4px 0" : "2px 0" }}>
+                      <span
+                        style={{
+                          width: isToday ? 26 : 22,
+                          height: isToday ? 26 : 22,
+                          borderRadius: "50%",
+                          background: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 18%, transparent)" : "var(--accent-primary-subtle)",
+                          color: isToday ? "var(--md-inverse-on-surface)" : "var(--accent-primary-press)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <i className="ph ph-plus" style={{ fontSize: isToday ? 14 : 12 }} aria-hidden="true" />
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
+                          lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
+                          fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
+                          color: isToday ? "var(--md-inverse-on-surface)" : "var(--accent-primary)",
+                        }}
+                      >
+                        Legg til måltid
+                      </span>
+                    </div>
+                  )}
                   {p?.responsible ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
                       <Avatar
@@ -276,7 +320,10 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                     color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 80%, transparent)" : "var(--text-tertiary)",
                   }}
                 >
-                  {p?.meal_name ? "Endre" : "Legg til"}
+                  {/* Only "Endre" needs the word — an unplanned day's card
+                      already says "Legg til måltid" front and centre, so
+                      repeating it here would be redundant, just the chevron. */}
+                  {p?.meal_name ? "Endre" : null}
                   <i className="ph ph-caret-right" style={{ fontSize: "0.95em" }} aria-hidden="true" />
                 </span>
               </div>
