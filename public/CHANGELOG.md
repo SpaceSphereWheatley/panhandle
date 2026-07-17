@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.27.3] — 2026-07-16
+
+### Changed
+- **Removed the accordion/collapse pattern from Settings entirely.** Vårt
+  hjem's member list, add-member form, and weekly-responsibility list, and
+  Administrasjon's icon-gap list, create-owner form, and all-users list are
+  now always directly visible (`SubpageSection`, the same block Konto and
+  Varsler already used) instead of hidden behind a tap-to-expand
+  `AccordionRow`. Every subpage now shows its content immediately — a
+  subpage already has the room, so nothing needs a second tap to reveal.
+  `AccordionRow`/`AccordionGroup` are removed, having no remaining callers.
+
 ## [1.27.2] — 2026-07-16
 
 ### Changed

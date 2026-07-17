@@ -11,11 +11,11 @@ const fieldLabelStyle = { fontSize: "var(--text-xs)", color: "var(--text-seconda
 
 // Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are
 // direct fields rather than accordioned (contrast with the old
-// ProfileIsland, which hid them behind AccordionRows on the shared root
-// scroll), each in a SubpageSection sharing AccordionRow's divider/heading
-// chrome so every subpage's labeled blocks look like one system. Logg ut /
-// Slett konto are pulled into their own visually distinct danger-zone block
-// below, instead of one more section a casual tap could stumble into.
+// ProfileIsland, which hid them behind accordions on the shared root
+// scroll), each in a SubpageSection so every subpage's labeled blocks look
+// like one system. Logg ut / Slett konto are pulled into their own
+// visually distinct danger-zone block below, instead of one more section a
+// casual tap could stumble into.
 export function KontoSubpage() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();

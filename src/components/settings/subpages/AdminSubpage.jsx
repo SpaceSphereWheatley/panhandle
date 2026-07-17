@@ -7,8 +7,7 @@ import { APP_VERSION } from "../../../lib/version.js";
 import { CredentialsModal } from "../../CredentialsModal.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { Card, Input } from "../../../design-system/index.js";
-import { AccordionRow } from "../AccordionRow.jsx";
-import { AccordionGroup } from "../AccordionGroup.jsx";
+import { SubpageSection } from "../SubpageSection.jsx";
 import { UiIcon } from "../../UiIcon.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
@@ -17,10 +16,10 @@ import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
 const MotionRow = motion.div;
 
 // Administrasjon subpage — directly-visible 2x2 stats, then the heavier
-// management tools accordioned (admin is a power-user screen, so this
-// density is fine). Statistikk is promoted out to its own subpage/row
-// instead of one more accordion, since a full charts dashboard needs its
-// own screen (see StatistikkSubpage.jsx).
+// management tools as always-open SubpageSections (no accordions — see
+// SubpageSection.jsx). Statistikk is promoted out to its own subpage/row
+// instead of a fold-out, since a full charts dashboard needs its own screen
+// (see StatistikkSubpage.jsx).
 export function AdminSubpage({ onNavigate }) {
   const { user: currentUser, isSuperAdmin } = useAuth();
   const { refresh: refreshListUsers } = useListUsers();
@@ -179,37 +178,36 @@ export function AdminSubpage({ onNavigate }) {
         {listCount} {listCount === 1 ? "liste" : "lister"} · Versjon {versionDetail}
       </div>
 
-      <AccordionGroup>
-        <AccordionRow label="Varer uten ikon">
-          <div className="icon-gap-list">
-            {iconGaps.map((n) => (
-              <span key={n}>{n}</span>
-            ))}
-          </div>
-        </AccordionRow>
+      <SubpageSection label="Varer uten ikon">
+        <div className="icon-gap-list">
+          {iconGaps.map((n) => (
+            <span key={n}>{n}</span>
+          ))}
+        </div>
+      </SubpageSection>
 
-        <AccordionRow label="Opprett eier (ny liste)">
-          <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
-          <Input
-            id="admin-new-owner-name"
-            placeholder="Navn"
-            value={newOwnerName}
-            onChange={(e) => setNewOwnerName(e.target.value)}
-            style={{ marginBottom: 8 }}
-          />
-          <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
-          <Input
-            id="admin-new-owner-email"
-            type="email"
-            placeholder="E-post"
-            value={newOwnerEmail}
-            onChange={(e) => setNewOwnerEmail(e.target.value)}
-          />
-          <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
-        </AccordionRow>
+      <SubpageSection label="Opprett eier (ny liste)">
+        <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
+        <Input
+          id="admin-new-owner-name"
+          placeholder="Navn"
+          value={newOwnerName}
+          onChange={(e) => setNewOwnerName(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+        <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
+        <Input
+          id="admin-new-owner-email"
+          type="email"
+          placeholder="E-post"
+          value={newOwnerEmail}
+          onChange={(e) => setNewOwnerEmail(e.target.value)}
+        />
+        <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
+      </SubpageSection>
 
-        <AccordionRow label="Alle brukere">
-          {Object.keys(groups).map((listId) => (
+      <SubpageSection label="Alle brukere">
+        {Object.keys(groups).map((listId) => (
             <div key={listId}>
               <div className="admin-group">
                 Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
@@ -259,8 +257,7 @@ export function AdminSubpage({ onNavigate }) {
               </AnimatePresence>
             </div>
           ))}
-        </AccordionRow>
-      </AccordionGroup>
+      </SubpageSection>
 
       {isSuperAdmin && (
         <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 12 }}>

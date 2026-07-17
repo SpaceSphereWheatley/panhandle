@@ -5,17 +5,17 @@ import { Badge, Button, Input } from "../../design-system/index.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
-import { AccordionRow } from "./AccordionRow.jsx";
+import { SubpageSection } from "./SubpageSection.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
 const MotionRow = motion.div;
 
-// "Vårt hjem" subpage, part 1: member list + add member, each in its own
-// accordion per the spec ("Se nåværende, legg til"). Content-only — no own
-// Card wrapper, since HjemSubpage.jsx merges this with RecurringIsland into
-// one shared container.
+// "Vårt hjem" subpage, part 1: member list + add member, each always-open
+// (no accordions — see SubpageSection.jsx). Content-only — no own Card
+// wrapper, since HjemSubpage.jsx merges this with RecurringIsland into one
+// shared container.
 export function MembersIsland() {
   const { user: currentUser } = useAuth();
   const { listUsers, refresh } = useListUsers();
@@ -65,7 +65,7 @@ export function MembersIsland() {
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Medlemmer</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{listUsers.length} / 10 brukere</div>
 
-      <AccordionRow label="Se nåværende medlemmer">
+      <SubpageSection label="Se nåværende medlemmer">
         <AnimatePresence initial={false}>
           {listUsers.map((u) => (
             <MotionRow
@@ -91,9 +91,9 @@ export function MembersIsland() {
             </MotionRow>
           ))}
         </AnimatePresence>
-      </AccordionRow>
+      </SubpageSection>
 
-      <AccordionRow label="Legg til medlem">
+      <SubpageSection label="Legg til medlem">
         <label htmlFor="members-new-name" className="sr-only">Navn på nytt medlem</label>
         <Input
           id="members-new-name"
@@ -113,7 +113,7 @@ export function MembersIsland() {
         <button onClick={addMember} disabled={full} className="btn-primary mt-8" style={{ opacity: full ? 0.5 : 1 }}>
           + Legg til bruker
         </button>
-      </AccordionRow>
+      </SubpageSection>
 
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />
