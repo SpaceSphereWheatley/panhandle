@@ -2,4 +2,4 @@
 // (worker/index.js) and the frontend (src/lib/version.js) both import this,
 // so a release only requires bumping the number here — see CLAUDE.md's
 // versioning convention (MAJOR.MINOR.PATCH) for when to bump which part.
-export const VERSION = "1.27.1";
+export const VERSION = "1.27.2";

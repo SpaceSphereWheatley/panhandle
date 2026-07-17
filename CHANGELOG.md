@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.27.2] — 2026-07-16
+
+### Changed
+- **Renamed the shopping list FAB's "get the other person's attention" ping
+  action from "Gi beskjed" to "Varsle husstanden"** — the old label didn't
+  say what was being said or to whom; the new one makes clear the button
+  notifies the rest of the household (reusing "varsle," the same verb
+  Settings' "Varsler" section is named after), no behavior change.
+
 ## [1.27.1] — 2026-07-16
 
 ### Fixed
