@@ -22,6 +22,7 @@ function unlockBodyScroll() {
  * modal's internal markup needing to move onto design-system components. */
 export function Sheet({ open = true, onClose, title, children, className }) {
   const titleId = React.useId();
+  const containerRef = React.useRef(null);
 
   useEffect(() => {
     if (!open || !onClose) return;
@@ -52,9 +53,18 @@ export function Sheet({ open = true, onClose, title, children, className }) {
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       {/* Escape is handled by our own listener above (it needs to fire even
           before the trap's initial focus lands); the trap itself only owns
-          Tab-cycling and initial/return focus. */}
-      <FocusTrap active={open} focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false }}>
+          Tab-cycling and initial/return focus. `fallbackFocus` targets the
+          dialog container itself (tabIndex={-1} makes it programmatically
+          focusable) — without it, focus-trap throws whenever a sheet mounts
+          with no tabbable content yet, e.g. a modal showing only a loading
+          spinner before its data arrives, taking down the whole app since
+          there's no error boundary. */}
+      <FocusTrap
+        active={open}
+        focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false, fallbackFocus: () => containerRef.current }}
+      >
         <div
+          ref={containerRef}
           className={className}
           role="dialog"
           aria-modal="true"
