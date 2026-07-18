@@ -410,7 +410,13 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // The row's total x offset, in pixels. Its "resting" position for a given
   // weekOffset is `-((weekOffset - WEEK_MIN) * paneWidth)`; the settle effect
   // below animates it there whenever weekOffset (or paneWidth, e.g. on
-  // rotation) changes, and onPan/onPanEnd drive it directly during a gesture.
+  // rotation) changes. Framer's own `drag="x"` gesture (passed this same
+  // motion value via the row's `style`, below) is the sole writer of `x`
+  // while a drag is in progress, and the settle effect is the sole writer
+  // once it's not — never both at once. The previous hand-rolled
+  // onPan/onPanEnd implementation instead wrote to `x` itself during the
+  // drag *in addition to* this settle effect, racing it — see CHANGELOG
+  // 1.32.0-1.32.2's repeated fixes for the same underlying bug class.
   const x = useMotionValue(0);
   const settleControlsRef = useRef(null);
   const transitionRef = useRef(transition);
@@ -427,38 +433,33 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // Distinguishes a genuine swipe from a tap-with-negligible-movement on the
   // draggable week row: without this, releasing a drag on top of a day card
   // fires that card's native onClick (Framer's gesture handling doesn't
-  // suppress it), popping open that day's edit modal. Set in onPan (not
-  // onPanEnd) since the browser's native click fires before Framer gets
-  // around to calling onPanEnd — see the comment there.
+  // suppress it), popping open that day's edit modal. Set in onDrag (not
+  // onDragEnd) since the browser's native click fires before Framer gets
+  // around to calling onDragEnd — see the comment there.
   const dragActiveRef = useRef(false);
   const suppressClickRef = useRef(false);
-  const dragStartXRef = useRef(0);
 
-  function onPanStart() {
+  function onDragStart() {
+    // Hand `x` over to Framer's drag gesture for the duration of the drag —
+    // stop whatever settle animation might still be in flight (e.g. a
+    // button-nav animation interrupted by an immediate swipe) so it isn't
+    // also writing to `x` while the drag is.
     settleControlsRef.current?.stop();
     dragActiveRef.current = false;
-    dragStartXRef.current = x.get();
   }
 
-  function onPan(_event, info) {
-    if (!paneWidth) return;
+  function onDrag(_event, info) {
     if (Math.abs(info.offset.x) > 5) {
       dragActiveRef.current = true;
       suppressClickRef.current = true;
     }
-    const raw = dragStartXRef.current + info.offset.x;
-    const min = -((WEEK_OFFSETS.length - 1) * paneWidth);
-    const max = 0;
-    // A little resistance past the first/last week instead of a hard stop.
-    const clamped = raw > max ? max + (raw - max) * 0.3 : raw < min ? min + (raw - min) * 0.3 : raw;
-    x.set(clamped);
   }
 
   // The browser's native `click` on whatever's under the pointer at release
   // fires before Framer gets to call this — so setting suppressClickRef here
-  // would always be too late; it's set in onPan above instead, the moment
+  // would always be too late; it's set in onDrag above instead, the moment
   // the drag is unambiguously real.
-  function onPanEnd(_event, info) {
+  function onDragEnd(_event, info) {
     if (dragActiveRef.current) {
       // Cleared a tick later so the click that follows this release (if
       // any) still sees it as suppressed.
@@ -551,9 +552,13 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         ) : (
           <motion.div
             style={{ display: "flex", width: paneWidth * WEEK_OFFSETS.length, x, touchAction: "pan-y" }}
-            onPanStart={onPanStart}
-            onPan={onPan}
-            onPanEnd={onPanEnd}
+            drag="x"
+            dragConstraints={{ left: -((WEEK_OFFSETS.length - 1) * paneWidth), right: 0 }}
+            dragElastic={0.3}
+            dragMomentum={false}
+            onDragStart={onDragStart}
+            onDrag={onDrag}
+            onDragEnd={onDragEnd}
           >
             {WEEK_OFFSETS.map((offset) => (
               <WeekPane
