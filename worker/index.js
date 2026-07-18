@@ -1578,8 +1578,8 @@ export default {
       const body = await readJson(request);
       if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
       const { current_password, new_password } = body;
-      if (!new_password || new_password.length < 6) {
-        return json({ error: "Nytt passord må være minst 6 tegn" }, 400);
+      if (!new_password || new_password.length < 8) {
+        return json({ error: "Nytt passord må være minst 8 tegn" }, 400);
       }
       const row = await env.DB.prepare(
         "SELECT pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
@@ -2515,6 +2515,15 @@ export default {
           username = excluded.username, list_id = excluded.list_id,
           p256dh = excluded.p256dh, auth = excluded.auth, updated_at = datetime('now')
       `).bind(body.endpoint, user.username, user.list_id, body.keys.p256dh, body.keys.auth).run();
+      // Without this, a list that never visited Settings has no
+      // notification_settings row, so the cron's `WHERE …_enabled = 1`
+      // silently skips it forever even though enabling push implies wanting
+      // reminders. Row-default columns (see migrations) already match
+      // GET /notification-settings' no-row fallback, so this is a no-op if a
+      // row already exists.
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO notification_settings (list_id) VALUES (?1)"
+      ).bind(user.list_id).run();
       return authedJson({ ok: true });
     }
 

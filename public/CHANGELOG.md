@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.34.3] — 2026-07-18
+
+### Fixed
+- **Meal and weekly reminders could silently never fire.** Enabling push
+  notifications turned both reminder toggles on in the UI, but no
+  `notification_settings` row existed until you separately visited Settings
+  and changed something — and the reminder cron only sends to lists that
+  have one. Subscribing to push now seeds that row with the same defaults
+  the UI already showed.
+- **Shopping list items could briefly leak between users on a shared
+  household device.** The local on-device cache wasn't cleared on logout, so
+  the next person to log in could see the previous user's (different list's)
+  items until the first background refresh. Logging out now clears the
+  cached data.
+- **Changing your password allowed a weaker minimum than signing up.**
+  `/change-password` only required 6 characters, letting you lower your
+  password strength below the 8-character floor enforced at signup and
+  password reset. Standardized on 8 everywhere.
+- **The "been on the list a while" marker likely never showed on iOS
+  Safari.** The date comparison relied on a format Safari doesn't reliably
+  parse; it's now normalized before parsing.
+
 ## [1.34.2] — 2026-07-18
 
 ### Fixed

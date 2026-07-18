@@ -8,9 +8,9 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-18):
-0. **Bugs (#81–#89)** — found in a full QA/QC pass 2026-07-18. The two P0s
-   (#79, #80) are fixed (see `Todo_done.md`). #81–#83 are P1; #84–#89 are
-   low-priority latent/edge issues.
+0. **Bugs (#85–#89)** — found in a full QA/QC pass 2026-07-18, low-priority
+   latent/edge issues. The two P0s (#79, #80) and all three P1s
+   (#81–#83), plus P2 #84, are fixed (see `Todo_done.md`).
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
@@ -32,51 +32,13 @@ husstanden" ping.
 
 ## Bugs
 
-Found in a full QA/QC review pass (2026-07-18). Prioritized: P0 first, then
-P1, then low-priority latent/edge issues. File:line refs are from that pass —
-verify before fixing.
+Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
+pass — verify before fixing.
 
-P0 items #79 and #80 are fixed — see `Todo_done.md`.
-
-### P1 — High / Medium
-
-81. Meal & weekly reminders silently never fire for users who never opened
-    the reminder settings. `GET /notification-settings` and the UI both
-    default the two reminder toggles to **true** with no row present
-    (`worker/index.js` ~L2518–2521, `VarslerSubpage.jsx` ~L33–36), but the
-    cron only sends to lists that have an actual row
-    (`checkMealReminders`/`checkWeeklyReminders`, `WHERE …_enabled = 1`,
-    ~L1230/L1271). No row is created until a reminder control is changed;
-    enabling push (`/push/subscribe`) doesn't create one. So a user enables
-    notifications, sees both toggles ON, and never gets a reminder.
-    _Value: Medium · Importance: Medium · Type: Bug / Notifications_
-
-82. Cross-user shopping-list leak on shared devices. `ITEMS_CACHE_KEY`
-    (`ph_cache_items_v1`) is global, not namespaced per user/list, and hydrated
-    on mount (`ShoppingListTab.jsx` ~L67); `logout()` only clears the
-    `ph_token/ph_user/…` keys (`AuthContext.jsx` ~L17–33). On a shared
-    household device (an explicitly supported case), the next user briefly
-    sees the previous user's items from a different list until the first
-    refresh. Fix: clear `ph_cache_*` on logout, or key the cache by `list_id`.
-    _Value: Medium · Importance: Medium · Type: Bug / Privacy_
-
-83. Password-length floor is weaker for change-password than for signup.
-    `/register` and `/reset-password` require ≥ 8 chars (`worker/index.js`
-    ~L1387, ~L1524) but `/change-password` requires only ≥ 6 (~L1581; UI text
-    also says "min. 6 tegn"). A user can lower their password strength below
-    the signup minimum after registering. Standardize on 8.
-    _Value: Medium · Importance: Low · Type: Bug / Auth_
+P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
+`Todo_done.md`.
 
 ### P2 — Low (latent / edge)
-
-84. Stale-item marker likely never shows on iOS Safari (primary platform).
-    `ItemCard.jsx` (~L33) does `new Date(item.added_at)` where `added_at` is
-    SQLite `datetime('now')` → `"YYYY-MM-DD HH:MM:SS"` (UTC, space-separated,
-    no `Z`). That's parsed as local time (harmless offset for a day
-    threshold) and isn't reliably parseable in Safari, where it can yield
-    `Invalid Date` → `NaN` compare → marker never appears. Normalize to ISO
-    (`T…Z`) before parsing.
-    _Value: Low · Importance: Low · Type: Bug / Date handling_
 
 85. "Legg til nøyaktig som skrevet" isn't actually exact. The exact-add path
     (`ShoppingListTab.jsx` ~L179) still POSTs `/list`, which runs

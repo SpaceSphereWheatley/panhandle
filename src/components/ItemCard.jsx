@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ItemIcon } from "./ItemIcon.jsx";
 import { Card } from "../design-system/index.js";
-import { cap } from "../lib/shoppingUtils.js";
+import { cap, parseSqliteDatetime } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
@@ -30,7 +30,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
   const isStale =
     !item.bought &&
     !!staleItemDays &&
-    Date.now() - new Date(item.added_at).getTime() > staleItemDays * 24 * 60 * 60 * 1000;
+    Date.now() - parseSqliteDatetime(item.added_at).getTime() > staleItemDays * 24 * 60 * 60 * 1000;
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const intensity = useDesignIntensity();

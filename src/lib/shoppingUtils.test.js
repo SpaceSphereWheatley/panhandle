@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { cap, parseItemInput, extractGF, matchCatalogue, haptic } from "./shoppingUtils.js";
+import { cap, parseItemInput, extractGF, matchCatalogue, haptic, parseSqliteDatetime } from "./shoppingUtils.js";
 
 describe("cap", () => {
   it("is null/undefined-safe", () => {
@@ -110,5 +110,13 @@ describe("haptic", () => {
     localStorage.setItem("ph_haptics", "0");
     haptic(20);
     expect(vibrate).not.toHaveBeenCalled();
+  });
+});
+
+describe("parseSqliteDatetime", () => {
+  it("parses SQLite's space-separated UTC format as a valid UTC instant", () => {
+    const d = parseSqliteDatetime("2026-07-18 12:30:00");
+    expect(Number.isNaN(d.getTime())).toBe(false);
+    expect(d.toISOString()).toBe("2026-07-18T12:30:00.000Z");
   });
 });

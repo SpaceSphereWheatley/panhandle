@@ -7,6 +7,38 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+84. (84) Fixed the "been on the list a while" marker likely never showing on
+    iOS Safari. `ItemCard.jsx`'s stale check parsed `item.added_at` — D1's
+    `datetime('now')` format, `"YYYY-MM-DD HH:MM:SS"` (UTC, no `Z`, space
+    instead of `T`) — directly with `new Date(...)`, which Safari doesn't
+    reliably parse (yielding `Invalid Date` → the comparison silently never
+    triggered). Added `parseSqliteDatetime` (`shoppingUtils.js`) to reformat
+    to a proper ISO string first, and used it in the stale check. (1.34.1)
+
+83. (83) Standardized the change-password minimum length to 8 characters,
+    matching `/register` and `/reset-password` — `/change-password`
+    previously only required 6, letting a user lower their password
+    strength below the signup floor after registering. (1.34.1)
+
+82. (82) Fixed a cross-user shopping-list leak on shared household devices.
+    `ph_cache_items_v1`/`ph_cache_plan_v1` (the on-device stale-while-
+    revalidate cache, see `localCache.js`) weren't namespaced per user/list
+    and weren't cleared on logout, so the next person to log in on a shared
+    device could briefly see the previous user's (different list's) items
+    until the first background refresh. Added `clearCache()`, called from
+    `AuthContext`'s `logout()`. (1.34.1)
+
+81. (81) Fixed meal/weekly reminders silently never firing for users who
+    never opened the reminder settings. `GET /notification-settings` and
+    the Settings UI both defaulted both reminder toggles to enabled with no
+    row present, but the cron only sends to lists with an actual
+    `notification_settings` row (`WHERE …_enabled = 1`) — and nothing
+    created one until a reminder control was explicitly changed, so
+    enabling push alone never got you a reminder. `POST /push/subscribe`
+    now seeds a default row (`INSERT OR IGNORE`) on first subscribe,
+    matching the same defaults `GET /notification-settings` already
+    fell back to. (1.34.1)
+
 80. (80) Fixed sole-owner account/list deletion silently failing. The
     last-owner cascade in `DELETE /account` and the super-admin
     `DELETE /admin/users/{u}` + `delete_list` path cleared every list-scoped
