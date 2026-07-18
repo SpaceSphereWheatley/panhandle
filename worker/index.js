@@ -1194,10 +1194,6 @@ async function verifyGoogleIdToken(idToken) {
 // contact URI) reuses the existing FEEDBACK_EMAIL secret rather than adding
 // a new env var.
 async function sendPushToSubscription(env, sub, payload) {
-  // TEMPORARY DIAGNOSTIC (remove after debugging the "no notifications ever
-  // arrive" report): records each send's outcome to push_debug_log so it can
-  // be inspected via D1 without wrangler tail access.
-  const endpointSuffix = sub.endpoint.slice(-12);
   try {
     const { endpoint, headers, body } = await buildPushHTTPRequest({
       privateJWK: JSON.parse(env.VAPID_PRIVATE_KEY),
@@ -1205,10 +1201,6 @@ async function sendPushToSubscription(env, sub, payload) {
       message: { payload, adminContact: `mailto:${env.FEEDBACK_EMAIL}` },
     });
     const res = await fetch(endpoint, { method: "POST", headers, body });
-    const resBody = await res.text().catch(() => "");
-    await env.DB.prepare(
-      "INSERT INTO push_debug_log (endpoint_suffix, status, ok, body) VALUES (?1, ?2, ?3, ?4)"
-    ).bind(endpointSuffix, res.status, res.ok ? 1 : 0, resBody.slice(0, 500)).run().catch(() => {});
     if (res.status === 404 || res.status === 410) {
       await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1").bind(sub.endpoint).run();
     }
@@ -1216,9 +1208,6 @@ async function sendPushToSubscription(env, sub, payload) {
     // Don't let one bad subscription (network hiccup, malformed keys) abort
     // the fan-out to the rest of a list's devices.
     console.error("push send failed", e?.message ?? e);
-    await env.DB.prepare(
-      "INSERT INTO push_debug_log (endpoint_suffix, error) VALUES (?1, ?2)"
-    ).bind(endpointSuffix, String(e?.message ?? e).slice(0, 500)).run().catch(() => {});
   }
 }
 

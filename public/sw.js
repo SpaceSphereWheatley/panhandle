@@ -59,7 +59,12 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title || 'Panhandle', {
       body: data.body || '',
       icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      // Android masks the status-bar badge down to its alpha channel alone
+      // and fills the silhouette itself — icon-192.png is fully opaque, so
+      // reusing it here rendered as a plain solid square. This is a
+      // dedicated white-on-transparent silhouette (rasterized from the same
+      // panhandle-icon.svg mark) built for that masking.
+      badge: '/badge-monochrome.png',
       data: { url: data.url || '/app.html' },
     })
   );
