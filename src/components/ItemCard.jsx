@@ -135,15 +135,23 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
             title={`På listen i over ${staleItemDays} dager`}
             style={{
               position: "absolute",
-              top: -1,
-              right: -1,
-              width: 9,
-              height: 9,
+              top: -4,
+              right: -4,
+              width: 16,
+              height: 16,
               borderRadius: "50%",
-              background: "var(--text-tertiary)",
+              background: "var(--surface-sunken)",
               border: "1.5px solid var(--surface-card)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-          />
+          >
+            <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </span>
         ) : null}
       </ContentWrapper>
       <ContentWrapper
