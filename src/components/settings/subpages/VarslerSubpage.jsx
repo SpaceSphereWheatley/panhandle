@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { usePush } from "../../../context/PushContext.jsx";
 import { api } from "../../../lib/api.js";
 import { useToast } from "../../../context/ToastContext.jsx";
-import { Card, Switch, Input } from "../../../design-system/index.js";
+import { Card, Switch, Input, IconButton } from "../../../design-system/index.js";
 import { SubpageSection } from "../SubpageSection.jsx";
+
+const STALE_ITEM_DAYS_MIN = 1;
+const STALE_ITEM_DAYS_MAX = 90;
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -32,6 +35,9 @@ export function VarslerSubpage() {
   const [weeklyReminderEnabled, setWeeklyReminderEnabled] = useState(true);
   const [weeklyReminderTime, setWeeklyReminderTime] = useState("18:00");
   const [staleItemDays, setStaleItemDays] = useState(7);
+  // Mirrors the input's raw typed text, decoupled from staleItemDays (the
+  // last known-valid/saved value) — see onChangeStaleItemDaysText for why.
+  const [staleItemDaysText, setStaleItemDaysText] = useState("7");
   const iosNeedsInstall = isIOS() && !isStandalone();
 
   useEffect(() => {
@@ -42,6 +48,7 @@ export function VarslerSubpage() {
       setWeeklyReminderEnabled(res.weekly_reminder_enabled);
       setWeeklyReminderTime(res.weekly_reminder_time);
       setStaleItemDays(res.stale_item_days);
+      setStaleItemDaysText(String(res.stale_item_days));
     });
   }, []);
 
@@ -98,11 +105,41 @@ export function VarslerSubpage() {
     saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time, staleItemDays });
   }
 
-  function onChangeStaleItemDays(e) {
-    const days = Number(e.target.value);
-    if (!Number.isInteger(days) || days < 1 || days > 90) return;
+  // Always mirrors what's typed, even mid-edit (empty, a lone "0", a value
+  // outside 1-90) — only a fully valid value also updates/saves the real
+  // staleItemDays, so a controlled re-render never snaps the field back to
+  // the old number while the user is still typing a new one.
+  function onChangeStaleItemDaysText(e) {
+    const text = e.target.value;
+    setStaleItemDaysText(text);
+    const days = Number(text);
+    if (text.trim() === "" || !Number.isInteger(days) || days < STALE_ITEM_DAYS_MIN || days > STALE_ITEM_DAYS_MAX) return;
     setStaleItemDays(days);
     saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, staleItemDays: days });
+  }
+
+  // On blur, resolve whatever's left in the field: clamp an out-of-range
+  // number into bounds, or fall back to the last valid value if it isn't a
+  // number at all (e.g. left empty).
+  function onBlurStaleItemDaysText() {
+    const days = Number(staleItemDaysText);
+    const resolved =
+      staleItemDaysText.trim() !== "" && Number.isInteger(days)
+        ? Math.min(STALE_ITEM_DAYS_MAX, Math.max(STALE_ITEM_DAYS_MIN, days))
+        : staleItemDays;
+    setStaleItemDaysText(String(resolved));
+    if (resolved !== staleItemDays) {
+      setStaleItemDays(resolved);
+      saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, staleItemDays: resolved });
+    }
+  }
+
+  function adjustStaleItemDays(delta) {
+    const next = Math.min(STALE_ITEM_DAYS_MAX, Math.max(STALE_ITEM_DAYS_MIN, staleItemDays + delta));
+    setStaleItemDaysText(String(next));
+    if (next === staleItemDays) return;
+    setStaleItemDays(next);
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, staleItemDays: next });
   }
 
   const pushDescription = !supported
@@ -177,15 +214,33 @@ export function VarslerSubpage() {
           >
             Antall dager
           </label>
-          <Input
-            id="stale-item-days"
-            type="number"
-            min={1}
-            max={90}
-            value={staleItemDays}
-            onChange={onChangeStaleItemDays}
-            style={{ maxWidth: 100 }}
-          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <IconButton
+              icon="minus"
+              size="sm"
+              variant="subtle"
+              label="Reduser antall dager"
+              onClick={() => adjustStaleItemDays(-1)}
+            />
+            <Input
+              id="stale-item-days"
+              type="number"
+              inputMode="numeric"
+              min={STALE_ITEM_DAYS_MIN}
+              max={STALE_ITEM_DAYS_MAX}
+              value={staleItemDaysText}
+              onChange={onChangeStaleItemDaysText}
+              onBlur={onBlurStaleItemDaysText}
+              style={{ maxWidth: 76 }}
+            />
+            <IconButton
+              icon="plus"
+              size="sm"
+              variant="subtle"
+              label="Øk antall dager"
+              onClick={() => adjustStaleItemDays(1)}
+            />
+          </div>
         </div>
       </SubpageSection>
     </Card>

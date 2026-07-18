@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.32.3] — 2026-07-18
+
+### Fixed
+- **The "days before an item goes stale" setting couldn't be retyped.** The
+  field validated on every keystroke and rejected any intermediate state
+  (an empty box, a lone leading digit), so a controlled re-render snapped
+  the displayed number straight back — clearing it to type a new value
+  never worked, only select-all-and-overtype did. Typing now always shows
+  what you type, with an out-of-range or non-numeric value only resolved
+  (clamped, or reverted to the last valid number) once you leave the
+  field. Added +/- buttons alongside it for one-day nudges.
+
 ## [1.32.2] — 2026-07-17
 
 ### Fixed
