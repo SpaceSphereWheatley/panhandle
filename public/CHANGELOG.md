@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.1] — 2026-07-18
+
+### Fixed
+- **Push notifications showed a plain solid square instead of the app icon.**
+  The status-bar badge reused the full-color app icon, but Android strips
+  color from that image and fills in only its opaque pixels — since the icon
+  had no transparency, the whole square came out solid. Push notifications
+  now use a dedicated white-on-transparent silhouette for the badge, so
+  Android can mask it correctly.
+
 ## [1.34.0] — 2026-07-18
 
 ### Added
