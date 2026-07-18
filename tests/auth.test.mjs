@@ -205,7 +205,9 @@ async function testChangePasswordRateLimiting(BASE) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "CF-Connecting-IP": ip },
       body: JSON.stringify({ current_password: "wrong-current-password", new_password: "New-password-999!" }),
     });
-    assert.equal(res.status, 401, `attempt ${i + 1} should be a normal wrong-current-password failure`);
+    // 403, not 401: the token is valid, only the current_password is wrong
+    // (a 401 would trip the frontend's force-logout-on-expiry path).
+    assert.equal(res.status, 403, `attempt ${i + 1} should be a normal wrong-current-password failure`);
   }
 
   const res = await fetch(`${BASE}/change-password`, {

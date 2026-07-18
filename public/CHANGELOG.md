@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.33.2] — 2026-07-18
+
+### Fixed
+- **A typo in your current password could log you out entirely.** Changing
+  your password or email, or deleting your account, returned the same
+  "unauthorized" status the app uses to detect an expired session — so a
+  single wrong-password typo bounced you to the login screen with a
+  misleading "your session expired" message instead of just showing "wrong
+  password." These now return a distinct status the app treats as a normal,
+  in-place error.
+- **Deleting the last owner of a list could silently fail.** When a list's
+  sole owner deleted their account (or a super-admin force-deleted a list),
+  the cleanup skipped the "who's viewing the list right now" presence rows,
+  which blocked the final list deletion and aborted the whole operation. The
+  presence rows are now cleared as part of the cascade.
+
 ## [1.33.1] — 2026-07-18
 
 ### Fixed
