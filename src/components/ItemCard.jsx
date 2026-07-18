@@ -155,8 +155,13 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
               width: 18,
               height: 18,
               borderRadius: "50%",
-              background: "var(--surface-sunken)",
-              border: "1.5px solid var(--surface-card)",
+              // Only important items get a visible marker — that's what makes
+              // it readable at a glance. Non-important items keep this same
+              // hit area (invisible, no background/border) so a tap here
+              // still marks the item important instead of needing a separate
+              // affordance.
+              background: item.important ? "var(--surface-sunken)" : "transparent",
+              border: item.important ? "1.5px solid var(--surface-card)" : "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -164,18 +169,20 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
               touchAction: "manipulation",
             }}
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="11"
-              height="11"
-              fill={item.important ? "var(--accent-tertiary)" : "none"}
-              stroke={item.important ? "var(--accent-tertiary)" : "var(--text-tertiary)"}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z" />
-            </svg>
+            {item.important ? (
+              <svg
+                viewBox="0 0 24 24"
+                width="11"
+                height="11"
+                fill="var(--accent-tertiary)"
+                stroke="var(--accent-tertiary)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z" />
+              </svg>
+            ) : null}
           </span>
         ) : null}
         {isStale ? (
