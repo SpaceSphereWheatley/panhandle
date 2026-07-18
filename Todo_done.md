@@ -1,11 +1,33 @@
 # Done
 
-Completed TODO items, numbered 1 (oldest) to 77 (most recent) — these are a
+Completed TODO items, numbered 1 (oldest) to 80 (most recent) — these are a
 separate, sequential log distinct from the open-item IDs in `TODO.md` (a
 parenthetical like "(9)" inside an entry below instead refers to that entry
 having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
+
+80. (80) Fixed sole-owner account/list deletion silently failing. The
+    last-owner cascade in `DELETE /account` and the super-admin
+    `DELETE /admin/users/{u}` + `delete_list` path cleared every list-scoped
+    table except `list_presence`, which references `lists(id)` without
+    `ON DELETE CASCADE` — so the trailing `DELETE FROM lists` hit a FK
+    violation and aborted the whole `env.DB.batch()` whenever a presence row
+    existed (which is almost always, since the shopping-list poll upserts one
+    on load). Added `DELETE FROM list_presence WHERE list_id = ?1` before the
+    `DELETE FROM lists` in both cascades. The gap slipped past
+    `tests/self-delete-account.test.mjs` because it never called `/presence`
+    before deleting.
+
+79. (79) Fixed a current-password typo logging the user out entirely.
+    `/change-password`, `/change-email`, and `DELETE /account` returned 401
+    for a wrong current password — the same status `src/lib/api.js` uses to
+    detect an expired session — so the frontend force-logged-out and showed
+    "Økten utløp …" instead of "Feil passord." These now return 403 (the
+    token is valid; only the supplied password is wrong), which `api()`
+    passes through as a normal in-place error. Updated the 401→403
+    assertions in `tests/auth.test.mjs` and
+    `tests/self-delete-account.test.mjs`.
 
 78. (13) Closed the icon gap: all 710 `COMMON_ITEMS` catalogue entries now
     resolve to an icon via `src/lib/itemIcons.js`'s `MAP`, up from 500 —

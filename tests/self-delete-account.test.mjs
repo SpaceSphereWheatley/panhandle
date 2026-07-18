@@ -74,7 +74,9 @@ async function testWrongPasswordRefused(BASE) {
   const { token } = await seedAndLogin(BASE, username, PASS);
 
   const res = await deleteAccount(BASE, token, "not-the-right-password");
-  assert.equal(res.status, 401);
+  // 403, not 401: the token is valid, only the supplied password is wrong.
+  // A 401 would make the frontend's api() force-log-out on a mere typo.
+  assert.equal(res.status, 403);
   const body = await res.json();
   assert.match(body.error, /feil passord/i);
 
@@ -82,7 +84,7 @@ async function testWrongPasswordRefused(BASE) {
   const listRes = await fetch(`${BASE}/list`, { headers: authHeaders(token) });
   assert.equal(listRes.status, 200, "token should still be valid after a refused deletion");
 
-  console.log("  - wrong current_password: refused (401), account untouched");
+  console.log("  - wrong current_password: refused (403), account untouched");
 }
 
 async function testNonOwnerLeaves(BASE) {
@@ -141,6 +143,15 @@ async function testSoleOwnerNoOtherMembersCascades(BASE) {
   const username = `sda_solo_${RUN_ID}`;
   const { token } = await seedAndLogin(BASE, username, PASS);
 
+  // Record presence first: the shopping-list poll does this on every load, so
+  // a real deletion almost always runs with a list_presence row present.
+  // list_presence references lists(id) without ON DELETE CASCADE, so unless
+  // the cascade clears it explicitly, the trailing DELETE FROM lists hits a FK
+  // violation and aborts the whole batch (regression guard for the bug where
+  // list_presence was missing from the cascade).
+  assert.equal((await fetch(`${BASE}/presence`, { method: "POST", headers: authHeaders(token) })).status, 200,
+    "recording presence should succeed");
+
   const res = await deleteAccount(BASE, token, PASS);
   assert.equal(res.status, 200);
   const body = await res.json();
@@ -149,7 +160,7 @@ async function testSoleOwnerNoOtherMembersCascades(BASE) {
   assert.equal((await fetch(`${BASE}/list`, { headers: authHeaders(token) })).status, 401);
   assert.equal((await login(BASE, username, PASS)).status, 401, "re-login should fail — the account is gone");
 
-  console.log("  - sole-owner self-delete (no other members): cascades, deletes the list and own account");
+  console.log("  - sole-owner self-delete (no other members, with presence row): cascades, deletes the list and own account");
 }
 
 async function testSoleOwnerWithMembersCascadesEveryone(BASE) {

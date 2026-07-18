@@ -8,9 +8,8 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-18):
-0. **Bugs (#79–#89)** — found in a full QA/QC pass 2026-07-18. #79 and #80
-   are P0 (both break core account flows in ordinary use and neither is
-   covered by existing tests); do these first. #81–#83 are P1; #84–#89 are
+0. **Bugs (#81–#89)** — found in a full QA/QC pass 2026-07-18. The two P0s
+   (#79, #80) are fixed (see `Todo_done.md`). #81–#83 are P1; #84–#89 are
    low-priority latent/edge issues.
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
@@ -37,40 +36,7 @@ Found in a full QA/QC review pass (2026-07-18). Prioritized: P0 first, then
 P1, then low-priority latent/edge issues. File:line refs are from that pass —
 verify before fixing.
 
-### P0 — Critical (breaks core flows in normal use)
-
-79. Mistyping the current password on a re-auth action logs the user out
-    entirely with a misleading "session expired" message. `src/lib/api.js`
-    (~L31–34) treats **any** 401 as an expired session
-    (`onUnauthorized()` → `logout("expired")`, `AuthContext.jsx` ~L69), but
-    `/change-password` (`worker/index.js` ~L1590), `/change-email` (~L1645)
-    and `DELETE /account` (~L1692) all return **401** for a wrong current
-    password — an intentional, displayable error. Result: a typo on change
-    password / change email / delete account bounces the user to the login
-    screen ("Økten utløp …") instead of showing "Feil passord". The
-    server-side brute-force throttle assumes the user stays and retries.
-    Fix: return a distinct code (e.g. 403) for wrong-password on these
-    endpoints, or make `api()` only auto-logout on 401 for non-re-auth calls.
-    _Value: High · Importance: High · Type: Bug / Auth_
-
-80. Sole-owner account/list deletion hits a foreign-key violation via
-    `list_presence`. The last-owner cascade in `DELETE /account`
-    (`worker/index.js` ~L1716–1727) and the superadmin
-    `DELETE /admin/users/{u}` + `delete_list` path (~L1915–1926) clear every
-    list-scoped table **except `list_presence`**, which is
-    `REFERENCES lists(id)` with **no `ON DELETE CASCADE`**
-    (`migrations/0013_list_presence.sql`). The trailing
-    `DELETE FROM lists` then violates the FK whenever a presence row exists —
-    and one essentially always does, since the shopping-list poll upserts
-    `/presence` on load (`ShoppingListTab.jsx` ~L119) and those rows are never
-    pruned. The `env.DB.batch()` throws (no try/catch) → 500, account/list
-    NOT deleted. `tests/self-delete-account.test.mjs` misses it because it
-    never calls `/presence` before deleting. Fix: add
-    `DELETE FROM list_presence WHERE list_id = ?1` to both cascade batches
-    (and ideally give the table `ON DELETE CASCADE`). Verify against prod FK
-    enforcement (D1 default, and already relied on elsewhere — see the
-    cascade comment at ~L1711).
-    _Value: High · Importance: High · Type: Bug / Data model_
+P0 items #79 and #80 are fixed — see `Todo_done.md`.
 
 ### P1 — High / Medium
 

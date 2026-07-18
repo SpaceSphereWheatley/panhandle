@@ -1587,7 +1587,11 @@ export default {
       if (!(await verifyPassword(current_password || "", row.pass_hash))) {
         await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
           .bind(ip, Date.now()).run();
-        return json({ error: "Feil nåværende passord" }, 401);
+        // 403, not 401: the caller's token IS valid — it's the supplied
+        // current_password that's wrong. The frontend's api() wrapper treats
+        // every 401 as an expired session and force-logs-out, so a 401 here
+        // would eject the user on a simple typo instead of showing this error.
+        return json({ error: "Feil nåværende passord" }, 403);
       }
       const newHash = await hashPassword(new_password);
       const newVersion = row.token_version + 1;
@@ -1642,7 +1646,9 @@ export default {
       if (!(await verifyPassword(body.current_password || "", row.pass_hash))) {
         await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
           .bind(ip, Date.now()).run();
-        return json({ error: "Feil passord" }, 401);
+        // 403, not 401 — see /change-password's note: the token is valid, the
+        // supplied password is wrong, and api() force-logs-out on any 401.
+        return json({ error: "Feil passord" }, 403);
       }
       const clash = await env.DB.prepare(
         "SELECT 1 FROM users WHERE (email = ?1 COLLATE NOCASE OR username = ?1 COLLATE NOCASE) AND username != ?2 COLLATE NOCASE"
@@ -1689,7 +1695,9 @@ export default {
       if (!(await verifyPassword(body.current_password || "", row.pass_hash))) {
         await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
           .bind(ip, Date.now()).run();
-        return json({ error: "Feil passord" }, 401);
+        // 403, not 401 — see /change-password's note: the token is valid, the
+        // supplied password is wrong, and api() force-logs-out on any 401.
+        return json({ error: "Feil passord" }, 403);
       }
 
       // Superadmin accounts can never be self-deleted, full stop — no count
@@ -1722,6 +1730,12 @@ export default {
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
+            // list_presence references lists(id) without ON DELETE CASCADE, so
+            // it must be cleared before the DELETE FROM lists below or that
+            // final statement hits a FK violation and aborts the whole batch
+            // (a presence row almost always exists — the shopping-list poll
+            // upserts one on every load).
+            env.DB.prepare("DELETE FROM list_presence WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(user.list_id),
           ]);
@@ -1921,6 +1935,10 @@ export default {
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
+            // See DELETE /account's cascade: list_presence has no ON DELETE
+            // CASCADE, so it must go before DELETE FROM lists or the batch
+            // aborts on a FK violation.
+            env.DB.prepare("DELETE FROM list_presence WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM users WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM lists WHERE id = ?1").bind(row.list_id),
           ]);
