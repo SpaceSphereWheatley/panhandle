@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.32.4] — 2026-07-18
+
+### Fixed
+- **Meal-week swipe snapped back to the wrong week the instant a new drag
+  started.** The row's horizontal position was driven by two independent
+  pieces of code at once — a `useEffect` that animated it to the current
+  week whenever `weekOffset`/the measured pane width changed, and hand-rolled
+  pan handlers that also wrote to the same position directly during a touch
+  drag — and the two could race, most visibly right as a new swipe began on
+  a week other than the current one. The drag is now driven entirely by
+  Framer Motion's own `drag` gesture instead of a hand-rolled one, so there's
+  a single owner of the row's position at any given moment.
+
 ## [1.32.3] — 2026-07-18
 
 ### Fixed
