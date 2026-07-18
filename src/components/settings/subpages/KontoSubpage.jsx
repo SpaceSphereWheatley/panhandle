@@ -76,8 +76,8 @@ export function KontoSubpage() {
   }
 
   async function changePassword() {
-    if (pwNew.length < 6) {
-      toast("Nytt passord må være minst 6 tegn", { error: true });
+    if (pwNew.length < 8) {
+      toast("Nytt passord må være minst 8 tegn", { error: true });
       return;
     }
     try {
@@ -152,8 +152,8 @@ export function KontoSubpage() {
         <SubpageSection label="Bytt passord">
           <label htmlFor="profile-pw-current" style={fieldLabelStyle}>Nåværende passord</label>
           <Input id="profile-pw-current" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
-          <label htmlFor="profile-pw-new" style={fieldLabelStyle}>Nytt passord (min. 6 tegn)</label>
-          <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 6 tegn)" style={{ marginBottom: 8 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+          <label htmlFor="profile-pw-new" style={fieldLabelStyle}>Nytt passord (min. 8 tegn)</label>
+          <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 8 tegn)" style={{ marginBottom: 8 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
           <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
         </SubpageSection>
 

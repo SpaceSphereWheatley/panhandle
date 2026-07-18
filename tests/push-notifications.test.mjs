@@ -93,6 +93,7 @@ async function runHttpTests(BASE) {
   assert.deepEqual(defaults, {
     meal_reminder_enabled: true, meal_reminder_time: "18:00",
     weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
+    stale_item_days: 7,
   }, "a list with no notification_settings row should see the app-level defaults");
 
   // ---- POST /notification-settings validates HH:mm in 15-min increments (both reminder times) ----
@@ -114,6 +115,7 @@ async function runHttpTests(BASE) {
     body: JSON.stringify({
       meal_reminder_enabled: false, meal_reminder_time: "07:30",
       weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
+      stale_item_days: 3,
     }),
   });
   assert.equal(saveRes.status, 200);
@@ -121,6 +123,7 @@ async function runHttpTests(BASE) {
   assert.deepEqual(await savedRes.json(), {
     meal_reminder_enabled: false, meal_reminder_time: "07:30",
     weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
+    stale_item_days: 3,
   });
 
   // ---- notification-settings is list-scoped, not global ----
@@ -128,6 +131,7 @@ async function runHttpTests(BASE) {
   assert.deepEqual(await otherListRes.json(), {
     meal_reminder_enabled: true, meal_reminder_time: "18:00",
     weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
+    stale_item_days: 7,
   }, "another list's settings must be unaffected");
 
   console.log("  - notification-settings defaults, validation, persistence, and list-scoping all check out");

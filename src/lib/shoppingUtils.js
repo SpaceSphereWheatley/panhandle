@@ -57,6 +57,14 @@ export function matchCatalogue(query, catalogue) {
     .sort((a, b) => a.name.length - b.name.length);
 }
 
+// D1/SQLite's datetime('now') produces "YYYY-MM-DD HH:MM:SS" (UTC, no "Z",
+// space instead of "T") — not reliably parseable by `new Date(...)` on Safari
+// (Chrome/Firefox are lenient about it, but Safari can yield Invalid Date).
+// Reformat to a proper ISO string first.
+export function parseSqliteDatetime(s) {
+  return new Date(`${String(s).replace(" ", "T")}Z`);
+}
+
 export function haptic(ms = 10) {
   if (localStorage.getItem("ph_haptics") !== "0" && navigator.vibrate) {
     navigator.vibrate(ms);

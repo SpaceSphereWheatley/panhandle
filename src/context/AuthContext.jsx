@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { configureApi, rawLogin, rawRegister, rawGoogleAuth } from "../lib/api.js";
+import { clearCache } from "../lib/localCache.js";
 
 const AuthContext = createContext(null);
 
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
     authRef.current = cleared;
     setAuth(cleared);
     persistAuth(cleared);
+    clearCache();
     if (reason === "expired") {
       setExpiredReason(
         "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt."

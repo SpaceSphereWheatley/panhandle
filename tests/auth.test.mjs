@@ -66,6 +66,7 @@ async function runTests(BASE) {
   await testTokenVersionOnFlagsPatch(BASE);
   await testChangePasswordRateLimiting(BASE);
   await testSlidingRefreshTokenHeader(BASE);
+  await testChangePasswordMinLength(BASE);
 }
 
 async function testLoginSuccessAndFailure(BASE) {
@@ -235,6 +236,32 @@ async function testSlidingRefreshTokenHeader(BASE) {
   assert.equal((await authedGet(BASE, "/list-users", refreshed)).status, 200, "the refreshed token should itself be usable");
 
   console.log("  - sliding expiry: authenticated responses carry a usable X-Refresh-Token header");
+}
+
+async function testChangePasswordMinLength(BASE) {
+  // Standardized to match /register and /reset-password's 8-char floor (see
+  // TODO #83) — previously change-password only required 6.
+  const username = `auth_cp_minlen_${RUN_ID}`;
+  await bootstrapAccount(BASE, username, PASS);
+  const token = await tokenFor(BASE, username, PASS);
+
+  const shortRes = await fetch(`${BASE}/change-password`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ current_password: PASS, new_password: "Sh0rt-1" }),
+  });
+  assert.equal(shortRes.status, 400, "a 7-char new password should be rejected");
+  const shortBody = await shortRes.json();
+  assert.match(shortBody.error, /minst 8 tegn/i);
+
+  const okRes = await fetch(`${BASE}/change-password`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ current_password: PASS, new_password: "8-chars!" }),
+  });
+  assert.equal(okRes.status, 200, "an 8-char new password should be accepted");
+
+  console.log("  - change-password: rejects new passwords under 8 chars, matching /register and /reset-password");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });
