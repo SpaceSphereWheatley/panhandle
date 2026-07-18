@@ -273,6 +273,22 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
   }
 
+  async function toggleImportant(id) {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    haptic();
+    const wasImportant = it.important;
+    setItems((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, important: wasImportant ? 0 : 1 } : x))
+    );
+    try {
+      await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ important: !wasImportant }) });
+    } catch {
+      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, important: wasImportant } : x)));
+      toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
+    }
+  }
+
   // On-demand "get the other person's attention" ping (TODO #7 phase 2) —
   // pushes to every other subscribed device on the list. The backend
   // enforces a 2-minute per-list cooldown (429), surfaced here as a toast
@@ -490,7 +506,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -524,7 +540,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, setEditingId, renderGeneration, clearResolving)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving)}
             </div>
           )}
         </>
@@ -618,7 +634,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, renderGeneration, onResolved, staleItemDays) {
+function renderItems(displayItems, viewMode, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays) {
   return (
     <div key={renderGeneration} style={viewMode === "grid" ? gridStyle : listStyle}>
       <AnimatePresence initial={false} mode="popLayout">
@@ -632,6 +648,7 @@ function renderItems(displayItems, viewMode, resolvingIds, onToggle, onEdit, ren
               clusterBg={bg}
               resolving={!!resolvingIds?.has(item.id)}
               onToggle={onToggle}
+              onToggleImportant={onToggleImportant}
               onEdit={onEdit}
               onResolved={onResolved}
               viewMode={viewMode}

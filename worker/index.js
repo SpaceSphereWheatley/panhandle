@@ -2112,7 +2112,7 @@ export default {
     // ===== SHOPPING LIST (all queries scoped to user.list_id) =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`
-        SELECT li.id, li.bought, li.added_by, li.added_at, li.bought_at, li.qty, li.notes, c.name, c.category
+        SELECT li.id, li.bought, li.important, li.added_by, li.added_at, li.bought_at, li.qty, li.notes, c.name, c.category
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
         WHERE li.list_id = ?1
@@ -2173,11 +2173,15 @@ export default {
     if (patchMatch && method === "PATCH") {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const { qty, notes, category, name } = body;
+      const { qty, notes, category, name, important } = body;
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(patchMatch[1], user.list_id).first();
       if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
+      if (important !== undefined) {
+        await env.DB.prepare("UPDATE list_items SET important = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(important ? 1 : 0, patchMatch[1], user.list_id).run();
+      }
       if (qty !== undefined) {
         const cleanQty = Math.max(1, parseInt(qty, 10) || 1);
         await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2 AND list_id = ?3")

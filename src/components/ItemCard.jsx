@@ -22,7 +22,7 @@ const STAGGER_CAP = 10;
 // `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
 // badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
 // not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
+export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
   const isGrid = viewMode === "grid";
   // Discreet "been on the list a while" marker — purely visual, computed from
   // added_at (see /notification-settings' stale_item_days, VarslerSubpage.jsx),
@@ -84,7 +84,7 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
       padding={isGrid ? "none" : "sm"}
       role="button"
       tabIndex={0}
-      aria-label={`${cap(item.name)}${item.bought ? ", kjøpt" : ""}`}
+      aria-label={`${cap(item.name)}${item.important ? ", viktig" : ""}${item.bought ? ", kjøpt" : ""}`}
       onClick={() => onToggle(item.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -130,6 +130,54 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
         }}
       >
         <ItemIcon name={item.name} />
+        {onToggleImportant ? (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-pressed={!!item.important}
+            aria-label={item.important ? "Fjern som viktig" : "Merk som viktig"}
+            title={item.important ? "Fjern som viktig" : "Merk som viktig"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleImportant(item.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleImportant(item.id);
+              }
+            }}
+            style={{
+              position: "absolute",
+              top: -4,
+              left: -4,
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: "var(--surface-sunken)",
+              border: "1.5px solid var(--surface-card)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              touchAction: "manipulation",
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="11"
+              height="11"
+              fill={item.important ? "var(--accent-tertiary)" : "none"}
+              stroke={item.important ? "var(--accent-tertiary)" : "var(--text-tertiary)"}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z" />
+            </svg>
+          </span>
+        ) : null}
         {isStale ? (
           <span
             title={`På listen i over ${staleItemDays} dager`}

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.34.0] — 2026-07-18
+
+### Added
+- **Mark shopping list items as important.** Tap the small star badge on any
+  item's icon to flag it — a quick, one-tap action separate from checking the
+  item off, so you can flag something as urgent without navigating into the
+  edit screen.
+
 ## [1.33.2] — 2026-07-18
 
 ### Fixed
