@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.33.0] — 2026-07-18
+
+### Added
+- **Every item in the shared catalogue now has an icon.** `itemIcons.js`'s
+  name→icon map covered only 500 of the 710 seeded catalogue items, so the
+  rest fell back to a plain first-letter badge in grid view. All 210
+  remaining items — niche produce, spices, meat/fish varieties, plant milks,
+  noodle types, vitamins/first-aid items, cleaning/household sundries, candy
+  brands, and the generic category headers (Kjøtt, Fisk, Frukt, Ost, Brød,
+  Mel, Olje, Frokostblanding, Pålegg) — now resolve to an icon, most reusing
+  an existing drawing and seven backed by new hand-drawn art (artichoke,
+  pregnancy test, gloves, broom, scissors, plus a cold-pack/heat-pack pouch
+  pair).
+
 ## [1.32.5] — 2026-07-18
 
 ### Fixed

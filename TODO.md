@@ -9,7 +9,6 @@ Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-17):
 1. **Small UI/polish items — low value, low risk, good filler:**
-   - **#13** Add ~200 more catalogue icons
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
@@ -64,14 +63,6 @@ husstanden" ping.
    _Value: Low · Importance: Low · Type: Performance_
 
 ## UI / Polish
-
-13. Create more icons. `src/lib/itemIcons.js`'s `MAP` currently maps
-    ~500 of the 710 `COMMON_ITEMS` catalogue entries to a drawn icon —
-    the rest fall back to the plain first-letter badge in grid view.
-    Incremental, no-risk work: pick a base/glyph shape from the existing
-    library (or draw a new one) and add `MAP` entries for the remaining
-    ~200 items.
-    _Value: Low · Importance: Low · Type: Content / Polish_
 
 6. Create a proper viewing window for desktop. Today the layout is
    deliberately mobile-first with a fixed `max-width: 480px` centered
