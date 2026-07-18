@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.34.2] — 2026-07-18
+
+### Fixed
+- **The importance star was on every item, not just important ones.** Every
+  item's icon badge showed a star outline, with only a subtle color change
+  once flagged — too easy to miss at a glance. Non-important items now show
+  no star at all, so a flagged item actually stands out; the same tap area
+  is still there to mark an item important in the first place.
+
 ## [1.34.1] — 2026-07-18
 
 ### Fixed
