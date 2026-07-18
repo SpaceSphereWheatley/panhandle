@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.33.1] — 2026-07-18
+
+### Fixed
+- **The "been on the list a while" marker looked like a new-item notification.**
+  A stale shopping list item was flagged with a plain dot in the same top-right
+  corner as an unread-notification badge — signalling the opposite of "this
+  has been sitting here." It's now a small clock glyph instead, in both list
+  and grid view.
+
 ## [1.33.0] — 2026-07-18
 
 ### Added
