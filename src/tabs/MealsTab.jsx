@@ -189,8 +189,8 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                             width: isToday ? 26 : 22,
                             height: isToday ? 26 : 22,
                             borderRadius: "50%",
-                            background: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 18%, transparent)" : "var(--accent-primary-subtle)",
-                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--accent-primary-press)",
+                            background: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 18%, transparent)" : "var(--surface-sunken)",
+                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-tertiary)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -205,7 +205,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                             fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
                             lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
                             fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
-                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--accent-primary)",
+                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
                           }}
                         >
                           Legg til måltid
