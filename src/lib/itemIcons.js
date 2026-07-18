@@ -198,7 +198,12 @@
     sachet: '<path d="M28,32 L72,32 L72,80 L28,80 Z"/><path d="M28,46 L72,46" stroke-width="3"/><path d="M28,32 L36,24 L64,24 L72,32" stroke-width="2.5"/>',
     dipbowl: '<path d="M20,46 C20,64 33,76 50,76 C67,76 80,64 80,46" stroke-width="5"/><path d="M20,46 L80,46" stroke-width="4"/><path d="M42,56 C46,52 54,52 50,58 C47,62 44,60 42,56 Z" stroke-width="2.5"/>',
     chocolatebar: '<rect x="24" y="30" width="52" height="40" rx="4"/><path d="M37,30 L37,70 M50,30 L50,70 M63,30 L63,70 M24,50 L76,50" stroke-width="2.5"/>',
-    candy: '<ellipse cx="50" cy="50" rx="16" ry="12"/><path d="M34,50 L20,40 L20,60 Z"/><path d="M66,50 L80,40 L80,60 Z"/>'
+    candy: '<ellipse cx="50" cy="50" rx="16" ry="12"/><path d="M34,50 L20,40 L20,60 Z"/><path d="M66,50 L80,40 L80,60 Z"/>',
+    artichoke: '<path d="M50,30 C36,32 28,44 30,58 C32,74 40,84 50,84 C60,84 68,74 70,58 C72,44 64,32 50,30 Z"/><path d="M38,40 C42,50 42,60 38,70 M50,32 C50,48 50,64 50,80 M62,40 C58,50 58,60 62,70" stroke-width="2"/><path d="M46,30 L44,20 M50,30 L50,18 M54,30 L56,20" stroke-width="2.5"/>',
+    pregnancytest: '<path d="M40,20 L60,20 L60,50 L54,50 L54,86 C54,90 46,90 46,86 L46,50 L40,50 Z"/><rect x="44" y="28" width="12" height="14" rx="2" stroke-width="2.4"/><path d="M47,35 L47,31 M50,35 L50,31 M53,35 L53,31" stroke-width="2"/>',
+    gloves: '<path d="M38,50 L38,26 C38,22 44,22 44,26 L44,46 M44,46 L44,20 C44,16 50,16 50,20 L50,46 M50,46 L50,18 C50,14 56,14 56,18 L56,46 M56,46 L56,24 C56,20 62,20 62,24 L62,50 C66,56 68,64 66,74 C64,84 54,88 44,86 C34,84 28,76 28,66 L28,54 C28,48 34,44 38,50 Z" stroke-width="2.6"/>',
+    broom: '<path d="M56,14 L40,74" stroke-width="4"/><path d="M40,74 C30,72 22,78 18,88 M40,74 C36,80 34,86 36,92 M40,74 C42,82 44,88 48,92 M40,74 C46,76 52,80 54,88" stroke-width="2.4"/><path d="M34,68 L48,80" stroke-width="2.6"/>',
+    scissors: '<circle cx="30" cy="26" r="9"/><circle cx="30" cy="74" r="9"/><path d="M38,32 L78,68 M38,68 L78,32"/>'
   };
 
   // Compose packaged-goods icons from base + glyph.
@@ -274,9 +279,11 @@
   I.pillbottle_heart = comp('pillbottle', 'heart', 50, 60, 0.9);
   I.pouch_leaf = comp('pouch', 'leaf', 50, 58);
   I.pouch_heart = comp('pouch', 'heart', 50, 58);
+  I.pouch_snow = comp('pouch', 'snow', 50, 58);
+  I.pouch_sun = comp('pouch', 'sun', 50, 58);
   I.shaker_salt = base.bottle ? ('<rect x="38" y="34" width="24" height="50" rx="8"/><rect x="40" y="22" width="20" height="14" rx="3"/><circle cx="46" cy="27" r="1.6" fill="#FFFFFF"/><circle cx="54" cy="27" r="1.6" fill="#FFFFFF"/><circle cx="46" cy="31" r="1.6" fill="#FFFFFF"/><circle cx="54" cy="31" r="1.6" fill="#FFFFFF"/>') : '';
 
-  // ---- name -> icon key map (all 499 catalogue items) ----------------------
+  // ---- name -> icon key map (covers every COMMON_ITEMS catalogue entry) ----
   var MAP = {
     // Frukt og grønt
     "banan": "banana", "eple": "apple", "pære": "pear", "appelsin": "orange", "klementin": "orange",
@@ -295,6 +302,13 @@
     "kinakål": "leafygreen", "ingefær": "ginger", "persille": "herbbunch", "basilikum": "herbbunch",
     "koriander": "herbbunch", "dill": "herbbunch", "gressløk": "herbbunch", "mynte": "herbbunch",
     "rabarbra": "rhubarb", "pasjonsfrukt": "stonefruit", "kokosnøtt": "coconut", "erter": "peapod",
+    "frukt": "apple", "grønnsaker": "carrot", "kirsebær": "berries", "søtkirsebær": "berries",
+    "stikkelsbær": "berries", "tranebær": "berries", "fiken": "pomegranate", "dadler": "stonefruit",
+    "litchi": "pomegranate", "papaya": "mango", "physalis": "berries", "mirabelle": "stonefruit",
+    "kaki": "orange", "fennikel": "celery", "artisjokk": "artichoke", "pak choi": "leafygreen",
+    "mangold": "leafygreen", "friséesalat": "leafygreen", "romansalat": "leafygreen",
+    "vårsalat": "leafygreen", "selleriknoll": "beet", "nepe": "radish", "estragon": "herbbunch",
+    "salvie": "herbbunch", "karse": "herbbunch", "sjalottløk": "onion",
     // Brød og bakevarer
     "grovbrød": "bread", "loff": "bread", "rundstykker": "roll", "baguette": "baguette", "polarbrød": "bread",
     "knekkebrød": "box_wheat", "pita": "roll", "tortilla": "roll", "lefse": "roll", "vafler": "waffle",
@@ -303,6 +317,10 @@
     "toastbrød": "bread", "fullkornsbrød": "bread", "speltbrød": "bread", "surdeigsbrød": "bread",
     "ciabatta": "baguette", "focaccia": "bread", "naanbrød": "roll", "hamburgerbrød": "roll",
     "hotdogbrød": "roll", "kavring": "roll", "donut": "donut",
+    "brød": "bread", "rugbrød": "bread", "flatbrød": "box_wheat", "lompe": "roll",
+    "grissini": "baguette", "bagel": "donut", "müslibrød": "bread", "solsikkebrød": "bread",
+    "steinbakt brød": "bread", "lavkarbobrød": "bread", "glutenfritt brød": "bread",
+    "wienerbrød": "croissant",
     // Meieriprodukter
     "melk": "carton_cow", "lettmelk": "carton_cow", "helmelk": "carton_cow", "skummet melk": "carton_cow",
     "ekstra lettmelk": "carton_cow", "laktosefri melk": "carton_cow", "fløte": "carton_drop",
@@ -314,6 +332,10 @@
     "naturell yoghurt": "yoghurtcup", "gresk yoghurt": "yoghurtcup", "drikkeyoghurt": "carton_drop",
     "skyr": "yoghurtcup", "kefir": "carton_drop", "kvarg": "yoghurtcup", "vaniljesaus": "carton_drop",
     "iskrem": "icecreamtub", "egg": "eggs",
+    "ost": "cheese", "mascarpone": "tub_cow", "ricotta": "tub_cow", "halloumi": "cheese",
+    "geitost": "cheese", "pultost": "tub_cow", "havremelk": "carton2_leaf", "mandelmelk": "carton2_leaf",
+    "soyamelk": "carton2_leaf", "vegansk ost": "cheese", "vegansk yoghurt": "yoghurtcup",
+    "vegansk rømme": "tub_cow",
     // Kjøtt og fisk
     "kjøttdeig": "meat", "karbonadedeig": "meat", "svinekjøtt": "steak", "storfekjøtt": "steak",
     "kylling": "drumstick", "kyllingfilet": "drumstick", "kyllinglår": "drumstick", "kyllingvinger": "drumstick",
@@ -326,6 +348,14 @@
     "sei": "fish", "hyse": "fish", "makrell": "fish", "sild": "fish", "tunfisk": "can_fish", "reker": "shrimp",
     "fiskekaker": "fish", "fiskeboller": "can_fish", "fiskepinner": "fishfillet", "fiskegrateng": "fishfillet",
     "krabbe": "shrimp", "blåskjell": "shrimp", "scampi": "shrimp",
+    "kjøtt": "meat", "fisk": "fish", "pålegg": "spreadtub", "kalvekjøtt": "steak", "elgkjøtt": "steak",
+    "reinsdyrkjøtt": "steak", "andebryst": "steak", "kanin": "drumstick", "geitekjøtt": "steak",
+    "lammekoteletter": "steak", "chorizo": "sausage", "pepperoni": "sausage", "prosciutto": "steak",
+    "parmaskinke": "steak", "kyllingpålegg": "spreadtub", "kalkunpålegg": "spreadtub",
+    "makrell i tomat": "can_tomato", "ansjos": "can_fish", "kaviar": "can_fish",
+    "krabbeklør": "shrimp", "hummer": "shrimp", "østers": "shrimp", "pangasius": "fishfillet",
+    "steinbit": "fish", "breiflabb": "fish", "tofu": "butter", "tempeh": "butter",
+    "vegankjøttdeig": "meat", "falafel": "nuts",
     // Ingredienser og krydder
     "salt": "shaker_salt", "pepper": "jar_pepper", "sukker": "bag_fizz", "brunt sukker": "bag_fizz",
     "melis": "bag_fizz", "vaniljesukker": "sachet", "hvetemel": "bag_wheat", "sammalt mel": "bag_wheat",
@@ -344,6 +374,19 @@
     "mandler": "nutbag", "valnøtter": "nutbag", "hasselnøtter": "nutbag", "cashewnøtter": "nutbag",
     "pinjekjerner": "nutbag", "rosiner": "bag_leaf", "sesamfrø": "sachet", "solsikkefrø": "bag_leaf",
     "gresskarkjerner": "bag_leaf", "fond": "bouillon",
+    "mel": "bag_wheat", "olje": "bottle_leaf", "cayennepepper": "jar_chili", "chiliflak": "jar_chili",
+    "sambal oelek": "jar_chili", "sweet chili saus": "bottle_drop", "bbq saus": "bottle_drop",
+    "pesto": "jar_leaf", "worcestershiresaus": "bottle_drop", "fiskesaus": "bottle_drop",
+    "østerssaus": "bottle_drop", "hoisinsaus": "bottle_drop", "sriracha": "bottle_drop",
+    "tabasco": "bottle_drop", "vaniljestang": "sachet", "safran": "sachet", "anis": "jar_leaf",
+    "fennikelfrø": "jar_leaf", "korianderfrø": "jar_leaf", "sennepsfrø": "jar_leaf",
+    "karvefrø": "jar_leaf", "stjerneanis": "jar_leaf", "nellik": "jar_leaf",
+    "hvit pepper": "jar_pepper", "rødvinseddik": "bottle_drop", "hvitvinseddik": "bottle_drop",
+    "kokosolje": "bottle_leaf", "sesamolje": "bottle_leaf", "agavesirup": "bottle_honey",
+    "lønnesirup": "bottle_honey", "stevia": "sachet", "mandelmel": "bag_wheat", "kokosmel": "bag_wheat",
+    "hampfrø": "sachet", "chiafrø": "sachet", "linfrø": "bag_leaf", "peanøtter": "nutbag",
+    "pistasjnøtter": "nutbag", "macadamianøtter": "nutbag", "tørkede aprikoser": "bag_leaf",
+    "tørkede fiken": "bag_leaf", "tørkede dadler": "bag_leaf", "tørkede tranebær": "bag_leaf",
     // Frysevarer og ferdigmåltid
     "grandiosa": "pizza", "frossenpizza": "pizza", "lasagne": "box_snow", "frosne grønnsaker": "bag_snow",
     "frosne bær": "bag_snow", "frosne erter": "bag_snow", "pommes frites": "bag_snow", "potetbåter": "bag_snow",
@@ -353,6 +396,9 @@
     "frossen laks": "fishfillet", "frosne reker": "bag_snow", "potetlomper": "roll",
     "smoothie frosne bær": "bag_snow", "iskrem boks": "icecreamtub", "fiskepinner frosne": "fishfillet",
     "frossen pizza mini": "pizza", "pølsedeig": "box_snow",
+    "is på pinne": "icecreamtub", "softis": "icecreamtub", "frosne bønner": "bag_snow",
+    "frossen blomkål": "bag_snow", "frossen brokkoli": "bag_snow", "iskake": "cakeslice",
+    "frosne croissanter": "box_snow", "frossen mango": "bag_snow",
     // Kornprodukter
     "havregryn": "oats", "lettkokte havregryn": "oats", "müsli": "oats", "cornflakes": "box_grain",
     "frosties": "box_grain", "cheerios": "box_grain", "havrefras": "box_grain", "weetabix": "box_grain",
@@ -362,6 +408,10 @@
     "bulgur": "bag_grain", "quinoa": "bag_grain", "byggryn": "bag_grain", "røde linser": "bag_bean",
     "kikerter": "can_bean", "sorte bønner": "can_bean", "kidneybønner": "can_bean", "polenta": "bag_grain",
     "pannekakemix": "box_grain", "vaffelmix": "box_grain", "linser": "bag_bean",
+    "frokostblanding": "cerealbowl", "havremel": "bag_grain", "bygg": "bag_grain",
+    "spelt": "bag_grain", "rug": "bag_grain", "müslibarer": "chocolatebar", "soyabønner": "bag_bean",
+    "edamame": "peapod", "hirse": "bag_grain", "risnudler": "pasta", "eggnudler": "pasta",
+    "glassnudler": "pasta", "udonnudler": "pasta", "ramen": "riceboml",
     // Snacks og godteri
     "potetgull": "bag_star", "ostepop": "bag_star", "saltstenger": "bag_star", "popcorn": "bag_star",
     "nachos": "bag_star", "dipp": "dipbowl", "salsa": "dipbowl", "guacamole": "dipbowl",
@@ -371,6 +421,9 @@
     "marie kjeks": "box_wheat", "havrekjeks": "box_wheat", "sjokoladekjeks": "box_choco", "snickers": "chocolatebar",
     "kit kat": "chocolatebar", "daim": "chocolatebar", "toblerone": "chocolatebar", "saltlakris": "candy",
     "kjeks": "box_wheat", "chips": "bag_star", "sjokolade": "chocolatebar",
+    "twix": "chocolatebar", "mars": "chocolatebar", "bounty": "chocolatebar",
+    "maltesers": "candy", "skumgodteri": "candy", "marshmallows": "candy",
+    "lakrisrull": "candy", "smågodt": "candy", "proteinbar": "chocolatebar",
     // Drikkevarer
     "vann": "waterbottle", "kullsyret vann": "waterbottle", "mineralvann": "waterbottle", "cola": "sodacan",
     "cola zero": "sodacan", "sprite": "sodacan", "fanta": "sodacan", "solo": "sodacan", "urge": "sodacan",
@@ -380,6 +433,10 @@
     "espresso": "mug", "te": "box_star", "grønn te": "box_star", "svart te": "box_star", "urtete": "box_star",
     "kakaopulver": "box_choco", "energidrikk": "energydrink", "red bull": "energydrink", "smoothie": "smoothie",
     "øl": "beer", "vin": "wineglass", "brus": "sodacan",
+    "sportsdrikk": "waterbottle", "kombucha": "sodacan", "iskaffe": "bottle_coffee",
+    "most": "carton_apple", "druejuice": "carton_orange", "tranebærjuice": "carton_orange",
+    "ananasjuice": "carton_orange", "mangojuice": "carton_orange", "sider": "beer",
+    "alkoholfritt øl": "beer",
     // Husholdning
     "toalettpapir": "toiletpaper", "tørkepapir": "paperroll", "kjøkkenrull": "paperroll", "servietter": "napkin",
     "oppvasksåpe": "bottle_bubble", "oppvaskmaskin tabletter": "box_bubble", "oppvaskmaskinsalt": "box_star",
@@ -393,6 +450,12 @@
     "luftfrisker": "spray_leaf", "vaskepulver": "box_bubble", "skyllemiddel": "jug_leaf", "grønnsåpe": "bottle_bubble",
     "tannpirker": "matches", "tape": "tape", "klesklyper": "clothespin", "zip poser": "foil",
     "håndsåpe kjøkken": "soapdispenser", "støvkluter": "sponge", "vaskeklut": "sponge",
+    "matboks": "giftbox", "termos": "waterbottle", "drikkeflaske": "waterbottle",
+    "avkalkningsmiddel": "bottle_bubble", "finvask": "jug_bubble", "silikonform": "waffle",
+    "bakeform": "cake", "engangshansker": "gloves", "gummihansker": "gloves", "kost": "broom",
+    "feiebrett": "mop", "vindusvisker": "mop", "toalettbørste": "dishbrush",
+    "møllmiddel": "sachet", "insektspray": "spray_leaf", "sikringer": "battery",
+    "forlengerledning": "battery",
     // Omsorg og helse
     "bleier": "diaper", "bleier størrelse 4": "diaper", "bleier størrelse 5": "diaper", "våtservietter": "napkin",
     "barnemat": "babyfood", "barnegrøt": "babyfood", "velling": "babybottle", "morsmelkerstatning": "babybottle",
@@ -407,16 +470,26 @@
     "håndsåpe": "soapdispenser", "deodorant": "deodorant", "barberskum": "spray_star", "barberblader": "razor",
     "bind": "pad", "tamponger": "pad", "truseinnlegg": "pad", "fuktighetskrem": "soap", "q-tips": "cottonswab",
     "vitaminer": "pillbottle_cross", "tran": "bottle_drop", "multivitamin barn": "pillbottle_heart",
+    "vitamin d": "pillbottle_cross", "magnesium": "pillbottle_cross", "probiotika": "pillbottle_cross",
+    "jerntilskudd": "pillbottle_cross", "allergitabletter": "pill", "øyedrops": "spray_drop",
+    "nesedrops": "spray_drop", "kompresser": "bandage", "sportstape": "tape",
+    "kuldepose": "pouch_snow", "varmepute": "pouch_sun", "graviditetstest": "pregnancytest",
+    "kondomer": "pad", "menstruasjonskopp": "teacup", "intimvask": "bottle_bubble",
+    "rakekrem": "spray_star", "hårfjerningskrem": "tube_cross", "hårspray": "spray_star",
+    "hårgele": "tube_drop", "leppepomade": "tube_cross", "negleklipper": "razor", "pinsett": "razor",
     // Dyreprodukter
     "kattemat": "catface", "kattemat våt": "can_paw", "kattemat tørr": "bag_paw", "kattesand": "bag_paw",
     "kattegodteri": "pettoy", "hundemat": "dogface", "hundemat våt": "can_paw", "hundemat tørr": "bag_paw",
     "hundegodteri": "bone", "tyggebein": "bone", "fuglefrø": "birdseed", "fiskefôr": "can_paw",
     "kaninmat": "bag_paw", "dyreleker": "pettoy", "bæsjeposer hund": "trashbag",
+    "hamstermat": "bag_paw", "marsvinmat": "bag_paw",
     // Annet
     "gavepapir": "giftwrap", "gavebånd": "giftwrap", "bursdagslys": "candle", "ballonger": "balloon",
     "servietter fest": "napkin", "engangsbestikk": "cutlery", "engangstallerken": "plate", "plastkopper": "partycup",
     "sugerør": "straw", "grillkull": "charcoal", "tennvæske": "bottle_star", "blomster": "flower",
-    "potteplante": "plant", "jord": "soil", "frø": "seeds"
+    "potteplante": "plant", "jord": "soil", "frø": "seeds",
+    "lim": "tube_drop", "saks": "scissors", "penn": "toothbrush", "notatbok": "napkin",
+    "konvolutter": "giftwrap", "gjødsel": "soil"
   };
 
   // babyfood fallback (reuse jar with heart)
@@ -427,6 +500,7 @@
   // ---- ICON_OFFSETS: generated by scripts/compute-icon-offsets.mjs, do not hand-edit ----
 var ICON_OFFSETS = {
   "apple": [0, 1.6],
+  "artichoke": [0, -1],
   "asparagus": [0, -5],
   "avocado": [0, -3],
   "babybottle": [0, -4.5],
@@ -467,6 +541,7 @@ var ICON_OFFSETS = {
   "box_wheat": [0, -4.5],
   "bread": [0, -5],
   "broccoli": [0, -3],
+  "broom": [13, -3],
   "butter": [0, -8],
   "cake": [0, -5],
   "cakeslice": [0, -4.2],
@@ -518,6 +593,7 @@ var ICON_OFFSETS = {
   "giftbox": [0, -9.5],
   "giftwrap": [-1, 6],
   "ginger": [-2.1, -7],
+  "gloves": [2.6, -0.7],
   "grapes": [0, 2.9],
   "herbbunch": [0, 3],
   "icecreamtub": [0, -0.9],
@@ -567,6 +643,9 @@ var ICON_OFFSETS = {
   "potato": [-0.4, -5.8],
   "pouch_heart": [0, -5],
   "pouch_leaf": [0, -5],
+  "pouch_snow": [0, -5],
+  "pouch_sun": [0, -5],
+  "pregnancytest": [0, -4.5],
   "pretzel": [0.4, 2.5],
   "radish": [0, -5],
   "razor": [0, 1],
@@ -575,6 +654,7 @@ var ICON_OFFSETS = {
   "roll": [0, -1],
   "sachet": [0, -2],
   "sausage": [0.4, -6.1],
+  "scissors": [0.5, 0],
   "seeds": [0, -7.7],
   "shaker_salt": [0, -3],
   "shrimp": [3, -7.2],

@@ -7,6 +7,19 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+78. (13) Closed the icon gap: all 710 `COMMON_ITEMS` catalogue entries now
+    resolve to an icon via `src/lib/itemIcons.js`'s `MAP`, up from 500 —
+    the remaining 210 fell back to a plain first-letter badge in grid view
+    before this. Most reused an existing drawing (near-synonym pattern
+    already used throughout `MAP`, e.g. many fish species sharing one
+    `fish` icon); seven items needed genuinely new hand-drawn art —
+    artichoke, a pregnancy test, gloves, a broom, scissors, and a
+    cold-pack/heat-pack pouch pair composed from the existing snowflake/sun
+    glyphs — verified via a rendered contact-sheet screenshot before
+    merging. Added `src/lib/itemIcons.test.js` asserting every
+    `COMMON_ITEMS` name resolves to a non-null icon, so future catalogue
+    growth regresses loudly instead of silently falling back to the
+    letter badge. (1.33.0)
 77. (7) Closed out push notifications. Phase 1: Web Push subscribe/
     unsubscribe infrastructure end-to-end — VAPID keys, the
     `push_subscriptions` table, a Settings → "Varsler" enable-notifications
