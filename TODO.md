@@ -7,7 +7,11 @@ them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-17):
+**Group priority** (highest to lowest, reassessed 2026-07-18):
+0. **Bugs (#79–#89)** — found in a full QA/QC pass 2026-07-18. #79 and #80
+   are P0 (both break core account flows in ordinary use and neither is
+   covered by existing tests); do these first. #81–#83 are P1; #84–#89 are
+   low-priority latent/edge issues.
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
@@ -26,6 +30,119 @@ Notifications (#7) shipped in full (phases 1–2) and is closed — see
 remaining phase, were considered and explicitly declined: not worth it
 for a 2-person household that already has the on-demand "Varsle
 husstanden" ping.
+
+## Bugs
+
+Found in a full QA/QC review pass (2026-07-18). Prioritized: P0 first, then
+P1, then low-priority latent/edge issues. File:line refs are from that pass —
+verify before fixing.
+
+### P0 — Critical (breaks core flows in normal use)
+
+79. Mistyping the current password on a re-auth action logs the user out
+    entirely with a misleading "session expired" message. `src/lib/api.js`
+    (~L31–34) treats **any** 401 as an expired session
+    (`onUnauthorized()` → `logout("expired")`, `AuthContext.jsx` ~L69), but
+    `/change-password` (`worker/index.js` ~L1590), `/change-email` (~L1645)
+    and `DELETE /account` (~L1692) all return **401** for a wrong current
+    password — an intentional, displayable error. Result: a typo on change
+    password / change email / delete account bounces the user to the login
+    screen ("Økten utløp …") instead of showing "Feil passord". The
+    server-side brute-force throttle assumes the user stays and retries.
+    Fix: return a distinct code (e.g. 403) for wrong-password on these
+    endpoints, or make `api()` only auto-logout on 401 for non-re-auth calls.
+    _Value: High · Importance: High · Type: Bug / Auth_
+
+80. Sole-owner account/list deletion hits a foreign-key violation via
+    `list_presence`. The last-owner cascade in `DELETE /account`
+    (`worker/index.js` ~L1716–1727) and the superadmin
+    `DELETE /admin/users/{u}` + `delete_list` path (~L1915–1926) clear every
+    list-scoped table **except `list_presence`**, which is
+    `REFERENCES lists(id)` with **no `ON DELETE CASCADE`**
+    (`migrations/0013_list_presence.sql`). The trailing
+    `DELETE FROM lists` then violates the FK whenever a presence row exists —
+    and one essentially always does, since the shopping-list poll upserts
+    `/presence` on load (`ShoppingListTab.jsx` ~L119) and those rows are never
+    pruned. The `env.DB.batch()` throws (no try/catch) → 500, account/list
+    NOT deleted. `tests/self-delete-account.test.mjs` misses it because it
+    never calls `/presence` before deleting. Fix: add
+    `DELETE FROM list_presence WHERE list_id = ?1` to both cascade batches
+    (and ideally give the table `ON DELETE CASCADE`). Verify against prod FK
+    enforcement (D1 default, and already relied on elsewhere — see the
+    cascade comment at ~L1711).
+    _Value: High · Importance: High · Type: Bug / Data model_
+
+### P1 — High / Medium
+
+81. Meal & weekly reminders silently never fire for users who never opened
+    the reminder settings. `GET /notification-settings` and the UI both
+    default the two reminder toggles to **true** with no row present
+    (`worker/index.js` ~L2518–2521, `VarslerSubpage.jsx` ~L33–36), but the
+    cron only sends to lists that have an actual row
+    (`checkMealReminders`/`checkWeeklyReminders`, `WHERE …_enabled = 1`,
+    ~L1230/L1271). No row is created until a reminder control is changed;
+    enabling push (`/push/subscribe`) doesn't create one. So a user enables
+    notifications, sees both toggles ON, and never gets a reminder.
+    _Value: Medium · Importance: Medium · Type: Bug / Notifications_
+
+82. Cross-user shopping-list leak on shared devices. `ITEMS_CACHE_KEY`
+    (`ph_cache_items_v1`) is global, not namespaced per user/list, and hydrated
+    on mount (`ShoppingListTab.jsx` ~L67); `logout()` only clears the
+    `ph_token/ph_user/…` keys (`AuthContext.jsx` ~L17–33). On a shared
+    household device (an explicitly supported case), the next user briefly
+    sees the previous user's items from a different list until the first
+    refresh. Fix: clear `ph_cache_*` on logout, or key the cache by `list_id`.
+    _Value: Medium · Importance: Medium · Type: Bug / Privacy_
+
+83. Password-length floor is weaker for change-password than for signup.
+    `/register` and `/reset-password` require ≥ 8 chars (`worker/index.js`
+    ~L1387, ~L1524) but `/change-password` requires only ≥ 6 (~L1581; UI text
+    also says "min. 6 tegn"). A user can lower their password strength below
+    the signup minimum after registering. Standardize on 8.
+    _Value: Medium · Importance: Low · Type: Bug / Auth_
+
+### P2 — Low (latent / edge)
+
+84. Stale-item marker likely never shows on iOS Safari (primary platform).
+    `ItemCard.jsx` (~L33) does `new Date(item.added_at)` where `added_at` is
+    SQLite `datetime('now')` → `"YYYY-MM-DD HH:MM:SS"` (UTC, space-separated,
+    no `Z`). That's parsed as local time (harmless offset for a day
+    threshold) and isn't reliably parseable in Safari, where it can yield
+    `Invalid Date` → `NaN` compare → marker never appears. Normalize to ISO
+    (`T…Z`) before parsing.
+    _Value: Low · Importance: Low · Type: Bug / Date handling_
+
+85. "Legg til nøyaktig som skrevet" isn't actually exact. The exact-add path
+    (`ShoppingListTab.jsx` ~L179) still POSTs `/list`, which runs
+    `extractGlutenFree` server-side (`worker/index.js` ~L2110), so an item
+    literally containing "gf"/"glutenfri" gets stripped and a "Glutenfri"
+    note appended — not verbatim.
+    _Value: Low · Importance: Low · Type: Bug / Shopping list_
+
+86. `/plan` POST wipes `responsible` when it's omitted: `responsible || ""`
+    (`worker/index.js` ~L2423) overwrites via
+    `ON CONFLICT … SET responsible = excluded.responsible`. Not triggered by
+    the current UI (always sends both fields), but a latent data-loss footgun
+    for any partial save.
+    _Value: Low · Importance: Low · Type: Bug / Meals_
+
+87. Toggle/delete list-item endpoints return `200 ok` for non-existent or
+    other-list IDs (`/list/:id/toggle` ~L2204, `DELETE /list/:id` ~L2228) —
+    the UPDATE/DELETE matches nothing and still reports success (no 404).
+    Harmless (scoped by `list_id`) but masks client bugs.
+    _Value: Low · Importance: Low · Type: Bug / API_
+
+88. `responsible` is never validated against list membership — `/plan`
+    (~L2423) and `/recurring` (~L2465) accept any string. Partly by design
+    (free-text "Annet"), but a client could store an arbitrary username.
+    _Value: Low · Importance: Low · Type: Bug / Meals_
+
+89. Recurring-default weekday uses a local `getDay()` on a UTC-parsed date.
+    `MealPlanModal.jsx` (~L57) does `new Date(iso).getDay()` — `iso` parses as
+    UTC midnight but the weekday is read locally, so the prefilled recurring
+    responsible is off-by-one for users west of UTC. Non-issue for a
+    Norway-only app; latent correctness bug.
+    _Value: Low · Importance: Low · Type: Bug / Date handling_
 
 ## Feature
 
