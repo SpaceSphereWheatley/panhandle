@@ -177,47 +177,46 @@ export function ItemCard({ item, resolving, onToggle, onEdit, onResolved, cluste
         >
           {cap(item.name)}
         </div>
-        {(item.qty > 1 || item.notes) ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: isGrid ? "center" : undefined,
-              gap: isGrid ? 5 : 6,
-              overflow: "hidden",
-              textOverflow: isGrid ? undefined : "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: isGrid ? "100%" : undefined,
-            }}
-          >
-            {item.qty > 1 ? (
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: isGrid ? "var(--text-2xs)" : "var(--text-xs)",
-                  fontWeight: "var(--weight-display-max)",
-                  color: clusterOn || "var(--accent-primary)",
-                  flexShrink: 0,
-                }}
-              >
-                {isGrid ? "x" : "×"}{item.qty}
-              </span>
-            ) : null}
-            {item.notes ? (
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: isGrid ? "var(--text-2xs)" : "var(--text-xs)",
-                  color: "var(--text-secondary)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {item.notes}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: isGrid ? "center" : undefined,
+            gap: isGrid ? 5 : 6,
+            overflow: "hidden",
+            textOverflow: isGrid ? undefined : "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: isGrid ? "100%" : undefined,
+            minHeight: 16,
+          }}
+        >
+          {item.qty > 1 ? (
+            <span
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: isGrid ? "var(--text-2xs)" : "var(--text-xs)",
+                fontWeight: "var(--weight-display-max)",
+                color: clusterOn || "var(--accent-primary)",
+                flexShrink: 0,
+              }}
+            >
+              {isGrid ? "x" : "×"}{item.qty}
+            </span>
+          ) : null}
+          {item.notes ? (
+            <span
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: isGrid ? "var(--text-2xs)" : "var(--text-xs)",
+                color: "var(--text-secondary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {item.notes}
+            </span>
+          ) : null}
+        </div>
       </ContentWrapper>
     </CardComponent>
   );

@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.32.5] — 2026-07-18
+
+### Fixed
+- **Shopping list rows were a different height depending on whether an item
+  had a quantity or a note.** The qty/notes line under an item's name was
+  only rendered when there was something to show, so rows without either
+  collapsed to a single line while rows with them stretched to two —
+  visibly uneven row heights in both list and grid view. That line now
+  always reserves its space, whether or not it has content.
+
 ## [1.32.4] — 2026-07-18
 
 ### Fixed
