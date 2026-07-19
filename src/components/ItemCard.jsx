@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { ItemIcon } from "./ItemIcon.jsx";
 import { Card } from "../design-system/index.js";
-import { cap, parseSqliteDatetime } from "../lib/shoppingUtils.js";
+import { cap, parseSqliteDatetime, haptic } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
@@ -14,6 +15,13 @@ const MotionDiv = motion.div;
 // sweep; step kept small to stay "restrained" per motion.css's own framing.
 const STAGGER_STEP_S = 0.024;
 const STAGGER_CAP = 10;
+
+// Swipe-right-to-mark-important thresholds (list-view values — grid view
+// scales these down since its tiles are much narrower, see isGrid below).
+const SWIPE_COMMIT_PX = 72;
+const SWIPE_VELOCITY = 500;
+const SWIPE_MAX_PX = 96;
+const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z";
 
 // Single card for both the list row and grid tile — `viewMode` picks the
 // layout. Deliberately the SAME component (not two components swapped by the
@@ -36,6 +44,45 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
   const intensity = useDesignIntensity();
   const CardComponent = shouldAnimate ? MotionCard : Card;
   const ContentWrapper = shouldAnimate ? MotionDiv : "div";
+
+  // Grid tiles are much narrower than list rows (ShoppingListTab's gridStyle
+  // can go under 140px per tile on narrow screens with 3 columns), so a flat
+  // 72px commit distance would consume most of a tile's width — scale it
+  // down there. Velocity threshold stays the same in both: a fast flick
+  // reads the same regardless of tile width.
+  const swipeCommitPx = isGrid ? 40 : SWIPE_COMMIT_PX;
+  const swipeMaxPx = isGrid ? 56 : SWIPE_MAX_PX;
+  const x = useMotionValue(0);
+  const swipeBackdropOpacity = useTransform(x, [0, swipeCommitPx], [0, 1]);
+  // Distinguishes a genuine swipe from a tap-with-negligible-movement, same
+  // pattern as MealsTab's week-pager swipe (see its onDrag comment): the
+  // browser's native click on release fires before Framer calls onDragEnd,
+  // so the suppress flag has to be set in onDrag, not onDragEnd.
+  const dragActiveRef = useRef(false);
+  const swipeSuppressRef = useRef(false);
+
+  function onSwipeDragStart() {
+    dragActiveRef.current = false;
+  }
+  function onSwipeDrag(_e, info) {
+    if (Math.abs(info.offset.x) > 5) {
+      dragActiveRef.current = true;
+      swipeSuppressRef.current = true;
+    }
+  }
+  function onSwipeDragEnd(_e, info) {
+    if (dragActiveRef.current) {
+      // Cleared a tick later so the click that follows this release (if
+      // any) still sees it as suppressed.
+      setTimeout(() => { swipeSuppressRef.current = false; }, 0);
+    }
+    const committed = info.offset.x > swipeCommitPx || info.velocity.x > SWIPE_VELOCITY;
+    if (committed) {
+      haptic();
+      onToggleImportant(item.id);
+    }
+    animate(x, 0, transition); // always spring back — never a persistent "open" state
+  }
 
   const staggerDelay = shouldAnimate && intensity === "expressive" ? Math.min(index, STAGGER_CAP) * STAGGER_STEP_S : 0;
   const layoutTransition = { ...transition, delay: staggerDelay };
@@ -79,38 +126,24 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
   // for the shell's scale so text never stretches through the transition.
   const contentMotionProps = shouldAnimate ? { layout: true, transition: layoutTransition } : {};
 
-  return (
-    <CardComponent
-      padding={isGrid ? "none" : "sm"}
-      role="button"
-      tabIndex={0}
-      aria-label={`${cap(item.name)}${item.important ? ", viktig" : ""}${item.bought ? ", kjøpt" : ""}`}
-      onClick={() => onToggle(item.id)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onToggle(item.id);
-        }
-      }}
-      {...longPress}
-      {...motionProps}
-      style={{
-        display: "flex",
-        flexDirection: isGrid ? "column" : "row",
-        alignItems: "center",
-        justifyContent: isGrid ? "flex-start" : undefined,
-        textAlign: isGrid ? "center" : undefined,
-        gap: isGrid ? 4 : 12,
-        overflow: "hidden",
-        background: clusterBg || "var(--surface-card)",
-        opacity: item.bought ? 0.55 : 1,
-        transition: "opacity var(--duration-fast) var(--ease-out)",
-        touchAction: "manipulation",
-        userSelect: "none",
-        ...(isGrid ? { padding: "16px 10px" } : null),
-        ...(resolving ? { pointerEvents: "none" } : null),
-      }}
-    >
+  // Flex layout for the icon badge + text block — used to live directly on
+  // CardComponent; now lives one level down on the content layer instead,
+  // so a sibling backdrop layer (below) can sit behind it and be revealed by
+  // the swipe-right gesture. CardComponent's own padding is untouched, so
+  // this still sits inside the same padded box as before.
+  const contentLayerStyle = {
+    position: "relative",
+    zIndex: 1,
+    display: "flex",
+    flexDirection: isGrid ? "column" : "row",
+    alignItems: "center",
+    justifyContent: isGrid ? "flex-start" : undefined,
+    textAlign: isGrid ? "center" : undefined,
+    gap: isGrid ? 4 : 12,
+  };
+
+  const contentChildren = (
+    <>
       <ContentWrapper
         {...contentMotionProps}
         className={isGrid ? "grid-badge" : "item-badge"}
@@ -281,6 +314,91 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
           ) : null}
         </div>
       </ContentWrapper>
+    </>
+  );
+
+  return (
+    <CardComponent
+      padding={isGrid ? "none" : "sm"}
+      role="button"
+      tabIndex={0}
+      aria-label={`${cap(item.name)}${item.important ? ", viktig" : ""}${item.bought ? ", kjøpt" : ""}`}
+      onClick={() => {
+        if (swipeSuppressRef.current) return;
+        onToggle(item.id);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle(item.id);
+        }
+      }}
+      {...longPress}
+      {...motionProps}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        background: clusterBg || "var(--surface-card)",
+        opacity: item.bought ? 0.55 : 1,
+        transition: "opacity var(--duration-fast) var(--ease-out)",
+        touchAction: "manipulation",
+        userSelect: "none",
+        ...(isGrid ? { padding: "16px 10px" } : null),
+        ...(resolving ? { pointerEvents: "none" } : null),
+      }}
+    >
+      {shouldAnimate ? (
+        // Swipe-right reveal — a full-bleed backdrop (its `inset:0` fills
+        // CardComponent's padding box regardless of CardComponent's own
+        // padding, per CSS's containing-block rules) that fades in as the
+        // content layer above it slides right, mirroring the same star used
+        // by the corner badge. Always rendered when shouldAnimate (list AND
+        // grid) — only "classic"/reduced-motion users skip it, since they
+        // still have the corner badge as an unconditional fallback.
+        <motion.div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: isGrid ? "center" : "flex-start",
+            paddingLeft: isGrid ? 0 : 20,
+            background: "var(--accent-tertiary-subtle)",
+            opacity: swipeBackdropOpacity,
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width={isGrid ? 18 : 20}
+            height={isGrid ? 18 : 20}
+            fill="var(--accent-tertiary)"
+            stroke="var(--accent-tertiary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d={STAR_PATH} />
+          </svg>
+        </motion.div>
+      ) : null}
+      {shouldAnimate ? (
+        <motion.div
+          style={{ ...contentLayerStyle, x, touchAction: "pan-y" }}
+          drag="x"
+          dragConstraints={{ left: 0, right: swipeMaxPx }}
+          dragElastic={{ left: 0, right: 0.35 }}
+          dragMomentum={false}
+          onDragStart={onSwipeDragStart}
+          onDrag={onSwipeDrag}
+          onDragEnd={onSwipeDragEnd}
+        >
+          {contentChildren}
+        </motion.div>
+      ) : (
+        <div style={contentLayerStyle}>{contentChildren}</div>
+      )}
     </CardComponent>
   );
 }
