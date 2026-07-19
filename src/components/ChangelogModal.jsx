@@ -4,6 +4,9 @@ import { Button } from "../design-system/index.js";
 import { parseChangelog } from "../lib/changelogUtils.js";
 
 const FULL_CHANGELOG_URL = "/changelog.html";
+// Spotlight the last few releases, not the entire history — the full log is
+// still one tap away via the link below.
+const RECENT_VERSIONS_COUNT = 3;
 
 export function ChangelogModal({ onClose }) {
   const [entries, setEntries] = useState(null);
@@ -26,7 +29,7 @@ export function ChangelogModal({ onClose }) {
       <div className="changelog-box">
         {error && <p className="cred-note">{error}</p>}
         {!error && !entries && <p className="cred-note">Laster...</p>}
-        {entries?.map((entry) => (
+        {entries?.slice(0, RECENT_VERSIONS_COUNT).map((entry) => (
           <section key={entry.version} className="changelog-entry">
             <h4>
               {entry.version} <span className="meta">— {entry.date}</span>

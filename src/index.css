@@ -199,9 +199,9 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 .changelog-box { max-height: 60vh; overflow-y: auto; }
 .changelog-entry { margin-bottom: 16px; }
 .changelog-entry:last-child { margin-bottom: 0; }
-.changelog-entry h4 { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.changelog-entry h4 { font-size: var(--text-lg); font-weight: 600; color: var(--text-primary); margin: 0 0 6px; }
 .changelog-entry ul { margin: 0; padding-left: 18px; }
-.changelog-entry li { font-size: var(--text-sm); color: var(--text-primary); line-height: 1.5; margin-bottom: 4px; }
+.changelog-entry li { font-size: var(--text-md); color: var(--text-primary); line-height: 1.5; margin-bottom: 6px; }
 .changelog-full-link { display: block; text-align: center; }
 .meta { font-size: var(--text-xs); color: var(--text-tertiary); margin-top: 4px; }
 

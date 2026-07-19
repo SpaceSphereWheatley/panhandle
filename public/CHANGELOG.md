@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.36.0] — 2026-07-19
+
+### Added
+- **New features now announce themselves.** Updating to a release that adds
+  a real new capability now opens a "what's new" modal automatically,
+  instead of relying on you noticing and tapping a toast. Smaller fixes/
+  tweaks still show the quieter toast, as before. The modal itself now
+  spotlights only the last few releases in a larger, easier-to-scan font
+  instead of the full history — the complete changelog is still one tap
+  away.
+
 ## [1.35.0] — 2026-07-19
 
 ### Added
