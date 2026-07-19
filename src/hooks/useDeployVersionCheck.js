@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { api } from "../lib/api.js";
-import { APP_VERSION } from "../lib/version.js";
+import { APP_VERSION, isFeatureVersionBump } from "../lib/version.js";
 
 const CHECK_MS = 60000;
 
@@ -8,7 +8,10 @@ const CHECK_MS = 60000;
 // - checkVersionUpdate: compares this browser's last-seen APP_VERSION against
 //   the running one. First-ever load just records it silently; a later
 //   mismatch (the Pages deploy moved on since this device last opened the
-//   app) shows a toast with a button into the changelog.
+//   app) either auto-opens the changelog (MAJOR/MINOR bump — a real new
+//   capability, per isFeatureVersionBump) or shows a quiet toast with a
+//   button into the changelog (PATCH-only bump — a fix/tweak not worth
+//   interrupting for).
 // - checkForNewDeploy: catches a deploy that happened *while this tab has
 //   been open* — polls the live Worker version and prompts rather than
 //   reloading silently, so an in-progress edit isn't lost.
@@ -19,7 +22,11 @@ export function useDeployVersionCheck({ toast, onOpenChangelog }) {
     const last = localStorage.getItem("ph_last_version");
     localStorage.setItem("ph_last_version", APP_VERSION);
     if (last && last !== APP_VERSION) {
-      toast(`Oppdatert til v${APP_VERSION}`, { actionLabel: "Hva er nytt?", actionFn: onOpenChangelog });
+      if (isFeatureVersionBump(last, APP_VERSION)) {
+        onOpenChangelog();
+      } else {
+        toast(`Oppdatert til v${APP_VERSION}`, { actionLabel: "Hva er nytt?", actionFn: onOpenChangelog });
+      }
     }
 
     async function checkForNewDeploy() {
