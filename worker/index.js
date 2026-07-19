@@ -2227,9 +2227,14 @@ export default {
       const item = await env.DB.prepare(
         "SELECT bought, catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(toggleMatch[1], user.list_id).first();
+      // Important is scoped to "this trip" — marking an item bought clears it
+      // (but undoing a bought mark doesn't restore it; that transition only
+      // clears, matching the times_bought counting below which only fires on
+      // the same 0->1 edge).
       await env.DB.prepare(`
         UPDATE list_items SET bought = CASE bought WHEN 0 THEN 1 ELSE 0 END,
-            bought_at = CASE bought WHEN 0 THEN datetime('now') ELSE NULL END
+            bought_at = CASE bought WHEN 0 THEN datetime('now') ELSE NULL END,
+            important = CASE bought WHEN 0 THEN 0 ELSE important END
         WHERE id = ?1 AND list_id = ?2
       `).bind(toggleMatch[1], user.list_id).run();
       // Only count it as a purchase on the 0->1 transition, not on undo —
