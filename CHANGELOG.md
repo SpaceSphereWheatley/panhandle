@@ -6,7 +6,9 @@
 - **Marking an item bought now clears its "important" star.** Important is
   meant for "this trip," not forever — checking an item off now drops the
   marker, so it doesn't carry over to your next shopping trip. Unchecking it
-  again (undoing a bought mark) doesn't bring the star back.
+  again (undoing a bought mark) doesn't bring the star back. Since a bought
+  item can never be important, the "Nylig kjøpt" section no longer shows the
+  star badge or swipe-to-mark gesture at all.
 
 ## [1.37.0] — 2026-07-19
 

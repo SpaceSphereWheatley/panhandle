@@ -622,7 +622,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving)}
+              {/* No onToggleImportant here: a bought item's important flag is
+                  always cleared server-side (see toggleItem/worker's /toggle
+                  handler), so marking one important here would have nothing
+                  to persist — ItemCard hides the badge and swipe gesture
+                  entirely when this is undefined. */}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving)}
             </div>
           )}
         </>
