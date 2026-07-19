@@ -20,8 +20,14 @@ const CLUSTER_KEYS = {
 
 // "Nylig kjøpt" isn't a real category (it's the recently-bought section) —
 // falls through to the neutral "other" cluster, which is correct since it's
-// not a store aisle.
+// not a store aisle. "Viktig" (the pinned important-items section, see
+// ShoppingListTab's pinImportant) isn't one either, but it does get its own
+// look rather than falling through: it reuses --accent-tertiary/-subtle, the
+// same star color already used for the importance badge/swipe-reveal in
+// ItemCard.jsx, so the pinned section visually reads as "the star color" at a
+// glance instead of a new unrelated hue.
 export function clusterFor(category) {
+  if (category === "Viktig") return { bg: "var(--accent-tertiary-subtle)", on: "var(--accent-tertiary)" };
   const key = CLUSTER_KEYS[category] || "other";
   return { bg: `var(--cluster-${key}-bg)`, on: `var(--cluster-${key}-on)` };
 }

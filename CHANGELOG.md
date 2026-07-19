@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.37.0] — 2026-07-19
+
+### Added
+- **A quick way to see just your important items.** A small star chip next
+  to the item count (only shown once something's marked important) pulls
+  those items into their own "Viktig" section above the rest of the list —
+  handy for a trip where you're not buying everything on the list. Nothing
+  gets hidden: everything else stays right below, in its normal aisle
+  order.
+
 ## [1.36.4] — 2026-07-19
 
 ### Fixed
