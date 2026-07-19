@@ -30,6 +30,29 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
 
+  // The app shell document is the one cached response whose *content*
+  // changes across deploys — it references Vite's content-hashed JS/CSS
+  // filenames, which are different every build, and the previous build's
+  // filenames stop existing on the server once a new deploy replaces
+  // dist/. Serving it stale-while-revalidate like the hashed assets below
+  // could hand a reload a stale app.html pointing at asset filenames the
+  // current deploy no longer serves (404s, React never mounts) — that's
+  // what caused the "update toast reloads into a white screen, only fixed
+  // by fully closing and reopening the app" bug. Network-first (falling
+  // back to cache only when actually offline) keeps offline support while
+  // making a reload always resolve a consistent, current shell+asset set.
+  if (request.mode === 'navigate' || url.pathname === '/app.html') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);
