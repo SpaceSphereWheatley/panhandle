@@ -36,6 +36,12 @@ const FALLBACK_RESOLVE_MS = 400;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 };
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 
+// Same star path ItemCard's importance badge/swipe-reveal draws — kept as a
+// literal here too (not imported), same self-contained-illustration reasoning
+// as ImportantInfoModal's copy: this is the pinImportant toggle chip's icon,
+// not a real item row.
+const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z";
+
 // Cold-load placeholder, shaped like a couple of categories worth of items —
 // a category label bar plus a handful of item-card-shaped blocks — so first
 // paint reserves roughly the real layout instead of a spinner with nothing
@@ -91,6 +97,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // /notification-settings and VarslerSubpage.jsx. Falls back to the app
   // default until the first fetch resolves.
   const [staleItemDays, setStaleItemDays] = useState(7);
+  // Pulls important, unbought items into their own "Viktig" section above the
+  // normal aisle list instead of hiding the rest — useful for a trip where
+  // you're not buying everything on the list. Not persisted: it's a
+  // per-visit lens on the list, not a standing preference like ph_view.
+  const [pinImportant, setPinImportant] = useState(false);
 
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
@@ -352,14 +363,27 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const bought = items
     .filter((it) => it.bought && !resolvingIds.has(it.id))
     .sort((a, b) => (b.bought_at || "").localeCompare(a.bought_at || ""));
+  // Important-item count driving the pinImportant chip — bought items don't
+  // count, since they're no longer something to look out for on this trip.
+  const importantUnbought = unbought.filter((it) => it.important);
+  const pinnedIds = pinImportant ? new Set(importantUnbought.map((it) => it.id)) : null;
   const groups = {};
-  for (const it of unbought) (groups[it.category] = groups[it.category] || []).push(it);
+  for (const it of unbought) {
+    if (pinnedIds?.has(it.id)) continue; // pulled into importantDisplayItems instead
+    (groups[it.category] = groups[it.category] || []).push(it);
+  }
   // One flat, aisle-sorted list: unbought items ordered by CATEGORIES. Recently
   // bought items (capped, re-add palette) render as their own section below
   // instead of being folded into the aisle list — see boughtDisplayItems.
+  // When pinImportant is on, important items are pulled out above into their
+  // own "Viktig" section (see importantDisplayItems) instead of appearing
+  // here too — same "own section, not a duplicate" split as bought items.
   const displayItems = CATEGORIES.filter((c) => groups[c]).flatMap((c) =>
     groups[c].map((it) => ({ item: it, clusterKey: it.category }))
   );
+  const importantDisplayItems = pinImportant
+    ? importantUnbought.map((it) => ({ item: it, clusterKey: "Viktig" }))
+    : [];
   // Classic intensity flattens the density down to a plain linear list,
   // regardless of the user's stored grid/list preference — ph_view stays
   // untouched so switching back to muted/expressive restores it exactly.
@@ -437,6 +461,43 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 16 }}>
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
+          {importantUnbought.length > 0 && (
+            <button
+              onClick={() => {
+                // Same "force a clean remount" move as the active-pane
+                // effect above: an item moving between this section and the
+                // main list reuses its id as AnimatePresence's key, and
+                // toggling that key's membership across two renders of the
+                // *same* AnimatePresence instance left it stuck invisible
+                // after re-entering — a fresh instance (initial={false}, so
+                // no mount-in animation) sidesteps that instead of chasing
+                // Framer's internal exit-tracking.
+                setRenderGeneration((g) => g + 1);
+                setPinImportant((prev) => !prev);
+              }}
+              aria-pressed={pinImportant}
+              aria-label={pinImportant ? "Vis alle varer" : "Vis kun viktige varer først"}
+              title={pinImportant ? "Vis alle varer" : "Vis kun viktige varer først"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                border: "none",
+                borderRadius: "var(--radius-pill)",
+                padding: "3px 8px",
+                fontSize: "var(--text-2xs)",
+                fontWeight: "var(--weight-semibold)",
+                cursor: "pointer",
+                background: pinImportant ? "var(--accent-tertiary)" : "var(--accent-tertiary-subtle)",
+                color: pinImportant ? "var(--text-on-accent)" : "var(--accent-tertiary)",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d={STAR_PATH} />
+              </svg>
+              {importantUnbought.length}
+            </button>
+          )}
           {presentUsers.length > 0 && (
             <div
               style={{ display: "flex", alignItems: "center" }}
@@ -506,6 +567,23 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         />
       ) : (
         <>
+          {importantDisplayItems.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div
+                style={{
+                  fontSize: "var(--text-2xs)",
+                  fontWeight: 700,
+                  color: clusterFor("Viktig").on,
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                  marginBottom: 8,
+                }}
+              >
+                Viktig
+              </div>
+              {renderItems(importantDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+            </div>
+          )}
           {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
 
           {boughtDisplayItems.length > 0 && (
