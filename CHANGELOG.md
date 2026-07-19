@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.36.2] — 2026-07-19
+
+### Fixed
+- **The "how to mark important" modal's swipe demo always showed a list
+  row, even if you use grid view.** It now mirrors whichever view you
+  currently have selected — a small tile for grid, a full-width row for
+  list — so the illustration matches what you actually see on the list.
+
 ## [1.36.1] — 2026-07-19
 
 ### Fixed
