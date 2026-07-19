@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.36.4] — 2026-07-19
+
+### Fixed
+- **The "how to mark important" modal's demos were hard to read.** The
+  swipe/tap illustrations were abstract shapes with no item name or icon,
+  making it unclear what was actually being demonstrated. They now show a
+  real item (icon + name) — a different common one each time you open the
+  modal — so it reads like an actual item on your list.
+
 ## [1.36.3] — 2026-07-19
 
 ### Fixed
