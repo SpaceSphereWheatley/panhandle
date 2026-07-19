@@ -43,7 +43,7 @@ export function ChangelogModal({ onClose }) {
         ))}
       </div>
       <a
-        className="cred-note changelog-full-link"
+        className="changelog-full-link"
         href={FULL_CHANGELOG_URL}
         target="_blank"
         rel="noreferrer"
