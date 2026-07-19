@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.36.3] — 2026-07-19
+
+### Fixed
+- **Tapping "Oppdater" on the update toast could reload into a blank white
+  screen**, recoverable only by fully closing and reopening the app. The
+  offline cache was serving the app shell itself stale-while-revalidate,
+  so a reload right after a deploy could load old cached HTML pointing at
+  JS/CSS files the new deploy no longer serves. The app shell now always
+  prefers the network (falling back to the cache only when offline), so
+  updates apply cleanly on the first reload.
+
 ## [1.36.2] — 2026-07-19
 
 ### Fixed
