@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.35.0] — 2026-07-19
+
+### Added
+- **Swipe right to mark an item important.** Marking a shopping list item
+  important used to require a precise tap on the small corner badge on its
+  icon. You can now just swipe the item to the right (list or grid view);
+  the corner badge still works too. The header's "last synced" text on the
+  Handleliste tab is now a small star legend instead — tap it for a short
+  how-to with a visual demo of both ways to mark an item important. Sync/
+  offline status still shows there when it's relevant.
+
 ## [1.34.3] — 2026-07-18
 
 ### Fixed

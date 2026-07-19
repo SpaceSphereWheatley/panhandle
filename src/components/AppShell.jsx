@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Header, TabBar } from "../design-system/index.js";
 import { ChangelogModal } from "./ChangelogModal.jsx";
+import { ImportantInfoModal } from "./ImportantInfoModal.jsx";
 import { InstallBanner } from "./InstallBanner.jsx";
 import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
 import { MealsTab } from "../tabs/MealsTab.jsx";
@@ -11,6 +12,54 @@ import { haptic } from "../lib/shoppingUtils.js";
 
 const TITLES = { list: "Handleliste", meals: "Måltider", settings: "Innstillinger" };
 const TAB_ORDER = ["list", "meals", "settings"];
+
+// Same star path ItemCard's importance badge/swipe-reveal draws — app.html
+// only loads Phosphor's "regular" icon weight (not "fill"), so a filled star
+// here has to be a plain inline SVG rather than UiIcon's ph-fill class.
+const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z";
+
+// Sync/offline text — shared by every tab's header, and also the fallback
+// shown on the Shopping List tab whenever sync.offline overrides the
+// importance legend below.
+function SyncStatus({ sync }) {
+  return (
+    <span
+      className={`sync${sync.offline ? " offline" : ""}`}
+      style={{ fontSize: "var(--text-2xs)", color: sync.offline ? "var(--accent-primary)" : "var(--text-tertiary)" }}
+    >
+      {sync.text}
+    </span>
+  );
+}
+
+// Replaces "Oppdatert HH:MM" on the Shopping List tab (only) with a small
+// legend explaining what the star marker means — tapping it opens
+// ImportantInfoModal. Meals/Settings keep the plain SyncStatus text, since
+// importance is a shopping-list-only concept.
+function ImportantLegendTrigger({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Om viktig-markering"
+      style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="13"
+        height="13"
+        fill="var(--accent-tertiary)"
+        stroke="var(--accent-tertiary)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d={STAR_PATH} />
+      </svg>
+      <span style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Viktig</span>
+    </button>
+  );
+}
 
 // Settings subpage titles, keyed by the joined settingsPath (e.g.
 // "admin/statistikk") — drives the single shared Header when a Settings
@@ -35,6 +84,7 @@ export function AppShell() {
   const [visited, setVisited] = useState({ list: true, meals: true });
   const [sync, setSync] = useState({ text: "", offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showImportantInfo, setShowImportantInfo] = useState(false);
   // Nav stack for the Settings tab only (e.g. [], ["konto"],
   // ["admin","statistikk"]) — lives here rather than in SettingsTab so it
   // shares the one history/popstate mechanism below instead of a second one.
@@ -141,12 +191,9 @@ export function AppShell() {
         title={title}
         onBack={settingsSubpageTitle ? () => history.back() : undefined}
         action={
-          <span
-            className={`sync${sync.offline ? " offline" : ""}`}
-            style={{ fontSize: "var(--text-2xs)", color: sync.offline ? "var(--accent-primary)" : "var(--text-tertiary)" }}
-          >
-            {sync.text}
-          </span>
+          tab === "list" && !sync.offline
+            ? <ImportantLegendTrigger onClick={() => setShowImportantInfo(true)} />
+            : <SyncStatus sync={sync} />
         }
       />
       <InstallBanner />
@@ -189,6 +236,7 @@ export function AppShell() {
         onChange={switchTab}
       />
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+      {showImportantInfo && <ImportantInfoModal onClose={() => setShowImportantInfo(false)} />}
     </div>
   );
 }
