@@ -3,10 +3,11 @@
 ## [1.36.1] — 2026-07-19
 
 ### Fixed
-- **The changelog's "see full list" link looked disabled instead of like a
-  link.** It was reusing a class meant for muted status text, which
-  overrode the app's actual link color/style with plain gray. It now picks
-  up the same link styling used everywhere else in the app.
+- **The changelog's "see full list" action was a leftover plain text link,
+  not a real button.** Every other modal in the app uses the design
+  system's actual button component for its actions; this one was styled
+  by hand with an old, inconsistent treatment. It's now a proper
+  low-emphasis button matching the rest of the app.
 
 ## [1.36.0] — 2026-07-19
 

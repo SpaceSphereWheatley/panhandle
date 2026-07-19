@@ -42,14 +42,15 @@ export function ChangelogModal({ onClose }) {
           </section>
         ))}
       </div>
-      <a
-        className="changelog-full-link"
-        href={FULL_CHANGELOG_URL}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Se hele endringsloggen
-      </a>
+      <div style={{ textAlign: "center", marginTop: 10 }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.open(FULL_CHANGELOG_URL, "_blank", "noopener,noreferrer")}
+        >
+          Se hele endringsloggen
+        </Button>
+      </div>
       <div className="actions">
         <Button variant="primary" onClick={onClose}>Lukk</Button>
       </div>
