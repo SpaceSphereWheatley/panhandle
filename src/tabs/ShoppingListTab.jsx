@@ -265,8 +265,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     if (!it) return;
     haptic();
     const wasBought = it.bought;
+    const wasImportant = it.important;
+    // Important is scoped to this trip, so checking an item off also clears
+    // it (mirrored server-side in the /toggle handler) — undoing the bought
+    // mark doesn't bring it back, same as the server.
     setItems((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, bought: wasBought ? 0 : 1 } : x))
+      prev.map((x) => (x.id === id ? { ...x, bought: wasBought ? 0 : 1, important: wasBought ? x.important : 0 } : x))
     );
     // Checking off (not un-checking): hold the row in place so the
     // strike-through + fade play before it re-sorts into "Nylig kjøpt". The
@@ -278,7 +282,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     try {
       await api(`/list/${id}/toggle`, { method: "POST" });
     } catch {
-      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought } : x)));
+      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought, important: wasImportant } : x)));
       clearResolving(id);
       toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
     }
@@ -618,7 +622,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 />
               </button>
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving)}
+              {/* No onToggleImportant here: a bought item's important flag is
+                  always cleared server-side (see toggleItem/worker's /toggle
+                  handler), so marking one important here would have nothing
+                  to persist — ItemCard hides the badge and swipe gesture
+                  entirely when this is undefined. */}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving)}
             </div>
           )}
         </>

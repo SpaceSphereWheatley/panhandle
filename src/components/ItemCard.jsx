@@ -347,14 +347,18 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
         ...(resolving ? { pointerEvents: "none" } : null),
       }}
     >
-      {shouldAnimate ? (
+      {shouldAnimate && onToggleImportant ? (
         // Swipe-right reveal — a full-bleed backdrop (its `inset:0` fills
         // CardComponent's padding box regardless of CardComponent's own
         // padding, per CSS's containing-block rules) that fades in as the
         // content layer above it slides right, mirroring the same star used
         // by the corner badge. Always rendered when shouldAnimate (list AND
         // grid) — only "classic"/reduced-motion users skip it, since they
-        // still have the corner badge as an unconditional fallback.
+        // still have the corner badge as an unconditional fallback. Gated on
+        // onToggleImportant same as that badge — e.g. "Nylig kjøpt" rows
+        // don't get it, since a bought item's important flag is always 0
+        // (see ShoppingListTab's toggleItem) and there'd be nothing to swipe
+        // toward.
         <motion.div
           aria-hidden="true"
           style={{
@@ -383,7 +387,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
           </svg>
         </motion.div>
       ) : null}
-      {shouldAnimate ? (
+      {shouldAnimate && onToggleImportant ? (
         <motion.div
           style={{ ...contentLayerStyle, x, touchAction: "pan-y" }}
           drag="x"
