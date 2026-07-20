@@ -7,6 +7,17 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+86. (85) Fixed "Legg til nøyaktig som skrevet" not actually being exact. The
+    exact-add path already skipped client-side parsing, but `POST /list`
+    unconditionally re-ran `extractGlutenFree`/`capitalizeName` on every
+    name server-side, so an item literally containing "gf"/"glutenfri" still
+    got stripped and a "Glutenfri" note appended. The route now accepts an
+    `exact` flag from the client and skips both transforms when set. Also
+    extended `parseItemInput` to recognize a number fused or spaced with a
+    unit (L/ml/g/kg/stk — "2L melk", "500g ost", "2 kg poteter", "3 stk
+    egg"), splitting into quantity + name with the unit kept as a note,
+    instead of riding along unparsed in the item name. (1.38.0)
+
 85. (90) Fixed admin endpoints being global instead of per-list. `GET
     /admin/users`, `POST /admin/users/{u}/reset-password`, and `PATCH
     /admin/users/{u}/flags` gated only on `user.is_admin` with no `list_id`

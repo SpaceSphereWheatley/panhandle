@@ -2156,9 +2156,18 @@ export default {
     if (path === "/list" && method === "POST") {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
-      const { name, category, notes, qty } = body;
-      const { name: stripped, gf } = extractGlutenFree(name);
-      const clean = capitalizeName(stripped);
+      const { name, category, notes, qty, exact } = body;
+      // "Legg til nøyaktig som skrevet" means verbatim — skip the gluten-free
+      // extraction and auto-capitalization normally applied to typed names.
+      let clean, gf;
+      if (exact) {
+        clean = (name || "").trim();
+        gf = false;
+      } else {
+        const { name: stripped, gf: gfFlag } = extractGlutenFree(name);
+        clean = capitalizeName(stripped);
+        gf = gfFlag;
+      }
       if (!clean) return authedJson({ error: "Tomt navn" }, 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
       // A gluten-free marker pulled out of the name is recorded as a "Glutenfri"

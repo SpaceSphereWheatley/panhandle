@@ -8,10 +8,11 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-20):
-0. **Bugs (#85–#99)** — #85–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
+0. **Bugs (#86–#99)** — #86–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
    a second full app-audit pass 2026-07-20. All low-priority latent/edge
    issues. The two P0s (#79, #80), all three P1s (#81–#83) plus the
-   2026-07-20-audit P1 (#90), and P2 #84, are fixed (see `Todo_done.md`).
+   2026-07-20-audit P1 (#90), P2 #84, and P2 #85, are fixed (see
+   `Todo_done.md`).
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
@@ -37,18 +38,12 @@ husstanden" ping.
 Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
 pass — verify before fixing.
 
-P0 items #79 and #80, P1 items #81–#83 and #90, and P2 item #84 are fixed —
-see `Todo_done.md`. Items #91–#99 were found in a second full app-audit pass
-(2026-07-20); file:line refs are from that pass — verify before fixing.
+P0 items #79 and #80, P1 items #81–#83 and #90, and P2 items #84–#85 are
+fixed — see `Todo_done.md`. Items #91–#99 were found in a second full
+app-audit pass (2026-07-20); file:line refs are from that pass — verify
+before fixing.
 
 ### P2 — Low (latent / edge)
-
-85. "Legg til nøyaktig som skrevet" isn't actually exact. The exact-add path
-    (`ShoppingListTab.jsx` ~L179) still POSTs `/list`, which runs
-    `extractGlutenFree` server-side (`worker/index.js` ~L2110), so an item
-    literally containing "gf"/"glutenfri" gets stripped and a "Glutenfri"
-    note appended — not verbatim.
-    _Value: Low · Importance: Low · Type: Bug / Shopping list_
 
 86. `/plan` POST wipes `responsible` when it's omitted: `responsible || ""`
     (`worker/index.js` ~L2423) overwrites via

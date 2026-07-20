@@ -192,13 +192,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       category = "Annet";
       qty = 1;
     } else {
-      const { name: rawName, qty: parsedQty } = parseItemInput(typed, catalogue);
+      const { name: rawName, qty: parsedQty, unit } = parseItemInput(typed, catalogue);
       if (!rawName) return;
       const { name: baseName, gf } = extractGF(rawName);
       const match = matchCatalogue(baseName, catalogue)[0];
       name = match ? match.name : baseName;
       category = match ? match.category : "Annet";
-      notes = gf ? "Glutenfri" : undefined;
+      const noteParts = [unit, gf ? "Glutenfri" : null].filter(Boolean);
+      notes = noteParts.length ? noteParts.join(", ") : undefined;
       qty = parsedQty;
     }
     setAddValue("");
@@ -209,7 +210,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     try {
       res = await api("/list", {
         method: "POST",
-        body: JSON.stringify({ name, qty: qty || 1, category, notes }),
+        body: JSON.stringify({ name, qty: qty || 1, category, notes, exact }),
       });
     } catch {
       setAddValue(typed);
