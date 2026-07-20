@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.37.2] — 2026-07-20
+
+### Changed
+- **Internal housekeeping only — nothing changes in the app.** Logged a fresh
+  round of audit findings and future ideas in the project's own to-do notes.
+  No user-facing behaviour was touched; the version bump is just to keep the
+  deploy and changelog in step per the release convention.
+
 ## [1.37.1] — 2026-07-19
 
 ### Changed
