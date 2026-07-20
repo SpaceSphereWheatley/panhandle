@@ -207,6 +207,42 @@ P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
     loading/permission-denied state.
     _Value: Low · Importance: Low · Type: Cleanup / Stale code_
 
+## Dev process / policy
+
+Process/documentation improvements from the 2026-07-20 dev-policy review (see
+that pass for the reasoning). All internal housekeeping — CLAUDE.md/docs only,
+no `VERSION` bump. #1–#3 from the same review are larger and have their own
+implementation plans (not listed here).
+
+109. Clarify what "wait for checks/review" means in the Workflow conventions.
+     There's no second human reviewer (solo dev + Claude), so "review feedback"
+     is really the Cloudflare deploy-preview bot and (when requested) Copilot —
+     the current wording reads as if human review gates the merge, making it a
+     step that's silently skipped or waited on indefinitely. Reword to name the
+     actual signals (deploy-preview click-through + optional Copilot).
+     _Value: Low · Importance: Low · Type: Dev process / Docs_
+
+110. State "never merge on red CI" explicitly. Cloudflare deploys independently
+     of GH Actions, so a merge with failing lint/unit-tests still redeploys prod
+     (only a Cloudflare *build* failure blocks a deploy). Nothing enforces the
+     "watch CI" step, so make it a hard rule in CLAUDE.md: don't merge on red —
+     it deploys anyway.
+     _Value: Low · Importance: Medium · Type: Dev process / Docs_
+
+111. Document a rollback procedure. Every merge auto-deploys instantly and
+     nothing gates it, but there's no written "how to roll back a bad deploy"
+     (revert-commit + merge for code; the manual reverse SQL for a bad
+     migration; or Cloudflare dashboard rollback). Add a short runbook to
+     CLAUDE.md's Deployment section.
+     _Value: Medium · Importance: Low · Type: Dev process / Docs_
+
+112. Guard against `d1_migrations` drift. The tracking row is hand-inserted via
+     MCP, so nothing verifies applied rows match the `migrations/` files (a
+     filename typo or forgotten INSERT goes unnoticed). Add a reconcile step
+     (e.g. `SELECT name FROM d1_migrations` vs. the folder) to the migration
+     runbook, run after applying.
+     _Value: Low · Importance: Low · Type: Dev process / Docs_
+
 ## Ideas (unvetted)
 
 Raw suggestions from the 2026-07-20 app-audit — **not** accepted work like the
