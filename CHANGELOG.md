@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.38.0] — 2026-07-20
+
+### Fixed
+- **"Legg til nøyaktig som skrevet" now actually adds it exactly as typed.**
+  Previously, an item containing "gf" or "glutenfri" still got that marker
+  stripped out and a "Glutenfri" note added even when you chose the
+  "add exactly as written" option — it wasn't truly verbatim. That option
+  now saves the name untouched, with no automatic capitalization either.
+
+### Added
+- **Quantities with units are now recognized when adding an item.** Typing
+  something like "2L melk", "500g ost", "2 kg poteter", or "3 stk egg" now
+  splits into the right quantity and item name, with the unit kept as a
+  note on the item — instead of the unit riding along as part of the name.
+
 ## [1.37.3] — 2026-07-20
 
 ### Fixed

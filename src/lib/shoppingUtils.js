@@ -8,25 +8,41 @@ export function cap(s) {
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 }
 
+// Recognized quantity units, fused or spaced with a number ("2L", "500g",
+// "2 kg", "3 stk"). Order doesn't matter for correctness here since no two
+// alternatives share a starting letter at the same anchored match position.
+const UNIT_ALT = "stk|kg|ml|g|l";
+
 // If the typed text is already a known catalogue item, don't strip a leading
 // or trailing integer thinking it's a quantity (e.g. a "7 Up" typed with a
-// space). Otherwise a leading or trailing "<qty>" below 20 is parsed as
-// quantity ("2 melk" or "melk 2") — larger numbers ("Yoghurt 500") are too
-// often part of the product name/size itself to treat as a quantity.
+// space). Otherwise a leading or trailing "<qty><unit>" (with a recognized
+// unit) is parsed as quantity + unit regardless of size, since the unit
+// disambiguates intent ("500g" is unambiguous). Without a unit, a bare
+// "<qty>" below 20 is parsed as quantity ("2 melk" or "melk 2") — larger
+// bare numbers ("Yoghurt 500") are too often part of the product name/size
+// itself to treat as a quantity.
 export function parseItemInput(raw, catalogue) {
   const text = raw.trim();
   if (catalogue.some((c) => c.name.toLowerCase() === text.toLowerCase())) {
-    return { name: text, qty: 1 };
+    return { name: text, qty: 1, unit: null };
+  }
+  const leadingUnit = text.match(new RegExp(`^(\\d+)\\s?(${UNIT_ALT})\\b\\s+(.+)$`, "i"));
+  if (leadingUnit) {
+    return { name: leadingUnit[3].trim(), qty: parseInt(leadingUnit[1], 10), unit: leadingUnit[2] };
+  }
+  const trailingUnit = text.match(new RegExp(`^(.+?)\\s+(\\d+)\\s?(${UNIT_ALT})\\b$`, "i"));
+  if (trailingUnit) {
+    return { name: trailingUnit[1].trim(), qty: parseInt(trailingUnit[2], 10), unit: trailingUnit[3] };
   }
   const leading = text.match(/^(\d+)\s+(.+)$/);
   if (leading && Number(leading[1]) < 20) {
-    return { name: leading[2].trim(), qty: parseInt(leading[1], 10) };
+    return { name: leading[2].trim(), qty: parseInt(leading[1], 10), unit: null };
   }
   const trailing = text.match(/^(.+)\s+(\d+)$/);
   if (trailing && Number(trailing[2]) < 20) {
-    return { name: trailing[1].trim(), qty: parseInt(trailing[2], 10) };
+    return { name: trailing[1].trim(), qty: parseInt(trailing[2], 10), unit: null };
   }
-  return { name: text, qty: 1 };
+  return { name: text, qty: 1, unit: null };
 }
 
 // Pulls a gluten-free marker (GF / gf / glutenfri / glutenfritt) out of a
