@@ -8,12 +8,10 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-20):
-0. **Bugs (#85–#99)** — #85–#89 from the 2026-07-18 QA/QC pass; #90–#99 from
+0. **Bugs (#85–#99)** — #85–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
    a second full app-audit pass 2026-07-20. All low-priority latent/edge
-   issues *except* **#90** (P1 — latent cross-tenant/privilege-escalation
-   design issue, worth resolving before the multi-list work in #1). The two
-   P0s (#79, #80) and all three P1s (#81–#83), plus P2 #84, are fixed (see
-   `Todo_done.md`).
+   issues. The two P0s (#79, #80), all three P1s (#81–#83) plus the
+   2026-07-20-audit P1 (#90), and P2 #84, are fixed (see `Todo_done.md`).
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
@@ -39,29 +37,9 @@ husstanden" ping.
 Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
 pass — verify before fixing.
 
-P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
-`Todo_done.md`. Items #90–#99 were found in a second full app-audit pass
+P0 items #79 and #80, P1 items #81–#83 and #90, and P2 item #84 are fixed —
+see `Todo_done.md`. Items #91–#99 were found in a second full app-audit pass
 (2026-07-20); file:line refs are from that pass — verify before fixing.
-
-### P1 — Latent (security / design)
-
-90. Admin endpoints are global, not per-list, despite `is_admin` being
-    documented (CLAUDE.md, Multi-tenant model) as a per-list flag. `GET
-    /admin/users` (`worker/index.js` ~L1823), `POST
-    /admin/users/{u}/reset-password` (~L1833), `PATCH /admin/users/{u}/flags`
-    (~L1850) and `POST /admin/owners` (~L1801) gate only on `user.is_admin`
-    with no `list_id` scoping, so any `is_admin=1` user can enumerate every
-    user in every household, reset any account's password, and change anyone's
-    flags across lists. Because superadmin status comes from an env var (not
-    the DB), a second admin could reset the superadmin account's password and
-    log in as it → full escalation. Latent today (only one admin exists), but
-    a real footgun the moment a second admin is granted, and directly at odds
-    with the multi-list model in #1. Fix direction: either treat admin as an
-    explicit *global* role (redocument, and gate the destructive endpoints
-    behind `isSuperAdmin` like `/admin/metrics` and `DELETE /admin/users/{u}`
-    already are), or scope these queries/mutations to the caller's `list_id`.
-    Resolve before #1 lands.
-    _Value: Medium · Importance: Medium · Type: Bug / Security / Multi-tenant_
 
 ### P2 — Low (latent / edge)
 

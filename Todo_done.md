@@ -7,6 +7,24 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+85. (90) Fixed admin endpoints being global instead of per-list. `GET
+    /admin/users`, `POST /admin/users/{u}/reset-password`, and `PATCH
+    /admin/users/{u}/flags` gated only on `user.is_admin` with no `list_id`
+    scoping, so any `is_admin=1` user could enumerate every user in every
+    household, reset any account's password (including the superadmin's,
+    since superadmin status is an env-var allowlist rather than a DB flag —
+    a full escalation path), and change anyone's flags across lists. These
+    three now scope to the caller's own `list_id` unless the caller is
+    superadmin (who still acts across all lists), the last-admin guard in
+    `PATCH .../flags` is now counted per-list (matching the existing
+    per-list last-owner guard), and both `reset-password`/`flags` refuse to
+    act on a superadmin target unless the caller is superadmin too — closing
+    the escalation path even within a shared list. `POST /admin/owners`
+    (mints a brand-new household, not an action on an existing one) is now
+    superadmin-only, matching `GET /admin/metrics`/`DELETE
+    /admin/users/{u}`'s existing double-gate; `AdminSubpage.jsx`'s "Opprett
+    eier" section is hidden for non-superadmins to match. (1.37.3)
+
 84. (84) Fixed the "been on the list a while" marker likely never showing on
     iOS Safari. `ItemCard.jsx`'s stale check parsed `item.added_at` — D1's
     `datetime('now')` format, `"YYYY-MM-DD HH:MM:SS"` (UTC, no `Z`, space

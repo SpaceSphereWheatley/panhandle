@@ -1797,9 +1797,13 @@ export default {
     }
 
     // ===== ADMIN ENDPOINTS (require is_admin) =====
-    // Create a new owner + their own list, seeded with COMMON_ITEMS.
+    // Create a new owner + their own list, seeded with COMMON_ITEMS. Minting
+    // a brand-new household is an app-operator action (there's no caller
+    // list to scope it against), so it's double-gated by isSuperAdmin like
+    // /admin/metrics and DELETE /admin/users/{u} below.
     if (path === "/admin/owners" && method === "POST") {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       const cleanEmail = (body.email || "").trim().toLowerCase();
@@ -1819,24 +1823,43 @@ export default {
       return authedJson({ username: cleanEmail, password });
     }
 
-    // Every user in the system (across all lists) with their flags.
+    // Every user in the caller's own list with their flags — unless the
+    // caller is superadmin, who sees every user in every list (needed for
+    // the admin console's cross-household view).
     if (path === "/admin/users" && method === "GET") {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
-      const { results } = await env.DB.prepare(
-        "SELECT username, name, is_admin, is_owner, list_id, created_by FROM users ORDER BY list_id, username"
+      const scoped = !isSuperAdmin(user.username, env);
+      const { results } = await (scoped
+        ? env.DB.prepare(
+            "SELECT username, name, is_admin, is_owner, list_id, created_by FROM users WHERE list_id = ?1 ORDER BY list_id, username"
+          ).bind(user.list_id)
+        : env.DB.prepare(
+            "SELECT username, name, is_admin, is_owner, list_id, created_by FROM users ORDER BY list_id, username"
+          )
       ).all();
       return authedJson(results);
     }
 
     // Reset any user's password (recovery path). Bumps token_version.
+    // Scoped to the caller's own list unless the caller is superadmin.
+    // Cross-list targets 404 (rather than 403) to avoid revealing another
+    // household's usernames. A superadmin account can never be reset by a
+    // non-superadmin, even within the same list — the direct fix for TODO
+    // #90's "reset the superadmin's password" escalation path.
     const rpMatch = path.match(/^\/admin\/users\/([^/]+)\/reset-password$/);
     if (rpMatch && method === "POST") {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
       const target = decodeURIComponent(rpMatch[1]);
       const row = await env.DB.prepare(
-        "SELECT username FROM users WHERE username = ?1 COLLATE NOCASE"
+        "SELECT username, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
-      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      const callerIsSuperAdmin = isSuperAdmin(user.username, env);
+      if (!row || (!callerIsSuperAdmin && row.list_id !== user.list_id)) {
+        return authedJson({ error: "Fant ikke bruker" }, 404);
+      }
+      if (!callerIsSuperAdmin && isSuperAdmin(row.username, env)) {
+        return authedJson({ error: "Kan ikke nullstille passordet til en app-eier-konto" }, 403);
+      }
       const password = genPassword();
       const hash = await hashPassword(password);
       await env.DB.prepare(
@@ -1846,6 +1869,7 @@ export default {
     }
 
     // Set is_admin / is_owner flags independently. Bumps token_version.
+    // Same list-scoping and superadmin-target guard as reset-password above.
     const flagMatch = path.match(/^\/admin\/users\/([^/]+)\/flags$/);
     if (flagMatch && method === "PATCH") {
       if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
@@ -1855,13 +1879,21 @@ export default {
       const row = await env.DB.prepare(
         "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
-      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      const callerIsSuperAdmin = isSuperAdmin(user.username, env);
+      if (!row || (!callerIsSuperAdmin && row.list_id !== user.list_id)) {
+        return authedJson({ error: "Fant ikke bruker" }, 404);
+      }
+      if (!callerIsSuperAdmin && isSuperAdmin(row.username, env)) {
+        return authedJson({ error: "Kan ikke endre tilgangen til en app-eier-konto" }, 403);
+      }
       let newAdmin = row.is_admin, newOwner = row.is_owner;
       if (body.is_admin !== undefined) newAdmin = body.is_admin ? 1 : 0;
       if (body.is_owner !== undefined) newOwner = body.is_owner ? 1 : 0;
-      // Never let the last admin be demoted.
+      // Never let a list lose its last admin.
       if (row.is_admin === 1 && newAdmin === 0) {
-        const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").first();
+        const c = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM users WHERE is_admin = 1 AND list_id = ?1"
+        ).bind(row.list_id).first();
         if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne siste admin" }, 400);
       }
       // Never let a list lose its only owner.

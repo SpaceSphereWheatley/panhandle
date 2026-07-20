@@ -13,9 +13,15 @@ const PORT = 8801;
 // decimal timestamp alone already eats most of a readable line).
 const RUN_ID = Date.now().toString(36);
 const PASS = "Test-password-123!";
+// The one account this test's own .dev.vars grants isSuperAdmin to — every
+// other admin created in this run is an ordinary (list-scoped) admin only.
+const SUPERADMIN_USERNAME = `ao_superadmin_${RUN_ID}`;
 
 async function main() {
-  const worker = await startWorker({ port: PORT });
+  const worker = await startWorker({
+    port: PORT,
+    extraDevVars: `SUPERADMIN_USERNAMES=${SUPERADMIN_USERNAME}\n`,
+  });
   try {
     await runTests(worker.base);
     console.log("\nAll admin/owner tests passed.");
@@ -65,46 +71,30 @@ async function runTests(BASE) {
   await testTenUserListCap(BASE);
   await testMemberFlagsForcedToZero(BASE);
   await testPermissionChecks(BASE);
+  await testCrossListAdminScoping(BASE);
+  await testSuperAdminCrossListAccess(BASE);
 }
 
-// Last-admin protection is a GLOBAL count (SELECT COUNT(*) WHERE is_admin=1
-// across all lists), and this local D1 persists across separate test-file
-// runs, so we can't assume we're the only admin in the DB. Instead: demote
-// every other admin down to just ours first (always safe, since our own
-// admin flag keeps the true count >=2 until the very last one), so the test
-// is deterministic regardless of what earlier test runs left behind.
+// Last-admin protection is a per-list count (SELECT COUNT(*) WHERE
+// is_admin=1 AND list_id=?, mirroring the last-owner guard below), so this
+// test is self-contained regardless of ambient DB state from other lists.
 async function testLastAdminProtection(BASE) {
   const username = `ao_lastadmin_${RUN_ID}`;
-  const { token: seedToken } = await seedAndLogin(BASE, username, PASS);
+  const { token } = await seedAndLogin(BASE, username, PASS);
 
-  const usersRes = await fetch(`${BASE}/admin/users`, { headers: authHeaders(seedToken) });
-  assert.equal(usersRes.status, 200);
-  const allUsers = await usersRes.json();
-  const otherAdmins = allUsers.filter(
-    (u) => u.is_admin && u.username.toLowerCase() !== username.toLowerCase()
-  );
-  for (const u of otherAdmins) {
-    const res = await patchFlags(BASE, seedToken, u.username, { is_admin: false });
-    assert.equal(res.status, 200, `demoting other admin ${u.username} should succeed while >=2 admins remain`);
-  }
-
-  // Now exactly one admin (us) remains — demoting ourselves must be refused.
-  const refusedRes = await patchFlags(BASE, seedToken, username, { is_admin: false });
+  // Exactly one admin on this fresh list (us) — demoting ourselves must be refused.
+  const refusedRes = await patchFlags(BASE, token, username, { is_admin: false });
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
   assert.match(refusedBody.error, /siste admin/i);
 
   // Promote a second admin (any member works), then demoting one succeeds.
-  const { username: memberUsername, token: memberToken } = await addMember(BASE, seedToken, `ao_lastadmin_m_${RUN_ID}`);
-  assert.equal((await patchFlags(BASE, seedToken, memberUsername, { is_admin: true })).status, 200);
-  const demoteRes = await patchFlags(BASE, seedToken, username, { is_admin: false });
-  assert.equal(demoteRes.status, 200, "demoting is allowed once a second admin exists");
+  const { username: memberUsername } = await addMember(BASE, token, `ao_lastadmin_m_${RUN_ID}`);
+  assert.equal((await patchFlags(BASE, token, memberUsername, { is_admin: true })).status, 200);
+  const demoteRes = await patchFlags(BASE, token, username, { is_admin: false });
+  assert.equal(demoteRes.status, 200, "demoting is allowed once a second admin exists on the same list");
 
-  // memberToken is now stale (token_version bumped by the promotion above);
-  // re-login isn't needed further, this test only asserts the demotion path.
-  void memberToken;
-
-  console.log("  - last-admin protection: refuses to demote the sole remaining admin, allows it once a second exists");
+  console.log("  - last-admin protection: refuses to demote a list's sole admin, allows it once a second exists on the same list");
 }
 
 // is_owner is scoped per-list (COUNT(*) WHERE is_owner=1 AND list_id=?), and
@@ -239,15 +229,123 @@ async function testPermissionChecks(BASE) {
   const listUsersRes = await fetch(`${BASE}/list-users`, { headers: authHeaders(memberToken) });
   assert.equal(listUsersRes.status, 200, "GET /list-users should be readable by any list member");
 
-  // An admin who is NOT on the SUPERADMIN_USERNAMES allowlist (the default,
-  // since it's unset in this test's .dev.vars) is still refused site-wide
-  // metrics even though they pass the ordinary is_admin gate.
+  // An admin who is NOT on the SUPERADMIN_USERNAMES allowlist (ownerUsername
+  // isn't — only SUPERADMIN_USERNAME is, set in this file's .dev.vars) is
+  // still refused site-wide metrics even though they pass the ordinary
+  // is_admin gate.
   const metricsAsAdminRes = await fetch(`${BASE}/admin/metrics`, { headers: authHeaders(ownerToken) });
   assert.equal(metricsAsAdminRes.status, 403);
   const metricsBody = await metricsAsAdminRes.json();
   assert.match(metricsBody.error, /app-eier/i);
 
-  console.log("  - permission checks: plain members get 403 on every admin/owner endpoint; a non-superadmin admin still can't read /admin/metrics");
+  // Same double-gate for POST /admin/owners — minting a new household is
+  // superadmin-only, so a non-superadmin admin is refused too (TODO #90).
+  const ownersAsAdminRes = await fetch(`${BASE}/admin/owners`, {
+    method: "POST", headers: authHeaders(ownerToken),
+    body: JSON.stringify({ email: `ao_perm_z_${RUN_ID}@example.test`, name: `ao_perm_z_${RUN_ID}` }),
+  });
+  assert.equal(ownersAsAdminRes.status, 403);
+  const ownersBody = await ownersAsAdminRes.json();
+  assert.match(ownersBody.error, /app-eier/i);
+
+  console.log("  - permission checks: plain members get 403 on every admin/owner endpoint; a non-superadmin admin still can't read /admin/metrics or create a new owner");
+}
+
+// TODO #90: is_admin is scoped per-list — an admin on one list must not be
+// able to see, reset the password of, or change the flags of a user on a
+// different list, and must not be able to mint new households at all
+// (that's superadmin-only, see testSuperAdminCrossListAccess below).
+async function testCrossListAdminScoping(BASE) {
+  const usernameA = `ao_crosslist_a_${RUN_ID}`;
+  const usernameB = `ao_crosslist_b_${RUN_ID}`;
+  const { token: tokenA } = await seedAndLogin(BASE, usernameA, PASS);
+  const { token: tokenB } = await seedAndLogin(BASE, usernameB, PASS);
+
+  // GET /admin/users as a non-superadmin only returns the caller's own list.
+  const usersRes = await fetch(`${BASE}/admin/users`, { headers: authHeaders(tokenA) });
+  assert.equal(usersRes.status, 200);
+  const users = await usersRes.json();
+  assert.ok(
+    users.some((u) => u.username.toLowerCase() === usernameA.toLowerCase()),
+    "GET /admin/users should include the caller's own account"
+  );
+  assert.ok(
+    !users.some((u) => u.username.toLowerCase() === usernameB.toLowerCase()),
+    "GET /admin/users must not leak a user from a different list"
+  );
+
+  // Reset-password and flags on a different list's user 404 (not 403 —
+  // doesn't reveal whether the username exists elsewhere).
+  const rpRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(usernameB)}/reset-password`, {
+    method: "POST", headers: authHeaders(tokenA),
+  });
+  assert.equal(rpRes.status, 404, "reset-password on a different list's user should 404, not 403 (no cross-list enumeration)");
+
+  const flagsRes = await patchFlags(BASE, tokenA, usernameB, { is_admin: false });
+  assert.equal(flagsRes.status, 404, "flags PATCH on a different list's user should 404, not 403");
+
+  // Same-list actions still work for an ordinary (non-superadmin) admin.
+  const { username: memberOfA } = await addMember(BASE, tokenA, `ao_crosslist_am_${RUN_ID}`);
+  const sameListRpRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(memberOfA)}/reset-password`, {
+    method: "POST", headers: authHeaders(tokenA),
+  });
+  assert.equal(sameListRpRes.status, 200, "reset-password on the caller's own-list user should still succeed");
+
+  console.log("  - cross-list admin scoping: GET/reset-password/flags are confined to the caller's own list, same-list actions still work");
+}
+
+// The literal escalation path TODO #90 named: a second (non-superadmin)
+// admin resetting the superadmin's password or flipping their flags, even
+// when they share the same list — must be refused regardless of scoping.
+// Superadmin itself keeps acting across every list, unchanged from before.
+async function testSuperAdminCrossListAccess(BASE) {
+  const { token: superToken } = await seedAndLogin(BASE, SUPERADMIN_USERNAME, PASS);
+  const otherUsername = `ao_super_other_${RUN_ID}`;
+  await seedAndLogin(BASE, otherUsername, PASS);
+
+  // Superadmin can still see, reset, and flag a user on a completely
+  // different list — this is unchanged, cross-list behavior for superadmin.
+  const usersRes = await fetch(`${BASE}/admin/users`, { headers: authHeaders(superToken) });
+  const users = await usersRes.json();
+  assert.ok(
+    users.some((u) => u.username.toLowerCase() === otherUsername.toLowerCase()),
+    "superadmin's GET /admin/users should still see every list"
+  );
+  const rpRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(otherUsername)}/reset-password`, {
+    method: "POST", headers: authHeaders(superToken),
+  });
+  assert.equal(rpRes.status, 200, "superadmin should still be able to reset a different list's user's password");
+  const flagsRes = await patchFlags(BASE, superToken, otherUsername, { is_owner: true });
+  assert.equal(flagsRes.status, 200, "superadmin should still be able to flag a different list's user");
+
+  // Superadmin is still the only one who can mint a new household.
+  const ownersRes = await fetch(`${BASE}/admin/owners`, {
+    method: "POST", headers: authHeaders(superToken),
+    body: JSON.stringify({ email: `ao_super_new_${RUN_ID}@example.test`, name: `ao_super_new_${RUN_ID}` }),
+  });
+  assert.equal(ownersRes.status, 200, "superadmin should still be able to create a new owner/household");
+
+  // A second, ordinary admin promoted within the superadmin's OWN list must
+  // still not be able to reset the superadmin's password or change their
+  // flags — the direct fix for TODO #90's "reset the superadmin's password
+  // and log in as it" escalation scenario.
+  const { username: sameListAdmin, password: sameListAdminPassword } = await addMember(BASE, superToken, `ao_super_sibling_${RUN_ID}`);
+  assert.equal((await patchFlags(BASE, superToken, sameListAdmin, { is_admin: true })).status, 200);
+  // The flags PATCH above bumped token_version, so the token addMember()
+  // returned is now stale — re-login for a fresh one.
+  const { token: sameListAdminToken } = await login(BASE, sameListAdmin, sameListAdminPassword);
+
+  const escalateRpRes = await fetch(`${BASE}/admin/users/${encodeURIComponent(SUPERADMIN_USERNAME)}/reset-password`, {
+    method: "POST", headers: authHeaders(sameListAdminToken),
+  });
+  assert.equal(escalateRpRes.status, 403, "a same-list, non-superadmin admin must not be able to reset the superadmin's password");
+  assert.match((await escalateRpRes.json()).error, /app-eier/i);
+
+  const escalateFlagsRes = await patchFlags(BASE, sameListAdminToken, SUPERADMIN_USERNAME, { is_admin: false });
+  assert.equal(escalateFlagsRes.status, 403, "a same-list, non-superadmin admin must not be able to change the superadmin's flags");
+  assert.match((await escalateFlagsRes.json()).error, /app-eier/i);
+
+  console.log("  - superadmin: still acts across every list; a same-list non-superadmin admin still can't touch the superadmin's account");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

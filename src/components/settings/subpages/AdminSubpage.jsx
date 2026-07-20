@@ -186,25 +186,27 @@ export function AdminSubpage({ onNavigate }) {
         </div>
       </SubpageSection>
 
-      <SubpageSection label="Opprett eier (ny liste)">
-        <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
-        <Input
-          id="admin-new-owner-name"
-          placeholder="Navn"
-          value={newOwnerName}
-          onChange={(e) => setNewOwnerName(e.target.value)}
-          style={{ marginBottom: 8 }}
-        />
-        <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
-        <Input
-          id="admin-new-owner-email"
-          type="email"
-          placeholder="E-post"
-          value={newOwnerEmail}
-          onChange={(e) => setNewOwnerEmail(e.target.value)}
-        />
-        <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
-      </SubpageSection>
+      {isSuperAdmin && (
+        <SubpageSection label="Opprett eier (ny liste)">
+          <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
+          <Input
+            id="admin-new-owner-name"
+            placeholder="Navn"
+            value={newOwnerName}
+            onChange={(e) => setNewOwnerName(e.target.value)}
+            style={{ marginBottom: 8 }}
+          />
+          <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
+          <Input
+            id="admin-new-owner-email"
+            type="email"
+            placeholder="E-post"
+            value={newOwnerEmail}
+            onChange={(e) => setNewOwnerEmail(e.target.value)}
+          />
+          <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
+        </SubpageSection>
+      )}
 
       <SubpageSection label="Alle brukere">
         {Object.keys(groups).map((listId) => (

@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.37.3] — 2026-07-20
+
+### Fixed
+- **Admin actions are now confined to your own household.** Resetting a
+  password, changing someone's admin/owner access, and viewing the user
+  list from the Administrasjon screen now only reach people in your own
+  list, instead of every household in the app. Creating a brand-new
+  household from that screen is now limited to the app owner. This closes
+  a latent cross-household access gap that only mattered once a second
+  household gets an admin — nothing changes for the current single-admin
+  setup.
+
+## [1.37.2] — 2026-07-20
+
+### Changed
+- **Internal housekeeping only — nothing changes in the app.** Logged a fresh
+  round of audit findings and future ideas in the project's own to-do notes.
+  No user-facing behaviour was touched; the version bump is just to keep the
+  deploy and changelog in step per the release convention.
+
 ## [1.37.1] — 2026-07-19
 
 ### Changed
