@@ -6,7 +6,8 @@
 // into CI — see CLAUDE.md's Testing conventions section — run them on
 // demand via `npm run test:integration` or `node tests/<file>.test.mjs`.
 import { spawn } from "node:child_process";
-import { writeFileSync, unlinkSync, existsSync } from "node:fs";
+import { writeFileSync, unlinkSync, existsSync, rmSync, mkdtempSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { hashPassword } from "../worker/index.js";
@@ -14,6 +15,19 @@ import { hashPassword } from "../worker/index.js";
 export const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const JWT_SECRET = "test-jwt-secret-not-for-production";
 const DEV_VARS_PATH = path.join(ROOT, ".dev.vars");
+
+// Per-worker isolated local-D1 state dir. Without this, every test file
+// (and every `wrangler d1 execute` bootstrap) shares the default
+// `.wrangler/state` D1, so IP-keyed rows like login_attempts accumulate
+// across files within a run — by the time a later file runs, the shared
+// 127.0.0.1 bucket has already tripped /login's 10-attempts-per-15-min
+// rate limit (from auth.test.mjs's rate-limit cases), failing an unrelated
+// seedAndLogin with a spurious 429. Each startWorker() gets its own throwaway
+// --persist-to dir (shared by migrations-apply, dev, and bootstrap execute
+// in the same process), removed on teardown, so files can't contaminate each
+// other. Set by startWorker(), read by bootstrapAccount() — one worker per
+// test-file process, so a module-level handle is enough.
+let persistPath = null;
 
 export function run(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -50,15 +64,18 @@ export async function startWorker({ port, extraDevVars = "" } = {}) {
     wroteDevVars = true;
   }
 
+  // Fresh, isolated local-D1 state for this worker (see persistPath above).
+  persistPath = mkdtempSync(path.join(os.tmpdir(), "ph-itest-"));
+
   console.log("Applying local D1 migrations...");
-  await run("npx", ["wrangler", "d1", "migrations", "apply", "panhandle", "--local"]);
+  await run("npx", ["wrangler", "d1", "migrations", "apply", "panhandle", "--local", "--persist-to", persistPath]);
 
   console.log(`Starting wrangler dev (local, port ${port})...`);
   // `wrangler dev` spawns its own child process (workerd) that a plain
   // proc.kill() on the npx process doesn't reach, leaving it (and its held
   // stdio pipes) running after teardown. detached:true puts it in its own
   // process group so we can kill the whole tree via the negative pid.
-  const proc = spawn("npx", ["wrangler", "dev", "--local", "--port", String(port)], {
+  const proc = spawn("npx", ["wrangler", "dev", "--local", "--port", String(port), "--persist-to", persistPath], {
     cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
 
@@ -71,6 +88,10 @@ export async function startWorker({ port, extraDevVars = "" } = {}) {
         process.kill(-proc.pid, "SIGTERM");
       } catch { /* already gone */ }
       if (wroteDevVars) unlinkSync(DEV_VARS_PATH);
+      if (persistPath) {
+        try { rmSync(persistPath, { recursive: true, force: true }); } catch { /* best-effort */ }
+        persistPath = null;
+      }
     },
   };
 }
@@ -95,7 +116,11 @@ export async function bootstrapAccount(base, username, password) {
   const sqlFile = path.join(ROOT, `.test-bootstrap-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
   writeFileSync(sqlFile, sql);
   try {
-    await run("npx", ["wrangler", "d1", "execute", "panhandle", "--local", "--file", sqlFile]);
+    // Must target the SAME isolated state dir the running worker uses (see
+    // persistPath) — otherwise the bootstrap writes to a different local D1
+    // than the worker reads, and every login would 401.
+    const persistArgs = persistPath ? ["--persist-to", persistPath] : [];
+    await run("npx", ["wrangler", "d1", "execute", "panhandle", "--local", "--file", sqlFile, ...persistArgs]);
   } finally {
     unlinkSync(sqlFile);
   }

@@ -1,0 +1,56 @@
+name: Integration tests
+
+# The wrangler-dev-backed integration suite (tests/*.test.mjs, excluding
+# worker-unit.test.mjs) — kept OUT of the main ci.yml because it's much slower
+# than the pure-unit jobs (boots `wrangler dev --local`/Miniflare per file,
+# ~6 min total). Runs only when auth/permission-relevant code actually
+# changes, via the paths filter below, so unrelated PRs don't pay the cost.
+# Like the rest of CI this doesn't *gate* deploys (Cloudflare's Git
+# integration deploys independently — see CLAUDE.md), but it's the pre-merge
+# signal for the security-sensitive endpoints these tests cover.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'tests/**'
+      - 'shared/**'
+      - 'migrations/**'
+      - 'wrangler.toml'
+      - '.github/workflows/integration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Auth/permission integration tests (wrangler dev)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Needed for @pushforge/builder (worker/index.js imports it) and so the
+      # tests can resolve the worker's own imports — same reason the
+      # backend-unit-test job in ci.yml runs `npm ci`.
+      - run: npm ci
+
+      # wrangler isn't a project dependency (CLAUDE.md keeps tooling out of the
+      # repo); the tests invoke it via `npx wrangler`. Warm the download once
+      # up front (pinned to the current major) so the per-file test spawns
+      # reuse the cache instead of racing to fetch it — same npx-a-pinned-tool
+      # pattern as ci.yml's eslint@8 lint job.
+      - name: Warm wrangler cache
+        run: npx --yes wrangler@4 --version
+
+      # Each test file gets an isolated local D1 (see tests/_helpers.mjs's
+      # --persist-to handling) so files can't contaminate each other's
+      # IP-keyed rate-limit state. A fresh runner has no stale .dev.vars, so
+      # startWorker writes and tears down its own.
+      - name: Run integration suite
+        run: npm run test:integration

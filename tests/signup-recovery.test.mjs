@@ -180,7 +180,10 @@ async function testAccountAndChangeEmail(BASE) {
     method: "POST", headers: auth,
     body: JSON.stringify({ current_password: "wrong-password", email: `${username}@example.com` }),
   });
-  assert.equal(res.status, 401, "wrong current_password should be rejected");
+  // 403 (not 401): the token is valid, the supplied current_password is
+  // wrong — /change-email returns 403 there on purpose, since api()
+  // force-logs-out on any 401 (see worker/index.js's /change-email note).
+  assert.equal(res.status, 403, "wrong current_password should be rejected");
 
   res = await fetch(`${BASE}/change-email`, {
     method: "POST", headers: auth,

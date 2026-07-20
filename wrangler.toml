@@ -2,21 +2,30 @@
 # Architecture: Pages hosts the frontend, Worker handles API + routing.
 # You will deploy via the Cloudflare dashboard, not the CLI.
 #
-# Schema/data migrations (migrations/*.sql) are applied with Wrangler's
-# built-in D1 migrations runner, not by hand in the dashboard:
-#   npx wrangler d1 migrations apply panhandle --remote
-# Wrangler tracks applied migrations in the `d1_migrations` table in the
-# DB itself (bootstrapped to cover 0001-0006, which were already applied
-# manually before this was set up), so it only runs new numbered files.
+# Schema/data migrations (migrations/*.sql): the developer installs nothing
+# locally, so they're applied by hand against each D1 via the
+# mcp__Cloudflare_Developer_Platform__d1_database_query tool, NOT Wrangler's
+# runner — and to BOTH databases below (preview first for testing, prod at
+# merge). Migrations must be expand/contract (additive, backward-compatible),
+# because the prod migration lands before the new code finishes deploying.
+# The per-DB `d1_migrations` table tracks what's applied. See CLAUDE.md's
+# "Databases" and "Applying migrations" sections for the full runbook.
 
 name = "panhandle"
 main = "worker/index.js"
 compatibility_date = "2026-01-01"
 
+# Two D1 databases share this one binding: `database_id` is production (bound
+# by the live Worker at shopping.mohibb.com); `preview_database_id` is bound
+# by every Cloudflare branch/commit *preview* deploy, so a preview never reads
+# or writes production data. Both carry the same schema (kept in sync via the
+# two-target migration runbook above). The production app is unaffected by
+# anything done to the preview DB.
 [[d1_databases]]
 binding = "DB"
 database_name = "panhandle"
 database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
+preview_database_id = "79e105ae-3a99-4853-80f8-c71054d0f303"
 
 # Drives runReminderPass (worker/index.js) — the "no meal planned for
 # tomorrow" push notification (TODO #7 phase 1). 15-minute granularity
