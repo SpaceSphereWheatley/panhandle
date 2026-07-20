@@ -57,12 +57,6 @@ async function addMember(base, ownerToken, label) {
   return { username, password, token };
 }
 
-function patchFlags(base, adminToken, targetUsername, flags) {
-  return fetch(`${base}/admin/users/${encodeURIComponent(targetUsername)}/flags`, {
-    method: "PATCH", headers: authHeaders(adminToken), body: JSON.stringify(flags),
-  });
-}
-
 function deleteUser(base, adminToken, targetUsername, body) {
   return fetch(`${base}/admin/users/${encodeURIComponent(targetUsername)}`, {
     method: "DELETE", headers: authHeaders(adminToken),
@@ -127,30 +121,13 @@ async function testDeletesPlainMember(BASE, superToken) {
 }
 
 // DELETE /admin/users/{u} requires the caller to be both is_admin and
-// isSuperAdmin, so the caller's own is_admin=1 always keeps the global
-// is_admin count at >= 1 — meaning the count-based "last admin" branch can
-// only ever fire when the caller targets themselves. Since superadmins can
-// never be deleted at all now (see testRefusesSuperAdminDeletion below),
-// that self-deletion path is refused by the superadmin guard first,
-// regardless of how many other admins exist — demoting every other admin
-// here just proves that doesn't change the outcome.
+// isSuperAdmin. is_admin's "last admin" guard is now counted per-list (see
+// TODO #90 / PATCH .../flags), and SUPERADMIN_USERNAME is the sole admin of
+// its own freshly-seeded list, so it's already the last-admin case with no
+// setup needed. Since superadmins can never be deleted at all now (see
+// testRefusesSuperAdminDeletion below), self-deletion is refused by the
+// unconditional superadmin guard first — regardless of admin count.
 async function testRefusesLastAdmin(BASE, superToken) {
-  const usersRes = await fetch(`${BASE}/admin/users`, { headers: authHeaders(superToken) });
-  const allUsers = await usersRes.json();
-  // Exclude SECOND_SUPERADMIN_USERNAME too — it's also bootstrapped as
-  // is_admin=1, and demoting it here would bump its token_version, leaving
-  // its own already-minted token (used later, in testRefusesSuperAdminDeletion)
-  // stale.
-  const protectedUsernames = [SUPERADMIN_USERNAME, SECOND_SUPERADMIN_USERNAME].map((u) => u.toLowerCase());
-  const otherAdmins = allUsers.filter(
-    (u) => u.is_admin && !protectedUsernames.includes(u.username.toLowerCase())
-  );
-  for (const u of otherAdmins) {
-    const res = await patchFlags(BASE, superToken, u.username, { is_admin: false });
-    assert.equal(res.status, 200, `demoting other admin ${u.username} should succeed while >=2 admins remain`);
-  }
-
-  // Even as the sole remaining admin, self-deletion is refused.
   const refusedRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
