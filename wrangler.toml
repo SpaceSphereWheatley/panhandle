@@ -2,17 +2,28 @@
 # Architecture: Pages hosts the frontend, Worker handles API + routing.
 # You will deploy via the Cloudflare dashboard, not the CLI.
 #
-# Schema/data migrations (migrations/*.sql) are applied with Wrangler's
-# built-in D1 migrations runner, not by hand in the dashboard:
-#   npx wrangler d1 migrations apply panhandle --remote
-# Wrangler tracks applied migrations in the `d1_migrations` table in the
-# DB itself (bootstrapped to cover 0001-0006, which were already applied
-# manually before this was set up), so it only runs new numbered files.
+# Schema/data migrations (migrations/*.sql): the developer installs nothing
+# locally, so they're applied by hand against production D1 via the
+# mcp__Cloudflare_Developer_Platform__d1_database_query tool, NOT Wrangler's
+# runner. Migrations must be expand/contract (additive, backward-compatible),
+# because the migration lands before the new code finishes deploying — and
+# because Cloudflare branch/commit previews bind this same production DB (see
+# the note below), so a preview runs new code against prod data too. The
+# `d1_migrations` table tracks what's applied. See CLAUDE.md's "Databases" /
+# "Applying migrations" for the full runbook.
 
 name = "panhandle"
 main = "worker/index.js"
 compatibility_date = "2026-01-01"
 
+# Single production D1. NOTE: `preview_database_id` is deliberately NOT set —
+# it only affects `wrangler dev`, not Workers Builds deploy previews, which
+# always bind `database_id`. We verified this empirically: a login against the
+# branch-preview Worker landed in the production DB, not a preview one. So
+# there is no data isolation between prod and the branch/commit preview
+# deploys — a preview reads and writes production data. That's why migrations
+# must be expand/contract, and why preview click-testing must treat prod as
+# live (clean up any throwaway accounts).
 [[d1_databases]]
 binding = "DB"
 database_name = "panhandle"

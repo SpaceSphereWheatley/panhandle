@@ -70,9 +70,9 @@ Version bump convention (`MAJOR.MINOR.PATCH`): bump MINOR for a release adding a
 
 When the user says "finish up" (or similar) on a branch with work ready to ship: sync with `main`, push, open a PR, wait for checks/review, then merge — without needing to ask at each step. CI (`.github/workflows/ci.yml`: lint, secret-scan, migration-numbering check, frontend build+unit-tests, backend unit-tests) doesn't gate deploys — Cloudflare's Git integration deploys independently of GH Actions results. So "waiting" means watching CI status, the Cloudflare deploy-preview bot comment, and review feedback before merging.
 
-**A PR that changes the app served to users doesn't merge without a version bump.** Every merge to `main` immediately redeploys the live app, so for any change that alters what users actually get — frontend (`src/`, `public/`, `app.html`), the Worker (`worker/`), migrations, or shared code both import (`shared/`) — bumping `VERSION` and adding a matching `CHANGELOG.md` entry is part of what "ready to merge" means, not optional cleanup: do it in the same PR before merging.
+**A PR that changes the app served to users doesn't merge without a version bump.** Every merge to `main` immediately redeploys the live app. The test is whether the change alters the **built output** — the Pages `dist/` bundle or the deployed Worker: frontend (`src/`, `public/`, `app.html`), the Worker (`worker/`), migrations, shared code both import (`shared/`), **and the build inputs that feed that output** — dependency changes (`package.json`/`package-lock.json`), `vite.config.js`, and any build-time script (e.g. `scripts/sync-changelog.mjs`, which runs in `prebuild`). For any of these, bumping `VERSION` and adding a matching `CHANGELOG.md` entry is part of what "ready to merge" means, not optional cleanup: do it in the same PR before merging.
 
-**Internal-housekeeping-only changes do NOT get a version bump and are not surfaced to users.** If a PR touches nothing that ends up in the deployed app — e.g. `TODO.md`/`Todo_done.md`, `docs/`, this `CLAUDE.md`, `README.md`, dev-only scripts/notes, or test files — then the running app is byte-for-byte identical after the merge, so there's nothing to "update" for users: leave `VERSION` and `CHANGELOG.md` alone. `CHANGELOG.md` is a user-facing "what's new" (it's copied into `public/` and rendered in-app), so an entry that says "we edited some internal notes" is noise the user never asked to see. The distinction is strictly *does this change what's served to people?* — not how big the diff is. (A change that edits both app code and docs is an app change: bump it.)
+**Internal-housekeeping-only changes do NOT get a version bump and are not surfaced to users.** If a PR leaves the built output byte-for-byte identical — `TODO.md`/`Todo_done.md`, `docs/`, this `CLAUDE.md`, `README.md`, tests (`tests/`, `src/**/*.test.*`), CI/workflow config (`.github/`), dev/preview-only config that never changes the production bundle or Worker, or manual dev-only tools that never run in the build (`scripts/compute-icon-offsets.mjs`, the one-off favicon script) — then the running app is identical after the merge, so there's nothing to "update" for users: leave `VERSION` and `CHANGELOG.md` alone. `CHANGELOG.md` is a user-facing "what's new" (copied into `public/` and rendered in-app), so an entry about internal notes is noise the user never asked to see. The test is strictly *does the built output change?* — not how big the diff is. (A change that touches both app output and docs is an app change: bump it.)
 
 If changes related to anything in CLAUDE.md are made, the change should also be reflected in this file.
 
@@ -80,21 +80,37 @@ If changes related to anything in CLAUDE.md are made, the change should also be 
 
 New pure-logic functions (worker helpers, `src/lib/*`) and new auth/permission-sensitive endpoints should get a unit or integration test added in the same PR — written after the behavior is working and validated on a deploy preview, not TDD-style. UI/component changes don't require tests; keep validating those via deploy-preview click-through. Run `npm test` (frontend unit tests), `node --test tests/worker-unit.test.mjs` (backend pure-function unit tests), and — for auth/permissions/admin-owner changes specifically — the relevant `tests/*.test.mjs` integration test (e.g. `node tests/auth.test.mjs`, `node tests/admin-owner.test.mjs`, `node tests/signup-recovery.test.mjs`, `node tests/admin-delete-user.test.mjs`, `node tests/self-delete-account.test.mjs`, `node tests/feedback.test.mjs`, `node tests/push-notifications.test.mjs`) before merging.
 
+The full integration suite (`npm run test:integration`) also runs in CI via `.github/workflows/integration.yml`, but **only** on PRs that touch `worker/`, `tests/`, `shared/`, `migrations/`, or `wrangler.toml` (it's ~6 min — too slow for the every-push `ci.yml`). Each file gets its own isolated local D1 (`tests/_helpers.mjs`'s `--persist-to`) so IP-keyed rate-limit state can't bleed between files. Like the rest of CI it doesn't *gate* the deploy, but it's the pre-merge signal for these endpoints — don't merge an auth/permission change with it red.
+
+**When the integration suite can't run in-session** (no `wrangler`/network, or a sandbox that can't boot Miniflare) and the CI job hasn't covered the change, verify an auth/permission change on the **deploy preview against throwaway accounts** before merging. Note the branch preview binds the **production** DB (see Databases — there's no preview DB), so those throwaway accounts are real prod rows: use obviously-fake credentials and delete them (via `DELETE /account` or a `d1_database_query`) when done. For a cross-tenant/permission check (cf. TODO #90): register two separate households via `/register` on the branch preview, confirm one can't reach the other's data or admin actions (expect `403`/`404`, not `200`), then remove both.
+
 ## Deployment
 
 Pure-function logic has unit test coverage, run in CI on every push/PR, no D1/wrangler needed. Auth, permissions, and other DB-backed behavior have integration tests (`tests/*.test.mjs`) that spin up the real Worker locally against local D1 via `wrangler dev --local` (see `tests/_helpers.mjs`) — intentionally **not** wired into CI (too slow/flaky to run on every push); run on demand via `npm run test:integration` or `node tests/<file>.test.mjs`. UI/component behavior has no automated coverage and is validated by deploying:
 - Worker changes: push to `main` — Cloudflare's Git integration runs `npx wrangler deploy` automatically.
 - Frontend changes (`src/`): push to `main` — Cloudflare Pages runs `npm run build` and deploys `dist/` automatically. `npm install && npm run build` can also be run wherever Node is available (including inside a Claude Code session) to validate a change before pushing; `npm run dev` runs Vite's local dev server (starts at `/app.html`).
-- Schema changes: add a new numbered file in `migrations/`, then see "Applying migrations" below.
+- Schema changes: add a new numbered file in `migrations/`, then see "Databases" and "Applying migrations" below — migrations are applied by hand to the production D1, and must be expand/contract.
+
+### Databases: one production D1 (previews share it)
+
+There is a **single** D1 database (`database_id` in `wrangler.toml`), bound by the live Worker at shopping.mohibb.com **and** by every Cloudflare branch/commit *preview* deploy. There is deliberately **no** data isolation between prod and previews: `preview_database_id` only affects `wrangler dev`, not Workers Builds deploy previews, which always bind `database_id` — verified empirically (a login against the branch-preview Worker landed in the production DB). So **a preview reads and writes production data**: preview click-testing that creates accounts/items is mutating prod, and a preview runs its (new) code against the (current) prod schema.
+
+Two facts drive the migration rules:
+- Cloudflare's Git integration runs `wrangler deploy`/`versions upload` but **never** `d1 migrations apply` — migrations are always applied by hand, separately from the code deploy.
+- On a merge to `main`, the migration lands slightly *before* the new code finishes building/deploying (~a minute), so for that window production runs the **old** code against the **new** schema — and a branch preview runs *new* code against a schema that may still be old until the migration is applied.
+
+**Migrations must therefore be expand/contract — additive and backward-compatible with the currently-deployed code:**
+- Only `ADD COLUMN` / `CREATE TABLE` / `CREATE INDEX`; never drop, rename, or retype anything live code reads.
+- New columns are nullable or carry a `DEFAULT`, so existing rows and the old code's INSERTs stay valid.
+- To remove or rename, do it over two releases: add-and-adopt first; drop the old column in a later migration only once no deployed code references it.
+
+Because expand/contract guarantees the old code tolerates the new schema, the migration can be applied a little **ahead** of the merge so the branch preview can be click-tested against it — the additive change is invisible to the still-deployed prod code until the new code ships.
 
 ### Applying migrations without a local install
 
-The developer doesn't install anything locally — everything goes through Claude Code or the Cloudflare web dashboard. Claude Code sessions on this repo generally have **no** `CLOUDFLARE_API_TOKEN`/`wrangler login` session, so `wrangler d1 migrations apply --remote` can't run from inside them.
+The developer installs nothing locally, and Claude Code sessions generally have **no** `CLOUDFLARE_API_TOKEN`/`wrangler login`, so `wrangler d1 migrations apply --remote` can't run from inside them. Instead, the allowed `mcp__Cloudflare_Developer_Platform__d1_database_query` tool (see `.claude/settings.json`) runs SQL against production D1 directly (Claude can do this in auto mode without prompting):
 
-**The `mcp__Cloudflare_Developer_Platform__d1_database_query` tool is allowed in `.claude/settings.json`**, so Claude can run SQL against production D1 directly without the user going to the Cloudflare dashboard. Use it to apply migrations and verify schema/data.
-
-The preferred way to apply a migration against production:
-1. Write the migration SQL file in `migrations/` as usual.
-2. Run the SQL via `mcp__Cloudflare_Developer_Platform__d1_database_query` (Claude can do this in auto mode without prompting).
-3. Also run `INSERT INTO d1_migrations (name, applied_at) VALUES ('00NN_filename.sql', datetime('now'));` so Wrangler's tracking table stays in sync.
-4. Verify the result with a follow-up query via the same tool.
+1. Write `migrations/00NN_*.sql` as usual (keeps the sequential-numbering CI check happy).
+2. Apply it to production via `d1_database_query`, and record it: `INSERT INTO d1_migrations (name, applied_at) VALUES ('00NN_*.sql', datetime('now'));`. Because it's expand/contract, doing this before the merge is safe — the deployed prod code ignores the additive change, and the branch preview (same DB) can now be click-tested against the new schema.
+3. Verify on the branch preview URL, then merge (Cloudflare auto-deploys the new code seconds later).
+4. Reconcile: `SELECT name FROM d1_migrations` should match the `migrations/` folder — a missed INSERT or a filename typo silently drifts the tracking table from the folder.
