@@ -7,14 +7,18 @@ them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-18):
-0. **Bugs (#85–#89)** — found in a full QA/QC pass 2026-07-18, low-priority
-   latent/edge issues. The two P0s (#79, #80) and all three P1s
-   (#81–#83), plus P2 #84, are fixed (see `Todo_done.md`).
+**Group priority** (highest to lowest, reassessed 2026-07-20):
+0. **Bugs (#85–#99)** — #85–#89 from the 2026-07-18 QA/QC pass; #90–#99 from
+   a second full app-audit pass 2026-07-20. All low-priority latent/edge
+   issues *except* **#90** (P1 — latent cross-tenant/privilege-escalation
+   design issue, worth resolving before the multi-list work in #1). The two
+   P0s (#79, #80) and all three P1s (#81–#83), plus P2 #84, are fixed (see
+   `Todo_done.md`).
 1. **Small UI/polish items — low value, low risk, good filler:**
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
+   - **#96–#99** small polish/stale-code items from the 2026-07-20 audit
 2. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
@@ -36,7 +40,28 @@ Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
 pass — verify before fixing.
 
 P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
-`Todo_done.md`.
+`Todo_done.md`. Items #90–#99 were found in a second full app-audit pass
+(2026-07-20); file:line refs are from that pass — verify before fixing.
+
+### P1 — Latent (security / design)
+
+90. Admin endpoints are global, not per-list, despite `is_admin` being
+    documented (CLAUDE.md, Multi-tenant model) as a per-list flag. `GET
+    /admin/users` (`worker/index.js` ~L1823), `POST
+    /admin/users/{u}/reset-password` (~L1833), `PATCH /admin/users/{u}/flags`
+    (~L1850) and `POST /admin/owners` (~L1801) gate only on `user.is_admin`
+    with no `list_id` scoping, so any `is_admin=1` user can enumerate every
+    user in every household, reset any account's password, and change anyone's
+    flags across lists. Because superadmin status comes from an env var (not
+    the DB), a second admin could reset the superadmin account's password and
+    log in as it → full escalation. Latent today (only one admin exists), but
+    a real footgun the moment a second admin is granted, and directly at odds
+    with the multi-list model in #1. Fix direction: either treat admin as an
+    explicit *global* role (redocument, and gate the destructive endpoints
+    behind `isSuperAdmin` like `/admin/metrics` and `DELETE /admin/users/{u}`
+    already are), or scope these queries/mutations to the caller's `list_id`.
+    Resolve before #1 lands.
+    _Value: Medium · Importance: Medium · Type: Bug / Security / Multi-tenant_
 
 ### P2 — Low (latent / edge)
 
@@ -71,6 +96,43 @@ P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
     responsible is off-by-one for users west of UTC. Non-issue for a
     Norway-only app; latent correctness bug.
     _Value: Low · Importance: Low · Type: Bug / Date handling_
+
+91. Sunday-evening double push. Both `meal_reminder_time` and
+    `weekly_reminder_time` default to `18:00` (`worker/index.js` ~L2555). On a
+    Sunday where next week is fully unplanned, `checkMealReminders` (tomorrow =
+    Monday, unplanned) and `checkWeeklyReminders` both fire, so the household
+    gets two back-to-back notifications. Suppress the daily meal reminder when
+    the weekly one fires for the same list/tick, or dedup at the fan-out.
+    _Value: Low · Importance: Low · Type: Bug / Notifications_
+
+92. `renameUsername` (`worker/index.js` ~L1039) cascades a username rename
+    across 6 tables but not `list_presence.username` (a by-value username copy,
+    ~L2101). Harmless because presence rows age out in ~20s and a fresh row is
+    written on the next poll, but it breaks the function's "update every
+    by-value copy" invariant. Add it to the batch, or leave an explicit
+    "ephemeral, intentionally skipped" comment.
+    _Value: Low · Importance: Low · Type: Bug / Data consistency_
+
+93. `nameFor` (`ListUsersContext.jsx` ~L35) matches `u.username === username`
+    case-sensitively. Stored copies (`added_by`, `responsible`) should always
+    be lowercased emails, so it's currently safe, but any mixed-case value
+    would silently fail to resolve to a display name (falls back to the raw
+    username). Lowercase both sides to remove the fragility.
+    _Value: Low · Importance: Low · Type: Bug / Display_
+
+94. Service-worker asset cache grows unbounded. `sw.js` (~L56) caches
+    content-hashed JS/CSS cache-first and never prunes; `CACHE_NAME` is fixed
+    at `panhandle-shell-v1`, so every deploy's old hashed assets accumulate
+    forever. Not a correctness bug (the shell is correctly network-first), but
+    unbounded storage over many deploys. Prune stale entries, or bump a
+    versioned cache name on release.
+    _Value: Low · Importance: Low · Type: Bug / Offline / Caching_
+
+95. `WeekIngredientsModal.confirmAdd` (~L59) counts a `{duplicate:true}`
+    response (qty bumped on an existing line) as a fresh add, so the success
+    toast can overstate how many *new* ingredients landed on the list. Cosmetic
+    accuracy only.
+    _Value: Low · Importance: Low · Type: Bug / Meals_
 
 ## Feature
 
@@ -117,6 +179,95 @@ P0 items #79 and #80, P1 items #81–#83, and P2 item #84 are fixed — see
    two-pane or sidebar layout), not just raising the cap; low priority
    since this is a 2-person app used mostly on phones.
    _Value: Low · Importance: Low · Type: UI / Layout_
+
+96. Reminder-time input allows values the server rejects. `VarslerSubpage.jsx`
+    uses `<Input type="time" step={900}>`, but a desktop user can still type a
+    non-quarter-hour (e.g. `18:07`); the server's `REMINDER_TIME_RE` only
+    accepts `:00/:15/:30/:45` and returns a generic "Ugyldig tidspunkt" toast
+    with no snapping. Round client-side before POST, or explain the 15-minute
+    constraint inline.
+    _Value: Low · Importance: Low · Type: UI / Notifications_
+
+97. `pinImportant` stays `true` after all important items are bought
+    (`ShoppingListTab.jsx`). The "Viktig" chip disappears while the lens stays
+    armed, so it silently re-engages the next time something is starred. Reset
+    it to `false` when `importantUnbought` empties.
+    _Value: Low · Importance: Low · Type: UI / Shopping list_
+
+98. Catalogue delete from the shopping list is more destructive than it looks.
+    `DELETE /list/:id/catalogue` removes the catalogue row and cascades to
+    every `list_items` line referencing it (history included), not just the one
+    occurrence. Confirm `ItemEditModal`'s wording makes that blast radius
+    clear, or add a distinct confirmation.
+    _Value: Low · Importance: Low · Type: UI / Shopping list_
+
+99. Stale code: `PushContext` exposes `permission` and `loading` in its context
+    value but nothing consumes them (`VarslerSubpage` only uses
+    `supported/subscribed/subscribe/unsubscribe`). Remove, or wire them into a
+    loading/permission-denied state.
+    _Value: Low · Importance: Low · Type: Cleanup / Stale code_
+
+## Ideas (unvetted)
+
+Raw suggestions from the 2026-07-20 app-audit — **not** accepted work like the
+items above, and not yet weighed against effort/appetite. Promote an idea into
+a real section (Feature / Data model / …) once it's actually decided on; delete
+the ones that don't earn their keep. Keep the same stable-ID discipline.
+
+_High value, low effort:_
+
+100. "Tøm handlede" sweep — a single action to clear all bought lines at once
+     (end-of-trip cleanup), instead of re-adding/removing them one at a time
+     from the "Nylig kjøpt" palette.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+101. Quantity stepper on the item card (subtle +/- or long-press) so the common
+     "need 2, not 1" adjustment doesn't require opening the edit modal.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+102. Surface the purchase-history stats already tracked per catalogue item
+     (`times_bought`/`first_bought`/`last_bought`) in the edit modal — e.g.
+     "kjøpt 12×, ca. hver 9. dag" — making the data behind the smart
+     suggestions visible, not just predictive.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+_High value, medium effort:_
+
+103. Recipe → meal ingredient import. Meals already carry a free-form
+     `ingredients` JSON; let a meal pull a starter ingredient list (paste a
+     recipe, or a small built-in library) to strengthen the "Fra
+     middagsplanen" flow.
+     _Value: Medium · Importance: Low · Type: Idea / Meals_
+
+104. Assign/claim shopping-list items, mirroring meal `responsible` — "you grab
+     the pharmacy stuff, I'll do groceries." Reuses the existing avatar/presence
+     UI and the by-value username pattern.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+105. Custom store/aisle ordering per list. `CATEGORIES` is a fixed aisle order;
+     letting a household reorder categories to match their actual store would
+     meaningfully speed shopping. Needs a per-list ordering store.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+_Exploratory / higher ceiling:_
+
+106. Optional spending log — capture price-per-purchase on toggle-bought, turning
+     the existing purchase-stats tables into a lightweight budget view. Adds a
+     schema column + UI; genuinely differentiating for a grocery app.
+     _Value: Medium · Importance: Low · Type: Idea / Meals + Shopping_
+
+107. Pantry / "have at home" state to suppress suggestions for staples you keep
+     stocked, complementing the current overdue-interval suggestions.
+     _Value: Low · Importance: Low · Type: Idea / Shopping list_
+
+108. Seed new lists from a shared `seed_catalogue` table (copy-on-create)
+     instead of the 710-entry `COMMON_ITEMS` array duplicated between
+     `worker/index.js` and migrations 0002/0003 — kills a documented drift
+     hazard. Refactor, not a user-facing feature.
+     _Value: Low · Importance: Low · Type: Idea / Refactor_
+
+(Batched "item added" push was already considered and declined — see the
+Notifications note at the top — noted here only so it isn't re-proposed.)
 
 ## Done
 
