@@ -7,6 +7,18 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+87. (86) Fixed `POST /plan` wiping whichever field a partial save omitted.
+    The upsert unconditionally overwrote both `meal_id` and `responsible` with
+    the request's raw values (`responsible || ""`, and `meal_id` staying
+    `null` whenever `meal_name` was falsy), so a save that only meant to
+    change one of the two fields would blank the other — not reachable from
+    the app's own screens (they always resend both together), but a latent
+    footgun for any future partial save. The handler now distinguishes an
+    omitted field (preserve the previously-stored value) from an explicit
+    falsy/empty one (clear it, as before), fixed symmetrically for both
+    `meal_id` and `responsible` since they shared the identical root cause in
+    the same code block. (1.38.1)
+
 86. (85) Fixed "Legg til nøyaktig som skrevet" not actually being exact. The
     exact-add path already skipped client-side parsing, but `POST /list`
     unconditionally re-ran `extractGlutenFree`/`capitalizeName` on every

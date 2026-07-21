@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.38.1] — 2026-07-20
+
+### Fixed
+- **Saving a meal plan day no longer loses the other half of it.** Updating
+  just who's responsible for a day could previously blank out the meal
+  planned for it, and updating just the meal could previously blank out who
+  was responsible — both are now preserved unless you actually change them.
+  This wasn't reachable from the app's own screens (they always send both
+  together), but closes the gap for any future partial save.
+
 ## [1.38.0] — 2026-07-20
 
 ### Fixed
