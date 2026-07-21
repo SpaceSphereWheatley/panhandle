@@ -2448,39 +2448,50 @@ export default {
       // Require at least one of meal_name or responsible to be set.
       if (!meal_name && !responsible) return authedJson({ error: "Mangler måltid eller ansvarlig" }, 400);
 
-      let mealId = null;
-      if (meal_name) {
-        // Capitalise new meal names the same way item names are (capitalizeName),
-        // so a meal typed in the planner is stored "Taco", not "taco". Lookups are
-        // COLLATE NOCASE, so this only affects how a genuinely new name is stored.
-        const clean = capitalizeName(meal_name);
-        // ingredients is a JSON-encoded array, stored once per meal name in
-        // meal_catalogue and shared across every occurrence of that meal —
-        // undefined means "leave whatever's stored alone".
-        const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
-        let meal = await env.DB.prepare(
-          "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
-        ).bind(clean, user.list_id).first();
-        if (!meal) {
-          // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
-          meal = await env.DB.prepare(`
-            INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
-            ON CONFLICT(list_id, name) DO UPDATE SET name = name
-            RETURNING id
-          `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
-        } else if (ingredientsJson !== undefined) {
-          await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
-            .bind(ingredientsJson, meal.id).run();
+      // Also used to bump usage stats only when the meal is actually new/changed
+      // (below), and now to preserve whichever field the caller omits: `meal_name`
+      // or `responsible` being absent from the request means "leave it alone",
+      // not "clear it" — distinct from an explicit falsy/empty value, which does
+      // clear it. (A full clear of both fields together is DELETE /plan/:date.)
+      const prevPlan = await env.DB.prepare(
+        "SELECT meal_id, responsible FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
+      ).bind(user.list_id, plan_date).first();
+
+      let mealId = prevPlan?.meal_id ?? null;
+      if (meal_name !== undefined) {
+        mealId = null;
+        if (meal_name) {
+          // Capitalise new meal names the same way item names are (capitalizeName),
+          // so a meal typed in the planner is stored "Taco", not "taco". Lookups are
+          // COLLATE NOCASE, so this only affects how a genuinely new name is stored.
+          const clean = capitalizeName(meal_name);
+          // ingredients is a JSON-encoded array, stored once per meal name in
+          // meal_catalogue and shared across every occurrence of that meal —
+          // undefined means "leave whatever's stored alone".
+          const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
+          let meal = await env.DB.prepare(
+            "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+          ).bind(clean, user.list_id).first();
+          if (!meal) {
+            // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
+            meal = await env.DB.prepare(`
+              INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
+              ON CONFLICT(list_id, name) DO UPDATE SET name = name
+              RETURNING id
+            `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
+          } else if (ingredientsJson !== undefined) {
+            await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
+              .bind(ingredientsJson, meal.id).run();
+          }
+          mealId = meal.id;
         }
-        mealId = meal.id;
       }
+
+      const effectiveResponsible = responsible !== undefined ? (responsible || "") : (prevPlan?.responsible ?? "");
 
       // Only bump usage stats when this date's meal is actually new/changed —
       // re-saving the same date with the same meal (e.g. just changing who's
       // responsible) shouldn't inflate times_planned.
-      const prevPlan = await env.DB.prepare(
-        "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
-      ).bind(user.list_id, plan_date).first();
       await env.DB.prepare(`
         INSERT INTO meal_plan (plan_date, meal_id, responsible, list_id)
         VALUES (?1, ?2, ?3, ?4)
@@ -2488,7 +2499,7 @@ export default {
           meal_id = excluded.meal_id,
           responsible = excluded.responsible,
           updated_at = datetime('now')
-      `).bind(plan_date, mealId, responsible || "", user.list_id).run();
+      `).bind(plan_date, mealId, effectiveResponsible, user.list_id).run();
       if (mealId !== null && (!prevPlan || prevPlan.meal_id !== mealId)) {
         await env.DB.prepare(`
           UPDATE meal_catalogue

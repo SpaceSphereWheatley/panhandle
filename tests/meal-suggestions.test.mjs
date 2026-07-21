@@ -101,6 +101,24 @@ async function runTests(BASE) {
   assert.ok(!meals.some(m => m.id === lasagneId), "deleted meal should no longer appear in meal_catalogue");
 
   console.log("  - meal editor: add/rename/edit-ingredients/delete all work, duplicate names rejected");
+
+  // ---- #86: POST /plan must preserve an omitted field, not wipe it ----
+  const partialDate1 = isoDaysAgo(2);
+  assert.equal((await postPlan(partialDate1, "Kylling", { responsible: "Ola" })).status, 200);
+  // Re-save with meal_name only (responsible omitted) -> responsible must survive.
+  assert.equal((await postPlan(partialDate1, "Kylling")).status, 200);
+  let planRows = await (await fetch(`${BASE}/plan?from=${partialDate1}&to=${partialDate1}`, { headers: auth })).json();
+  assert.equal(planRows[0]?.responsible, "Ola", "omitting responsible on a re-save must not wipe the existing value");
+
+  const partialDate2 = isoDaysAgo(1);
+  assert.equal((await postPlan(partialDate2, "Fisk", { responsible: "Kari" })).status, 200);
+  // Re-save with responsible only (meal_name omitted) -> the planned meal must survive.
+  assert.equal((await postPlan(partialDate2, undefined, { responsible: "Ola" })).status, 200);
+  planRows = await (await fetch(`${BASE}/plan?from=${partialDate2}&to=${partialDate2}`, { headers: auth })).json();
+  assert.equal(planRows[0]?.meal_name, "Fisk", "omitting meal_name on a re-save must not wipe the existing meal");
+  assert.equal(planRows[0]?.responsible, "Ola", "responsible should still update to the newly-sent value");
+
+  console.log("  - #86: omitting a field on POST /plan preserves it instead of wiping it");
 }
 
 main().catch(err => { console.error(err); process.exitCode = 1; });
