@@ -55,11 +55,16 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       return;
     }
     let added = 0,
+      merged = 0,
       failed = 0;
     for (const r of checked) {
       try {
-        await api("/list", { method: "POST", body: JSON.stringify({ name: r.name, qty: 1, category: r.category }) });
-        added++;
+        const res = await api("/list", { method: "POST", body: JSON.stringify({ name: r.name, qty: 1, category: r.category }) });
+        // A { duplicate: true } response means the qty was bumped on a line
+        // already on the list — not a genuinely new ingredient, so don't count
+        // it as one (it would otherwise overstate the "added" total).
+        if (res?.duplicate) merged++;
+        else added++;
       } catch {
         failed++;
       }
@@ -67,6 +72,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
     await onAdded?.();
     onClose();
     if (failed) toast(`${added} lagt til, ${failed} feilet – sjekk nettforbindelsen`, { error: true });
+    else if (added === 0 && merged > 0) toast("Alle valgte lå allerede på listen");
     else toast(`${added} ${added === 1 ? "ingrediens" : "ingredienser"} lagt til på handlelisten`);
   }
 

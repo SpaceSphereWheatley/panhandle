@@ -1,11 +1,53 @@
 # Done
 
-Completed TODO items, numbered 1 (oldest) to 80 (most recent) — these are a
+Completed TODO items, numbered 1 (oldest) to 94 (most recent) — these are a
 separate, sequential log distinct from the open-item IDs in `TODO.md` (a
 parenthetical like "(9)" inside an entry below instead refers to that entry
 having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
+
+94. (99) Removed stale code: `PushContext` exposed `permission` and `loading`
+    in its context value but nothing consumed them (`VarslerSubpage`/
+    `SettingsRoot` only read `supported`/`subscribed`/`subscribe`/
+    `unsubscribe`). Dropped both, along with the now-dead `setPermission`/
+    `setLoading` state they backed. (1.39.1)
+
+93. (97) Fixed the "Viktig" lens staying armed after all important items were
+    bought. `pinImportant` stayed `true` once `importantUnbought` emptied, so
+    the chip vanished while the filter silently re-engaged the next time an
+    item was starred. It now resets to `false` when nothing important remains
+    unbought. (1.39.1)
+
+92. (96) Fixed reminder-time inputs accepting values the server rejects. A
+    desktop `<input type="time">` let a user type a non-quarter-hour (e.g.
+    18:07), which `REMINDER_TIME_RE` rejected with a generic toast and no
+    correction. `VarslerSubpage` now snaps the value to the nearest 15-minute
+    increment (`snapToQuarterHour`) before saving. (1.39.1)
+
+91. (95) Fixed `WeekIngredientsModal.confirmAdd` overstating how many *new*
+    ingredients landed: a `{ duplicate: true }` response (qty bumped on an
+    existing line) was counted as a fresh add. Merged lines are now counted
+    separately from genuinely-new ones. (1.39.1)
+
+90. (93) Made `nameFor` (`ListUsersContext`) match usernames case-insensitively.
+    Stored copies should always be lowercased emails, so it was safe in
+    practice, but a mixed-case value would silently fail to resolve to a
+    display name; both sides are now lowercased. (1.39.1)
+
+89. (91) Fixed the Sunday-evening double push. On a Sunday where the upcoming
+    week was completely unplanned, both `checkMealReminders` (tomorrow =
+    Monday, unplanned) and `checkWeeklyReminders` fired on the same tick,
+    sending two back-to-back notifications. `checkWeeklyReminders` now returns
+    the list_ids it notified and `runNotificationPass` suppresses the daily
+    meal reminder for those lists on that tick. (1.39.1)
+
+88. (113) Added offline write durability for the shopping list. Adds and
+    toggles made with no connectivity were reverted and lost; a new persisted
+    outbound queue (`src/lib/writeQueue.js`) now keeps the optimistic change
+    and replays it in order on reconnect, with a temp→real id mapping (via a
+    new `id` field on the `POST /list` response) so a toggle/important queued
+    against a not-yet-synced offline add resolves. (1.39.0)
 
 87. (86) Fixed `POST /plan` wiping whichever field a partial save omitted.
     The upsert unconditionally overwrote both `meal_id` and `responsible` with

@@ -1224,7 +1224,10 @@ export async function sendPushToList(env, list_id, payload, { excludeUsernames =
 }
 
 // The "no meal planned for tomorrow" reminder (TODO #7 phase 1).
-async function checkMealReminders(env, nowMs) {
+// `suppressedListIds` holds lists the weekly reminder already fired for on
+// this same tick (see runNotificationPass / #91) — skip them so a fully
+// unplanned upcoming Sunday->week doesn't produce two back-to-back pushes.
+async function checkMealReminders(env, nowMs, suppressedListIds = new Set()) {
   const { hhmm, tomorrow } = osloLocalDateParts(nowMs);
   const { results: enabledLists } = await env.DB.prepare(
     "SELECT list_id, meal_reminder_time FROM notification_settings WHERE meal_reminder_enabled = 1"
@@ -1234,6 +1237,7 @@ async function checkMealReminders(env, nowMs) {
     .map((row) => row.list_id);
 
   for (const list_id of dueListIds) {
+    if (suppressedListIds.has(list_id)) continue; // weekly reminder already sent this tick (#91)
     const plan = await env.DB.prepare(
       "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
     ).bind(list_id, tomorrow).first();
@@ -1263,9 +1267,13 @@ async function checkMealReminders(env, nowMs) {
 // upcoming Mon-Sun week has zero planned meals at all — not "few," which
 // would need an arbitrary threshold and risks nagging a household that's
 // already started. `dow` is 0=Mon..6=Sun (see osloLocalDateParts).
+// Returns the Set of list_ids it actually sent a weekly reminder to on this
+// tick, so runNotificationPass can suppress the daily meal reminder for those
+// same lists (#91). Empty on any non-Sunday tick.
 async function checkWeeklyReminders(env, nowMs) {
+  const notified = new Set();
   const { hhmm, tomorrow, dow } = osloLocalDateParts(nowMs);
-  if (dow !== 6) return; // only Sunday
+  if (dow !== 6) return notified; // only Sunday
 
   const { results: enabledLists } = await env.DB.prepare(
     "SELECT list_id, weekly_reminder_time FROM notification_settings WHERE weekly_reminder_enabled = 1"
@@ -1273,7 +1281,7 @@ async function checkWeeklyReminders(env, nowMs) {
   const dueListIds = enabledLists
     .filter((row) => isReminderDue(hhmm, row.weekly_reminder_time))
     .map((row) => row.list_id);
-  if (dueListIds.length === 0) return;
+  if (dueListIds.length === 0) return notified;
 
   // Today is Sunday, so `tomorrow` is already the upcoming week's Monday.
   const weekStart = tomorrow;
@@ -1295,7 +1303,9 @@ async function checkWeeklyReminders(env, nowMs) {
       body: "Åpne Panhandle for å planlegge ukens middager.",
       url: "/app.html",
     });
+    notified.add(list_id);
   }
+  return notified;
 }
 
 // Cron entry point (TODO #7 phases 1-2), dispatching to each independently
@@ -1305,8 +1315,12 @@ async function checkWeeklyReminders(env, nowMs) {
 // fabricated timestamp against a real local D1, instead of depending on
 // wrangler dev's scheduled-event simulation.
 export async function runNotificationPass(env, nowMs) {
-  await checkMealReminders(env, nowMs);
-  await checkWeeklyReminders(env, nowMs);
+  // Weekly first: on a Sunday where the upcoming week is completely unplanned,
+  // the weekly reminder and the daily "no meal tomorrow" reminder would both
+  // be due at the same tick and fire back-to-back. Suppress the daily one for
+  // any list the weekly reminder just sent to (#91).
+  const weeklyNotified = await checkWeeklyReminders(env, nowMs);
+  await checkMealReminders(env, nowMs, weeklyNotified);
 }
 
 export default {

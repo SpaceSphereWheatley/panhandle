@@ -23,11 +23,7 @@ export function PushProvider({ children }) {
   const [supported] = useState(
     () => typeof navigator !== "undefined" && "serviceWorker" in navigator && "PushManager" in window
   );
-  const [permission, setPermission] = useState(
-    () => (typeof Notification !== "undefined" ? Notification.permission : "denied")
-  );
   const [subscribed, setSubscribed] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // Re-syncs the browser's current subscription (if any) to the server on
   // every mount/token change. This is also how a subscription that the
@@ -57,10 +53,8 @@ export function PushProvider({ children }) {
 
   const subscribe = useCallback(async () => {
     if (!supported) return { error: "Nettleseren støtter ikke push-varsler" };
-    setLoading(true);
     try {
       const result = await Notification.requestPermission();
-      setPermission(result);
       if (result !== "granted") return { error: "Tillatelse til varsler ble ikke gitt" };
 
       const { publicKey } = await api("/push/vapid-public-key");
@@ -76,29 +70,22 @@ export function PushProvider({ children }) {
       return { error: null };
     } catch {
       return { error: "Kunne ikke aktivere varsler" };
-    } finally {
-      setLoading(false);
     }
   }, [supported]);
 
   const unsubscribe = useCallback(async () => {
     if (!supported) return;
-    setLoading(true);
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        await api("/push/subscribe", { method: "DELETE", body: JSON.stringify({ endpoint: sub.endpoint }) });
-        await sub.unsubscribe();
-      }
-      setSubscribed(false);
-    } finally {
-      setLoading(false);
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await api("/push/subscribe", { method: "DELETE", body: JSON.stringify({ endpoint: sub.endpoint }) });
+      await sub.unsubscribe();
     }
+    setSubscribed(false);
   }, [supported]);
 
   return (
-    <PushContext.Provider value={{ supported, permission, subscribed, loading, subscribe, unsubscribe }}>
+    <PushContext.Provider value={{ supported, subscribed, subscribe, unsubscribe }}>
       {children}
     </PushContext.Provider>
   );
