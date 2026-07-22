@@ -433,6 +433,31 @@ async function runNotificationPassTests() {
     }
   }
   console.log("  - weekly reminder never fires on a non-Sunday");
+
+  // ---- scenario H: Sunday, both reminders due, week + tomorrow unplanned ->
+  // only the weekly one fires; the daily meal reminder is suppressed (#91) ----
+  {
+    const sub = { endpoint: "https://push.test/list-8-device", ...(await genSubscriberKeys()), list_id: 8, username: "h1" };
+    const { db, state } = makeFakeDB({
+      // Both reminder times land on this same 18:00-Oslo tick.
+      notificationSettings: [{ list_id: 8, meal_reminder_time: DUE_TIME, weekly_reminder_time: DUE_TIME }],
+      mealPlans: [],
+      pushSubscriptions: [sub],
+    });
+    let fetchCalls = 0;
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
+    try {
+      await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
+      assert.equal(fetchCalls, 1, "a fully-unplanned Sunday must send exactly one push, not two back-to-back");
+      // Only the weekly reminder was logged — the daily meal reminder was
+      // suppressed for this list on this tick, not merely deduped.
+      assert.deepEqual(state.notificationLog, [{ list_id: 8, type: "weekly_reminder", target_date: WEEK_START }]);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+  console.log("  - fully-unplanned Sunday sends only the weekly reminder, suppressing the daily one (#91)");
 }
 
 main().catch((e) => {

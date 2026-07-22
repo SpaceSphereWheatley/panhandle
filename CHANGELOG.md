@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.39.1] — 2026-07-22
+
+### Fixed
+- **No more double notification on a quiet Sunday.** When the whole upcoming
+  week had no meals planned, you could get two reminders back-to-back on
+  Sunday evening — the weekly "plan next week" nudge and the daily "nothing
+  planned for tomorrow" one. Now only the weekly reminder is sent in that case.
+- **The "important only" filter turns itself off once everything important is
+  bought,** instead of staying silently armed and re-engaging the next time you
+  star an item.
+- **Picking a reminder time now snaps to the nearest quarter-hour.** Typing an
+  odd minute like 18:07 on a computer used to be silently rejected with an
+  unhelpful error; it's now rounded to a valid time (e.g. 18:00) and saved.
+- **The "from the meal plan" add no longer overcounts.** Ingredients already on
+  your list are no longer counted as newly added in the confirmation message.
+- A display name now resolves regardless of letter case, and some unused
+  notification code was cleaned up — no visible change from either.
+
 ## [1.39.0] — 2026-07-22
 
 ### Added

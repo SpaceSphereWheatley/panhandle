@@ -8,21 +8,21 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-21):
-0. **Reliability — offline write durability (#113)** — the one "shared-list
-   app" complaint from the review-landscape scan that actually applies here:
-   an add/toggle made with no signal (mid-shop) must survive and reconcile,
-   not silently drop. Highest-value actionable item; verify the offline path
-   end-to-end before anything else.
+0. **Reliability — offline write durability (#113)** — DONE (1.39.0, see
+   `Todo_done.md`). A persisted outbound queue now keeps an add/toggle made
+   with no signal and replays it on reconnect.
 1. **Bugs (#87–#99)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
    a second full app-audit pass 2026-07-20. All low-priority latent/edge
    issues. The two P0s (#79, #80), all three P1s (#81–#83) plus the
-   2026-07-20-audit P1 (#90), and P2 #84–#86, are fixed (see `Todo_done.md`).
+   2026-07-20-audit P1 (#90), P2 #84–#86, and the 1.39.1 batch (#91, #93,
+   #95, #96, #97, #99) are fixed (see `Todo_done.md`); #87, #88, #89, #92,
+   #94, #98 remain open.
 2. **Small UI/polish items — low value, low risk, good filler:**
    - **#100** "Tøm handlede" bulk-clear (end-of-trip sweep)
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
-   - **#96–#99** small polish/stale-code items from the 2026-07-20 audit
+   - **#98** catalogue-delete blast-radius wording (from the 2026-07-20 audit)
 3. **Custom aisle/store ordering (#105)** — a real shopping-speed win (reviews
    consistently rank "match my store's layout" the top efficiency feature);
    needs a per-list ordering store. Medium value, deferred behind reliability
@@ -42,21 +42,6 @@ remaining phase, were considered and explicitly declined: not worth it
 for a 2-person household that already has the on-demand "Varsle
 husstanden" ping.
 
-## Reliability
-
-113. Offline write durability. The app polls `/list` every 7s and keeps a
-     `localCache` read cache, but there is no durable *write* queue: an add or
-     toggle made with no connectivity (e.g. mid-shop in a low-signal aisle) is
-     not guaranteed to survive and reconcile once the device is back online —
-     the single most-common complaint across shared-list apps in the review
-     scan, and the one that genuinely applies to Panhandle. Verify the
-     offline-add / offline-toggle path end-to-end (airplane mode → mutate →
-     reconnect → confirm the server received it and nothing was lost); if
-     writes drop, add a persisted outbound queue that replays on reconnect.
-     Distinct from #5 (idle poll backoff) — this is about write *durability*,
-     not poll frequency.
-     _Value: High · Importance: Medium · Type: Reliability / Offline_
-
 ## Bugs
 
 Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
@@ -65,7 +50,8 @@ pass — verify before fixing.
 P0 items #79 and #80, P1 items #81–#83 and #90, and P2 items #84–#86 are
 fixed — see `Todo_done.md`. Items #91–#99 were found in a second full
 app-audit pass (2026-07-20); file:line refs are from that pass — verify
-before fixing.
+before fixing. Of those, #91, #93, #95 (and UI-section #96, #97, #99) are
+now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ### P2 — Low (latent / edge)
 
@@ -87,14 +73,6 @@ before fixing.
     Norway-only app; latent correctness bug.
     _Value: Low · Importance: Low · Type: Bug / Date handling_
 
-91. Sunday-evening double push. Both `meal_reminder_time` and
-    `weekly_reminder_time` default to `18:00` (`worker/index.js` ~L2555). On a
-    Sunday where next week is fully unplanned, `checkMealReminders` (tomorrow =
-    Monday, unplanned) and `checkWeeklyReminders` both fire, so the household
-    gets two back-to-back notifications. Suppress the daily meal reminder when
-    the weekly one fires for the same list/tick, or dedup at the fan-out.
-    _Value: Low · Importance: Low · Type: Bug / Notifications_
-
 92. `renameUsername` (`worker/index.js` ~L1039) cascades a username rename
     across 6 tables but not `list_presence.username` (a by-value username copy,
     ~L2101). Harmless because presence rows age out in ~20s and a fresh row is
@@ -103,13 +81,6 @@ before fixing.
     "ephemeral, intentionally skipped" comment.
     _Value: Low · Importance: Low · Type: Bug / Data consistency_
 
-93. `nameFor` (`ListUsersContext.jsx` ~L35) matches `u.username === username`
-    case-sensitively. Stored copies (`added_by`, `responsible`) should always
-    be lowercased emails, so it's currently safe, but any mixed-case value
-    would silently fail to resolve to a display name (falls back to the raw
-    username). Lowercase both sides to remove the fragility.
-    _Value: Low · Importance: Low · Type: Bug / Display_
-
 94. Service-worker asset cache grows unbounded. `sw.js` (~L56) caches
     content-hashed JS/CSS cache-first and never prunes; `CACHE_NAME` is fixed
     at `panhandle-shell-v1`, so every deploy's old hashed assets accumulate
@@ -117,12 +88,6 @@ before fixing.
     unbounded storage over many deploys. Prune stale entries, or bump a
     versioned cache name on release.
     _Value: Low · Importance: Low · Type: Bug / Offline / Caching_
-
-95. `WeekIngredientsModal.confirmAdd` (~L59) counts a `{duplicate:true}`
-    response (qty bumped on an existing line) as a fresh add, so the success
-    toast can overstate how many *new* ingredients landed on the list. Cosmetic
-    accuracy only.
-    _Value: Low · Importance: Low · Type: Bug / Meals_
 
 ## Feature
 
@@ -181,32 +146,12 @@ before fixing.
    since this is a 2-person app used mostly on phones.
    _Value: Low · Importance: Low · Type: UI / Layout_
 
-96. Reminder-time input allows values the server rejects. `VarslerSubpage.jsx`
-    uses `<Input type="time" step={900}>`, but a desktop user can still type a
-    non-quarter-hour (e.g. `18:07`); the server's `REMINDER_TIME_RE` only
-    accepts `:00/:15/:30/:45` and returns a generic "Ugyldig tidspunkt" toast
-    with no snapping. Round client-side before POST, or explain the 15-minute
-    constraint inline.
-    _Value: Low · Importance: Low · Type: UI / Notifications_
-
-97. `pinImportant` stays `true` after all important items are bought
-    (`ShoppingListTab.jsx`). The "Viktig" chip disappears while the lens stays
-    armed, so it silently re-engages the next time something is starred. Reset
-    it to `false` when `importantUnbought` empties.
-    _Value: Low · Importance: Low · Type: UI / Shopping list_
-
 98. Catalogue delete from the shopping list is more destructive than it looks.
     `DELETE /list/:id/catalogue` removes the catalogue row and cascades to
     every `list_items` line referencing it (history included), not just the one
     occurrence. Confirm `ItemEditModal`'s wording makes that blast radius
     clear, or add a distinct confirmation.
     _Value: Low · Importance: Low · Type: UI / Shopping list_
-
-99. Stale code: `PushContext` exposes `permission` and `loading` in its context
-    value but nothing consumes them (`VarslerSubpage` only uses
-    `supported/subscribed/subscribe/unsubscribe`). Remove, or wire them into a
-    loading/permission-denied state.
-    _Value: Low · Importance: Low · Type: Cleanup / Stale code_
 
 ## Dev process / policy
 

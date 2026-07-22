@@ -8,6 +8,21 @@ import { SubpageSection } from "../SubpageSection.jsx";
 const STALE_ITEM_DAYS_MIN = 1;
 const STALE_ITEM_DAYS_MAX = 90;
 
+// The server's REMINDER_TIME_RE only accepts :00/:15/:30/:45 (see
+// worker/index.js), but a desktop <input type="time"> lets you type any
+// minute (e.g. 18:07). Snap to the nearest quarter-hour before saving so a
+// valid value is always sent — instead of a generic "Ugyldig tidspunkt"
+// rejection with no correction (#96). Wraps within the day (23:53 -> 00:00).
+function snapToQuarterHour(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  if (!m) return hhmm;
+  const total = Math.round((Number(m[1]) * 60 + Number(m[2])) / 15) * 15;
+  const wrapped = ((total % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(wrapped / 60)).padStart(2, "0");
+  const mm = String(wrapped % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
@@ -87,8 +102,8 @@ export function VarslerSubpage() {
   }
 
   function onChangeMealTime(e) {
-    const time = e.target.value;
-    if (!time) return;
+    if (!e.target.value) return;
+    const time = snapToQuarterHour(e.target.value);
     setMealReminderTime(time);
     saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime, staleItemDays });
   }
@@ -99,8 +114,8 @@ export function VarslerSubpage() {
   }
 
   function onChangeWeeklyTime(e) {
-    const time = e.target.value;
-    if (!time) return;
+    if (!e.target.value) return;
+    const time = snapToQuarterHour(e.target.value);
     setWeeklyReminderTime(time);
     saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time, staleItemDays });
   }

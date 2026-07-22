@@ -461,6 +461,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // Important-item count driving the pinImportant chip — bought items don't
   // count, since they're no longer something to look out for on this trip.
   const importantUnbought = unbought.filter((it) => it.important);
+  // Disarm the "Viktig" lens once nothing important remains unbought, so it
+  // doesn't silently re-engage the next time an item is starred while the chip
+  // is gone (#97). No render-generation bump needed: with the important list
+  // empty, the pinned/unpinned layouts are identical, so nothing visibly moves.
+  useEffect(() => {
+    if (pinImportant && importantUnbought.length === 0) setPinImportant(false);
+  }, [pinImportant, importantUnbought.length]);
   const pinnedIds = pinImportant ? new Set(importantUnbought.map((it) => it.id)) : null;
   const groups = {};
   for (const it of unbought) {
