@@ -15,6 +15,8 @@ import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, Avatar, FabMenu, Skeleton, EmptyState } from "../design-system/index.js";
 import { readCache, writeCache } from "../lib/localCache.js";
+import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const POLL_MS = 7000;
 // Last-fetched list, hydrated on mount so a returning user sees real items
@@ -69,6 +71,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const intensity = useDesignIntensity();
   const { shouldAnimate } = useMotionConfig();
   const { nameFor } = useListUsers();
+  const { user: currentUser } = useAuth();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
   // Other members who've polled the list in the last ~20s (see POST
@@ -102,6 +105,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // you're not buying everything on the list. Not persisted: it's a
   // per-visit lens on the list, not a standing preference like ph_view.
   const [pinImportant, setPinImportant] = useState(false);
+  // Count of offline writes waiting to be replayed (see src/lib/writeQueue.js
+  // and TODO #113). Drives the "usendte" pill so a mid-shop add/toggle made
+  // with no signal reads as saved-and-pending, not lost. Seeded from any
+  // queue that survived an app close.
+  const [pendingWrites, setPendingWrites] = useState(() => queueLength());
 
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
@@ -111,6 +119,19 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   }
 
   async function loadList() {
+    // Replay any queued offline writes first, so the fetch below already
+    // reflects them (the queued add is replayed → its real row comes back in
+    // the snapshot, replacing our temp-id optimistic item). If the flush
+    // can't drain the queue we're still offline: keep the optimistic state
+    // and skip the fetch rather than overwriting it with stale server data.
+    if (queueLength() > 0) {
+      const { drained } = await flushQueue(api);
+      setPendingWrites(queueLength());
+      if (!drained) {
+        onOffline();
+        return;
+      }
+    }
     let fetched;
     try {
       fetched = await api("/list");
@@ -120,7 +141,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       return;
     }
     setItems(fetched);
-    writeCache(ITEMS_CACHE_KEY, fetched);
     try {
       setSuggestedItems(await api("/catalogue/suggestions"));
     } catch {
@@ -168,8 +188,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);
-    return () => clearInterval(timer);
+    // Replay queued offline writes the moment connectivity returns, rather
+    // than waiting up to POLL_MS for the next tick (loadList flushes first).
+    const onOnline = () => loadList();
+    window.addEventListener("online", onOnline);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("online", onOnline);
+    };
   }, [active]);
+
+  // Persist the current (possibly optimistic) list on every change, not just
+  // after a server fetch, so an offline-added/toggled item survives a reload
+  // while still offline — its replay op lives in the write queue, and this
+  // keeps the matching optimistic row on screen until that op syncs. Skips the
+  // initial run so a cold open with nothing cached doesn't write an empty
+  // array over the "no cache yet" signal `loading` reads on the next open.
+  const didHydrate = useRef(false);
+  useEffect(() => {
+    if (!didHydrate.current) {
+      didHydrate.current = true;
+      return;
+    }
+    writeCache(ITEMS_CACHE_KEY, items);
+  }, [items]);
 
   useEffect(() => {
     if (!active) return;
@@ -181,6 +223,31 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   function setView(mode) {
     setViewMode(mode);
     localStorage.setItem("ph_view", mode);
+  }
+
+  // Shared by addItem/addSuggestedItem's offline paths: persist the add to the
+  // write queue for replay, and drop a matching optimistic row on the list
+  // (with a temp id — see writeQueue.newTempId) so it shows immediately and
+  // survives a reload while still offline.
+  function queueOfflineAdd({ name, category, notes, qty, exact }) {
+    const tempId = newTempId();
+    enqueue({ kind: "add", tempId, body: { name, qty: qty || 1, category, notes, exact } });
+    const optimistic = {
+      id: tempId,
+      bought: 0,
+      important: 0,
+      added_by: currentUser,
+      added_at: new Date().toISOString(),
+      bought_at: null,
+      qty: qty || 1,
+      notes: notes ?? null,
+      // The server capitalizes non-exact names; mirror that so the optimistic
+      // row reads the same before and after it syncs.
+      name: exact ? name : cap(name),
+      category,
+    };
+    setItems((prev) => [...prev, optimistic]);
+    setPendingWrites(queueLength());
   }
 
   async function addItem(rawText, { exact = false } = {}) {
@@ -212,7 +279,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         method: "POST",
         body: JSON.stringify({ name, qty: qty || 1, category, notes, exact }),
       });
-    } catch {
+    } catch (e) {
+      if (e.message === "network") {
+        queueOfflineAdd({ name, category, notes, qty, exact });
+        toast("Lagret – sendes når du er tilkoblet igjen");
+        return;
+      }
       setAddValue(typed);
       toast("Kunne ikke legge til – sjekk nettforbindelsen", { error: true });
       return;
@@ -233,8 +305,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     setSuggestedItems((prev) => prev.filter((s) => s.id !== it.id));
     try {
       await api("/list", { method: "POST", body: JSON.stringify({ name: it.name, qty: 1, category: it.category }) });
-    } catch {
+    } catch (e) {
+      if (e.message === "network") {
+        queueOfflineAdd({ name: it.name, category: it.category, qty: 1 });
+        toast("Lagret – sendes når du er tilkoblet igjen");
+        return;
+      }
       toast("Kunne ikke legge til – sjekk nettforbindelsen", { error: true });
+      return;
     }
     await loadCatalogue();
     loadList();
@@ -282,7 +360,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
     try {
       await api(`/list/${id}/toggle`, { method: "POST" });
-    } catch {
+    } catch (e) {
+      if (e.message === "network") {
+        // Keep the optimistic flip (and its "Nylig kjøpt" re-sort); queue the
+        // toggle to replay on reconnect instead of reverting it.
+        enqueue({ kind: "toggle", targetId: id });
+        setPendingWrites(queueLength());
+        return;
+      }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought, important: wasImportant } : x)));
       clearResolving(id);
       toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
@@ -299,7 +384,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     );
     try {
       await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ important: !wasImportant }) });
-    } catch {
+    } catch (e) {
+      if (e.message === "network") {
+        enqueue({ kind: "important", targetId: id, important: !wasImportant });
+        setPendingWrites(queueLength());
+        return;
+      }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, important: wasImportant } : x)));
       toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
     }
@@ -466,6 +556,25 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 16 }}>
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
+          {pendingWrites > 0 && (
+            <span
+              title="Endringer lagret på enheten – sendes når du er tilkoblet igjen"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+                borderRadius: "var(--radius-pill)",
+                padding: "3px 8px",
+                fontSize: "var(--text-2xs)",
+                fontWeight: "var(--weight-semibold)",
+                background: "var(--surface-sunken)",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              <UiIcon name="cloud-slash" size={12} />
+              {pendingWrites}
+            </span>
+          )}
           {importantUnbought.length > 0 && (
             <button
               onClick={() => {

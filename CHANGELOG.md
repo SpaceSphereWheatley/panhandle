@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.39.0] — 2026-07-22
+
+### Added
+- **Items you add or check off with no signal are no longer lost.** If you
+  add an item or tick one as bought while offline — mid-shop in a dead spot,
+  say — it's now saved on your device and sent automatically the moment
+  you're back online, instead of quietly disappearing. A small counter next
+  to the item summary shows how many changes are still waiting to sync.
+
 ## [1.38.1] — 2026-07-20
 
 ### Fixed

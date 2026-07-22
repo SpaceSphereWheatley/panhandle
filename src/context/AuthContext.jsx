@@ -1,6 +1,7 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { configureApi, rawLogin, rawRegister, rawGoogleAuth } from "../lib/api.js";
 import { clearCache } from "../lib/localCache.js";
+import { clearQueue } from "../lib/writeQueue.js";
 
 const AuthContext = createContext(null);
 
@@ -47,6 +48,10 @@ export function AuthProvider({ children }) {
     setAuth(cleared);
     persistAuth(cleared);
     clearCache();
+    // Drop any not-yet-synced offline writes too, so a next user on a shared
+    // household device never inherits (and replays) the previous user's
+    // queued mutations. Same shared-device reasoning as clearCache above.
+    clearQueue();
     if (reason === "expired") {
       setExpiredReason(
         "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt."

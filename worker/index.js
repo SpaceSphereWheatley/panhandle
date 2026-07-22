@@ -2202,12 +2202,15 @@ export default {
         const updated = await env.DB.prepare(
           "UPDATE list_items SET qty = qty + ?2 WHERE id = ?1 RETURNING qty"
         ).bind(existing.id, addQty).first();
-        return authedJson({ ok: true, duplicate: true, qty: updated.qty });
+        // `id` lets the offline write queue (see src/lib/writeQueue.js) map a
+        // temp id to the real line when replaying a queued add — here the
+        // merge target's existing id.
+        return authedJson({ ok: true, duplicate: true, qty: updated.qty, id: existing.id });
       }
-      await env.DB.prepare(
+      const inserted = await env.DB.prepare(
         "INSERT INTO list_items (catalogue_id, added_by, notes, qty, list_id) VALUES (?1, ?2, ?3, ?4, ?5)"
       ).bind(cat.id, user.username, noteVal, addQty, user.list_id).run();
-      return authedJson({ ok: true, qty: addQty });
+      return authedJson({ ok: true, qty: addQty, id: inserted.meta.last_row_id });
     }
 
     const patchMatch = path.match(/^\/list\/(\d+)$/);
