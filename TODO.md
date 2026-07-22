@@ -1,28 +1,38 @@
 # TODO
 
 Open items, numbered and grouped by theme; within each group, sorted by
-value (highest-value first). Numbers are stable IDs for reference in
+importance (highest-importance first, ties broken by value). Numbers are stable IDs for reference in
 commits/discussion — don't renumber when items are completed, just strike
 them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-20):
-0. **Bugs (#87–#99)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
+**Group priority** (highest to lowest, reassessed 2026-07-21):
+0. **Reliability — offline write durability (#113)** — the one "shared-list
+   app" complaint from the review-landscape scan that actually applies here:
+   an add/toggle made with no signal (mid-shop) must survive and reconcile,
+   not silently drop. Highest-value actionable item; verify the offline path
+   end-to-end before anything else.
+1. **Bugs (#87–#99)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
    a second full app-audit pass 2026-07-20. All low-priority latent/edge
    issues. The two P0s (#79, #80), all three P1s (#81–#83) plus the
    2026-07-20-audit P1 (#90), and P2 #84–#86, are fixed (see `Todo_done.md`).
-1. **Small UI/polish items — low value, low risk, good filler:**
+2. **Small UI/polish items — low value, low risk, good filler:**
+   - **#100** "Tøm handlede" bulk-clear (end-of-trip sweep)
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
    - **#96–#99** small polish/stale-code items from the 2026-07-20 audit
-2. **Multi-list data model (#1)** — high ceiling if this app ever needs
+3. **Custom aisle/store ordering (#105)** — a real shopping-speed win (reviews
+   consistently rank "match my store's layout" the top efficiency feature);
+   needs a per-list ordering store. Medium value, deferred behind reliability
+   + bugs.
+4. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
-3. **i18n (#15)** — largest effort of anything open (touches nearly every
+5. **i18n (#15)** — largest effort of anything open (touches nearly every
    component) with no expressed need (household is Norwegian-only);
    lowest priority despite medium value.
 
@@ -31,6 +41,21 @@ Notifications (#7) shipped in full (phases 1–2) and is closed — see
 remaining phase, were considered and explicitly declined: not worth it
 for a 2-person household that already has the on-demand "Varsle
 husstanden" ping.
+
+## Reliability
+
+113. Offline write durability. The app polls `/list` every 7s and keeps a
+     `localCache` read cache, but there is no durable *write* queue: an add or
+     toggle made with no connectivity (e.g. mid-shop in a low-signal aisle) is
+     not guaranteed to survive and reconcile once the device is back online —
+     the single most-common complaint across shared-list apps in the review
+     scan, and the one that genuinely applies to Panhandle. Verify the
+     offline-add / offline-toggle path end-to-end (airplane mode → mutate →
+     reconnect → confirm the server received it and nothing was lost); if
+     writes drop, add a persisted outbound queue that replays on reconnect.
+     Distinct from #5 (idle poll backoff) — this is about write *durability*,
+     not poll frequency.
+     _Value: High · Importance: Medium · Type: Reliability / Offline_
 
 ## Bugs
 
@@ -101,6 +126,12 @@ before fixing.
 
 ## Feature
 
+105. Custom store/aisle ordering per list. `CATEGORIES` is a fixed aisle order;
+     letting a household reorder categories to match their actual store would
+     meaningfully speed shopping (reviews repeatedly single this out as the top
+     efficiency feature). Needs a per-list ordering store.
+     _Value: Medium · Importance: Low · Type: Feature / Shopping list_
+
 15. Add language support (i18n). The UI is currently 100% hardcoded
     Norwegian strings across every tab/component/modal — no translation
     layer, no string-key extraction, no language switcher. Needs a
@@ -135,6 +166,11 @@ before fixing.
    _Value: Low · Importance: Low · Type: Performance_
 
 ## UI / Polish
+
+100. "Tøm handlede" sweep — a single action to clear all bought lines at once
+     (end-of-trip cleanup), instead of re-adding/removing them one at a time
+     from the "Nylig kjøpt" palette.
+     _Value: Medium · Importance: Low · Type: UI / Shopping list_
 
 6. Create a proper viewing window for desktop. Today the layout is
    deliberately mobile-first with a fixed `max-width: 480px` centered
@@ -179,14 +215,6 @@ that pass for the reasoning). All internal housekeeping — CLAUDE.md/docs only,
 no `VERSION` bump. #1–#3 from the same review are larger and have their own
 implementation plans (not listed here).
 
-109. Clarify what "wait for checks/review" means in the Workflow conventions.
-     There's no second human reviewer (solo dev + Claude), so "review feedback"
-     is really the Cloudflare deploy-preview bot and (when requested) Copilot —
-     the current wording reads as if human review gates the merge, making it a
-     step that's silently skipped or waited on indefinitely. Reword to name the
-     actual signals (deploy-preview click-through + optional Copilot).
-     _Value: Low · Importance: Low · Type: Dev process / Docs_
-
 110. State "never merge on red CI" explicitly. Cloudflare deploys independently
      of GH Actions, so a merge with failing lint/unit-tests still redeploys prod
      (only a Cloudflare *build* failure blocks a deploy). Nothing enforces the
@@ -200,6 +228,14 @@ implementation plans (not listed here).
      migration; or Cloudflare dashboard rollback). Add a short runbook to
      CLAUDE.md's Deployment section.
      _Value: Medium · Importance: Low · Type: Dev process / Docs_
+
+109. Clarify what "wait for checks/review" means in the Workflow conventions.
+     There's no second human reviewer (solo dev + Claude), so "review feedback"
+     is really the Cloudflare deploy-preview bot and (when requested) Copilot —
+     the current wording reads as if human review gates the merge, making it a
+     step that's silently skipped or waited on indefinitely. Reword to name the
+     actual signals (deploy-preview click-through + optional Copilot).
+     _Value: Low · Importance: Low · Type: Dev process / Docs_
 
 112. Guard against `d1_migrations` drift. The tracking row is hand-inserted via
      MCP, so nothing verifies applied rows match the `migrations/` files (a
@@ -216,11 +252,6 @@ a real section (Feature / Data model / …) once it's actually decided on; delet
 the ones that don't earn their keep. Keep the same stable-ID discipline.
 
 _High value, low effort:_
-
-100. "Tøm handlede" sweep — a single action to clear all bought lines at once
-     (end-of-trip cleanup), instead of re-adding/removing them one at a time
-     from the "Nylig kjøpt" palette.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
 
 101. Quantity stepper on the item card (subtle +/- or long-press) so the common
      "need 2, not 1" adjustment doesn't require opening the edit modal.
@@ -243,11 +274,6 @@ _High value, medium effort:_
 104. Assign/claim shopping-list items, mirroring meal `responsible` — "you grab
      the pharmacy stuff, I'll do groceries." Reuses the existing avatar/presence
      UI and the by-value username pattern.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
-
-105. Custom store/aisle ordering per list. `CATEGORIES` is a fixed aisle order;
-     letting a household reorder categories to match their actual store would
-     meaningfully speed shopping. Needs a per-list ordering store.
      _Value: Medium · Importance: Low · Type: Idea / Shopping list_
 
 _Exploratory / higher ceiling:_
