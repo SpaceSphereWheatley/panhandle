@@ -3,8 +3,10 @@ import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { CATEGORIES, cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
+import { cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
+import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
+import { useConfirm } from "../context/ConfirmContext.jsx";
 import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
@@ -71,6 +73,8 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const intensity = useDesignIntensity();
   const { shouldAnimate } = useMotionConfig();
   const { nameFor } = useListUsers();
+  const { order: categoryOrder } = useCategoryOrder();
+  const confirm = useConfirm();
   const { user: currentUser } = useAuth();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
@@ -452,6 +456,26 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     });
   }
 
+  // End-of-trip sweep (TODO #100): clear every bought line at once instead of
+  // removing them one at a time from "Nylig kjøpt". Confirmed first since it's
+  // a bulk delete; online-only (not part of the offline write queue, which is
+  // scoped to add/toggle/important). The catalogue rows stay, so anything
+  // cleared can be re-added and its purchase stats/suggestions are untouched.
+  async function clearBought() {
+    if (!(await confirm("Fjerne alle handlede varer fra listen?", { title: "Tøm handlede?", confirmLabel: "Tøm" }))) return;
+    const snapshot = items;
+    haptic();
+    setItems((prev) => prev.filter((it) => !it.bought));
+    try {
+      await api("/list/bought", { method: "DELETE" });
+    } catch {
+      setItems(snapshot);
+      toast("Kunne ikke tømme – sjekk nettforbindelsen", { error: true });
+      return;
+    }
+    loadList();
+  }
+
   // A just-checked item stays in its category (struck through, fading) until
   // its resolve timer fires — only then does it move to "Nylig kjøpt".
   const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
@@ -474,13 +498,15 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     if (pinnedIds?.has(it.id)) continue; // pulled into importantDisplayItems instead
     (groups[it.category] = groups[it.category] || []).push(it);
   }
-  // One flat, aisle-sorted list: unbought items ordered by CATEGORIES. Recently
-  // bought items (capped, re-add palette) render as their own section below
-  // instead of being folded into the aisle list — see boughtDisplayItems.
-  // When pinImportant is on, important items are pulled out above into their
-  // own "Viktig" section (see importantDisplayItems) instead of appearing
-  // here too — same "own section, not a duplicate" split as bought items.
-  const displayItems = CATEGORIES.filter((c) => groups[c]).flatMap((c) =>
+  // One flat, aisle-sorted list: unbought items ordered by the list's custom
+  // aisle order (TODO #105, from CategoryOrderContext — falls back to the
+  // canonical CATEGORIES order until loaded). Recently bought items (capped,
+  // re-add palette) render as their own section below instead of being folded
+  // into the aisle list — see boughtDisplayItems. When pinImportant is on,
+  // important items are pulled out above into their own "Viktig" section (see
+  // importantDisplayItems) instead of appearing here too — same "own section,
+  // not a duplicate" split as bought items.
+  const displayItems = categoryOrder.filter((c) => groups[c]).flatMap((c) =>
     groups[c].map((it) => ({ item: it, clusterKey: it.category }))
   );
   const importantDisplayItems = pinImportant
@@ -709,36 +735,67 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <button
-                onClick={toggleBoughtCollapsed}
+              <div
                 style={{
-                  width: "100%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  background: "none",
-                  border: "none",
-                  fontFamily: "var(--font-sans)",
-                  cursor: "pointer",
-                  fontSize: "var(--text-2xs)",
-                  fontWeight: 700,
-                  color: clusterFor("Nylig kjøpt").on,
-                  textTransform: "uppercase",
-                  letterSpacing: "var(--tracking-wide)",
-                  padding: 0,
+                  gap: 12,
                   marginBottom: boughtCollapsed ? 0 : 8,
                 }}
               >
-                <span>Nylig kjøpt</span>
-                <UiIcon
-                  name="chevronDown"
-                  size={14}
+                <button
+                  onClick={toggleBoughtCollapsed}
                   style={{
-                    transition: "transform var(--duration-fast) var(--ease-out)",
-                    transform: boughtCollapsed ? "rotate(-90deg)" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "none",
+                    border: "none",
+                    fontFamily: "var(--font-sans)",
+                    cursor: "pointer",
+                    fontSize: "var(--text-2xs)",
+                    fontWeight: 700,
+                    color: clusterFor("Nylig kjøpt").on,
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--tracking-wide)",
+                    padding: 0,
                   }}
-                />
-              </button>
+                >
+                  <span>Nylig kjøpt</span>
+                  <UiIcon
+                    name="chevronDown"
+                    size={14}
+                    style={{
+                      transition: "transform var(--duration-fast) var(--ease-out)",
+                      transform: boughtCollapsed ? "rotate(-90deg)" : "none",
+                    }}
+                  />
+                </button>
+                {/* End-of-trip sweep (TODO #100) — clears every bought line at
+                    once. Sits next to the section it acts on rather than in the
+                    FAB, so it reads as "clear this list", not a global action. */}
+                <button
+                  onClick={clearBought}
+                  title="Fjern alle handlede varer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    background: "none",
+                    border: "none",
+                    fontFamily: "var(--font-sans)",
+                    cursor: "pointer",
+                    fontSize: "var(--text-2xs)",
+                    fontWeight: "var(--weight-semibold)",
+                    color: "var(--text-tertiary)",
+                    padding: 0,
+                  }}
+                >
+                  <UiIcon name="broom" size={13} />
+                  Tøm handlede
+                </button>
+              </div>
               {/* No onToggleImportant here: a bought item's important flag is
                   always cleared server-side (see toggleItem/worker's /toggle
                   handler), so marking one important here would have nothing

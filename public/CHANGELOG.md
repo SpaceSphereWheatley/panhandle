@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.40.0] — 2026-07-23
+
+### Added
+- **Match the list to your store.** You can now set the order of the item
+  groups (fruit & veg, dairy, household…) to follow your own store's layout,
+  under Innstillinger → Butikk. The shopping list then sorts itself along the
+  route you actually walk, so you're not backtracking across the shop. It's a
+  shared setting for the whole household.
+- **"Tøm handlede" — clear everything you've bought in one tap.** When you're
+  done shopping, a new button on the "Nylig kjøpt" section wipes all the
+  checked-off items at once, instead of removing them one by one. The items
+  themselves are remembered, so they still show up in search and suggestions
+  next time.
+
 ## [1.39.1] — 2026-07-22
 
 ### Fixed

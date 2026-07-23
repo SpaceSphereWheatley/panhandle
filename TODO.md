@@ -18,15 +18,15 @@ Completed items live in `Todo_done.md`, not below.
    #95, #96, #97, #99) are fixed (see `Todo_done.md`); #87, #88, #89, #92,
    #94, #98 remain open.
 2. **Small UI/polish items — low value, low risk, good filler:**
-   - **#100** "Tøm handlede" bulk-clear (end-of-trip sweep)
+   - ~~**#100** "Tøm handlede" bulk-clear (end-of-trip sweep)~~ — DONE (1.40.0,
+     see `Todo_done.md`).
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
    - **#98** catalogue-delete blast-radius wording (from the 2026-07-20 audit)
-3. **Custom aisle/store ordering (#105)** — a real shopping-speed win (reviews
-   consistently rank "match my store's layout" the top efficiency feature);
-   needs a per-list ordering store. Medium value, deferred behind reliability
-   + bugs.
+3. **Custom aisle/store ordering (#105)** — DONE (1.40.0, see `Todo_done.md`).
+   A per-list `category_order` store now lets a household reorder aisles to
+   match their store's layout.
 4. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
@@ -91,12 +91,6 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## Feature
 
-105. Custom store/aisle ordering per list. `CATEGORIES` is a fixed aisle order;
-     letting a household reorder categories to match their actual store would
-     meaningfully speed shopping (reviews repeatedly single this out as the top
-     efficiency feature). Needs a per-list ordering store.
-     _Value: Medium · Importance: Low · Type: Feature / Shopping list_
-
 15. Add language support (i18n). The UI is currently 100% hardcoded
     Norwegian strings across every tab/component/modal — no translation
     layer, no string-key extraction, no language switcher. Needs a
@@ -132,11 +126,6 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## UI / Polish
 
-100. "Tøm handlede" sweep — a single action to clear all bought lines at once
-     (end-of-trip cleanup), instead of re-adding/removing them one at a time
-     from the "Nylig kjøpt" palette.
-     _Value: Medium · Importance: Low · Type: UI / Shopping list_
-
 6. Create a proper viewing window for desktop. Today the layout is
    deliberately mobile-first with a fixed `max-width: 480px` centered
    column at any viewport size (`src/index.css:34`) — a past decision
@@ -160,34 +149,9 @@ that pass for the reasoning). All internal housekeeping — CLAUDE.md/docs only,
 no `VERSION` bump. #1–#3 from the same review are larger and have their own
 implementation plans (not listed here).
 
-110. State "never merge on red CI" explicitly. Cloudflare deploys independently
-     of GH Actions, so a merge with failing lint/unit-tests still redeploys prod
-     (only a Cloudflare *build* failure blocks a deploy). Nothing enforces the
-     "watch CI" step, so make it a hard rule in CLAUDE.md: don't merge on red —
-     it deploys anyway.
-     _Value: Low · Importance: Medium · Type: Dev process / Docs_
-
-111. Document a rollback procedure. Every merge auto-deploys instantly and
-     nothing gates it, but there's no written "how to roll back a bad deploy"
-     (revert-commit + merge for code; the manual reverse SQL for a bad
-     migration; or Cloudflare dashboard rollback). Add a short runbook to
-     CLAUDE.md's Deployment section.
-     _Value: Medium · Importance: Low · Type: Dev process / Docs_
-
-109. Clarify what "wait for checks/review" means in the Workflow conventions.
-     There's no second human reviewer (solo dev + Claude), so "review feedback"
-     is really the Cloudflare deploy-preview bot and (when requested) Copilot —
-     the current wording reads as if human review gates the merge, making it a
-     step that's silently skipped or waited on indefinitely. Reword to name the
-     actual signals (deploy-preview click-through + optional Copilot).
-     _Value: Low · Importance: Low · Type: Dev process / Docs_
-
-112. Guard against `d1_migrations` drift. The tracking row is hand-inserted via
-     MCP, so nothing verifies applied rows match the `migrations/` files (a
-     filename typo or forgotten INSERT goes unnoticed). Add a reconcile step
-     (e.g. `SELECT name FROM d1_migrations` vs. the folder) to the migration
-     runbook, run after applying.
-     _Value: Low · Importance: Low · Type: Dev process / Docs_
+~~#109 (clarify "wait for checks/review"), #110 (never merge on red CI), #111
+(rollback runbook), #112 (`d1_migrations` drift reconcile)~~ — all DONE, see
+`Todo_done.md` and CLAUDE.md's Workflow conventions / Deployment sections.
 
 ## Ideas (unvetted)
 

@@ -1,11 +1,47 @@
 # Done
 
-Completed TODO items, numbered 1 (oldest) to 94 (most recent) — these are a
+Completed TODO items, numbered 1 (oldest) to 100 (most recent) — these are a
 separate, sequential log distinct from the open-item IDs in `TODO.md` (a
 parenthetical like "(9)" inside an entry below instead refers to that entry
 having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
+
+100. (105) Custom per-list aisle order — "match my store's layout". Added the
+     `category_order` table (`migrations/0017_category_order.sql`, one row per
+     `list_id`+`category` with a `position`) and `GET`/`POST /category-order`
+     (any-list-member, same level as `/recurring`), plus `normalizeCategoryOrder`
+     in `shared/categories.js` (unit-tested) which resolves any partial/stale/
+     malformed stored order to a complete valid permutation. Frontend:
+     `CategoryOrderContext` feeds the order into `ShoppingListTab`'s grouping,
+     and the new Settings → "Butikk" subpage (`ButikkSubpage.jsx`) is an up/down
+     reorder editor. Cleaned up in the two list-deletion cascades. (1.40.0)
+
+99. (100) "Tøm handlede" end-of-trip sweep — `DELETE /list/bought` clears every
+    bought `list_items` row for the list at once, surfaced as a button on the
+    "Nylig kjøpt" section (confirmed first; online-only). Only touches
+    `list_items`, so the catalogue rows and their durable purchase stats
+    survive and suggestions/re-adding are unaffected. (1.40.0)
+
+98. (109) Clarified what "wait for checks/review" means in CLAUDE.md's Workflow
+    conventions: there's no second human reviewer (solo dev + Claude), so the
+    real pre-merge signals are CI, the deploy-preview click-through, and — only
+    when asked — a Copilot review, not a human approval gate. Docs-only. (no
+    version bump)
+
+97. (110) Made "never merge on red CI" an explicit hard rule in CLAUDE.md.
+    Cloudflare deploys on push independently of GH Actions, so a merge with
+    red lint/tests still redeploys prod; the Workflow conventions now say to
+    treat red CI as a stop, not "merge anyway." Docs-only. (no version bump)
+
+96. (111) Added a rollback runbook to CLAUDE.md's Deployment section, covering
+    the three cases (code revert + redeploy or Cloudflare dashboard rollback;
+    a reverse migration for schema; both together). Docs-only. (no version bump)
+
+95. (112) Hardened the migration runbook against `d1_migrations` drift: step 4
+    is now an explicit "run every time" reconcile of `SELECT name FROM
+    d1_migrations` against the `migrations/` folder, since the hand-inserted
+    tracking row has no other guard. Docs-only. (no version bump)
 
 94. (99) Removed stale code: `PushContext` exposed `permission` and `loading`
     in its context value but nothing consumed them (`VarslerSubpage`/

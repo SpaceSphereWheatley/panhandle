@@ -11,7 +11,7 @@ import {
   isSuperAdmin, escapeHtml, COMMON_ITEMS,
   osloLocalDateParts, isReminderDue, addDaysIso,
 } from "../worker/index.js";
-import { CATEGORIES } from "../shared/categories.js";
+import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
 describe("b64url / b64urlStr / b64urlDecode", () => {
   test("roundtrips a UTF-8 string through b64urlStr/b64urlDecode", () => {
@@ -381,5 +381,38 @@ describe("COMMON_ITEMS (new-list catalogue seed)", () => {
       seen.add(key);
     }
     assert.deepEqual(dupes, []);
+  });
+});
+
+describe("normalizeCategoryOrder", () => {
+  test("empty/invalid input returns the canonical CATEGORIES order", () => {
+    assert.deepEqual(normalizeCategoryOrder([]), CATEGORIES);
+    assert.deepEqual(normalizeCategoryOrder(null), CATEGORIES);
+    assert.deepEqual(normalizeCategoryOrder(undefined), CATEGORIES);
+    assert.deepEqual(normalizeCategoryOrder("nope"), CATEGORIES);
+  });
+
+  test("preserves a full custom ordering as-is", () => {
+    const custom = [...CATEGORIES].reverse();
+    assert.deepEqual(normalizeCategoryOrder(custom), custom);
+  });
+
+  test("appends any not-yet-placed categories in canonical order", () => {
+    const partial = ["Drikkevarer", "Meieriprodukter"];
+    const result = normalizeCategoryOrder(partial);
+    assert.deepEqual(result.slice(0, 2), partial);
+    // The rest are the remaining CATEGORIES, in their canonical order.
+    const rest = CATEGORIES.filter((c) => !partial.includes(c));
+    assert.deepEqual(result.slice(2), rest);
+    // And it's still a complete, one-of-each permutation.
+    assert.deepEqual([...result].sort(), [...CATEGORIES].sort());
+  });
+
+  test("drops unknown names and de-duplicates", () => {
+    const messy = ["Drikkevarer", "Drikkevarer", "Ikke en kategori", "Husholdning"];
+    const result = normalizeCategoryOrder(messy);
+    assert.deepEqual(result.slice(0, 2), ["Drikkevarer", "Husholdning"]);
+    assert.equal(result.length, CATEGORIES.length);
+    assert.deepEqual([...result].sort(), [...CATEGORIES].sort());
   });
 });

@@ -94,6 +94,12 @@ export function SettingsRoot({ onNavigate }) {
           supportingText={`${listUsers.length} / 10 medlemmer`}
           onClick={() => onNavigate(["hjem"])}
         />
+        <SettingsRow
+          icon="storefront"
+          label="Butikk"
+          supportingText="Rekkefølge på varegrupper"
+          onClick={() => onNavigate(["butikk"])}
+        />
         {isAdmin && (
           <SettingsRow
             icon="shield-check"
