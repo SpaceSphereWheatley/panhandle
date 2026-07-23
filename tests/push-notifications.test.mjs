@@ -87,54 +87,82 @@ async function runHttpTests(BASE) {
   console.log("  - unsubscribe is idempotent");
 
   // ---- GET /notification-settings returns app-level defaults when unset ----
+  // notification-settings now holds only the per-list stale_item_days; the
+  // meal/weekly reminder preferences moved to per-device /push/reminder-settings.
   const defaultsRes = await fetch(`${BASE}/notification-settings`, { headers: authA });
   assert.equal(defaultsRes.status, 200);
   const defaults = await defaultsRes.json();
-  assert.deepEqual(defaults, {
-    meal_reminder_enabled: true, meal_reminder_time: "18:00",
-    weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
-    stale_item_days: 7,
-  }, "a list with no notification_settings row should see the app-level defaults");
+  assert.deepEqual(defaults, { stale_item_days: 7 }, "a list with no notification_settings row should see the stale-item default");
 
-  // ---- POST /notification-settings validates HH:mm in 15-min increments (both reminder times) ----
-  const invalidMealTimeRes = await fetch(`${BASE}/notification-settings`, {
-    method: "POST", headers: authA,
-    body: JSON.stringify({ meal_reminder_enabled: true, meal_reminder_time: "18:07", weekly_reminder_enabled: true, weekly_reminder_time: "18:00" }),
+  // ---- POST /notification-settings validates and persists stale_item_days ----
+  const invalidDaysRes = await fetch(`${BASE}/notification-settings`, {
+    method: "POST", headers: authA, body: JSON.stringify({ stale_item_days: 0 }),
   });
-  assert.equal(invalidMealTimeRes.status, 400, "a non-15-minute meal_reminder_time should be rejected");
+  assert.equal(invalidDaysRes.status, 400, "an out-of-range stale_item_days should be rejected");
 
-  const invalidWeeklyTimeRes = await fetch(`${BASE}/notification-settings`, {
-    method: "POST", headers: authA,
-    body: JSON.stringify({ meal_reminder_enabled: true, meal_reminder_time: "18:00", weekly_reminder_enabled: true, weekly_reminder_time: "18:07" }),
-  });
-  assert.equal(invalidWeeklyTimeRes.status, 400, "a non-15-minute weekly_reminder_time should be rejected");
-
-  // ---- POST /notification-settings persists and is readable via GET ----
   const saveRes = await fetch(`${BASE}/notification-settings`, {
-    method: "POST", headers: authA,
-    body: JSON.stringify({
-      meal_reminder_enabled: false, meal_reminder_time: "07:30",
-      weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
-      stale_item_days: 3,
-    }),
+    method: "POST", headers: authA, body: JSON.stringify({ stale_item_days: 3 }),
   });
   assert.equal(saveRes.status, 200);
   const savedRes = await fetch(`${BASE}/notification-settings`, { headers: authA });
-  assert.deepEqual(await savedRes.json(), {
-    meal_reminder_enabled: false, meal_reminder_time: "07:30",
-    weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
-    stale_item_days: 3,
-  });
+  assert.deepEqual(await savedRes.json(), { stale_item_days: 3 });
 
   // ---- notification-settings is list-scoped, not global ----
   const otherListRes = await fetch(`${BASE}/notification-settings`, { headers: authB });
-  assert.deepEqual(await otherListRes.json(), {
+  assert.deepEqual(await otherListRes.json(), { stale_item_days: 7 }, "another list's settings must be unaffected");
+
+  console.log("  - notification-settings (stale_item_days) defaults, validation, persistence, and list-scoping all check out");
+
+  // ---- per-device reminder settings (/push/reminder-settings) ----
+  const deviceEndpoint = `https://push.test/device-${RUN_ID}`;
+  // GET before subscribing returns app-level defaults (no device row yet).
+  const preSubRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authA });
+  assert.deepEqual(await preSubRes.json(), {
     meal_reminder_enabled: true, meal_reminder_time: "18:00",
     weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
-    stale_item_days: 7,
-  }, "another list's settings must be unaffected");
+  }, "an unsubscribed device sees the reminder defaults");
 
-  console.log("  - notification-settings defaults, validation, persistence, and list-scoping all check out");
+  // POST to an endpoint with no subscription row is a 404 (nothing to update).
+  const noRowRes = await fetch(`${BASE}/push/reminder-settings`, {
+    method: "POST", headers: authA,
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: true, weekly_reminder_time: "18:00" }),
+  });
+  assert.equal(noRowRes.status, 404, "saving reminder settings for an unsubscribed device should 404");
+
+  // Subscribe this device, then its reminder settings become writable.
+  assert.equal((await subscribeAs(authA, deviceEndpoint)).status, 200);
+
+  const badTimeRes = await fetch(`${BASE}/push/reminder-settings`, {
+    method: "POST", headers: authA,
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "18:07", weekly_reminder_enabled: true, weekly_reminder_time: "18:00" }),
+  });
+  assert.equal(badTimeRes.status, 400, "a non-15-minute reminder time should be rejected");
+
+  const saveDeviceRes = await fetch(`${BASE}/push/reminder-settings`, {
+    method: "POST", headers: authA,
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: false, weekly_reminder_time: "09:15" }),
+  });
+  assert.equal(saveDeviceRes.status, 200);
+  const readDeviceRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authA });
+  assert.deepEqual(await readDeviceRes.json(), {
+    meal_reminder_enabled: false, meal_reminder_time: "07:30",
+    weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
+  }, "a device's saved reminder settings are readable back");
+
+  // A different list can't see or touch this device's settings (scoped to the
+  // caller's own list) — a stray endpoint reads back as defaults.
+  const crossListRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authB });
+  assert.deepEqual(await crossListRes.json(), {
+    meal_reminder_enabled: true, meal_reminder_time: "18:00",
+    weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
+  }, "another list must not see this device's reminder settings");
+  const crossListSaveRes = await fetch(`${BASE}/push/reminder-settings`, {
+    method: "POST", headers: authB,
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "06:00", weekly_reminder_enabled: true, weekly_reminder_time: "06:00" }),
+  });
+  assert.equal(crossListSaveRes.status, 404, "another list must not be able to update this device's settings");
+
+  console.log("  - per-device reminder settings default, validate, persist, and are list-scoped");
 
   // ---- POST /push/ping ----
   const noAuthPingRes = await fetch(`${BASE}/push/ping`, { method: "POST" });
@@ -180,10 +208,11 @@ async function genSubscriberKeys() {
 // engine, just enough to exercise the real control flow deterministically.
 function makeFakeDB(initial) {
   const state = {
-    notificationSettings: initial.notificationSettings ?? [],
     mealPlans: initial.mealPlans ?? [],
     pushSubscriptions: initial.pushSubscriptions ?? [],
-    notificationLog: [],
+    // Per-device dedup guard (replaces the old per-list notification_log for
+    // reminders — see migrations/0019). Rows: { endpoint, type, target_date }.
+    notificationDeviceLog: [],
   };
 
   function prepare(sql) {
@@ -197,7 +226,6 @@ function makeFakeDB(initial) {
   }
 
   function select(sql, binds) {
-    if (sql.includes("FROM notification_settings")) return state.notificationSettings;
     if (sql.includes("FROM meal_plan")) {
       const [list_id, a, b] = binds;
       if (sql.includes("BETWEEN")) {
@@ -209,6 +237,14 @@ function makeFakeDB(initial) {
       return state.mealPlans.filter((r) => r.list_id === list_id && r.plan_date === a);
     }
     if (sql.includes("FROM push_subscriptions")) {
+      // Reminder checks filter by the per-device enabled flag; sendPushToList
+      // filters by list_id. Distinguish on the WHERE clause.
+      if (sql.includes("WHERE meal_reminder_enabled = 1")) {
+        return state.pushSubscriptions.filter((r) => r.meal_reminder_enabled === 1);
+      }
+      if (sql.includes("WHERE weekly_reminder_enabled = 1")) {
+        return state.pushSubscriptions.filter((r) => r.weekly_reminder_enabled === 1);
+      }
       const [list_id] = binds;
       return state.pushSubscriptions.filter((r) => r.list_id === list_id);
     }
@@ -216,16 +252,16 @@ function makeFakeDB(initial) {
   }
 
   function exec(sql, binds) {
-    if (sql.includes("INSERT OR IGNORE INTO notification_log")) {
+    if (sql.includes("INSERT OR IGNORE INTO notification_device_log")) {
       // `type` is a literal in the SQL text ('meal_reminder'/'weekly_reminder'),
       // not a bind param — extract it so this fake respects the real
-      // UNIQUE(list_id, type, target_date) constraint, not just (list_id, target_date).
-      const [list_id, target_date] = binds;
+      // UNIQUE(endpoint, type, target_date) constraint.
+      const [endpoint, , target_date] = binds; // (endpoint, list_id, target_date)
       const type = sql.match(/'([a-z_]+)'/)?.[1] ?? null;
-      if (state.notificationLog.some((r) => r.list_id === list_id && r.type === type && r.target_date === target_date)) {
+      if (state.notificationDeviceLog.some((r) => r.endpoint === endpoint && r.type === type && r.target_date === target_date)) {
         return { meta: { changes: 0 } };
       }
-      state.notificationLog.push({ list_id, type, target_date });
+      state.notificationDeviceLog.push({ endpoint, type, target_date });
       return { meta: { changes: 1 } };
     }
     if (sql.includes("DELETE FROM push_subscriptions WHERE endpoint")) {
@@ -274,21 +310,27 @@ async function runNotificationPassTests() {
   const DUE_TIME = "18:00";
   const TOMORROW = "2026-07-16";
 
+  // Build a push subscription with per-device reminder fields. Reminders are
+  // now stored on the subscription itself (device-only), so these fixtures
+  // carry the enabled/time the checks read directly.
+  const makeSub = async (overrides) => ({
+    ...(await genSubscriberKeys()),
+    meal_reminder_enabled: 1, meal_reminder_time: "23:45",
+    weekly_reminder_enabled: 1, weekly_reminder_time: "23:45",
+    ...overrides,
+  });
+
   // ---- scenario A: due, unplanned, one subscription -> sends once, dedups on a second pass ----
   {
-    const sub = { endpoint: "https://push.test/list-1-device", ...(await genSubscriberKeys()), list_id: 1, username: "a1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 1, meal_reminder_time: DUE_TIME }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-1-device", list_id: 1, username: "a1", meal_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
-    globalThis.fetch = async (...args) => { fetchCalls++; return new Response(null, { status: 201 }); };
+    globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
-      assert.equal(fetchCalls, 1, "a due, unplanned list with one subscription should send exactly one push");
-      assert.deepEqual(state.notificationLog, [{ list_id: 1, type: "meal_reminder", target_date: TOMORROW }]);
+      assert.equal(fetchCalls, 1, "a due, unplanned device should send exactly one push");
+      assert.deepEqual(state.notificationDeviceLog, [{ endpoint: sub.endpoint, type: "meal_reminder", target_date: TOMORROW }]);
 
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
       assert.equal(fetchCalls, 1, "a second pass at the same time must not double-send (dedup)");
@@ -296,23 +338,54 @@ async function runNotificationPassTests() {
       globalThis.fetch = origFetch;
     }
   }
-  console.log("  - due + unplanned list sends once and dedups a repeat pass (meal reminder)");
+  console.log("  - due + unplanned device sends once and dedups a repeat pass (meal reminder)");
+
+  // ---- scenario A2: two devices on the same list -> each gets its own push (not just one) ----
+  {
+    const sub1 = await makeSub({ endpoint: "https://push.test/list-1b-d1", list_id: 11, username: "x1", meal_reminder_time: DUE_TIME });
+    const sub2 = await makeSub({ endpoint: "https://push.test/list-1b-d2", list_id: 11, username: "x2", meal_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub1, sub2] });
+    let fetchCalls = 0;
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
+    try {
+      await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
+      assert.equal(fetchCalls, 2, "two devices on the same list should each get their own reminder");
+      assert.equal(state.notificationDeviceLog.length, 2, "each device gets its own dedup row");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+  console.log("  - two devices on a list are each notified (per-device, not per-list) (meal reminder)");
+
+  // ---- scenario A3: a device with meal_reminder disabled is skipped, its listmate isn't ----
+  {
+    const on = await makeSub({ endpoint: "https://push.test/list-1c-on", list_id: 12, username: "y1", meal_reminder_time: DUE_TIME });
+    const off = await makeSub({ endpoint: "https://push.test/list-1c-off", list_id: 12, username: "y2", meal_reminder_enabled: 0, meal_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [on, off] });
+    let calledEndpoints = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (endpoint) => { calledEndpoints.push(endpoint); return new Response(null, { status: 201 }); };
+    try {
+      await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
+      assert.deepEqual(calledEndpoints, [on.endpoint], "only the device with the reminder enabled should be notified");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+  console.log("  - one member disabling their own reminder doesn't silence a listmate (device-only)");
 
   // ---- scenario B: due but already planned -> no send ----
   {
-    const sub = { endpoint: "https://push.test/list-2-device", ...(await genSubscriberKeys()), list_id: 2, username: "b1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 2, meal_reminder_time: DUE_TIME }],
-      mealPlans: [{ list_id: 2, plan_date: TOMORROW, meal_id: 42 }],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-2-device", list_id: 2, username: "b1", meal_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [{ list_id: 2, plan_date: TOMORROW, meal_id: 42 }], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
       assert.equal(fetchCalls, 0, "a list with tomorrow already planned should not receive a reminder");
-      assert.deepEqual(state.notificationLog, []);
+      assert.deepEqual(state.notificationDeviceLog, []);
     } finally {
       globalThis.fetch = origFetch;
     }
@@ -321,33 +394,25 @@ async function runNotificationPassTests() {
 
   // ---- scenario C: not due (wrong configured time) -> no send ----
   {
-    const sub = { endpoint: "https://push.test/list-3-device", ...(await genSubscriberKeys()), list_id: 3, username: "c1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 3, meal_reminder_time: "09:00" }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-3-device", list_id: 3, username: "c1", meal_reminder_time: "09:00" });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
-      assert.equal(fetchCalls, 0, "a list whose configured reminder time doesn't match now should not fire");
-      assert.deepEqual(state.notificationLog, []);
+      assert.equal(fetchCalls, 0, "a device whose configured reminder time doesn't match now should not fire");
+      assert.deepEqual(state.notificationDeviceLog, []);
     } finally {
       globalThis.fetch = origFetch;
     }
   }
-  console.log("  - list not due at the current local time is skipped (meal reminder)");
+  console.log("  - device not due at the current local time is skipped (meal reminder)");
 
   // ---- scenario D: push service reports the subscription is gone (410) -> row is cleaned up ----
   {
-    const sub = { endpoint: "https://push.test/list-4-device", ...(await genSubscriberKeys()), list_id: 4, username: "d1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 4, meal_reminder_time: DUE_TIME }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-4-device", list_id: 4, username: "d1", meal_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(null, { status: 410 });
     try {
@@ -369,19 +434,15 @@ async function runNotificationPassTests() {
 
   // ---- scenario E: due, week completely unplanned -> sends once, dedups on a repeat pass ----
   {
-    const sub = { endpoint: "https://push.test/list-5-device", ...(await genSubscriberKeys()), list_id: 5, username: "e1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 5, meal_reminder_time: "23:45", weekly_reminder_time: DUE_TIME }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-5-device", list_id: 5, username: "e1", weekly_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
       await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
-      assert.equal(fetchCalls, 1, "a due list with a completely unplanned upcoming week should send exactly one push");
-      assert.deepEqual(state.notificationLog, [{ list_id: 5, type: "weekly_reminder", target_date: WEEK_START }]);
+      assert.equal(fetchCalls, 1, "a due device with a completely unplanned upcoming week should send exactly one push");
+      assert.deepEqual(state.notificationDeviceLog, [{ endpoint: sub.endpoint, type: "weekly_reminder", target_date: WEEK_START }]);
 
       await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
       assert.equal(fetchCalls, 1, "a second pass at the same time must not double-send (dedup)");
@@ -393,19 +454,15 @@ async function runNotificationPassTests() {
 
   // ---- scenario F: due but the week already has at least one planned meal -> no send ----
   {
-    const sub = { endpoint: "https://push.test/list-6-device", ...(await genSubscriberKeys()), list_id: 6, username: "f1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 6, meal_reminder_time: "23:45", weekly_reminder_time: DUE_TIME }],
-      mealPlans: [{ list_id: 6, plan_date: WEEK_START, meal_id: 7 }],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-6-device", list_id: 6, username: "f1", weekly_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [{ list_id: 6, plan_date: WEEK_START, meal_id: 7 }], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
       await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
       assert.equal(fetchCalls, 0, "a week with at least one planned meal should not receive the weekly reminder");
-      assert.deepEqual(state.notificationLog, []);
+      assert.deepEqual(state.notificationDeviceLog, []);
     } finally {
       globalThis.fetch = origFetch;
     }
@@ -414,12 +471,8 @@ async function runNotificationPassTests() {
 
   // ---- scenario G: not Sunday -> no send, regardless of configured time ----
   {
-    const sub = { endpoint: "https://push.test/list-7-device", ...(await genSubscriberKeys()), list_id: 7, username: "g1" };
-    const { db, state } = makeFakeDB({
-      notificationSettings: [{ list_id: 7, meal_reminder_time: "23:45", weekly_reminder_time: DUE_TIME }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    const sub = await makeSub({ endpoint: "https://push.test/list-7-device", list_id: 7, username: "g1", weekly_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
@@ -427,23 +480,20 @@ async function runNotificationPassTests() {
       // NOW_MS (from the meal-reminder scenarios) is a Wednesday.
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
       assert.equal(fetchCalls, 0, "the weekly reminder should never fire on a non-Sunday");
-      assert.deepEqual(state.notificationLog, []);
+      assert.deepEqual(state.notificationDeviceLog, []);
     } finally {
       globalThis.fetch = origFetch;
     }
   }
   console.log("  - weekly reminder never fires on a non-Sunday");
 
-  // ---- scenario H: Sunday, both reminders due, week + tomorrow unplanned ->
-  // only the weekly one fires; the daily meal reminder is suppressed (#91) ----
+  // ---- scenario H: Sunday, both reminders due on the same device, week +
+  // tomorrow unplanned -> only the weekly one fires; the daily meal reminder
+  // is suppressed for that device (#91) ----
   {
-    const sub = { endpoint: "https://push.test/list-8-device", ...(await genSubscriberKeys()), list_id: 8, username: "h1" };
-    const { db, state } = makeFakeDB({
-      // Both reminder times land on this same 18:00-Oslo tick.
-      notificationSettings: [{ list_id: 8, meal_reminder_time: DUE_TIME, weekly_reminder_time: DUE_TIME }],
-      mealPlans: [],
-      pushSubscriptions: [sub],
-    });
+    // Both reminder times land on this same 18:00-Oslo tick.
+    const sub = await makeSub({ endpoint: "https://push.test/list-8-device", list_id: 8, username: "h1", meal_reminder_time: DUE_TIME, weekly_reminder_time: DUE_TIME });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
     let fetchCalls = 0;
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
@@ -451,8 +501,8 @@ async function runNotificationPassTests() {
       await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
       assert.equal(fetchCalls, 1, "a fully-unplanned Sunday must send exactly one push, not two back-to-back");
       // Only the weekly reminder was logged — the daily meal reminder was
-      // suppressed for this list on this tick, not merely deduped.
-      assert.deepEqual(state.notificationLog, [{ list_id: 8, type: "weekly_reminder", target_date: WEEK_START }]);
+      // suppressed for this device on this tick, not merely deduped.
+      assert.deepEqual(state.notificationDeviceLog, [{ endpoint: sub.endpoint, type: "weekly_reminder", target_date: WEEK_START }]);
     } finally {
       globalThis.fetch = origFetch;
     }
