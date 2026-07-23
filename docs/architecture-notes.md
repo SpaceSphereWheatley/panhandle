@@ -25,6 +25,7 @@ The Vite entry is named `app.html` (not `index.html`) specifically so it builds 
 - `0015_stale_item_marker.sql` adds `notification_settings.stale_item_days` — the per-list threshold for the shopping list's client-side "stale item" marker.
 - `0016_important_item_marker.sql` adds `list_items.important` — the per-line, this-trip importance flag toggled from the item card.
 - `0017_category_order.sql` adds the `category_order` table (one row per `list_id`+`category`, with a `position`) — the per-list custom aisle order (TODO #105). Additive/expand-only; a list with no rows falls back to the canonical `CATEGORIES` order via `normalizeCategoryOrder` (see Categories and people in `CLAUDE.md`).
+- `0018_catalogue_sync_state.sql` adds `catalogue_sync_state`, a single-row table backing the cron-driven `checkCatalogueSync` (see Catalogue sync in `CLAUDE.md`), which replaced `0002`/`0003`'s pattern of a hand-written one-off migration every time a common item was added — new items now only need adding to `COMMON_ITEMS` and a deploy.
 
 ## Auth: extra detail
 
