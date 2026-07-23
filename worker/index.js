@@ -10,7 +10,7 @@
 //       (each gets its own list); owners add members to their own list.
 
 import { VERSION } from "../shared/version.js";
-import { CATEGORIES } from "../shared/categories.js";
+import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 import { buildPushHTTPRequest } from "@pushforge/builder";
 
 // Deployed Worker (API) version, imported from shared/version.js so it can't
@@ -1744,6 +1744,7 @@ export default {
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(user.list_id),
             // list_presence references lists(id) without ON DELETE CASCADE, so
             // it must be cleared before the DELETE FROM lists below or that
             // final statement hits a FK violation and aborts the whole batch
@@ -1981,6 +1982,7 @@ export default {
             env.DB.prepare("DELETE FROM push_subscriptions WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
             // aborts on a FK violation.
@@ -2227,6 +2229,18 @@ export default {
       return authedJson({ ok: true, qty: addQty, id: inserted.meta.last_row_id });
     }
 
+    // End-of-trip sweep (TODO #100): drop every bought line at once instead of
+    // clearing them one at a time from the "Nylig kjøpt" palette. Only touches
+    // list_items — the item_catalogue rows (and their durable purchase stats)
+    // stay, so suggestions and re-adding are unaffected. Placed before the
+    // /list/:id regex handlers below, though "bought" wouldn't match \d+ anyway.
+    if (path === "/list/bought" && method === "DELETE") {
+      const res = await env.DB.prepare(
+        "DELETE FROM list_items WHERE list_id = ?1 AND bought = 1"
+      ).bind(user.list_id).run();
+      return authedJson({ ok: true, cleared: res.meta?.changes ?? 0 });
+    }
+
     const patchMatch = path.match(/^\/list\/(\d+)$/);
     if (patchMatch && method === "PATCH") {
       const body = await readJson(request);
@@ -2343,6 +2357,36 @@ export default {
         LIMIT 8
       `).bind(user.list_id).all();
       return authedJson(results);
+    }
+
+    // Per-list custom aisle order (TODO #105) — a shared household setting,
+    // same permission level as /recurring (any list member, not owner-gated),
+    // since it's the household's store layout, not a per-device preference.
+    // GET always returns a complete, valid ordering: stored positions merged
+    // with any not-yet-placed categories (normalizeCategoryOrder), so a list
+    // that never customised falls back to the canonical CATEGORIES order.
+    if (path === "/category-order" && method === "GET") {
+      const { results } = await env.DB.prepare(
+        "SELECT category FROM category_order WHERE list_id = ?1 ORDER BY position ASC"
+      ).bind(user.list_id).all();
+      return authedJson({ order: normalizeCategoryOrder(results.map((r) => r.category)) });
+    }
+
+    if (path === "/category-order" && method === "POST") {
+      const body = await readJson(request);
+      if (!body || !Array.isArray(body.order)) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      // Normalise before storing so the row set is always a full, valid,
+      // duplicate-free ordering regardless of what the client sent.
+      const order = normalizeCategoryOrder(body.order);
+      const stmts = [env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(user.list_id)];
+      order.forEach((cat, i) => {
+        stmts.push(
+          env.DB.prepare("INSERT INTO category_order (list_id, category, position) VALUES (?1, ?2, ?3)")
+            .bind(user.list_id, cat, i)
+        );
+      });
+      await env.DB.batch(stmts);
+      return authedJson({ ok: true, order });
     }
 
     // ===== MEALS =====

@@ -22,6 +22,9 @@ The Vite entry is named `app.html` (not `index.html`) specifically so it builds 
 - `0011_user_display_name.sql` adds `users.name` (a display name, separate from username/e-mail).
 - `0012_push_notifications.sql` adds `push_subscriptions`, `notification_settings`, and `notification_log` (see Push notifications in `CLAUDE.md`).
 - `0014_notification_phase2.sql` adds `notification_settings.weekly_reminder_enabled`/`weekly_reminder_time` and the `notification_state` table (see Push notifications in `CLAUDE.md`).
+- `0015_stale_item_marker.sql` adds `notification_settings.stale_item_days` — the per-list threshold for the shopping list's client-side "stale item" marker.
+- `0016_important_item_marker.sql` adds `list_items.important` — the per-line, this-trip importance flag toggled from the item card.
+- `0017_category_order.sql` adds the `category_order` table (one row per `list_id`+`category`, with a `position`) — the per-list custom aisle order (TODO #105). Additive/expand-only; a list with no rows falls back to the canonical `CATEGORIES` order via `normalizeCategoryOrder` (see Categories and people in `CLAUDE.md`).
 
 ## Auth: extra detail
 

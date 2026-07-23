@@ -5,6 +5,7 @@ import { ToastProvider } from "./context/ToastContext.jsx";
 import { ConfirmProvider } from "./context/ConfirmContext.jsx";
 import { ListUsersProvider } from "./context/ListUsersContext.jsx";
 import { RecurringProvider } from "./context/RecurringContext.jsx";
+import { CategoryOrderProvider } from "./context/CategoryOrderContext.jsx";
 import { PushProvider } from "./context/PushContext.jsx";
 import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
 import { AuthScreens } from "./components/AuthScreens.jsx";
@@ -33,9 +34,11 @@ function Root() {
   return (
     <ListUsersProvider>
       <RecurringProvider>
-        <PushProvider>
-          <AppShell />
-        </PushProvider>
+        <CategoryOrderProvider>
+          <PushProvider>
+            <AppShell />
+          </PushProvider>
+        </CategoryOrderProvider>
       </RecurringProvider>
     </ListUsersProvider>
   );
