@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.42.1] — 2026-07-23
+
+### Fixed
+- **"Hva er nytt" text is left-aligned again from Settings.** Opening the
+  changelog from Settings' "Hva er nytt?" link centered the version headings
+  and bullet text (while the bullet markers themselves stayed put on the
+  left), because the dialog inherited centered text from the footer it was
+  triggered from. All dialogs now always render left-aligned text regardless
+  of where they're opened from.
+
 ## [1.42.0] — 2026-07-23
 
 ### Changed
