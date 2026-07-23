@@ -89,7 +89,8 @@ export function AppShell() {
   // Nav stack for the Settings tab only (e.g. [], ["konto"],
   // ["admin","statistikk"]) — lives here rather than in SettingsTab so it
   // shares the one history/popstate mechanism below instead of a second one.
-  // Not reset on tab switch, so returning to Settings resumes where you left off.
+  // Not reset on tab switch, so returning to Settings resumes where you left off
+  // — see pushNav below for how that stays compatible with back navigation.
   const [settingsPath, setSettingsPath] = useState([]);
   const toast = useToast();
   const applyingPopRef = useRef(false);
@@ -132,10 +133,12 @@ export function AppShell() {
 
   useDeployVersionCheck({ toast, onOpenChangelog: () => setShowChangelog(true) });
 
-  // Tab switches (and Settings subpage navigations) each push a history
-  // entry so the hardware/browser back button steps through them instead of
-  // exiting the installed PWA outright — there's no other history to fall
-  // back to. (Modals don't participate in this yet — see CLAUDE.md/PR notes.)
+  // Settings subpage navigations push a history entry so the hardware/browser
+  // back button (and the subpage Header's back arrow) can step back out of
+  // them. Plain tab switches deliberately do NOT push — see pushNav below —
+  // so back navigation from inside a subpage always lands on Settings root
+  // (or one level shallower) no matter how many other tabs were visited in
+  // between. (Modals don't participate in this yet — see CLAUDE.md/PR notes.)
   useEffect(() => {
     history.replaceState({ tab: "list", settingsPath: [] }, "");
     function onPopState(e) {
@@ -150,9 +153,17 @@ export function AppShell() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // Replaces (not pushes) the current history entry for a plain tab switch.
+  // settingsPath is sticky and carried along for the "resume where you left
+  // off" behavior, but since this replaces rather than pushes, a chain of tab
+  // hops never grows the stack — it just keeps overwriting the same
+  // top-of-stack frame. That keeps the invariant pushSettingsPath below
+  // relies on: whenever settingsPath is non-empty, the entry directly below
+  // it on the real stack is always the state that was current at the moment
+  // the user drilled in, regardless of any tab hops since.
   function pushNav(nextTab) {
     if (applyingPopRef.current) return;
-    history.pushState({ tab: nextTab, settingsPath }, "");
+    history.replaceState({ tab: nextTab, settingsPath }, "");
   }
 
   // Pushes a new Settings subpage (e.g. ["konto"], ["admin","statistikk"]).
@@ -174,7 +185,16 @@ export function AppShell() {
   }
 
   function switchTab(t) {
-    if (t === tab) return;
+    if (t === tab) {
+      // Tapping the already-active Settings tab icon while inside a subpage
+      // is a direct escape hatch back to the Settings root list, matching
+      // common bottom-nav convention (tap the current tab again → its root).
+      if (t === "settings" && settingsPath.length > 0) {
+        setSettingsPath([]);
+        history.replaceState({ tab: "settings", settingsPath: [] }, "");
+      }
+      return;
+    }
     haptic();
     setTab(t);
     setVisited((prev) => (prev[t] ? prev : { ...prev, [t]: true }));

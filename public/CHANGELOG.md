@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.41.1] — 2026-07-23
+
+### Fixed
+- **Settings no longer strands you on the wrong tab.** Drilling into a Settings
+  sub-page (like Butikkoppsett or Varsler) and then switching to another tab
+  before coming back could break the back button — tapping it, or the browser's
+  back gesture, would dump you on an unrelated tab instead of the Settings list.
+  Back navigation now always returns you to the Settings list correctly.
+  Tapping the Innstillinger tab icon again while inside a sub-page also now
+  jumps straight back to the Settings list.
+
 ## [1.41.0] — 2026-07-23
 
 ### Added
