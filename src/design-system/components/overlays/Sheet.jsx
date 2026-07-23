@@ -82,6 +82,12 @@ export function Sheet({ open = true, onClose, title, children, className }) {
             overflowY: 'auto',
             padding: '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
             animation: 'ph-sheet-in var(--spring-duration) var(--ease-spring)',
+            // Sheets can be triggered from anywhere in the tree (e.g. a
+            // centered footer) — position: fixed detaches the sheet
+            // visually but not from CSS inheritance, so without this a
+            // sheet's text silently inherits whatever text-align the
+            // trigger's ancestors happen to have set.
+            textAlign: 'left',
           }}
         >
           <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />
