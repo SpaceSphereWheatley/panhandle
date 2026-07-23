@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.41.0] — 2026-07-23
+
+### Added
+- **Arrow-key navigation for add-item suggestions.** When you type in the
+  "Legg til vare" box, you can now press ↑/↓ to move a highlight down the
+  suggestion list and hit Enter to add whichever one is highlighted, instead
+  of having to reach for the mouse or type the name out exactly.
+- **Drag-to-reorder store categories.** You can now drag the shopping-list
+  categories into place instead of only nudging them one step at a time with
+  up/down buttons. The settings page for this is also renamed from "Butikk"
+  to "Butikkoppsett" so it's clearer what it's for.
+
+### Fixed
+- **New common grocery items now reach every existing household
+  automatically,** within about 15 minutes of a deploy, instead of requiring
+  a separate manual database step — no visible change to how the app works.
+
 ## [1.40.0] — 2026-07-23
 
 ### Added
