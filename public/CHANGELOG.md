@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.43.2] — 2026-07-23
+
+### Fixed
+- **Rydding i databasen (ingen synlig endring).** Ryddet opp en intern
+  inkonsistens i butikkoppsett-tabellen og fjernet et par databasefelt for
+  varslingsinnstillinger som ikke lenger er i bruk siden påminnelser ble
+  flyttet til per-enhet i forrige oppdatering. Rent internt vedlikehold —
+  ingen funksjon endres.
+
 ## [1.43.1] — 2026-07-23
 
 ### Changed
