@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.40.1] — 2026-07-23
+
+### Changed
+- **Drag to reorder your store's aisles.** Under Innstillinger →
+  Butikkoppsett (renamed from "Butikk" for clarity), you can now drag the
+  item groups into place with a handle instead of only nudging them one step
+  at a time with the up/down buttons — much quicker for a full reorder. The
+  up/down buttons are still there too.
+
 ## [1.40.0] — 2026-07-23
 
 ### Added
