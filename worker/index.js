@@ -1227,36 +1227,44 @@ export async function sendPushToList(env, list_id, payload, { excludeUsernames =
 }
 
 // The "no meal planned for tomorrow" reminder (TODO #7 phase 1).
-// `suppressedListIds` holds lists the weekly reminder already fired for on
-// this same tick (see runNotificationPass / #91) — skip them so a fully
-// unplanned upcoming Sunday->week doesn't produce two back-to-back pushes.
-async function checkMealReminders(env, nowMs, suppressedListIds = new Set()) {
+// Reminders are per-device (device-only notifications): each subscription
+// carries its own enabled/time, so this iterates push_subscriptions rather
+// than a shared per-list setting — one member can't toggle another's
+// reminders. `suppressedEndpoints` holds devices the weekly reminder already
+// fired for on this same tick (see runNotificationPass / #91) — skip them so a
+// fully unplanned upcoming Sunday->week doesn't produce two back-to-back
+// pushes to the same device.
+async function checkMealReminders(env, nowMs, suppressedEndpoints = new Set()) {
   const { hhmm, tomorrow } = osloLocalDateParts(nowMs);
-  const { results: enabledLists } = await env.DB.prepare(
-    "SELECT list_id, meal_reminder_time FROM notification_settings WHERE meal_reminder_enabled = 1"
+  const { results: subs } = await env.DB.prepare(
+    "SELECT endpoint, p256dh, auth, list_id, meal_reminder_time FROM push_subscriptions WHERE meal_reminder_enabled = 1"
   ).all();
-  const dueListIds = enabledLists
-    .filter((row) => isReminderDue(hhmm, row.meal_reminder_time))
-    .map((row) => row.list_id);
+  const dueSubs = subs.filter((s) => isReminderDue(hhmm, s.meal_reminder_time));
 
-  for (const list_id of dueListIds) {
-    if (suppressedListIds.has(list_id)) continue; // weekly reminder already sent this tick (#91)
-    const plan = await env.DB.prepare(
-      "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
-    ).bind(list_id, tomorrow).first();
-    if (plan && plan.meal_id !== null) continue; // already planned
+  // A list's "is tomorrow planned?" answer is shared across its devices —
+  // look it up once per list, not once per subscription.
+  const plannedByList = new Map();
+  for (const sub of dueSubs) {
+    if (suppressedEndpoints.has(sub.endpoint)) continue; // weekly reminder already sent to this device this tick (#91)
+    if (!plannedByList.has(sub.list_id)) {
+      const plan = await env.DB.prepare(
+        "SELECT meal_id FROM meal_plan WHERE list_id = ?1 AND plan_date = ?2"
+      ).bind(sub.list_id, tomorrow).first();
+      plannedByList.set(sub.list_id, !!(plan && plan.meal_id !== null));
+    }
+    if (plannedByList.get(sub.list_id)) continue; // already planned
 
-    // Dedup guard: INSERT OR IGNORE fails silently (changes === 0) if this
-    // list/date was already notified today — including a second cron tick
-    // that resolves to the same local hhmm on an Oslo DST fall-back day.
+    // Per-device dedup guard: INSERT OR IGNORE fails silently (changes === 0)
+    // if this device/date was already notified today — including a second cron
+    // tick that resolves to the same local hhmm on an Oslo DST fall-back day.
     const inserted = await env.DB.prepare(
-      "INSERT OR IGNORE INTO notification_log (list_id, type, target_date) VALUES (?1, 'meal_reminder', ?2)"
-    ).bind(list_id, tomorrow).run();
+      "INSERT OR IGNORE INTO notification_device_log (endpoint, list_id, type, target_date) VALUES (?1, ?2, 'meal_reminder', ?3)"
+    ).bind(sub.endpoint, sub.list_id, tomorrow).run();
     if (inserted.meta.changes === 0) continue;
 
     // Kept minimal — encrypted Web Push payloads have a ~4KB ceiling and
     // there's no reason to carry meal data for a "plan something" nudge.
-    await sendPushToList(env, list_id, {
+    await sendPushToSubscription(env, sub, {
       title: "Ingen middag planlagt i morgen",
       body: "Åpne Panhandle for å planlegge middag.",
       url: "/app.html",
@@ -1270,43 +1278,47 @@ async function checkMealReminders(env, nowMs, suppressedListIds = new Set()) {
 // upcoming Mon-Sun week has zero planned meals at all — not "few," which
 // would need an arbitrary threshold and risks nagging a household that's
 // already started. `dow` is 0=Mon..6=Sun (see osloLocalDateParts).
-// Returns the Set of list_ids it actually sent a weekly reminder to on this
-// tick, so runNotificationPass can suppress the daily meal reminder for those
-// same lists (#91). Empty on any non-Sunday tick.
+// Returns the Set of device endpoints it actually sent a weekly reminder to on
+// this tick, so runNotificationPass can suppress the daily meal reminder for
+// those same devices (#91). Empty on any non-Sunday tick. Like the daily
+// reminder this is per-device (see checkMealReminders).
 async function checkWeeklyReminders(env, nowMs) {
   const notified = new Set();
   const { hhmm, tomorrow, dow } = osloLocalDateParts(nowMs);
   if (dow !== 6) return notified; // only Sunday
 
-  const { results: enabledLists } = await env.DB.prepare(
-    "SELECT list_id, weekly_reminder_time FROM notification_settings WHERE weekly_reminder_enabled = 1"
+  const { results: subs } = await env.DB.prepare(
+    "SELECT endpoint, p256dh, auth, list_id, weekly_reminder_time FROM push_subscriptions WHERE weekly_reminder_enabled = 1"
   ).all();
-  const dueListIds = enabledLists
-    .filter((row) => isReminderDue(hhmm, row.weekly_reminder_time))
-    .map((row) => row.list_id);
-  if (dueListIds.length === 0) return notified;
+  const dueSubs = subs.filter((s) => isReminderDue(hhmm, s.weekly_reminder_time));
+  if (dueSubs.length === 0) return notified;
 
   // Today is Sunday, so `tomorrow` is already the upcoming week's Monday.
   const weekStart = tomorrow;
   const weekEnd = addDaysIso(weekStart, 6);
 
-  for (const list_id of dueListIds) {
-    const planned = await env.DB.prepare(
-      "SELECT COUNT(*) AS n FROM meal_plan WHERE list_id = ?1 AND plan_date BETWEEN ?2 AND ?3 AND meal_id IS NOT NULL"
-    ).bind(list_id, weekStart, weekEnd).first();
-    if (planned.n > 0) continue; // week already has at least one meal planned
+  // A list's "is next week planned?" answer is shared across its devices.
+  const plannedByList = new Map();
+  for (const sub of dueSubs) {
+    if (!plannedByList.has(sub.list_id)) {
+      const planned = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM meal_plan WHERE list_id = ?1 AND plan_date BETWEEN ?2 AND ?3 AND meal_id IS NOT NULL"
+      ).bind(sub.list_id, weekStart, weekEnd).first();
+      plannedByList.set(sub.list_id, planned.n > 0);
+    }
+    if (plannedByList.get(sub.list_id)) continue; // week already has at least one meal planned
 
     const inserted = await env.DB.prepare(
-      "INSERT OR IGNORE INTO notification_log (list_id, type, target_date) VALUES (?1, 'weekly_reminder', ?2)"
-    ).bind(list_id, weekStart).run();
+      "INSERT OR IGNORE INTO notification_device_log (endpoint, list_id, type, target_date) VALUES (?1, ?2, 'weekly_reminder', ?3)"
+    ).bind(sub.endpoint, sub.list_id, weekStart).run();
     if (inserted.meta.changes === 0) continue;
 
-    await sendPushToList(env, list_id, {
+    await sendPushToSubscription(env, sub, {
       title: "Ingen middager planlagt neste uke",
       body: "Åpne Panhandle for å planlegge ukens middager.",
       url: "/app.html",
     });
-    notified.add(list_id);
+    notified.add(sub.endpoint);
   }
   return notified;
 }
@@ -1321,9 +1333,9 @@ export async function runNotificationPass(env, nowMs) {
   // Weekly first: on a Sunday where the upcoming week is completely unplanned,
   // the weekly reminder and the daily "no meal tomorrow" reminder would both
   // be due at the same tick and fire back-to-back. Suppress the daily one for
-  // any list the weekly reminder just sent to (#91).
-  const weeklyNotified = await checkWeeklyReminders(env, nowMs);
-  await checkMealReminders(env, nowMs, weeklyNotified);
+  // any device the weekly reminder just sent to (#91).
+  const weeklyNotifiedEndpoints = await checkWeeklyReminders(env, nowMs);
+  await checkMealReminders(env, nowMs, weeklyNotifiedEndpoints);
 }
 
 // Stable content hash of a COMMON_ITEMS-shaped array, used by
@@ -2670,6 +2682,11 @@ export default {
       if (!body?.endpoint || !body?.keys?.p256dh || !body?.keys?.auth) {
         return authedJson({ error: "Ugyldig abonnement" }, 400);
       }
+      // The reminder columns (meal/weekly enabled+time) are per-device and
+      // intentionally NOT touched here: on first insert they take their
+      // DEFAULTs (enabled, 18:00 — matching the cron's fallback), and on an
+      // upsert (a re-subscribe / PushContext refresh) they're preserved so a
+      // device keeps whatever reminder preferences it had.
       await env.DB.prepare(`
         INSERT INTO push_subscriptions (endpoint, username, list_id, p256dh, auth)
         VALUES (?1, ?2, ?3, ?4, ?5)
@@ -2677,15 +2694,6 @@ export default {
           username = excluded.username, list_id = excluded.list_id,
           p256dh = excluded.p256dh, auth = excluded.auth, updated_at = datetime('now')
       `).bind(body.endpoint, user.username, user.list_id, body.keys.p256dh, body.keys.auth).run();
-      // Without this, a list that never visited Settings has no
-      // notification_settings row, so the cron's `WHERE …_enabled = 1`
-      // silently skips it forever even though enabling push implies wanting
-      // reminders. Row-default columns (see migrations) already match
-      // GET /notification-settings' no-row fallback, so this is a no-op if a
-      // row already exists.
-      await env.DB.prepare(
-        "INSERT OR IGNORE INTO notification_settings (list_id) VALUES (?1)"
-      ).bind(user.list_id).run();
       return authedJson({ ok: true });
     }
 
@@ -2700,18 +2708,16 @@ export default {
     }
 
     // Shared household setting — same permission level as /recurring (any
-    // list member, not owner-gated). No row exists until someone visits
-    // Settings and changes something, so GET falls back to app-level
-    // defaults rather than requiring a seeded row per list.
+    // list member, not owner-gated). Holds only stale_item_days now (the
+    // shopping list's stale-item marker threshold, a per-list shopping
+    // behaviour); the meal/weekly reminder preferences moved to per-device
+    // storage (see /push/reminder-settings). No row exists until someone
+    // changes the threshold, so GET falls back to the app-level default.
     if (path === "/notification-settings" && method === "GET") {
       const row = await env.DB.prepare(
-        "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time, stale_item_days FROM notification_settings WHERE list_id = ?1"
+        "SELECT stale_item_days FROM notification_settings WHERE list_id = ?1"
       ).bind(user.list_id).first();
       return authedJson({
-        meal_reminder_enabled: row ? !!row.meal_reminder_enabled : true,
-        meal_reminder_time: row?.meal_reminder_time || "18:00",
-        weekly_reminder_enabled: row ? !!row.weekly_reminder_enabled : true,
-        weekly_reminder_time: row?.weekly_reminder_time || "18:00",
         stale_item_days: row?.stale_item_days ?? 7,
       });
     }
@@ -2719,6 +2725,49 @@ export default {
     if (path === "/notification-settings" && method === "POST") {
       const body = await readJson(request);
       if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      const staleItemDays = Number(body.stale_item_days);
+      if (!Number.isInteger(staleItemDays) || staleItemDays < STALE_ITEM_DAYS_MIN || staleItemDays > STALE_ITEM_DAYS_MAX) {
+        return authedJson({ error: "Ugyldig antall dager" }, 400);
+      }
+      // Only stale_item_days is written; the reminder columns still exist on
+      // this table (expand/contract — not yet dropped) but are no longer read
+      // or written by any code path.
+      await env.DB.prepare(`
+        INSERT INTO notification_settings (list_id, stale_item_days)
+        VALUES (?1, ?2)
+        ON CONFLICT(list_id) DO UPDATE SET
+          stale_item_days = excluded.stale_item_days,
+          updated_at = datetime('now')
+      `).bind(user.list_id, staleItemDays).run();
+      return authedJson({ ok: true });
+    }
+
+    // Per-device meal-planning reminder preferences (device-only
+    // notifications): each browser's push subscription carries its own
+    // enabled/time, so members control their own reminders and one member
+    // can't toggle another's. Identified by the subscription `endpoint` the
+    // frontend already holds; scoped to the caller's own list so a stray
+    // endpoint from another household can't be read or written. Any list
+    // member (same level as /notification-settings). Defaults (enabled,
+    // 18:00) are returned when this device isn't subscribed yet.
+    if (path === "/push/reminder-settings" && method === "GET") {
+      const endpoint = url.searchParams.get("endpoint") || "";
+      const row = endpoint
+        ? await env.DB.prepare(
+            "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time FROM push_subscriptions WHERE endpoint = ?1 AND list_id = ?2"
+          ).bind(endpoint, user.list_id).first()
+        : null;
+      return authedJson({
+        meal_reminder_enabled: row ? !!row.meal_reminder_enabled : true,
+        meal_reminder_time: row?.meal_reminder_time || "18:00",
+        weekly_reminder_enabled: row ? !!row.weekly_reminder_enabled : true,
+        weekly_reminder_time: row?.weekly_reminder_time || "18:00",
+      });
+    }
+
+    if (path === "/push/reminder-settings" && method === "POST") {
+      const body = await readJson(request);
+      if (!body?.endpoint) return authedJson({ error: "Ugyldig forespørsel" }, 400);
       // 15-minute increments only, matching the cron's check granularity —
       // any other value would just never fire.
       if (!REMINDER_TIME_RE.test(body.meal_reminder_time || "")) {
@@ -2727,24 +2776,23 @@ export default {
       if (!REMINDER_TIME_RE.test(body.weekly_reminder_time || "")) {
         return authedJson({ error: "Ugyldig tidspunkt" }, 400);
       }
-      const staleItemDays = Number(body.stale_item_days);
-      if (!Number.isInteger(staleItemDays) || staleItemDays < STALE_ITEM_DAYS_MIN || staleItemDays > STALE_ITEM_DAYS_MAX) {
-        return authedJson({ error: "Ugyldig antall dager" }, 400);
-      }
-      await env.DB.prepare(`
-        INSERT INTO notification_settings (list_id, meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time, stale_item_days)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        ON CONFLICT(list_id) DO UPDATE SET
-          meal_reminder_enabled = excluded.meal_reminder_enabled,
-          meal_reminder_time = excluded.meal_reminder_time,
-          weekly_reminder_enabled = excluded.weekly_reminder_enabled,
-          weekly_reminder_time = excluded.weekly_reminder_time,
-          stale_item_days = excluded.stale_item_days,
+      // Updates only this device's own subscription row (scoped to the
+      // caller's list). A no-op if the device isn't subscribed — the
+      // frontend only surfaces these controls once push is enabled.
+      const res = await env.DB.prepare(`
+        UPDATE push_subscriptions SET
+          meal_reminder_enabled = ?1, meal_reminder_time = ?2,
+          weekly_reminder_enabled = ?3, weekly_reminder_time = ?4,
           updated_at = datetime('now')
+        WHERE endpoint = ?5 AND list_id = ?6
       `).bind(
-        user.list_id, body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time,
-        body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time, staleItemDays
+        body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time,
+        body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time,
+        body.endpoint, user.list_id
       ).run();
+      if (res.meta.changes === 0) {
+        return authedJson({ error: "Ingen aktiv varsling på denne enheten" }, 404);
+      }
       return authedJson({ ok: true });
     }
 

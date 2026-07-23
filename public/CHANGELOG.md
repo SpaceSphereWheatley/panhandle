@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.43.0] — 2026-07-23
+
+### Changed
+- **Varsler gjelder nå kun din egen enhet.** Påminnelsene om middagsplanlegging
+  ("Middag ikke planlagt i morgen" og den ukentlige planleggingspåminnelsen)
+  styres nå per enhet i stedet for felles for hele husstanden. Slår du en
+  påminnelse av eller endrer tidspunktet, gjelder det bare din telefon eller
+  nettleser — ingen kan lenger skru av eller på varsler for andre. Hvert medlem
+  bestemmer selv hva de vil bli minnet på, og når. (Innstillingene for
+  påminnelser vises på Varsler-siden først etter at du har slått på varsler på
+  enheten.) "Varsle husstanden"-knappen fungerer som før — den er en bevisst
+  handling for å få oppmerksomheten til de andre.
+
 ## [1.42.2] — 2026-07-23
 
 ### Fixed
