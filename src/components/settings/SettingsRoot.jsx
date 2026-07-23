@@ -1,93 +1,53 @@
-import { useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { usePush } from "../../context/PushContext.jsx";
-import { currentTheme, setTheme } from "../../lib/theme.js";
-import { currentIntensity, setIntensity } from "../../lib/designIntensity.js";
-import { SegmentedControl, Switch } from "../../design-system/index.js";
 import { PwaInstallCTA } from "./PwaInstallCTA.jsx";
 import { SettingsGroup } from "./SettingsGroup.jsx";
 import { SettingsRow } from "./SettingsRow.jsx";
 import { AboutFooter } from "./AboutFooter.jsx";
 
-function hapticsEnabled() {
-  return localStorage.getItem("ph_haptics") !== "0";
-}
-
-const THEME_OPTIONS = [
-  { value: "light", label: "Lys" },
-  { value: "dark", label: "Mørk" },
-  { value: "system", label: "Følg systemet" },
-];
-
-const INTENSITY_OPTIONS = [
-  { value: "expressive", label: "Ekspressiv" },
-  { value: "muted", label: "Dempet" },
-  { value: "classic", label: "Klassisk" },
-];
-
-// Settings root: hero PWA CTA, then two grouped clusters — device-local
-// prefs that never navigate, and server-backed things that open a subpage —
-// then the flat About footer. See docs/architecture-notes.md-adjacent
-// reasoning in CLAUDE.md: this replaces the old five-Card/accordion layout.
+// Settings root: hero PWA CTA, then grouped clusters of navigation rows —
+// "Meg" (this device + your account), a standalone Varsler row (it straddles
+// personal and household, so it sits on its own rather than being forced into
+// either), and "Husstanden" (the shared list) — then the flat About footer.
+// Every row navigates to a subpage, so the root reads as one uniform list;
+// nothing renders controls inline anymore. (Appearance — theme/design/haptics
+// — used to live inline here under an "Appinnstillinger" label; it's now the
+// "Utseende" subpage, so the root is consistent.)
 export function SettingsRoot({ onNavigate }) {
   const { user, name, isAdmin } = useAuth();
   const { listUsers } = useListUsers();
   const { subscribed } = usePush();
 
-  const [theme, setThemeState] = useState(currentTheme());
-  const [intensity, setIntensityState] = useState(currentIntensity());
-  const [haptics, setHapticsState] = useState(hapticsEnabled());
-
-  function onSetTheme(t) {
-    setTheme(t);
-    setThemeState(t);
-  }
-  function onSetIntensity(v) {
-    setIntensity(v);
-    setIntensityState(v);
-  }
-  function onSetHaptics(on) {
-    localStorage.setItem("ph_haptics", on ? "1" : "0");
-    setHapticsState(on);
-    if (on && navigator.vibrate) navigator.vibrate(10);
-  }
-
   return (
     <section>
       <PwaInstallCTA />
 
-      <SettingsGroup label="Appinnstillinger">
+      <SettingsGroup label="Meg">
         <SettingsRow
           icon="palette"
-          label="Designintensitet"
-          stackedControl={<SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />}
+          label="Utseende"
+          supportingText="Tema, design og vibrasjon"
+          onClick={() => onNavigate(["utseende"])}
         />
-        <SettingsRow
-          icon="circle-half"
-          label="Tema"
-          stackedControl={<SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />}
-        />
-        <SettingsRow
-          icon="device-mobile"
-          label="Vibrasjon ved handling"
-          trailing={<Switch checked={haptics} onChange={onSetHaptics} />}
-        />
-      </SettingsGroup>
-
-      <SettingsGroup label="Konto & liste">
         <SettingsRow
           icon="user-circle"
           label="Konto"
           supportingText={name || user}
           onClick={() => onNavigate(["konto"])}
         />
+      </SettingsGroup>
+
+      <SettingsGroup>
         <SettingsRow
           icon="bell"
           label="Varsler"
           supportingText={subscribed ? "Aktivert" : "Av"}
           onClick={() => onNavigate(["varsler"])}
         />
+      </SettingsGroup>
+
+      <SettingsGroup label="Husstanden">
         <SettingsRow
           icon="house"
           label="Vårt hjem"

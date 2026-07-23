@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.1] — 2026-07-23
+
+### Changed
+- **Innstillinger ser likt ut hele veien.** Øverst på innstillingssiden lå
+  utseende-valgene (tema, design og vibrasjon) rett i lista, mens alt annet
+  åpnet sin egen side når du trykket. Nå åpner også utseende sin egen side,
+  «Utseende», så hele innstillingssiden er én ryddig liste der hvert valg
+  fungerer likt. Valgene er samlet under «Meg» (din enhet og konto) og
+  «Husstanden» (det dere deler), med «Varsler» for seg selv.
+
 ## [1.43.0] — 2026-07-23
 
 ### Changed
