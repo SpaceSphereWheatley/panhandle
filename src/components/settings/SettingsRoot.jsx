@@ -6,12 +6,14 @@ import { SettingsGroup } from "./SettingsGroup.jsx";
 import { SettingsRow } from "./SettingsRow.jsx";
 import { AboutFooter } from "./AboutFooter.jsx";
 
-// Settings root: hero PWA CTA, then two grouped clusters of navigation rows —
-// personal (this device + your account) and the shared household — then the
-// flat About footer. Every row navigates to a subpage, so the root reads as
-// one uniform list; nothing renders controls inline anymore. (Appearance —
-// theme/design/haptics — used to live inline here under an "Appinnstillinger"
-// label; it's now the "Utseende" subpage, so the root is consistent.)
+// Settings root: hero PWA CTA, then grouped clusters of navigation rows —
+// "Meg" (this device + your account), a standalone Varsler row (it straddles
+// personal and household, so it sits on its own rather than being forced into
+// either), and "Husstanden" (the shared list) — then the flat About footer.
+// Every row navigates to a subpage, so the root reads as one uniform list;
+// nothing renders controls inline anymore. (Appearance — theme/design/haptics
+// — used to live inline here under an "Appinnstillinger" label; it's now the
+// "Utseende" subpage, so the root is consistent.)
 export function SettingsRoot({ onNavigate }) {
   const { user, name, isAdmin } = useAuth();
   const { listUsers } = useListUsers();
@@ -36,13 +38,16 @@ export function SettingsRoot({ onNavigate }) {
         />
       </SettingsGroup>
 
-      <SettingsGroup label="Husstanden">
+      <SettingsGroup>
         <SettingsRow
           icon="bell"
           label="Varsler"
           supportingText={subscribed ? "Aktivert" : "Av"}
           onClick={() => onNavigate(["varsler"])}
         />
+      </SettingsGroup>
+
+      <SettingsGroup label="Husstanden">
         <SettingsRow
           icon="house"
           label="Vårt hjem"
