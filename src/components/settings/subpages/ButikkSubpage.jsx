@@ -17,11 +17,10 @@ const STALE_ITEM_DAYS_MAX = 90;
 // the aisle order (TODO #105) and the stale-item marker threshold. Both are
 // shared per-list settings, so a change here applies to everyone.
 //
-// The stale-item threshold is stored on /notification-settings (the app's only
-// per-list preference store), which upserts all five fields in one write — so
-// this page fetches the current reminder settings on mount and re-sends them
-// unchanged alongside the new stale_item_days. Only one Settings subpage is
-// mounted at a time, so those carried-through values are always fresh.
+// The stale-item threshold is stored on /notification-settings, which now
+// holds only stale_item_days (the reminder preferences moved to per-device
+// storage — see VarslerSubpage), so this page just reads and writes that one
+// field.
 export function ButikkSubpage() {
   const { order, refresh, save } = useCategoryOrder();
   const toast = useToast();
@@ -101,26 +100,14 @@ export function ButikkSubpage() {
 // Stale-item marker threshold. Its text-vs-value decoupling (staleItemDaysText
 // mirrors raw typing; only a fully valid value updates/saves the real number)
 // keeps a controlled re-render from snapping the field back to the old value
-// mid-edit. Reminder fields are held opaquely and re-sent unchanged.
+// mid-edit.
 function StaleItemSection({ toast }) {
   const [staleItemDays, setStaleItemDays] = useState(7);
   const [staleItemDaysText, setStaleItemDaysText] = useState("7");
-  const reminderRef = useRef({
-    meal_reminder_enabled: true,
-    meal_reminder_time: "18:00",
-    weekly_reminder_enabled: true,
-    weekly_reminder_time: "18:00",
-  });
 
   useEffect(() => {
     api("/notification-settings").then((res) => {
       if (res.error) return;
-      reminderRef.current = {
-        meal_reminder_enabled: res.meal_reminder_enabled,
-        meal_reminder_time: res.meal_reminder_time,
-        weekly_reminder_enabled: res.weekly_reminder_enabled,
-        weekly_reminder_time: res.weekly_reminder_time,
-      };
       setStaleItemDays(res.stale_item_days);
       setStaleItemDaysText(String(res.stale_item_days));
     });
@@ -130,7 +117,7 @@ function StaleItemSection({ toast }) {
     try {
       const res = await api("/notification-settings", {
         method: "POST",
-        body: JSON.stringify({ ...reminderRef.current, stale_item_days: days }),
+        body: JSON.stringify({ stale_item_days: days }),
       });
       if (res.error) toast(res.error, { error: true });
     } catch {

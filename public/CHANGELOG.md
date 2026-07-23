@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.42.2] — 2026-07-23
+## [1.43.1] — 2026-07-23
 
 ### Changed
 - **Innstillinger ser likt ut hele veien.** Øverst på innstillingssiden lå
@@ -9,6 +9,28 @@
   «Utseende», så hele innstillingssiden er én ryddig liste der hvert valg
   fungerer likt. Valgene er samlet under «Meg» (din enhet og konto) og
   «Husstanden» (det dere deler), med «Varsler» for seg selv.
+
+## [1.43.0] — 2026-07-23
+
+### Changed
+- **Varsler gjelder nå kun din egen enhet.** Påminnelsene om middagsplanlegging
+  ("Middag ikke planlagt i morgen" og den ukentlige planleggingspåminnelsen)
+  styres nå per enhet i stedet for felles for hele husstanden. Slår du en
+  påminnelse av eller endrer tidspunktet, gjelder det bare din telefon eller
+  nettleser — ingen kan lenger skru av eller på varsler for andre. Hvert medlem
+  bestemmer selv hva de vil bli minnet på, og når. (Innstillingene for
+  påminnelser vises på Varsler-siden først etter at du har slått på varsler på
+  enheten.) "Varsle husstanden"-knappen fungerer som før — den er en bevisst
+  handling for å få oppmerksomheten til de andre.
+
+## [1.42.2] — 2026-07-23
+
+### Fixed
+- **"Hva er nytt" viser nå riktig versjon.** Vinduet som dukker opp etter en
+  oppdatering for å vise hva som er nytt, kunne henge én versjon bak — det viste
+  forrige oppdaterings punkter i stedet for den nyeste. Nå hentes alltid den
+  ferskeste endringsloggen, så vinduet stemmer med versjonen du faktisk kjører
+  (slik innstillingssiden og den fulle endringsloggen allerede gjorde).
 
 ## [1.42.1] — 2026-07-23
 

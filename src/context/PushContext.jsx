@@ -24,6 +24,10 @@ export function PushProvider({ children }) {
     () => typeof navigator !== "undefined" && "serviceWorker" in navigator && "PushManager" in window
   );
   const [subscribed, setSubscribed] = useState(false);
+  // This device's current push endpoint (or null). Reminder preferences are
+  // per-device and keyed by it (see /push/reminder-settings), so VarslerSubpage
+  // needs it to read/write this device's own settings.
+  const [endpoint, setEndpoint] = useState(null);
 
   // Re-syncs the browser's current subscription (if any) to the server on
   // every mount/token change. This is also how a subscription that the
@@ -40,6 +44,7 @@ export function PushProvider({ children }) {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       setSubscribed(!!sub);
+      setEndpoint(sub?.endpoint ?? null);
       if (sub) await api("/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
     } catch {
       /* non-critical, keep whatever we had */
@@ -48,7 +53,10 @@ export function PushProvider({ children }) {
 
   useEffect(() => {
     if (token) refresh();
-    else setSubscribed(false);
+    else {
+      setSubscribed(false);
+      setEndpoint(null);
+    }
   }, [token, refresh]);
 
   const subscribe = useCallback(async () => {
@@ -67,6 +75,7 @@ export function PushProvider({ children }) {
       });
       await api("/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
       setSubscribed(true);
+      setEndpoint(sub.endpoint);
       return { error: null };
     } catch {
       return { error: "Kunne ikke aktivere varsler" };
@@ -82,10 +91,11 @@ export function PushProvider({ children }) {
       await sub.unsubscribe();
     }
     setSubscribed(false);
+    setEndpoint(null);
   }, [supported]);
 
   return (
-    <PushContext.Provider value={{ supported, subscribed, subscribe, unsubscribe }}>
+    <PushContext.Provider value={{ supported, subscribed, endpoint, subscribe, unsubscribe }}>
       {children}
     </PushContext.Provider>
   );
