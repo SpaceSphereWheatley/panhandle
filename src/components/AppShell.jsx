@@ -68,7 +68,7 @@ const SETTINGS_SUBPAGE_TITLES = {
   konto: "Konto",
   varsler: "Varsler",
   hjem: "Vårt hjem",
-  butikk: "Butikk",
+  butikk: "Butikkoppsett",
   admin: "Administrasjon",
   "admin/statistikk": "Statistikk",
 };
