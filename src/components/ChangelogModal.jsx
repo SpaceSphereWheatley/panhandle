@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { parseChangelog } from "../lib/changelogUtils.js";
+import { APP_VERSION } from "../lib/version.js";
 
 const FULL_CHANGELOG_URL = "/changelog.html";
 // Spotlight the last few releases, not the entire history — the full log is
@@ -15,7 +16,12 @@ export function ChangelogModal({ onClose }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/CHANGELOG.md");
+        // Version-stamped URL so a device still running the previous deploy's
+        // service worker (stale-while-revalidate on the old sw.js) can't hand
+        // back last version's changelog — this modal auto-opens right after a
+        // deploy, exactly when that cache is stale. The new sw.js serves
+        // /CHANGELOG.md network-first, making this belt-and-suspenders there.
+        const res = await fetch(`/CHANGELOG.md?v=${encodeURIComponent(APP_VERSION)}`);
         if (!res.ok) throw new Error("fetch failed");
         setEntries(parseChangelog(await res.text()));
       } catch {

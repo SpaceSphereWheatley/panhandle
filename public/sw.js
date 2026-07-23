@@ -41,7 +41,15 @@ self.addEventListener('fetch', (event) => {
   // by fully closing and reopening the app" bug. Network-first (falling
   // back to cache only when actually offline) keeps offline support while
   // making a reload always resolve a consistent, current shell+asset set.
-  if (request.mode === 'navigate' || url.pathname === '/app.html') {
+  //
+  // /CHANGELOG.md is in the same boat: unlike the content-hashed assets, its
+  // *content* changes across deploys under a stable URL, so stale-while-
+  // revalidate would serve the previous deploy's copy on the first fetch
+  // after a deploy — exactly when the "Hva er nytt" changelog modal
+  // auto-opens (useDeployVersionCheck fires on the first load of the new
+  // build), leaving it one version behind. Network-first keeps it current
+  // there while still falling back to cache offline.
+  if (request.mode === 'navigate' || url.pathname === '/app.html' || url.pathname === '/CHANGELOG.md') {
     event.respondWith(
       fetch(request)
         .then((response) => {
