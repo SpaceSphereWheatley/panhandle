@@ -143,39 +143,6 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
   display: inline-block; background: var(--surface-sunken); border-radius: var(--radius-sm);
   padding: 3px 8px; margin: 0 4px 4px 0;
 }
-.logout {
-  background: var(--accent-primary); color: var(--text-on-accent); border: none; padding: 14px;
-  border-radius: var(--radius-pill); width: 100%; font-size: var(--text-md); font-weight: 600; cursor: pointer;
-  font-family: var(--font-sans);
-}
-
-/* Per-list group header inside the admin "Alle brukere" list */
-.admin-group {
-  font-size: var(--text-2xs); font-weight: 700; color: var(--text-tertiary);
-  text-transform: uppercase; letter-spacing: var(--tracking-wide); margin: 14px 0 6px;
-}
-
-/* User management rows (owner + admin panels) */
-.mgmt-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  background: var(--surface-sunken); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 6px;
-}
-.mgmt-row .who { min-width: 0; flex: 1; }
-.mgmt-row .who .uname {
-  font-size: var(--text-sm); font-weight: 600; color: var(--text-primary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.mgmt-row .who .sub { font-size: var(--text-2xs); color: var(--text-tertiary); margin-top: 2px; }
-.mgmt-row .acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.mgmt-row button.mini {
-  border: 1px solid var(--border-default); background: var(--surface-card); color: var(--text-primary);
-  border-radius: var(--radius-sm); font-size: var(--text-2xs); padding: 6px 8px; cursor: pointer; font-family: var(--font-sans);
-}
-.mgmt-row button.mini.danger { color: var(--status-danger); border-color: var(--status-danger); }
-.mgmt-row label.flag {
-  display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-2xs); color: var(--text-tertiary);
-}
-
 /* Site-wide metrics table (admin/metrics) */
 .metrics-table { font-size: var(--text-sm); }
 .metrics-table-row {
@@ -274,11 +241,3 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .token-dropdown-option { padding: 10px 14px; cursor: pointer; color: var(--text-primary); font-size: var(--text-sm); }
 .token-dropdown-option:active { background: var(--surface-sunken); }
-
-/* Button variants (About/misc settings actions not yet on design-system Button) */
-.btn-primary {
-  width: 100%; padding: 12px; border-radius: var(--radius-pill); border: none;
-  background: var(--accent-primary); color: var(--text-on-accent); font-size: var(--text-sm); font-weight: 600;
-  cursor: pointer; font-family: var(--font-sans);
-}
-.btn-primary.mt-8 { margin-top: 8px; }

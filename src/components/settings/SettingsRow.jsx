@@ -14,7 +14,7 @@ const TONE_FG = {
 // treatments — a chevron (onClick, navigates to a subpage), an inline
 // control (e.g. Switch, via `trailing`), or a full-width control rendered
 // below the label (e.g. SegmentedControl, via `stackedControl`).
-export function SettingsRow({ icon, tone = "primary", label, supportingText, onClick, trailing, stackedControl }) {
+export function SettingsRow({ icon, tone = "primary", label, supportingText, onClick, trailing, stackedControl, flush = false }) {
   const Wrapper = onClick ? "button" : "div";
   return (
     <Wrapper
@@ -24,7 +24,7 @@ export function SettingsRow({ icon, tone = "primary", label, supportingText, onC
         flexDirection: "column",
         gap: stackedControl ? 10 : 0,
         width: "100%",
-        padding: "12px 16px",
+        padding: flush ? "12px 0" : "12px 16px",
         border: "none",
         background: "none",
         textAlign: "left",

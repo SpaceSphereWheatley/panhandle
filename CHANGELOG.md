@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.42.0] — 2026-07-23
+
+### Changed
+- **Innstillinger er pusset opp.** Hele innstillingssiden er ryddet så knapper,
+  brytere, felt og lister ser like ut fra side til side, med et roligere og mer
+  konsekvent uttrykk. "Logg ut" skiller seg ikke lenger ut som en hovedknapp,
+  og navnet ditt lagres nå automatisk når du forlater feltet.
+- **"Gamle varer"-innstillingen er flyttet.** Valget for hvor lenge en vare kan
+  ligge ukjøpt før den får en diskré markering, ligger nå under "Butikkoppsett"
+  sammen med de andre handleliste-valgene, i stedet for under "Varsler" der det
+  egentlig ikke hørte hjemme.
+- **Tydeligere på hvem varsler gjelder.** Varsler-siden viser nå at det å slå på
+  push-varsler gjelder kun din egen enhet, mens påminnelsene om middagsplanlegging
+  gjelder hele husstanden.
+
 ## [1.41.1] — 2026-07-23
 
 ### Fixed

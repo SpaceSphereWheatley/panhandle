@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { useListUsers } from "../../../context/ListUsersContext.jsx";
 import { api } from "../../../lib/api.js";
@@ -6,16 +6,16 @@ import { Button, Card, Input } from "../../../design-system/index.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
+import { FieldLabel } from "../FieldLabel.jsx";
 
-const fieldLabelStyle = { fontSize: "var(--text-xs)", color: "var(--text-secondary)", display: "block", marginBottom: 4 };
-
-// Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are
-// direct fields rather than accordioned (contrast with the old
-// ProfileIsland, which hid them behind accordions on the shared root
-// scroll), each in a SubpageSection so every subpage's labeled blocks look
-// like one system. Logg ut / Slett konto are pulled into their own
-// visually distinct danger-zone block below, instead of one more section a
-// casual tap could stumble into.
+// Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are direct
+// fields, each in a SubpageSection so every subpage's labeled blocks look like
+// one system. Save model: Navn auto-saves on blur (no password needed, so it's
+// a preference, not an action); E-post and Bytt passord keep explicit buttons
+// because both require the current password — that's a credential-guarded
+// action. Logg ut / Slett konto sit in their own visually distinct blocks so a
+// casual tap can't stumble into them, and every button here is the shared
+// design-system <Button> (no bespoke .btn-primary/.logout classes).
 export function KontoSubpage() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
@@ -24,6 +24,7 @@ export function KontoSubpage() {
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [nameInput, setNameInput] = useState(name || user || "");
+  const savedName = useRef(name || user || "");
   const [email, setEmail] = useState(null);
   const [emailInput, setEmailInput] = useState("");
   const [emailPw, setEmailPw] = useState("");
@@ -36,19 +37,25 @@ export function KontoSubpage() {
       setEmail(res.email);
       setEmailInput(res.email || "");
       setNameInput(res.name || user || "");
+      savedName.current = res.name || user || "";
     });
   }, []);
 
+  // Auto-save on blur, but only when the value actually changed — tabbing
+  // through the field without editing shouldn't POST or toast.
   async function saveName() {
+    const next = nameInput.trim();
+    if (!next || next === savedName.current) return;
     try {
       const res = await api("/change-name", {
         method: "POST",
-        body: JSON.stringify({ name: nameInput.trim() }),
+        body: JSON.stringify({ name: next }),
       });
       if (res.error) {
         toast(res.error, { error: true });
         return;
       }
+      savedName.current = res.name;
       updateIdentity({ name: res.name });
       toast("Navn lagret.");
     } catch {
@@ -133,32 +140,37 @@ export function KontoSubpage() {
         <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{user}</div>
 
         <SubpageSection label="Navn">
-          <label htmlFor="profile-name" style={fieldLabelStyle}>Navn</label>
-          <Input id="profile-name" placeholder="Navn" style={{ marginBottom: 8 }} value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
-          <button onClick={saveName} className="btn-primary">Lagre navn</button>
+          <FieldLabel htmlFor="profile-name">Navn</FieldLabel>
+          <Input
+            id="profile-name"
+            placeholder="Navn"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={saveName}
+          />
         </SubpageSection>
 
         <SubpageSection
           label={email ? "E-post" : "Legg til e-post"}
           description="Brukes til innlogging, Google-innlogging og for å tilbakestille passord hvis du glemmer det. Endrer du e-posten, logges andre enheter ut."
         >
-          <label htmlFor="profile-email" style={fieldLabelStyle}>E-post</label>
+          <FieldLabel htmlFor="profile-email">E-post</FieldLabel>
           <Input id="profile-email" type="email" placeholder="E-post" style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
-          <label htmlFor="profile-email-pw" style={fieldLabelStyle}>Nåværende passord</label>
-          <Input id="profile-email-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
-          <button onClick={saveEmail} className="btn-primary">Lagre e-post</button>
+          <FieldLabel htmlFor="profile-email-pw">Nåværende passord</FieldLabel>
+          <Input id="profile-email-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 10 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
+          <Button variant="primary" onClick={saveEmail}>Lagre e-post</Button>
         </SubpageSection>
 
         <SubpageSection label="Bytt passord">
-          <label htmlFor="profile-pw-current" style={fieldLabelStyle}>Nåværende passord</label>
+          <FieldLabel htmlFor="profile-pw-current">Nåværende passord</FieldLabel>
           <Input id="profile-pw-current" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
-          <label htmlFor="profile-pw-new" style={fieldLabelStyle}>Nytt passord (min. 8 tegn)</label>
-          <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 8 tegn)" style={{ marginBottom: 8 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
-          <button onClick={changePassword} className="btn-primary">Lagre nytt passord</button>
+          <FieldLabel htmlFor="profile-pw-new">Nytt passord (min. 8 tegn)</FieldLabel>
+          <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 8 tegn)" style={{ marginBottom: 10 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+          <Button variant="primary" onClick={changePassword}>Lagre nytt passord</Button>
         </SubpageSection>
 
         <SubpageSection>
-          <button className="logout" onClick={() => logout()}>Logg ut</button>
+          <Button variant="outline" onClick={() => logout()}>Logg ut</Button>
         </SubpageSection>
       </Card>
 
@@ -169,8 +181,8 @@ export function KontoSubpage() {
             ? "Hvis du er listens eneste eier, slettes hele listen — handleliste, måltidsplan og alt annet innhold — når du sletter kontoen din. Har listen en annen eier, mister du bare din egen tilgang."
             : "Du mister tilgang til listen. Dette kan ikke angres."}
         </div>
-        <label htmlFor="profile-delete-pw" style={fieldLabelStyle}>Nåværende passord</label>
-        <Input id="profile-delete-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
+        <FieldLabel htmlFor="profile-delete-pw">Nåværende passord</FieldLabel>
+        <Input id="profile-delete-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 10 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
         <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
       </Card>
     </section>
