@@ -65,6 +65,7 @@ function ImportantLegendTrigger({ onClick }) {
 // "admin/statistikk") — drives the single shared Header when a Settings
 // subpage is open, so subpages never render their own second header.
 const SETTINGS_SUBPAGE_TITLES = {
+  utseende: "Utseende",
   konto: "Konto",
   varsler: "Varsler",
   hjem: "Vårt hjem",

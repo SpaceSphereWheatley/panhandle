@@ -1,4 +1,5 @@
 import { SettingsRoot } from "../components/settings/SettingsRoot.jsx";
+import { UtseendeSubpage } from "../components/settings/subpages/UtseendeSubpage.jsx";
 import { KontoSubpage } from "../components/settings/subpages/KontoSubpage.jsx";
 import { VarslerSubpage } from "../components/settings/subpages/VarslerSubpage.jsx";
 import { HjemSubpage } from "../components/settings/subpages/HjemSubpage.jsx";
@@ -12,6 +13,7 @@ import { StatistikkSubpage } from "../components/settings/subpages/StatistikkSub
 export function SettingsTab({ settingsPath = [], onNavigate }) {
   const [root, sub] = settingsPath;
 
+  if (root === "utseende") return <UtseendeSubpage />;
   if (root === "konto") return <KontoSubpage />;
   if (root === "varsler") return <VarslerSubpage />;
   if (root === "hjem") return <HjemSubpage />;
