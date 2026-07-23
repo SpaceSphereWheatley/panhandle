@@ -97,7 +97,7 @@ export function SettingsRoot({ onNavigate }) {
         <SettingsRow
           icon="storefront"
           label="Butikkoppsett"
-          supportingText="Rekkefølge på varegrupper"
+          supportingText="Varegrupper og gamle varer"
           onClick={() => onNavigate(["butikk"])}
         />
         {isAdmin && (

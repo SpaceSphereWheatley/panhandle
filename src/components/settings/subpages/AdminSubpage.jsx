@@ -6,14 +6,28 @@ import { iconForItem } from "../../../lib/itemIcons.js";
 import { APP_VERSION } from "../../../lib/version.js";
 import { CredentialsModal } from "../../CredentialsModal.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
-import { Card, Input } from "../../../design-system/index.js";
+import { Button, Card, Input, Switch } from "../../../design-system/index.js";
 import { SubpageSection } from "../SubpageSection.jsx";
-import { UiIcon } from "../../UiIcon.jsx";
+import { SettingsRow } from "../SettingsRow.jsx";
+import { FieldLabel } from "../FieldLabel.jsx";
+import { ManagementRow } from "../ManagementRow.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
 
-const MotionRow = motion.div;
+const MotionRow = motion(ManagementRow);
+
+// Per-list group header inside "Alle brukere" — the same eyebrow treatment
+// SettingsGroup uses for root clusters, kept in sync instead of the old
+// duplicate .admin-group CSS class.
+const groupHeadingStyle = {
+  fontSize: "var(--text-2xs)",
+  fontWeight: 700,
+  color: "var(--text-tertiary)",
+  textTransform: "uppercase",
+  letterSpacing: "var(--tracking-wide)",
+  margin: "14px 0 6px",
+};
 
 // Administrasjon subpage — directly-visible 2x2 stats, then the heavier
 // management tools as always-open SubpageSections (no accordions — see
@@ -178,17 +192,19 @@ export function AdminSubpage({ onNavigate }) {
         {listCount} {listCount === 1 ? "liste" : "lister"} · Versjon {versionDetail}
       </div>
 
-      <SubpageSection label="Varer uten ikon">
-        <div className="icon-gap-list">
-          {iconGaps.map((n) => (
-            <span key={n}>{n}</span>
-          ))}
-        </div>
-      </SubpageSection>
+      {isSuperAdmin && (
+        <SubpageSection label="Varer uten ikon">
+          <div className="icon-gap-list">
+            {iconGaps.map((n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </div>
+        </SubpageSection>
+      )}
 
       {isSuperAdmin && (
         <SubpageSection label="Opprett eier (ny liste)">
-          <label htmlFor="admin-new-owner-name" className="sr-only">Navn på ny eier</label>
+          <FieldLabel htmlFor="admin-new-owner-name" visuallyHidden>Navn på ny eier</FieldLabel>
           <Input
             id="admin-new-owner-name"
             placeholder="Navn"
@@ -196,65 +212,63 @@ export function AdminSubpage({ onNavigate }) {
             onChange={(e) => setNewOwnerName(e.target.value)}
             style={{ marginBottom: 8 }}
           />
-          <label htmlFor="admin-new-owner-email" className="sr-only">E-post for ny eier</label>
+          <FieldLabel htmlFor="admin-new-owner-email" visuallyHidden>E-post for ny eier</FieldLabel>
           <Input
             id="admin-new-owner-email"
             type="email"
             placeholder="E-post"
             value={newOwnerEmail}
             onChange={(e) => setNewOwnerEmail(e.target.value)}
+            style={{ marginBottom: 10 }}
           />
-          <button onClick={createOwner} className="btn-primary mt-8">+ Opprett eier</button>
+          <Button variant="primary" icon="plus" onClick={createOwner}>Opprett eier</Button>
         </SubpageSection>
       )}
 
       <SubpageSection label="Alle brukere">
         {Object.keys(groups).map((listId) => (
             <div key={listId}>
-              <div className="admin-group">
+              <div style={groupHeadingStyle}>
                 Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
               </div>
               <AnimatePresence initial={false}>
                 {groups[listId].map((u) => (
                   <MotionRow
-                    className="mgmt-row"
                     key={u.username}
                     layout={shouldAnimate}
                     transition={transition}
                     initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
                     animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
                     exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
-                  >
-                    <div className="who">
-                      <div className="uname">{u.name || u.username}</div>
-                      <div className="sub">
-                        {u.username}
-                        {u.username === currentUser ? " · deg" : u.created_by ? " · av " + u.created_by : ""}
-                      </div>
-                    </div>
-                    <div className="acts">
-                      <label className="flag">
-                        <input
-                          type="checkbox"
+                    title={u.name || u.username}
+                    subtitle={
+                      u.username +
+                      (u.username === currentUser ? " · deg" : u.created_by ? " · av " + u.created_by : "")
+                    }
+                    footer={
+                      <>
+                        <Switch
                           checked={!!u.is_admin}
-                          onChange={(e) => setFlag(u.username, "is_admin", e.target.checked)}
+                          onChange={(v) => setFlag(u.username, "is_admin", v)}
+                          label="Admin"
                         />
-                        Admin
-                      </label>
-                      <label className="flag">
-                        <input
-                          type="checkbox"
+                        <Switch
                           checked={!!u.is_owner}
-                          onChange={(e) => setFlag(u.username, "is_owner", e.target.checked)}
+                          onChange={(v) => setFlag(u.username, "is_owner", v)}
+                          label="Eier"
                         />
-                        Eier
-                      </label>
-                      <button className="mini" onClick={() => resetPassword(u.username)}>Nullstill pw</button>
-                      {isSuperAdmin && (
-                        <button className="mini danger" onClick={() => deleteUser(u.username)}>Slett</button>
-                      )}
-                    </div>
-                  </MotionRow>
+                        <div style={{ flex: 1 }} />
+                        <Button variant="outline" size="sm" onClick={() => resetPassword(u.username)}>
+                          Nullstill passord
+                        </Button>
+                        {isSuperAdmin && (
+                          <Button variant="danger" size="sm" onClick={() => deleteUser(u.username)}>
+                            Slett
+                          </Button>
+                        )}
+                      </>
+                    }
+                  />
                 ))}
               </AnimatePresence>
             </div>
@@ -262,27 +276,13 @@ export function AdminSubpage({ onNavigate }) {
       </SubpageSection>
 
       {isSuperAdmin && (
-        <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 12 }}>
-          <button
+        <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 4 }}>
+          <SettingsRow
+            flush
+            label="Statistikk"
+            supportingText="Bruksdata for alle lister"
             onClick={() => onNavigate(["admin", "statistikk"])}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
-          >
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>Statistikk</div>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>Bruksdata for alle lister</div>
-            </div>
-            <UiIcon name="caretRight" size={16} style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
-          </button>
+          />
         </div>
       )}
 

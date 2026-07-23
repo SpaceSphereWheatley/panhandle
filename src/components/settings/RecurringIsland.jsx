@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
-import { Input } from "../../design-system/index.js";
+import { Input, Select } from "../../design-system/index.js";
 import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
 import { SubpageSection } from "./SubpageSection.jsx";
 
@@ -56,7 +56,7 @@ export function RecurringIsland() {
 
   return (
     <SubpageSection label="Fast ansvarlig per ukedag">
-      <div style={{ fontSize: 13, color: "var(--text-tertiary)", margin: "0 0 12px" }}>
+      <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: "0 0 12px" }}>
         Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
         og du kan alltid endre det for en enkelt dag.
       </div>
@@ -68,18 +68,17 @@ export function RecurringIsland() {
           return (
             <div style={{ padding: "10px 0", borderBottom: "1px solid var(--border-default)" }} key={day}>
               <div id={`recurring-day-${dow}`} style={{ fontWeight: 600, marginBottom: 6, color: "var(--text-primary)" }}>{day}</div>
-              <select
+              <Select
                 value={selectValue}
                 onChange={(e) => onSelectChange(dow, e.target.value)}
                 aria-labelledby={`recurring-day-${dow}`}
-                style={{ width: "100%", padding: 10, fontSize: 15, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--surface-sunken)", color: "var(--text-primary)" }}
               >
                 <option value="">Ingen</option>
                 {people.map((p) => (
                   <option value={p} key={p}>{nameFor(p)}</option>
                 ))}
                 <option value="__other__">Annet...</option>
-              </select>
+              </Select>
               {isOther && (
                 <Input
                   type="text"

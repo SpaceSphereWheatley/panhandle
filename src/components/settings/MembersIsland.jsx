@@ -6,11 +6,13 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { CredentialsModal } from "../CredentialsModal.jsx";
 import { SubpageSection } from "./SubpageSection.jsx";
+import { FieldLabel } from "./FieldLabel.jsx";
+import { ManagementRow } from "./ManagementRow.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
-const MotionRow = motion.div;
+const MotionRow = motion(ManagementRow);
 
 // "Vårt hjem" subpage, part 1: member list + add member, each always-open
 // (no accordions — see SubpageSection.jsx). Content-only — no own Card
@@ -65,36 +67,33 @@ export function MembersIsland() {
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Medlemmer</div>
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{listUsers.length} / 10 brukere</div>
 
-      <SubpageSection label="Se nåværende medlemmer">
+      <SubpageSection label="Medlemmer">
         <AnimatePresence initial={false}>
           {listUsers.map((u) => (
             <MotionRow
-              className="mgmt-row"
               key={u.username}
               layout={shouldAnimate}
               transition={transition}
               initial={shouldAnimate ? { opacity: 0, y: 8 } : false}
               animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
               exit={shouldAnimate ? { opacity: 0, scale: 0.9 } : undefined}
-            >
-              <div className="who">
-                <div className="uname">
-                  {u.name || u.username}{" "}
-                  {!!u.is_owner && <Badge tone="secondary">Eier</Badge>}{" "}
+              title={
+                <>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name || u.username}</span>
+                  {!!u.is_owner && <Badge tone="secondary">Eier</Badge>}
                   {!!u.is_admin && <Badge tone="primary">Admin</Badge>}
-                </div>
-                <div className="sub">{u.username === currentUser ? "deg" : u.username}</div>
-              </div>
-              <div className="acts">
-                <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
-              </div>
+                </>
+              }
+              subtitle={u.username === currentUser ? "deg" : u.username}
+            >
+              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
             </MotionRow>
           ))}
         </AnimatePresence>
       </SubpageSection>
 
       <SubpageSection label="Legg til medlem">
-        <label htmlFor="members-new-name" className="sr-only">Navn på nytt medlem</label>
+        <FieldLabel htmlFor="members-new-name" visuallyHidden>Navn på nytt medlem</FieldLabel>
         <Input
           id="members-new-name"
           placeholder="Navn"
@@ -102,17 +101,18 @@ export function MembersIsland() {
           onChange={(e) => setNewName(e.target.value)}
           style={{ marginBottom: 8 }}
         />
-        <label htmlFor="members-new-email" className="sr-only">E-post for nytt medlem</label>
+        <FieldLabel htmlFor="members-new-email" visuallyHidden>E-post for nytt medlem</FieldLabel>
         <Input
           id="members-new-email"
           type="email"
           placeholder="E-post"
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
+          style={{ marginBottom: 10 }}
         />
-        <button onClick={addMember} disabled={full} className="btn-primary mt-8" style={{ opacity: full ? 0.5 : 1 }}>
-          + Legg til bruker
-        </button>
+        <Button variant="primary" icon="plus" onClick={addMember} disabled={full}>
+          Legg til bruker
+        </Button>
       </SubpageSection>
 
       {creds && (
