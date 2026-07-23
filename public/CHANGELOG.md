@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.42.2] — 2026-07-23
+
+### Fixed
+- **"Hva er nytt" viser nå riktig versjon.** Vinduet som dukker opp etter en
+  oppdatering for å vise hva som er nytt, kunne henge én versjon bak — det viste
+  forrige oppdaterings punkter i stedet for den nyeste. Nå hentes alltid den
+  ferskeste endringsloggen, så vinduet stemmer med versjonen du faktisk kjører
+  (slik innstillingssiden og den fulle endringsloggen allerede gjorde).
+
 ## [1.42.1] — 2026-07-23
 
 ### Fixed
