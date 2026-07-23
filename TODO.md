@@ -11,12 +11,13 @@ Completed items live in `Todo_done.md`, not below.
 0. **Reliability — offline write durability (#113)** — DONE (1.39.0, see
    `Todo_done.md`). A persisted outbound queue now keeps an add/toggle made
    with no signal and replays it on reconnect.
-1. **Bugs (#87–#99)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99 from
-   a second full app-audit pass 2026-07-20. All low-priority latent/edge
-   issues. The two P0s (#79, #80), all three P1s (#81–#83) plus the
-   2026-07-20-audit P1 (#90), P2 #84–#86, and the 1.39.1 batch (#91, #93,
-   #95, #96, #97, #99) are fixed (see `Todo_done.md`); #87, #88, #89, #92,
-   #94, #98 remain open.
+1. **Bugs (#87–#99, #114)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99
+   from a second full app-audit pass 2026-07-20; #114 found 2026-07-23. The
+   two P0s (#79, #80), all three P1s (#81–#83) plus the 2026-07-20-audit P1
+   (#90), P2 #84–#86, and the 1.39.1 batch (#91, #93, #95, #96, #97, #99) are
+   fixed (see `Todo_done.md`); #87, #88, #89, #92, #94, #98 remain low-priority
+   latent/edge issues. #114 (stale/inconsistent in-app changelog right after
+   a deploy) is user-visible and higher priority than those.
 2. **Small UI/polish items — low value, low risk, good filler:**
    - ~~**#100** "Tøm handlede" bulk-clear (end-of-trip sweep)~~ — DONE (1.40.0,
      see `Todo_done.md`).
@@ -52,6 +53,34 @@ fixed — see `Todo_done.md`. Items #91–#99 were found in a second full
 app-audit pass (2026-07-20); file:line refs are from that pass — verify
 before fixing. Of those, #91, #93, #95 (and UI-section #96, #97, #99) are
 now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
+#114 was reported directly by the user (2026-07-23).
+
+### P1 — High / Medium
+
+114. The in-app changelog shows stale or inconsistent content right after a
+     deploy: the version-bump modal that auto-opens is typically a version
+     behind, and viewing the full changelog or reopening it from Settings
+     moments later shows something else again. Root cause is
+     `public/sw.js`'s generic fetch handler (~L56), which caches
+     `/CHANGELOG.md` stale-while-revalidate — the same treatment it gives
+     the hashed JS/CSS/image app-shell assets. Unlike those, `/CHANGELOG.md`
+     is requested at the same URL on every release, so whichever tab fetches
+     it first after a deploy gets the *previous* release's cached text back
+     immediately (with a background refetch updating the cache only for
+     next time) — and that first fetch is usually
+     `useDeployVersionCheck`'s auto-opened modal (`ChangelogModal.jsx` ~L18)
+     right after the page reloads into the new version. A second fetch
+     moments later — reopening the modal from Settings (`AboutFooter.jsx`)
+     or following "Se hele endringsloggen" out to `changelog.html`, which
+     fetches the same URL again (~L255) — lands after that background
+     revalidation completed, so it shows different (correct) content,
+     which reads as the two views disagreeing. `APP_VERSION` itself (baked
+     into the hashed JS bundle) is never wrong — only the changelog *text*
+     lags. Fix direction: stop treating `/CHANGELOG.md` like a hashed asset
+     in `sw.js` (network-first, like `app.html`'s special case), or add
+     `cache: 'no-store'` to the two `fetch("/CHANGELOG.md")` call sites
+     (`ChangelogModal.jsx`, `public/changelog.html`).
+     _Value: Medium · Importance: High · Type: Bug / Caching / UX_
 
 ### P2 — Low (latent / edge)
 
