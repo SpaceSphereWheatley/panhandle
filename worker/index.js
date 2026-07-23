@@ -29,15 +29,18 @@ const LOGIN_MAX_ATTEMPTS = 10;
 
 // Common Norwegian groceries seeded into a new list's catalogue at creation,
 // so a fresh household gets autocomplete/category-matching for everyday items
-// instead of a blank catalogue. One-time copy per list — editing this array
-// only affects lists created afterwards. Categories must be in CATEGORIES.
-// Kept in sync with migrations/0002_seed_catalogue.sql and
-// 0003_expand_catalogue.sql (~710 items total) — those migrations backfilled
-// this same set into every list that existed *at the time they were run*
-// (via CROSS JOIN lists), but new lists only ever get seeded through this
-// array, so it needs to carry the full set too, not just the original
-// smaller list. If you add more items via a future migration, add them here
-// as well so newly-created lists don't fall behind again.
+// instead of a blank catalogue. Categories must be in CATEGORIES.
+//
+// This array is the single source of truth — editing it and deploying is
+// the entire rollout process. New lists get it via createList() immediately;
+// existing lists get backfilled automatically within 15 minutes by
+// checkCatalogueSync (cron-driven, see scheduled() below), which hashes this
+// array on every tick and only re-runs the cross-list backfill when the hash
+// has actually changed. There's no separate migration file to write anymore
+// (contrast the old one-off migrations/0002_seed_catalogue.sql and
+// 0003_expand_catalogue.sql, which hand-transcribed items into SQL and had
+// to be run manually — kept only for historical record, not a pattern to
+// repeat).
 export const COMMON_ITEMS = [
   { name: "Frukt", category: "Frukt og grønt" },
   { name: "Grønnsaker", category: "Frukt og grønt" },
@@ -1321,6 +1324,47 @@ export async function runNotificationPass(env, nowMs) {
   // any list the weekly reminder just sent to (#91).
   const weeklyNotified = await checkWeeklyReminders(env, nowMs);
   await checkMealReminders(env, nowMs, weeklyNotified);
+}
+
+// Stable content hash of a COMMON_ITEMS-shaped array, used by
+// checkCatalogueSync to detect whether the array changed since the last
+// cron tick without diffing every list's catalogue every 15 minutes.
+async function hashCommonItems(items) {
+  const bytes = new TextEncoder().encode(JSON.stringify(items));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Keeps every existing list's item_catalogue backfilled with the current
+// COMMON_ITEMS set, so a household created before an item was added doesn't
+// permanently miss it (see COMMON_ITEMS's doc comment for the rollout
+// story this replaces). Cron-driven, cheap on every tick where COMMON_ITEMS
+// hasn't changed (one row read, no writes) — the full cross-list backfill
+// only runs when its hash no longer matches catalogue_sync_state.
+// `items` defaults to COMMON_ITEMS but is a parameter so tests can exercise
+// this against a small fixture array instead of the real ~710-item list.
+export async function checkCatalogueSync(env, items = COMMON_ITEMS) {
+  const hash = await hashCommonItems(items);
+  const state = await env.DB.prepare(
+    "SELECT items_hash FROM catalogue_sync_state WHERE id = 1"
+  ).first();
+  if (state?.items_hash === hash) return { synced: false };
+
+  const { results: lists } = await env.DB.prepare("SELECT id FROM lists").all();
+  await Promise.all(lists.map((list) =>
+    env.DB.batch(items.map((it) =>
+      env.DB.prepare(
+        "INSERT INTO item_catalogue (name, category, list_id) VALUES (?1, ?2, ?3) ON CONFLICT(list_id, name) DO UPDATE SET category = excluded.category"
+      ).bind(it.name, it.category, list.id)
+    ))
+  ));
+
+  await env.DB.prepare(`
+    INSERT INTO catalogue_sync_state (id, items_hash, synced_at) VALUES (1, ?1, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET items_hash = excluded.items_hash, synced_at = excluded.synced_at
+  `).bind(hash).run();
+
+  return { synced: true, listCount: lists.length };
 }
 
 export default {
@@ -2742,8 +2786,12 @@ export default {
   },
 
   // Cron-driven (see [triggers] in wrangler.toml). Thin wrapper so the actual
-  // logic (runNotificationPass, above) stays independently callable/testable.
+  // logic (runNotificationPass / checkCatalogueSync, above) stays
+  // independently callable/testable. The two checks are unrelated concerns
+  // (notifications vs. catalogue rollout) run as separate waitUntil tasks
+  // rather than bundled into one function.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runNotificationPass(env, event.scheduledTime));
+    ctx.waitUntil(checkCatalogueSync(env));
   },
 };
