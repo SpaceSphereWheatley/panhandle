@@ -89,6 +89,9 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  // -1 = nothing arrow-key-highlighted in the suggestions dropdown (Enter
+  // falls back to submitting addValue as typed, same as before this existed).
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   // "Nylig kjøpt" starts collapsed — it's a re-add palette, not something to
@@ -117,6 +120,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
+  const suggestionRefs = useRef([]);
 
   async function loadCatalogue() {
     setCatalogue(await api("/catalogue"));
@@ -275,6 +279,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
     setAddValue("");
     setSuggestions([]);
+    setHighlightedIndex(-1);
     haptic();
     addInputRef.current?.focus();
     let res;
@@ -434,6 +439,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   function onAddInputChange(v) {
     setAddValue(v);
+    setHighlightedIndex(-1);
     if (!v.trim()) {
       setSuggestions([]);
       return;
@@ -442,6 +448,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     const { name: base } = extractGF(query);
     setSuggestions(matchCatalogue(base, catalogue).slice(0, 6));
   }
+
+  useEffect(() => {
+    if (highlightedIndex === -1) return;
+    suggestionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex]);
 
   function focusAddInput() {
     addInputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -543,9 +554,37 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           value={addValue}
           onChange={(e) => onAddInputChange(e.target.value)}
           onKeyDown={(e) => {
+            const exactOptionShown = Boolean(addValue.trim());
+            const optionCount = suggestions.length + (exactOptionShown ? 1 : 0);
+            if (e.key === "ArrowDown") {
+              if (!optionCount) return;
+              e.preventDefault();
+              setHighlightedIndex((i) => (i + 1) % optionCount);
+              return;
+            }
+            if (e.key === "ArrowUp") {
+              if (!optionCount) return;
+              e.preventDefault();
+              setHighlightedIndex((i) => (i <= 0 ? optionCount - 1 : i - 1));
+              return;
+            }
+            if (e.key === "Escape") {
+              if (highlightedIndex === -1) return;
+              e.preventDefault();
+              setHighlightedIndex(-1);
+              return;
+            }
             if (e.key === "Enter") {
               e.preventDefault();
-              addItem(addValue);
+              if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+                const m = suggestions[highlightedIndex];
+                const { gf } = extractGF(parseItemInput(addValue, catalogue).name);
+                addItem(cap(m.name) + (gf ? " GF" : ""));
+              } else if (highlightedIndex === suggestions.length && exactOptionShown) {
+                addItem(addValue, { exact: true });
+              } else {
+                addItem(addValue);
+              }
             }
           }}
         />
@@ -565,18 +604,37 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               boxShadow: "var(--shadow-raised)",
             }}
           >
-            {suggestions.map((m) => {
+            {suggestions.map((m, i) => {
               const { gf } = extractGF(parseItemInput(addValue, catalogue).name);
               const label = cap(m.name) + (gf ? " GF" : "");
               return (
-                <div key={m.id} style={{ padding: "12px 14px", cursor: "pointer", color: "var(--text-primary)" }} onClick={() => addItem(label)}>
+                <div
+                  key={m.id}
+                  ref={(el) => (suggestionRefs.current[i] = el)}
+                  style={{
+                    padding: "12px 14px",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                    background: highlightedIndex === i ? "var(--surface-sunken)" : undefined,
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(i)}
+                  onClick={() => addItem(label)}
+                >
                   {label}
                 </div>
               );
             })}
             {addValue.trim() && (
               <div
-                style={{ padding: "12px 14px", cursor: "pointer", fontStyle: "italic", color: "var(--text-tertiary)" }}
+                ref={(el) => (suggestionRefs.current[suggestions.length] = el)}
+                style={{
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  fontStyle: "italic",
+                  color: "var(--text-tertiary)",
+                  background: highlightedIndex === suggestions.length ? "var(--surface-sunken)" : undefined,
+                }}
+                onMouseEnter={() => setHighlightedIndex(suggestions.length)}
                 onClick={() => addItem(addValue, { exact: true })}
               >
                 Legg til «{addValue.trim()}» nøyaktig som skrevet
