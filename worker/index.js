@@ -1,4 +1,3 @@
-// Laget av Mohibb Malik, 2026
 // Worker API for shared shopping list + meal planner
 // Served at shopping.mohibb.com. Frontend on Cloudflare Pages,
 // API = this Worker under /api/*. Proxies other paths to Pages.
