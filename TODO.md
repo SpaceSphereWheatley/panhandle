@@ -94,15 +94,16 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## Feature
 
-15. Add language support (i18n). The UI is currently 100% hardcoded
-    Norwegian strings across every tab/component/modal — no translation
-    layer, no string-key extraction, no language switcher. Needs a
-    translation infrastructure decision (a lightweight locale →
-    string-map approach fits this app's size better than pulling in a
-    full i18n library), a language switcher (Settings, persisted
-    per-device like theme), then extracting/translating every existing
-    string. Large, cross-cutting effort — touches nearly every component,
-    not a contained feature.
+15. Extract/translate the rest of the app into the nb/en i18n layer (phase 2
+    of language support — phase 1, the translation infrastructure
+    (`src/lib/i18n/`), the Settings → "Språk" switcher, and `ShoppingListTab`
+    wired up as a proof of concept, shipped in 1.43.4). Every other
+    tab/component (`MealsTab`, the other Settings subpages, every modal,
+    `AuthScreens`, `ConfirmContext`'s shared "Avbryt" chrome) is still 100%
+    hardcoded Norwegian. Server-side error strings (`worker/index.js`,
+    surfaced via `toast(res.error)`) are a separate translation surface not
+    yet addressed either. Large, cross-cutting effort — touches nearly every
+    remaining component, still not a contained feature.
     _Value: Medium · Importance: Low · Type: Feature / i18n_
 
 ## Data model / Account lifecycle

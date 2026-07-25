@@ -1,6 +1,7 @@
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { usePush } from "../../context/PushContext.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { PwaInstallCTA } from "./PwaInstallCTA.jsx";
 import { SettingsGroup } from "./SettingsGroup.jsx";
 import { SettingsRow } from "./SettingsRow.jsx";
@@ -18,6 +19,7 @@ export function SettingsRoot({ onNavigate }) {
   const { user, name, isAdmin } = useAuth();
   const { listUsers } = useListUsers();
   const { subscribed } = usePush();
+  const { lang } = useLanguage();
 
   return (
     <section>
@@ -35,6 +37,12 @@ export function SettingsRoot({ onNavigate }) {
           label="Konto"
           supportingText={name || user}
           onClick={() => onNavigate(["konto"])}
+        />
+        <SettingsRow
+          icon="translate"
+          label="Språk"
+          supportingText={lang === "en" ? "English" : "Norsk"}
+          onClick={() => onNavigate(["sprak"])}
         />
       </SettingsGroup>
 
