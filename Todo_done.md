@@ -7,6 +7,17 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+101. (114) In-app changelog showing stale/inconsistent content right after a
+     deploy. Root cause was `sw.js` caching `/CHANGELOG.md` stale-while-
+     revalidate like the hashed app-shell assets, even though its content
+     (unlike theirs) changes across deploys under a stable URL — so the
+     `ChangelogModal` auto-open right after a new build landed usually got
+     the previous deploy's cached text. Fixed by serving `/CHANGELOG.md`
+     network-first in `sw.js` (falling back to cache only when offline),
+     plus version-stamping `ChangelogModal`'s fetch
+     (`/CHANGELOG.md?v=${APP_VERSION}`) as belt-and-suspenders for a device
+     still running the previous deploy's service worker. (1.42.2)
+
 100. (105) Custom per-list aisle order — "match my store's layout". Added the
      `category_order` table (`migrations/0017_category_order.sql`, one row per
      `list_id`+`category` with a `position`) and `GET`/`POST /category-order`
