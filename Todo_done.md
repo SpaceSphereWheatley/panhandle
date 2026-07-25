@@ -7,6 +7,12 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+102. (114) Butikkoppsett's category-reorder row: moved the drag handle from
+     between the name and the up/down arrows to the far right, after both
+     arrows, per user request — a clearer, more predictable grab-target
+     placement. `ButikkSubpage.jsx`'s `CategoryRow` now orders it dot → name
+     → ↑ → ↓ → drag handle. (1.43.3)
+
 101. (114) In-app changelog showing stale/inconsistent content right after a
      deploy. Root cause was `sw.js` caching `/CHANGELOG.md` stale-while-
      revalidate like the hashed app-shell assets, even though its content

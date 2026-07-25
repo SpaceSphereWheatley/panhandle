@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.43.3] — 2026-07-25
+
+### Changed
+- **Dra-i-håndtaket flyttet lengst til høyre i butikkoppsett.** I lista over
+  varegrupper (Innstillinger → Butikkoppsett) satt dra-håndtaket mellom
+  varenavnet og opp/ned-pilene. Det er nå flyttet til å være ytterst til
+  høyre, etter pilene, som et tydeligere grep-punkt.
+
 ## [1.43.2] — 2026-07-23
 
 ### Fixed
