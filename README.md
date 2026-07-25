@@ -68,7 +68,3 @@ Both halves deploy automatically on push to `main`:
 ## License
 
 Personal project. Feel free to fork and adapt for your own use.
-
----
-
-**Made by:** Mohibb Malik, 2026
