@@ -145,19 +145,6 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
     clear, or add a distinct confirmation.
     _Value: Low · Importance: Low · Type: UI / Shopping list_
 
-114. Butikkoppsett's category-reorder row layout: reported (2026-07-23) that
-     the drag handle sits to the right of the up/down arrow buttons — worth a
-     look at whether that's the most intuitive grab-target placement.
-     Re-checked 2026-07-25: `src/components/settings/subpages/ButikkSubpage.jsx`
-     `CategoryRow` (~L183-251) still orders it dot → name (flex:1) → drag
-     handle (~L214-230) → ↑ → ↓ in a plain, non-reversed flex row with no
-     `flex-direction: row-reverse` or CSS `order` override anywhere — so the
-     drag handle renders *left* of both arrows, still not matching the
-     reported "right of the arrows." Needs an actual screenshot of the
-     rendered page (device/browser/zoom could matter) before touching the
-     JSX, since the source doesn't reproduce what was reported.
-     _Value: Low · Importance: Low · Type: UI / Settings_
-
 ## Dev process / policy
 
 Process/documentation improvements from the 2026-07-20 dev-policy review (see

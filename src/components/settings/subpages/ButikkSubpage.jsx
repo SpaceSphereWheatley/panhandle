@@ -211,23 +211,6 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
         }}
       />
       <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{cat}</span>
-      <span
-        aria-hidden="true"
-        onPointerDown={(e) => dragControls.start(e)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          flexShrink: 0,
-          touchAction: "none",
-          cursor: "grab",
-          color: "var(--text-tertiary)",
-        }}
-      >
-        <UiIcon name="dots-six-vertical" size={18} />
-      </span>
       <button
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
@@ -246,6 +229,23 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       >
         <UiIcon name="caret-down" size={16} />
       </button>
+      <span
+        aria-hidden="true"
+        onPointerDown={(e) => dragControls.start(e)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 36,
+          height: 36,
+          flexShrink: 0,
+          touchAction: "none",
+          cursor: "grab",
+          color: "var(--text-tertiary)",
+        }}
+      >
+        <UiIcon name="dots-six-vertical" size={18} />
+      </span>
     </Reorder.Item>
   );
 }
