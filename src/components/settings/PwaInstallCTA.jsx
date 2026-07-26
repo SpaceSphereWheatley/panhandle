@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useInstallPrompt, isStandalone, isIos } from "../../context/InstallPromptContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 import { IconButton } from "../../design-system/index.js";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 import { InstallHelpModal } from "./InstallHelpModal.jsx";
 
 const DISMISS_KEY = "ph_install_cta_dismissed";
@@ -19,6 +20,7 @@ function isDismissed() {
 // vanishing); and a plain text row once the user has explicitly dismissed
 // it (a stronger, user-stated signal, so it's quieter still).
 export function PwaInstallCTA() {
+  const t = useTranslation();
   const { canInstall, promptInstall, installed } = useInstallPrompt();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [press, setPress] = useState(false);
@@ -82,7 +84,7 @@ export function PwaInstallCTA() {
         }}
       >
         <i className="ph ph-device-mobile" style={{ fontSize: 18, flexShrink: 0 }} />
-        <span>Installer Panhandle</span>
+        <span>{t("settings.install.cta")}</span>
       </Wrapper>
     );
   } else if (dismissed) {
@@ -103,7 +105,7 @@ export function PwaInstallCTA() {
         }}
       >
         <i className="ph ph-device-mobile" style={{ fontSize: 17, flexShrink: 0, color: "var(--accent-primary)" }} />
-        <span>Installer Panhandle</span>
+        <span>{t("settings.install.cta")}</span>
       </Wrapper>
     );
   } else {
@@ -126,7 +128,7 @@ export function PwaInstallCTA() {
           icon="x"
           size="sm"
           variant="ghost"
-          label="Ikke nå"
+          label={t("settings.install.dismiss")}
           onClick={dismiss}
           style={{ position: "absolute", top: 8, right: 8, background: "transparent", color: "var(--text-on-accent)" }}
         />
@@ -140,12 +142,10 @@ export function PwaInstallCTA() {
             margin: "10px 0 6px",
           }}
         >
-          Installer Panhandle
+          {t("settings.install.cta")}
         </div>
         <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, opacity: 0.9 }}>
-          {isIos()
-            ? 'Trykk del-ikonet ⎋ i Safari og velg «Legg til på Hjemskjerm».'
-            : "Trykk for full skjerm og rask tilgang, uten nettleserlinjer."}
+          {t(isIos() ? "settings.install.iosHint" : "settings.install.hint")}
         </div>
       </Wrapper>
     );

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Input, Button } from "../design-system/index.js";
 import { GoogleSignIn } from "./GoogleSignIn.jsx";
+import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 export function LoginScreen({ onSignup, onForgot }) {
+  const t = useTranslation();
   const { login, loginWithGoogle, expiredReason } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,9 +19,10 @@ export function LoginScreen({ onSignup, onForgot }) {
     setBusy(true);
     try {
       const { error } = await login(username.trim(), password);
+      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (error) setError(error);
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -30,9 +33,10 @@ export function LoginScreen({ onSignup, onForgot }) {
     setBusy(true);
     try {
       const { error } = await loginWithGoogle(credential);
+      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (error) setError(error);
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -68,7 +72,7 @@ export function LoginScreen({ onSignup, onForgot }) {
       <div style={{ width: "100%", maxWidth: 320 }}>
         <Input
           type="email"
-          placeholder="E-post"
+          placeholder={t("auth.email")}
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -78,7 +82,7 @@ export function LoginScreen({ onSignup, onForgot }) {
       <div style={{ width: "100%", maxWidth: 320 }}>
         <Input
           type={showPassword ? "text" : "password"}
-          placeholder="Passord"
+          placeholder={t("auth.password")}
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -87,7 +91,7 @@ export function LoginScreen({ onSignup, onForgot }) {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              aria-label="Vis eller skjul passord"
+              aria-label={t("auth.togglePasswordAria")}
               style={{
                 background: "none",
                 border: "none",
@@ -100,23 +104,23 @@ export function LoginScreen({ onSignup, onForgot }) {
                 flexShrink: 0,
               }}
             >
-              {showPassword ? "Skjul" : "Vis"}
+              {t(showPassword ? "auth.hidePassword" : "auth.showPassword")}
             </button>
           }
         />
       </div>
       <div style={{ marginTop: 6 }}>
         <Button variant="primary" size="lg" disabled={busy} onClick={doLogin}>
-          {busy ? "Logger inn..." : "Logg inn"}
+          {t(busy ? "auth.login.busy" : "auth.login.submit")}
         </Button>
       </div>
       <div
         id="loginErr"
         style={{ color: "var(--status-danger)", fontSize: "var(--text-sm)", minHeight: 18, textAlign: "center" }}
       >
-        {error || expiredReason}
+        {error || (expiredReason ? t("auth.sessionExpired") : "")}
       </div>
-      <div style={{ margin: "2px 0", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>eller</div>
+      <div style={{ margin: "2px 0", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>{t("auth.or")}</div>
       <GoogleSignIn onCredential={doGoogle} />
       <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
         <button
@@ -124,14 +128,14 @@ export function LoginScreen({ onSignup, onForgot }) {
           onClick={onSignup}
           style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer" }}
         >
-          Opprett ny husstand
+          {t("auth.login.signupLink")}
         </button>
         <button
           type="button"
           onClick={onForgot}
           style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer" }}
         >
-          Glemt passord?
+          {t("auth.login.forgotLink")}
         </button>
       </div>
     </div>

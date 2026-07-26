@@ -56,7 +56,7 @@ describe("AuthContext", () => {
     expect(localStorage.getItem("ph_is_admin")).toBe("1");
   });
 
-  it("logout('expired') clears storage and sets a user-facing expiredReason", async () => {
+  it("logout('expired') clears storage and sets the expiredReason code", async () => {
     rawLogin.mockResolvedValue({
       ok: true,
       data: { token: "tok-1", user: "alice", is_admin: 0, is_owner: 0, is_superadmin: 0 },
@@ -69,7 +69,9 @@ describe("AuthContext", () => {
 
     await waitFor(() => expect(screen.getByTestId("token").textContent).toBe("none"));
     expect(localStorage.getItem("ph_token")).toBeNull();
-    expect(screen.getByTestId("expired").textContent).toMatch(/Logg inn på nytt/);
+    // A reason code, not a sentence — LoginScreen renders it via t(), so the
+    // wording lives in the dictionaries rather than in this context.
+    expect(screen.getByTestId("expired").textContent).toBe("expired");
   });
 
   // Regression guard for the documented invariant in AuthContext.jsx: configureApi

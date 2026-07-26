@@ -3,9 +3,11 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { Input, Button } from "../design-system/index.js";
 import { Turnstile } from "./Turnstile.jsx";
 import { GoogleSignIn } from "./GoogleSignIn.jsx";
+import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 export function SignupScreen({ onBack }) {
+  const t = useTranslation();
   const { register, loginWithGoogle } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,11 +21,11 @@ export function SignupScreen({ onBack }) {
   async function doRegister() {
     setError("");
     if (password !== confirm) {
-      setError("Passordene er ikke like");
+      setError(t("auth.signup.passwordMismatch"));
       return;
     }
     if (!turnstileToken) {
-      setError("Fullfør bot-verifiseringen");
+      setError(t("auth.signup.turnstileRequired"));
       return;
     }
     setBusy(true);
@@ -35,9 +37,10 @@ export function SignupScreen({ onBack }) {
         list_name: listName.trim() || undefined,
         turnstile_token: turnstileToken,
       });
+      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (error) setError(error);
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -48,9 +51,10 @@ export function SignupScreen({ onBack }) {
     setBusy(true);
     try {
       const { error } = await loginWithGoogle(credential, listName.trim() || undefined);
+      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (error) setError(error);
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -80,30 +84,30 @@ export function SignupScreen({ onBack }) {
           margin: "0 0 8px",
         }}
       >
-        Opprett ny husstand
+        {t("auth.signup.title")}
       </h1>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Navn" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input placeholder={t("auth.signup.name")} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="E-post" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input placeholder={t("auth.email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Passord (minst 8 tegn)" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input placeholder={t("auth.signup.password")} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Gjenta passord" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <Input placeholder={t("auth.signup.repeatPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Familienavn (valgfritt)" value={listName} onChange={(e) => setListName(e.target.value)} />
+        <Input placeholder={t("auth.signup.listName")} value={listName} onChange={(e) => setListName(e.target.value)} />
       </div>
       <Turnstile onToken={setTurnstileToken} />
       <div style={{ marginTop: 6 }}>
         <Button variant="primary" size="lg" disabled={busy} onClick={doRegister}>
-          {busy ? "Oppretter..." : "Opprett konto"}
+          {t(busy ? "auth.signup.busy" : "auth.signup.submit")}
         </Button>
       </div>
-      <div style={{ margin: "6px 0", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>eller</div>
+      <div style={{ margin: "6px 0", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>{t("auth.or")}</div>
       <GoogleSignIn onCredential={doGoogle} />
       <div style={{ color: "var(--status-danger)", fontSize: "var(--text-sm)", minHeight: 18, textAlign: "center" }}>
         {error}
@@ -113,7 +117,7 @@ export function SignupScreen({ onBack }) {
         onClick={onBack}
         style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer", marginTop: 8 }}
       >
-        Har du allerede en konto? Logg inn
+        {t("auth.signup.backLink")}
       </button>
     </div>
   );

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { rawResetPassword } from "../lib/api.js";
 import { Input, Button } from "../design-system/index.js";
+import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 export function ResetPasswordScreen({ token, onDone }) {
+  const t = useTranslation();
   const { completeAuth } = useAuth();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -14,18 +16,19 @@ export function ResetPasswordScreen({ token, onDone }) {
   async function submit() {
     setError("");
     if (password !== confirm) {
-      setError("Passordene er ikke like");
+      setError(t("auth.signup.passwordMismatch"));
       return;
     }
     if (password.length < 8) {
-      setError("Passord må være minst 8 tegn");
+      setError(t("auth.reset.tooShort"));
       return;
     }
     setBusy(true);
     try {
       const { ok, data } = await rawResetPassword(token, password);
       if (!ok) {
-        setError(data.error || "Tilbakestilling feilet");
+        // TODO(i18n): data.error is a raw server string (worker/index.js), not run through t() — phase 2+.
+        setError(data.error || t("auth.reset.failed"));
         return;
       }
       completeAuth(data);
@@ -35,7 +38,7 @@ export function ResetPasswordScreen({ token, onDone }) {
       window.history.replaceState({}, "", url);
       onDone();
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -64,17 +67,17 @@ export function ResetPasswordScreen({ token, onDone }) {
           margin: "0 0 8px",
         }}
       >
-        Nytt passord
+        {t("auth.reset.title")}
       </h1>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Nytt passord (minst 8 tegn)" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input placeholder={t("auth.reset.password")} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
       </div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <Input placeholder="Gjenta nytt passord" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <Input placeholder={t("auth.reset.repeatPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
       </div>
       <div style={{ marginTop: 6 }}>
         <Button variant="primary" size="lg" disabled={busy} onClick={submit}>
-          {busy ? "Lagrer..." : "Lagre nytt passord"}
+          {t(busy ? "auth.reset.busy" : "auth.reset.submit")}
         </Button>
       </div>
       <div style={{ color: "var(--status-danger)", fontSize: "var(--text-sm)", minHeight: 18, textAlign: "center" }}>

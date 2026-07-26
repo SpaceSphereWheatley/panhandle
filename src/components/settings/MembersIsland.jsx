@@ -10,6 +10,7 @@ import { FieldLabel } from "./FieldLabel.jsx";
 import { ManagementRow } from "./ManagementRow.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 
 const MotionRow = motion(ManagementRow);
@@ -23,6 +24,7 @@ export function MembersIsland() {
   const { listUsers, refresh } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
+  const t = useTranslation();
   const { shouldAnimate, transition } = useMotionConfig();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -34,15 +36,16 @@ export function MembersIsland() {
     const name = newName.trim();
     const email = newEmail.trim();
     if (!name) {
-      toast("Skriv inn et navn", { error: true });
+      toast(t("settings.admin.toast.enterName"), { error: true });
       return;
     }
     if (!email) {
-      toast("Skriv inn en e-post", { error: true });
+      toast(t("settings.admin.toast.enterEmail"), { error: true });
       return;
     }
     const res = await api("/list-users", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -53,9 +56,16 @@ export function MembersIsland() {
   }
 
   async function removeMember(username) {
-    if (!(await confirm(`Fjerne ${username} fra listen?`, { title: "Fjerne medlem?", confirmLabel: "Fjern" }))) return;
+    if (
+      !(await confirm(t("settings.hjem.members.confirmRemove.body", { name: username }), {
+        title: t("settings.hjem.members.confirmRemove.title"),
+        confirmLabel: t("settings.hjem.members.confirmRemove.confirmLabel"),
+      }))
+    )
+      return;
     const res = await api(`/list-users/${encodeURIComponent(username)}`, { method: "DELETE" });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -64,10 +74,10 @@ export function MembersIsland() {
 
   return (
     <>
-      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Medlemmer</div>
-      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{listUsers.length} / 10 brukere</div>
+      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.hjem.members.eyebrow")}</div>
+      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{t("settings.hjem.members.count", { count: listUsers.length })}</div>
 
-      <SubpageSection label="Medlemmer">
+      <SubpageSection label={t("settings.hjem.members.label")}>
         <AnimatePresence initial={false}>
           {listUsers.map((u) => (
             <MotionRow
@@ -80,38 +90,38 @@ export function MembersIsland() {
               title={
                 <>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name || u.username}</span>
-                  {!!u.is_owner && <Badge tone="secondary">Eier</Badge>}
-                  {!!u.is_admin && <Badge tone="primary">Admin</Badge>}
+                  {!!u.is_owner && <Badge tone="secondary">{t("settings.hjem.members.badgeOwner")}</Badge>}
+                  {!!u.is_admin && <Badge tone="primary">{t("settings.hjem.members.badgeAdmin")}</Badge>}
                 </>
               }
-              subtitle={u.username === currentUser ? "deg" : u.username}
+              subtitle={u.username === currentUser ? t("settings.hjem.members.you") : u.username}
             >
-              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>Fjern</Button>
+              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>{t("settings.hjem.members.remove")}</Button>
             </MotionRow>
           ))}
         </AnimatePresence>
       </SubpageSection>
 
-      <SubpageSection label="Legg til medlem">
-        <FieldLabel htmlFor="members-new-name" visuallyHidden>Navn på nytt medlem</FieldLabel>
+      <SubpageSection label={t("settings.hjem.members.add.label")}>
+        <FieldLabel htmlFor="members-new-name" visuallyHidden>{t("settings.hjem.members.add.nameField")}</FieldLabel>
         <Input
           id="members-new-name"
-          placeholder="Navn"
+          placeholder={t("settings.konto.name.label")}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           style={{ marginBottom: 8 }}
         />
-        <FieldLabel htmlFor="members-new-email" visuallyHidden>E-post for nytt medlem</FieldLabel>
+        <FieldLabel htmlFor="members-new-email" visuallyHidden>{t("settings.hjem.members.add.emailField")}</FieldLabel>
         <Input
           id="members-new-email"
           type="email"
-          placeholder="E-post"
+          placeholder={t("settings.konto.email.label")}
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
           style={{ marginBottom: 10 }}
         />
         <Button variant="primary" icon="plus" onClick={addMember} disabled={full}>
-          Legg til bruker
+          {t("settings.hjem.members.add.submit")}
         </Button>
       </SubpageSection>
 

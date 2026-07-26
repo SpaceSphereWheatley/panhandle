@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.js";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 
 // Site-wide usage metrics, across every list — not just the caller's own.
 // Gated server-side by GET /admin/metrics (is_admin + a superadmin allowlist);
 // a non-superadmin admin just sees the error message below.
 export function MetricsSettings() {
+  const t = useTranslation();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -16,10 +18,11 @@ export function MetricsSettings() {
   }, []);
 
   if (error) {
+    // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
     return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>{error}</div>;
   }
   if (!data) {
-    return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>Laster …</div>;
+    return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>{t("settings.metrics.loading")}</div>;
   }
 
   const boughtPct = data.shopping.total_items
@@ -31,44 +34,44 @@ export function MetricsSettings() {
 
   return (
     <div>
-      <div className="setrow"><div className="k">Lister</div><div className="v">{data.overview.lists}</div></div>
-      <div className="setrow"><div className="k">Brukere</div><div className="v">{data.overview.users}</div></div>
-      <div className="setrow"><div className="k">Admins / eiere</div><div className="v">{data.overview.admins} / {data.overview.owners}</div></div>
-      <div className="setrow"><div className="k">Mislykkede innlogginger (24t)</div><div className="v">{data.failed_logins_24h}</div></div>
+      <div className="setrow"><div className="k">{t("settings.metrics.lists")}</div><div className="v">{data.overview.lists}</div></div>
+      <div className="setrow"><div className="k">{t("settings.metrics.users")}</div><div className="v">{data.overview.users}</div></div>
+      <div className="setrow"><div className="k">{t("settings.metrics.adminsOwners")}</div><div className="v">{data.overview.admins} / {data.overview.owners}</div></div>
+      <div className="setrow"><div className="k">{t("settings.metrics.failedLogins")}</div><div className="v">{data.failed_logins_24h}</div></div>
 
-      <MetricSection title="Nye brukere per uke">
+      <MetricSection title={t("settings.metrics.signupsPerWeek")}>
         <TrendBars data={data.signups_by_week} />
       </MetricSection>
 
-      <MetricSection title="Nye lister per uke">
+      <MetricSection title={t("settings.metrics.listsPerWeek")}>
         <TrendBars data={data.lists_by_week} />
       </MetricSection>
 
-      <MetricSection title="Handleliste-aktivitet">
-        <div className="setrow"><div className="k">Varer totalt</div><div className="v">{data.shopping.total_items}</div></div>
-        <div className="setrow"><div className="k">Kjøpt</div><div className="v">{data.shopping.bought_items} ({boughtPct}%)</div></div>
+      <MetricSection title={t("settings.metrics.shoppingActivity")}>
+        <div className="setrow"><div className="k">{t("settings.metrics.totalItems")}</div><div className="v">{data.shopping.total_items}</div></div>
+        <div className="setrow"><div className="k">{t("settings.metrics.bought")}</div><div className="v">{data.shopping.bought_items} ({boughtPct}%)</div></div>
         <div style={{ marginTop: 12 }}>
-          <div className="k" style={{ marginBottom: 8 }}>Varer lagt til per uke</div>
+          <div className="k" style={{ marginBottom: 8 }}>{t("settings.metrics.itemsPerWeek")}</div>
           <TrendBars data={data.shopping.items_by_week} />
         </div>
         <div style={{ marginTop: 16 }}>
-          <div className="k" style={{ marginBottom: 8 }}>Mest kjøpte varer</div>
+          <div className="k" style={{ marginBottom: 8 }}>{t("settings.metrics.topItems")}</div>
           <RankedBars data={data.shopping.top_items} />
         </div>
       </MetricSection>
 
-      <MetricSection title="Måltidsplanlegging">
-        <div className="setrow"><div className="k">Dager planlagt</div><div className="v">{data.meals.plan_filled} / {data.meals.plan_total} ({planFillPct}%)</div></div>
+      <MetricSection title={t("settings.metrics.mealPlanning")}>
+        <div className="setrow"><div className="k">{t("settings.metrics.daysPlanned")}</div><div className="v">{data.meals.plan_filled} / {data.meals.plan_total} ({planFillPct}%)</div></div>
         <div style={{ marginTop: 16 }}>
-          <div className="k" style={{ marginBottom: 8 }}>Mest planlagte måltider</div>
+          <div className="k" style={{ marginBottom: 8 }}>{t("settings.metrics.topMeals")}</div>
           <RankedBars data={data.meals.top_meals} />
         </div>
       </MetricSection>
 
-      <MetricSection title="Lister">
+      <MetricSection title={t("settings.metrics.lists")}>
         <div className="metrics-table">
           <div className="metrics-table-row metrics-table-head">
-            <span>Liste</span><span>Brukere</span><span>Varer</span><span>Kjøpt</span>
+            <span>{t("settings.metrics.table.list")}</span><span>{t("settings.metrics.users")}</span><span>{t("settings.metrics.table.items")}</span><span>{t("settings.metrics.bought")}</span>
           </div>
           {data.per_list.map((l) => (
             <div className="metrics-table-row" key={l.list_id}>
@@ -95,9 +98,10 @@ function MetricSection({ title, children }) {
 // are labeled on the axis (a full weekly tick label per bar would collide);
 // the per-bar tooltip carries the rest.
 function TrendBars({ data }) {
+  const t = useTranslation();
   const [hover, setHover] = useState(null);
   if (!data || data.length === 0) {
-    return <div style={{ color: "var(--text-tertiary)", fontSize: 13 }}>Ingen data ennå</div>;
+    return <div style={{ color: "var(--text-tertiary)", fontSize: 13 }}>{t("settings.metrics.noData")}</div>;
   }
   const max = Math.max(...data.map((d) => d.n), 1);
   const barW = 16;
@@ -107,7 +111,7 @@ function TrendBars({ data }) {
 
   return (
     <div style={{ position: "relative" }}>
-      <svg width={width} height={height + 16} role="img" aria-label={title(data)}>
+      <svg width={width} height={height + 16} role="img" aria-label={t("settings.metrics.trendAria", { from: data[0].week, to: data[data.length - 1].week })}>
         <line x1={0} y1={height} x2={width} y2={height} stroke="var(--border-default)" strokeWidth={1} />
         {data.map((d, i) => {
           const h = Math.max((d.n / max) * (height - 4), d.n > 0 ? 3 : 0);
@@ -138,22 +142,19 @@ function TrendBars({ data }) {
             padding: "4px 8px", fontSize: 12, whiteSpace: "nowrap", pointerEvents: "none",
           }}
         >
-          <strong>{data[hover].n}</strong> <span style={{ opacity: 0.8 }}>uke {data[hover].week}</span>
+          <strong>{data[hover].n}</strong> <span style={{ opacity: 0.8 }}>{t("settings.metrics.week", { week: data[hover].week })}</span>
         </div>
       )}
     </div>
   );
 }
 
-function title(data) {
-  return `Ukentlig trend, ${data[0].week} til ${data[data.length - 1].week}`;
-}
-
 // Horizontal ranked bar list for a small top-N (named categories, so every
 // bar is directly labeled with its name; value sits at the bar's tip).
 function RankedBars({ data }) {
+  const t = useTranslation();
   if (!data || data.length === 0) {
-    return <div style={{ color: "var(--text-tertiary)", fontSize: 13 }}>Ingen data ennå</div>;
+    return <div style={{ color: "var(--text-tertiary)", fontSize: 13 }}>{t("settings.metrics.noData")}</div>;
   }
   const max = Math.max(...data.map((d) => d.n), 1);
   return (

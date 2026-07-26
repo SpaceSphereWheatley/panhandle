@@ -4,6 +4,7 @@ import { Button, LoadingState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { buildIngredientRows } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 import { IngredientChecklist } from "./IngredientChecklist.jsx";
 
 // From the meal modal's "+ Legg ingredienser på handlelisten": pick which of
@@ -11,6 +12,7 @@ import { IngredientChecklist } from "./IngredientChecklist.jsx";
 // the active list are shown but left unchecked.
 export function IngredientPickerModal({ ingredients, onClose }) {
   const toast = useToast();
+  const t = useTranslation();
   const [rows, setRows] = useState(null);
 
   useEffect(() => {
@@ -49,17 +51,17 @@ export function IngredientPickerModal({ ingredients, onClose }) {
       }
     }
     onClose();
-    if (failed) toast(`${added} lagt til, ${failed} feilet – sjekk nettforbindelsen`, { error: true });
-    else toast(`${added} ${added === 1 ? "ingrediens" : "ingredienser"} lagt til på handlelisten`);
+    if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
+    else toast(t("meals.toast.ingredientsAdded", { count: added }));
   }
 
   return (
-    <Modal onClose={onClose} title="Legg til på handlelisten">
-      <p className="cred-note">Velg hvilke ingredienser som skal på listen.</p>
+    <Modal onClose={onClose} title={t("meals.ingredientPicker.title")}>
+      <p className="cred-note">{t("meals.ingredientPicker.intro")}</p>
       {rows === null ? <LoadingState /> : <IngredientChecklist rows={rows} onToggle={toggleRow} />}
       <div className="actions">
-        <Button variant="outline" onClick={onClose}>Avbryt</Button>
-        <Button variant="primary" onClick={confirmAdd}>Legg til valgte</Button>
+        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
       </div>
     </Modal>
   );

@@ -3,6 +3,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { Button, Card, Input, IconButton } from "../../../design-system/index.js";
 import { useCategoryOrder } from "../../../context/CategoryOrderContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { api } from "../../../lib/api.js";
 import { clusterFor } from "../../../lib/categoryClusters.js";
 import { CATEGORIES, haptic } from "../../../lib/shoppingUtils.js";
@@ -24,6 +25,7 @@ const STALE_ITEM_DAYS_MAX = 90;
 export function ButikkSubpage() {
   const { order, refresh, save } = useCategoryOrder();
   const toast = useToast();
+  const t = useTranslation();
   const [localOrder, setLocalOrder] = useState(order);
   const localOrderRef = useRef(localOrder);
 
@@ -49,6 +51,7 @@ export function ButikkSubpage() {
     [next[index], next[target]] = [next[target], next[index]];
     haptic();
     const res = await save(next);
+    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
     if (res.error) toast(res.error, { error: true });
   }
 
@@ -62,7 +65,7 @@ export function ButikkSubpage() {
     haptic();
     const res = await save(CATEGORIES);
     if (res.error) toast(res.error, { error: true });
-    else toast("Tilbakestilt til standard.");
+    else toast(t("settings.butikk.order.resetToast"));
   }
 
   const isDefault = localOrder.length === CATEGORIES.length && localOrder.every((c, i) => c === CATEGORIES[i]);
@@ -70,8 +73,8 @@ export function ButikkSubpage() {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <SubpageSection
-        label="Rekkefølge på varegrupper"
-        description="Sett varegruppene i samme rekkefølge som butikken deres, så følger handlelisten ruten dere faktisk går. Endringen gjelder for hele husstanden."
+        label={t("settings.butikk.order.label")}
+        description={t("settings.butikk.order.description")}
       >
         <Reorder.Group as="div" axis="y" values={localOrder} onReorder={setLocalOrder}>
           {localOrder.map((cat, i) => (
@@ -87,12 +90,12 @@ export function ButikkSubpage() {
         </Reorder.Group>
         <div style={{ marginTop: 12 }}>
           <Button variant="ghost" size="sm" onClick={reset} disabled={isDefault}>
-            Tilbakestill til standardrekkefølge
+            {t("settings.butikk.order.reset")}
           </Button>
         </div>
       </SubpageSection>
 
-      <StaleItemSection toast={toast} />
+      <StaleItemSection toast={toast} t={t} />
     </Card>
   );
 }
@@ -101,7 +104,7 @@ export function ButikkSubpage() {
 // mirrors raw typing; only a fully valid value updates/saves the real number)
 // keeps a controlled re-render from snapping the field back to the old value
 // mid-edit.
-function StaleItemSection({ toast }) {
+function StaleItemSection({ toast, t }) {
   const [staleItemDays, setStaleItemDays] = useState(7);
   const [staleItemDaysText, setStaleItemDaysText] = useState("7");
 
@@ -119,9 +122,10 @@ function StaleItemSection({ toast }) {
         method: "POST",
         body: JSON.stringify({ stale_item_days: days }),
       });
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (res.error) toast(res.error, { error: true });
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
@@ -157,12 +161,12 @@ function StaleItemSection({ toast }) {
 
   return (
     <SubpageSection
-      label="Gamle varer på handlelisten"
-      description="Varer som har ligget ukjøpt lenger enn dette får en diskré markering i handlelisten. Gjelder hele husstanden."
+      label={t("settings.butikk.stale.label")}
+      description={t("settings.butikk.stale.description")}
     >
-      <FieldLabel htmlFor="stale-item-days">Antall dager</FieldLabel>
+      <FieldLabel htmlFor="stale-item-days">{t("settings.butikk.stale.days")}</FieldLabel>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <IconButton icon="minus" size="sm" variant="subtle" label="Reduser antall dager" onClick={() => adjust(-1)} />
+        <IconButton icon="minus" size="sm" variant="subtle" label={t("settings.butikk.stale.decrease")} onClick={() => adjust(-1)} />
         <Input
           id="stale-item-days"
           type="number"
@@ -174,13 +178,14 @@ function StaleItemSection({ toast }) {
           onBlur={onBlurText}
           style={{ maxWidth: 76 }}
         />
-        <IconButton icon="plus" size="sm" variant="subtle" label="Øk antall dager" onClick={() => adjust(1)} />
+        <IconButton icon="plus" size="sm" variant="subtle" label={t("settings.butikk.stale.increase")} onClick={() => adjust(1)} />
       </div>
     </SubpageSection>
   );
 }
 
 function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
+  const t = useTranslation();
   const dragControls = useDragControls();
 
   return (
@@ -214,8 +219,8 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
-        aria-label={`Flytt ${cat} opp`}
-        title="Flytt opp"
+        aria-label={t("settings.butikk.order.moveUp", { category: cat })}
+        title={t("settings.butikk.order.moveUpTitle")}
         style={reorderBtnStyle(index === 0)}
       >
         <UiIcon name="caret-up" size={16} />
@@ -223,8 +228,8 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, 1)}
         disabled={index === total - 1}
-        aria-label={`Flytt ${cat} ned`}
-        title="Flytt ned"
+        aria-label={t("settings.butikk.order.moveDown", { category: cat })}
+        title={t("settings.butikk.order.moveDownTitle")}
         style={reorderBtnStyle(index === total - 1)}
       >
         <UiIcon name="caret-down" size={16} />
