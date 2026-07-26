@@ -2,11 +2,10 @@ import { describe, it, expect } from "vitest";
 import { nb } from "./nb.js";
 import { en } from "./en.js";
 
-// The two dictionaries are maintained by hand, one key at a time, across
-// several phases (docs/i18n-roadmap.md). translate() silently falls back to
-// nb for a key missing from en, which is the right runtime behaviour but
-// hides the mistake — an English user just sees a stray Norwegian string.
-// These checks make the drift a test failure instead.
+// The two dictionaries are maintained by hand, one key at a time. translate()
+// silently falls back to en for a key missing from nb, which is the right
+// runtime behaviour but hides the mistake — a Norwegian user just sees a
+// stray English string. These checks make the drift a test failure instead.
 describe("dictionaries", () => {
   it("define exactly the same keys", () => {
     const nbKeys = Object.keys(nb).sort();
