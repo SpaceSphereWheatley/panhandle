@@ -1,6 +1,8 @@
 import { matchCatalogue } from "./shoppingUtils.js";
 
-export const WEEKDAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"];
+// (WEEKDAYS_NO used to live here. Its only consumer, RecurringIsland, now
+// builds the same Monday-first list per language via i18n/dateLocale.js's
+// weekdayNames(lang) instead of a hardcoded Norwegian array.)
 
 // Turns a flat list of raw ingredient strings (as typed into meal_catalogue)
 // into deduped, catalogue-matched rows ready for a checkable "add to

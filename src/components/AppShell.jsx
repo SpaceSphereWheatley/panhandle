@@ -7,10 +7,13 @@ import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
 import { MealsTab } from "../tabs/MealsTab.jsx";
 import { SettingsTab } from "../tabs/SettingsTab.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { dateLocale } from "../lib/i18n/dateLocale.js";
+import { SETTINGS_SUBPAGE_TITLE_KEYS } from "../lib/settingsNav.js";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
 import { haptic } from "../lib/shoppingUtils.js";
 
-const TITLES = { list: "Handleliste", meals: "Måltider", settings: "Innstillinger" };
+const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", settings: "shell.tab.settings" };
 const TAB_ORDER = ["list", "meals", "settings"];
 
 // Same star path ItemCard's importance badge/swipe-reveal draws — app.html
@@ -20,14 +23,25 @@ const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6
 
 // Sync/offline text — shared by every tab's header, and also the fallback
 // shown on the Shopping List tab whenever sync.offline overrides the
-// importance legend below.
+// importance legend below. `sync` carries a kind + a timestamp rather than a
+// finished string so the label (and the clock format) follow the current
+// language, instead of being frozen in whichever one was active at the tick.
 function SyncStatus({ sync }) {
+  const t = useTranslation();
+  const { lang } = useLanguage();
+  let text = "";
+  if (sync.kind === "updated") {
+    const time = new Date(sync.at).toLocaleTimeString(dateLocale(lang), { hour: "2-digit", minute: "2-digit" });
+    text = t("shell.sync.updated", { time });
+  } else if (sync.kind) {
+    text = t(sync.kind === "offline" ? "shell.sync.offline" : "shell.sync.failed");
+  }
   return (
     <span
       className={`sync${sync.offline ? " offline" : ""}`}
       style={{ fontSize: "var(--text-2xs)", color: sync.offline ? "var(--accent-primary)" : "var(--text-tertiary)" }}
     >
-      {sync.text}
+      {text}
     </span>
   );
 }
@@ -37,10 +51,11 @@ function SyncStatus({ sync }) {
 // ImportantInfoModal. Meals/Settings keep the plain SyncStatus text, since
 // importance is a shopping-list-only concept.
 function ImportantLegendTrigger({ onClick }) {
+  const t = useTranslation();
   return (
     <button
       onClick={onClick}
-      aria-label="Om viktig-markering"
+      aria-label={t("shell.important.legendAria")}
       style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
     >
       <svg
@@ -56,24 +71,10 @@ function ImportantLegendTrigger({ onClick }) {
       >
         <path d={STAR_PATH} />
       </svg>
-      <span style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Viktig</span>
+      <span style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("shell.important.legend")}</span>
     </button>
   );
 }
-
-// Settings subpage titles, keyed by the joined settingsPath (e.g.
-// "admin/statistikk") — drives the single shared Header when a Settings
-// subpage is open, so subpages never render their own second header.
-const SETTINGS_SUBPAGE_TITLES = {
-  utseende: "Utseende",
-  konto: "Konto",
-  sprak: "Språk",
-  varsler: "Varsler",
-  hjem: "Vårt hjem",
-  butikk: "Butikkoppsett",
-  admin: "Administrasjon",
-  "admin/statistikk": "Statistikk",
-};
 
 export function AppShell() {
   const [tab, setTab] = useState("list");
@@ -85,7 +86,7 @@ export function AppShell() {
   // switches to it, instead of only starting then — Settings stays lazy,
   // there's no equivalent "check it right away" need for it.
   const [visited, setVisited] = useState({ list: true, meals: true });
-  const [sync, setSync] = useState({ text: "", offline: false });
+  const [sync, setSync] = useState({ kind: null, at: 0, offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
   const [showImportantInfo, setShowImportantInfo] = useState(false);
   // Nav stack for the Settings tab only (e.g. [], ["konto"],
@@ -95,6 +96,7 @@ export function AppShell() {
   // — see pushNav below for how that stays compatible with back navigation.
   const [settingsPath, setSettingsPath] = useState([]);
   const toast = useToast();
+  const t = useTranslation();
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -179,11 +181,10 @@ export function AppShell() {
   }
 
   function onSyncTick() {
-    const t = new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
-    setSync({ text: "Oppdatert " + t, offline: false });
+    setSync({ kind: "updated", at: Date.now(), offline: false });
   }
   function onOffline() {
-    setSync({ text: navigator.onLine === false ? "Offline" : "Kunne ikke oppdatere", offline: true });
+    setSync({ kind: navigator.onLine === false ? "offline" : "failed", at: Date.now(), offline: true });
   }
 
   function switchTab(t) {
@@ -203,10 +204,11 @@ export function AppShell() {
     pushNav(t);
   }
 
-  const settingsSubpageTitle = tab === "settings" && settingsPath.length > 0
-    ? SETTINGS_SUBPAGE_TITLES[settingsPath.join("/")]
+  const subpageTitleKey = tab === "settings" && settingsPath.length > 0
+    ? SETTINGS_SUBPAGE_TITLE_KEYS[settingsPath.join("/")]
     : null;
-  const title = settingsSubpageTitle || TITLES[tab];
+  const settingsSubpageTitle = subpageTitleKey ? t(subpageTitleKey) : null;
+  const title = settingsSubpageTitle || t(TITLE_KEYS[tab]);
 
   return (
     <div id="app">
@@ -251,9 +253,9 @@ export function AppShell() {
       </main>
       <TabBar
         tabs={[
-          { key: "list", label: "Handleliste", icon: "shopping-cart-simple" },
-          { key: "meals", label: "Måltider", icon: "cooking-pot" },
-          { key: "settings", label: "Innstillinger", icon: "gear" },
+          { key: "list", label: t("shell.tab.list"), icon: "shopping-cart-simple" },
+          { key: "meals", label: t("shell.tab.meals"), icon: "cooking-pot" },
+          { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
         ]}
         active={tab}
         onChange={switchTab}

@@ -3,6 +3,7 @@ import { usePush } from "../../../context/PushContext.jsx";
 import { api } from "../../../lib/api.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { Card, Switch, Input } from "../../../design-system/index.js";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
 
@@ -43,6 +44,7 @@ function isStandalone() {
 export function VarslerSubpage() {
   const { supported, subscribed, endpoint, subscribe, unsubscribe } = usePush();
   const toast = useToast();
+  const t = useTranslation();
   const [mealReminderEnabled, setMealReminderEnabled] = useState(true);
   const [mealReminderTime, setMealReminderTime] = useState("18:00");
   const [weeklyReminderEnabled, setWeeklyReminderEnabled] = useState(true);
@@ -77,9 +79,10 @@ export function VarslerSubpage() {
           weekly_reminder_time: next.weeklyReminderTime,
         }),
       });
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       if (res.error) toast(res.error, { error: true });
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
@@ -117,31 +120,31 @@ export function VarslerSubpage() {
   }
 
   const pushDescription = !supported
-    ? "Nettleseren din støtter ikke push-varsler."
+    ? t("settings.varsler.push.unsupported")
     : iosNeedsInstall
-      ? "På iPhone/iPad må appen legges til på Hjem-skjermen (Del → Legg til på Hjem-skjermen) før varsler kan aktiveres."
-      : "Gjelder kun denne enheten. Hvert medlem må slå på varsler på sine egne enheter.";
+      ? t("settings.varsler.push.iosHint")
+      : t("settings.varsler.push.description");
 
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
-      <SubpageSection label="Push-varsler" description={pushDescription}>
-        <Switch checked={subscribed} onChange={onToggleNotifications} label="Aktiver varsler" />
+      <SubpageSection label={t("settings.varsler.push.label")} description={pushDescription}>
+        <Switch checked={subscribed} onChange={onToggleNotifications} label={t("settings.varsler.push.toggle")} />
       </SubpageSection>
 
       {subscribed && (
         <>
           <SubpageSection
-            label="Middag ikke planlagt"
-            description="Gjelder kun denne enheten."
+            label={t("settings.varsler.meal.label")}
+            description={t("settings.varsler.deviceOnly")}
           >
             <Switch
               checked={mealReminderEnabled}
               onChange={onToggleMealReminder}
-              label="Påminnelse om middag ikke planlagt i morgen"
+              label={t("settings.varsler.meal.toggle")}
             />
             {mealReminderEnabled && (
               <div style={{ marginTop: 10 }}>
-                <FieldLabel htmlFor="meal-reminder-time">Tidspunkt for påminnelse</FieldLabel>
+                <FieldLabel htmlFor="meal-reminder-time">{t("settings.varsler.meal.time")}</FieldLabel>
                 <Input
                   id="meal-reminder-time"
                   type="time"
@@ -155,17 +158,17 @@ export function VarslerSubpage() {
           </SubpageSection>
 
           <SubpageSection
-            label="Ukentlig planleggingspåminnelse"
-            description="Gjelder kun denne enheten."
+            label={t("settings.varsler.weekly.label")}
+            description={t("settings.varsler.deviceOnly")}
           >
             <Switch
               checked={weeklyReminderEnabled}
               onChange={onToggleWeeklyReminder}
-              label="Ukentlig påminnelse om å planlegge middager"
+              label={t("settings.varsler.weekly.toggle")}
             />
             {weeklyReminderEnabled && (
               <div style={{ marginTop: 10 }}>
-                <FieldLabel htmlFor="weekly-reminder-time">Tidspunkt på søndag</FieldLabel>
+                <FieldLabel htmlFor="weekly-reminder-time">{t("settings.varsler.weekly.time")}</FieldLabel>
                 <Input
                   id="weekly-reminder-time"
                   type="time"

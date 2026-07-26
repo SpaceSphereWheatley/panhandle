@@ -13,6 +13,7 @@ import { FieldLabel } from "../FieldLabel.jsx";
 import { ManagementRow } from "../ManagementRow.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
 
 const MotionRow = motion(ManagementRow);
@@ -39,6 +40,7 @@ export function AdminSubpage({ onNavigate }) {
   const { refresh: refreshListUsers } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
+  const t = useTranslation();
   const { shouldAnimate, transition } = useMotionConfig();
   const [userCount, setUserCount] = useState("–");
   const [listCount, setListCount] = useState("–");
@@ -94,9 +96,15 @@ export function AdminSubpage({ onNavigate }) {
   }, []);
 
   async function setFlag(username, flag, value) {
-    const flagLabel = flag === "is_admin" ? "admin" : "eier";
-    const verb = value ? `gjøre ${username} til ${flagLabel}` : `fjerne ${flagLabel}-tilgangen til ${username}`;
-    if (!(await confirm(`Er du sikker på at du vil ${verb}?`, { title: "Endre tilgang?", confirmLabel: "Bekreft", danger: !value }))) {
+    const role = t(flag === "is_admin" ? "settings.admin.confirm.flag.roleAdmin" : "settings.admin.confirm.flag.roleOwner");
+    const body = t(value ? "settings.admin.confirm.flag.grant" : "settings.admin.confirm.flag.revoke", { name: username, role });
+    if (
+      !(await confirm(body, {
+        title: t("settings.admin.confirm.flag.title"),
+        confirmLabel: t("settings.admin.confirm.flag.confirmLabel"),
+        danger: !value,
+      }))
+    ) {
       setUsers((prev) => [...prev]);
       return;
     }
@@ -104,16 +112,23 @@ export function AdminSubpage({ onNavigate }) {
       method: "PATCH",
       body: JSON.stringify({ [flag]: value }),
     });
+    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
     if (res.error) toast(res.error, { error: true });
     loadAllUsers();
     refreshListUsers();
   }
 
   async function resetPassword(username) {
-    if (!(await confirm(`Nullstille passordet til ${username}? Alle deres aktive økter logges ut.`, { title: "Nullstille passord?", confirmLabel: "Nullstill" })))
+    if (
+      !(await confirm(t("settings.admin.confirm.resetPassword.body", { name: username }), {
+        title: t("settings.admin.confirm.resetPassword.title"),
+        confirmLabel: t("settings.admin.confirm.resetPassword.confirmLabel"),
+      }))
+    )
       return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}/reset-password`, { method: "POST" });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -127,27 +142,37 @@ export function AdminSubpage({ onNavigate }) {
 
     if (isLoneOwner) {
       if (!(await confirm(
-        `${username} er eneste eier av listen sin. Å slette brukeren sletter HELE listen med alt innhold (varer, katalog, måltider) permanent for alle på den. Dette kan ikke angres.`,
-        { title: "Slette bruker og liste?", confirmLabel: "Slett bruker og liste" }
+        t("settings.admin.confirm.deleteLoneOwner.body", { name: username }),
+        {
+          title: t("settings.admin.confirm.deleteLoneOwner.title"),
+          confirmLabel: t("settings.admin.confirm.deleteLoneOwner.confirmLabel"),
+        }
       ))) return;
       const res = await api(`/admin/users/${encodeURIComponent(username)}`, {
         method: "DELETE",
         body: JSON.stringify({ delete_list: true }),
       });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         return;
       }
-      toast(`${username} og listen er slettet`);
+      toast(t("settings.admin.toast.userAndListDeleted", { name: username }));
       loadAllUsers();
       refreshListUsers();
       return;
     }
 
-    if (!(await confirm(`Slette brukeren ${username} for godt? Dette kan ikke angres.`, { title: "Slette bruker?", confirmLabel: "Slett" })))
+    if (
+      !(await confirm(t("settings.admin.confirm.deleteUser.body", { name: username }), {
+        title: t("settings.admin.confirm.deleteUser.title"),
+        confirmLabel: t("settings.admin.confirm.deleteUser.confirmLabel"),
+      }))
+    )
       return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}`, { method: "DELETE" });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -159,15 +184,16 @@ export function AdminSubpage({ onNavigate }) {
     const name = newOwnerName.trim();
     const email = newOwnerEmail.trim();
     if (!name) {
-      toast("Skriv inn et navn", { error: true });
+      toast(t("settings.admin.toast.enterName"), { error: true });
       return;
     }
     if (!email) {
-      toast("Skriv inn en e-post", { error: true });
+      toast(t("settings.admin.toast.enterEmail"), { error: true });
       return;
     }
     const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -183,17 +209,17 @@ export function AdminSubpage({ onNavigate }) {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 6 }}>
-        <StatTile label="Varer i katalog" value={catCount} icon="package" />
-        <StatTile label="Varer uten ikon" value={iconGapCount} icon="image-square" />
-        <StatTile label="Måltider i database" value={mealCount} icon="cooking-pot" />
-        <StatTile label="Brukere" value={userCount} icon="users" />
+        <StatTile label={t("settings.admin.stat.catalogueItems")} value={catCount} icon="package" />
+        <StatTile label={t("settings.admin.stat.itemsWithoutIcon")} value={iconGapCount} icon="image-square" />
+        <StatTile label={t("settings.admin.stat.mealsInDatabase")} value={mealCount} icon="cooking-pot" />
+        <StatTile label={t("settings.admin.stat.users")} value={userCount} icon="users" />
       </div>
       <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginBottom: 8 }}>
-        {listCount} {listCount === 1 ? "liste" : "lister"} · Versjon {versionDetail}
+        {t("settings.admin.listsAndVersion", { count: listCount, version: versionDetail })}
       </div>
 
       {isSuperAdmin && (
-        <SubpageSection label="Varer uten ikon">
+        <SubpageSection label={t("settings.admin.iconGaps.label")}>
           <div className="icon-gap-list">
             {iconGaps.map((n) => (
               <span key={n}>{n}</span>
@@ -203,33 +229,33 @@ export function AdminSubpage({ onNavigate }) {
       )}
 
       {isSuperAdmin && (
-        <SubpageSection label="Opprett eier (ny liste)">
-          <FieldLabel htmlFor="admin-new-owner-name" visuallyHidden>Navn på ny eier</FieldLabel>
+        <SubpageSection label={t("settings.admin.newOwner.label")}>
+          <FieldLabel htmlFor="admin-new-owner-name" visuallyHidden>{t("settings.admin.newOwner.nameField")}</FieldLabel>
           <Input
             id="admin-new-owner-name"
-            placeholder="Navn"
+            placeholder={t("settings.konto.name.label")}
             value={newOwnerName}
             onChange={(e) => setNewOwnerName(e.target.value)}
             style={{ marginBottom: 8 }}
           />
-          <FieldLabel htmlFor="admin-new-owner-email" visuallyHidden>E-post for ny eier</FieldLabel>
+          <FieldLabel htmlFor="admin-new-owner-email" visuallyHidden>{t("settings.admin.newOwner.emailField")}</FieldLabel>
           <Input
             id="admin-new-owner-email"
             type="email"
-            placeholder="E-post"
+            placeholder={t("settings.konto.email.label")}
             value={newOwnerEmail}
             onChange={(e) => setNewOwnerEmail(e.target.value)}
             style={{ marginBottom: 10 }}
           />
-          <Button variant="primary" icon="plus" onClick={createOwner}>Opprett eier</Button>
+          <Button variant="primary" icon="plus" onClick={createOwner}>{t("settings.admin.newOwner.submit")}</Button>
         </SubpageSection>
       )}
 
-      <SubpageSection label="Alle brukere">
+      <SubpageSection label={t("settings.admin.allUsers.label")}>
         {Object.keys(groups).map((listId) => (
             <div key={listId}>
               <div style={groupHeadingStyle}>
-                Liste {listId ?? "-"} · {groups[listId].length} {groups[listId].length === 1 ? "bruker" : "brukere"}
+                {t("settings.admin.allUsers.group", { listId: listId ?? "-", count: groups[listId].length })}
               </div>
               <AnimatePresence initial={false}>
                 {groups[listId].map((u) => (
@@ -243,27 +269,31 @@ export function AdminSubpage({ onNavigate }) {
                     title={u.name || u.username}
                     subtitle={
                       u.username +
-                      (u.username === currentUser ? " · deg" : u.created_by ? " · av " + u.created_by : "")
+                      (u.username === currentUser
+                        ? t("settings.admin.user.you")
+                        : u.created_by
+                          ? t("settings.admin.user.createdBy", { name: u.created_by })
+                          : "")
                     }
                     footer={
                       <>
                         <Switch
                           checked={!!u.is_admin}
                           onChange={(v) => setFlag(u.username, "is_admin", v)}
-                          label="Admin"
+                          label={t("settings.admin.user.admin")}
                         />
                         <Switch
                           checked={!!u.is_owner}
                           onChange={(v) => setFlag(u.username, "is_owner", v)}
-                          label="Eier"
+                          label={t("settings.admin.user.owner")}
                         />
                         <div style={{ flex: 1 }} />
                         <Button variant="outline" size="sm" onClick={() => resetPassword(u.username)}>
-                          Nullstill passord
+                          {t("settings.admin.user.resetPassword")}
                         </Button>
                         {isSuperAdmin && (
                           <Button variant="danger" size="sm" onClick={() => deleteUser(u.username)}>
-                            Slett
+                            {t("settings.admin.user.delete")}
                           </Button>
                         )}
                       </>
@@ -279,8 +309,8 @@ export function AdminSubpage({ onNavigate }) {
         <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 4 }}>
           <SettingsRow
             flush
-            label="Statistikk"
-            supportingText="Bruksdata for alle lister"
+            label={t("settings.nav.statistikk")}
+            supportingText={t("settings.admin.statistikk.supporting")}
             onClick={() => onNavigate(["admin", "statistikk"])}
           />
         </div>

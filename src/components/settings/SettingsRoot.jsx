@@ -1,7 +1,8 @@
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { usePush } from "../../context/PushContext.jsx";
-import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
+import { SETTINGS_SUBPAGE_TITLE_KEYS } from "../../lib/settingsNav.js";
 import { PwaInstallCTA } from "./PwaInstallCTA.jsx";
 import { SettingsGroup } from "./SettingsGroup.jsx";
 import { SettingsRow } from "./SettingsRow.jsx";
@@ -20,27 +21,30 @@ export function SettingsRoot({ onNavigate }) {
   const { listUsers } = useListUsers();
   const { subscribed } = usePush();
   const { lang } = useLanguage();
+  const t = useTranslation();
 
   return (
     <section>
       <PwaInstallCTA />
 
-      <SettingsGroup label="Meg">
+      <SettingsGroup label={t("settings.root.group.me")}>
         <SettingsRow
           icon="palette"
-          label="Utseende"
-          supportingText="Tema, design og vibrasjon"
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.utseende)}
+          supportingText={t("settings.root.utseende.supporting")}
           onClick={() => onNavigate(["utseende"])}
         />
         <SettingsRow
           icon="user-circle"
-          label="Konto"
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.konto)}
           supportingText={name || user}
           onClick={() => onNavigate(["konto"])}
         />
         <SettingsRow
           icon="translate"
-          label="Språk"
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.sprak)}
+          // Each language's own endonym, never translated — the point of this
+          // row is to be recognisable to someone who can't read the current UI.
           supportingText={lang === "en" ? "English" : "Norsk"}
           onClick={() => onNavigate(["sprak"])}
         />
@@ -49,30 +53,30 @@ export function SettingsRoot({ onNavigate }) {
       <SettingsGroup>
         <SettingsRow
           icon="bell"
-          label="Varsler"
-          supportingText={subscribed ? "Aktivert" : "Av"}
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.varsler)}
+          supportingText={t(subscribed ? "settings.root.varsler.on" : "settings.root.varsler.off")}
           onClick={() => onNavigate(["varsler"])}
         />
       </SettingsGroup>
 
-      <SettingsGroup label="Husstanden">
+      <SettingsGroup label={t("settings.root.group.household")}>
         <SettingsRow
           icon="house"
-          label="Vårt hjem"
-          supportingText={`${listUsers.length} / 10 medlemmer`}
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.hjem)}
+          supportingText={t("settings.root.hjem.supporting", { count: listUsers.length })}
           onClick={() => onNavigate(["hjem"])}
         />
         <SettingsRow
           icon="storefront"
-          label="Butikkoppsett"
-          supportingText="Varegrupper og gamle varer"
+          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.butikk)}
+          supportingText={t("settings.root.butikk.supporting")}
           onClick={() => onNavigate(["butikk"])}
         />
         {isAdmin && (
           <SettingsRow
             icon="shield-check"
-            label="Administrasjon"
-            supportingText="Brukere, lister og statistikk"
+            label={t(SETTINGS_SUBPAGE_TITLE_KEYS.admin)}
+            supportingText={t("settings.root.admin.supporting")}
             onClick={() => onNavigate(["admin"])}
           />
         )}

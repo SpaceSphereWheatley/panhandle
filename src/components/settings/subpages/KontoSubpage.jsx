@@ -5,6 +5,7 @@ import { api } from "../../../lib/api.js";
 import { Button, Card, Input } from "../../../design-system/index.js";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
 
@@ -21,6 +22,7 @@ export function KontoSubpage() {
   const { listUsers } = useListUsers();
   const toast = useToast();
   const confirm = useConfirm();
+  const t = useTranslation();
   const [pwCurrent, setPwCurrent] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [nameInput, setNameInput] = useState(name || user || "");
@@ -52,14 +54,15 @@ export function KontoSubpage() {
         body: JSON.stringify({ name: next }),
       });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         return;
       }
       savedName.current = res.name;
       updateIdentity({ name: res.name });
-      toast("Navn lagret.");
+      toast(t("settings.konto.toast.nameSaved"));
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
@@ -70,21 +73,22 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: emailPw, email: emailInput.trim() }),
       });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         return;
       }
       setEmail(res.email);
       setEmailPw("");
       updateIdentity({ token: res.token, user: res.username });
-      toast("E-post lagret.");
+      toast(t("settings.konto.toast.emailSaved"));
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
   async function changePassword() {
     if (pwNew.length < 8) {
-      toast("Nytt passord må være minst 8 tegn", { error: true });
+      toast(t("settings.konto.toast.passwordTooShort"), { error: true });
       return;
     }
     try {
@@ -93,15 +97,16 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: pwCurrent, new_password: pwNew }),
       });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         return;
       }
       if (res.token) localStorage.setItem("ph_token", res.token);
-      toast("Passord endret. Andre enheter er logget ut.");
+      toast(t("settings.konto.toast.passwordChanged"));
       setPwCurrent("");
       setPwNew("");
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
@@ -109,11 +114,17 @@ export function KontoSubpage() {
     const soleOwner = isOwner && listUsers.filter((u) => u.is_owner).length <= 1;
     const otherMembers = listUsers.filter((u) => u.username !== user).map((u) => u.name || u.username);
     const message = !soleOwner
-      ? "Kontoen din slettes for godt og du mister tilgang til listen. Dette kan ikke angres."
+      ? t("settings.konto.delete.confirmMember")
       : otherMembers.length > 0
-        ? `Du er listens eneste eier. Sletter du kontoen din slettes hele listen — handleliste, måltidsplan og alt annet innhold — og tilgangen forsvinner også for: ${otherMembers.join(", ")}. Dette kan ikke angres.`
-        : "Du er listens eneste eier. Sletter du kontoen din slettes hele listen — handleliste, måltidsplan og alt annet innhold — for godt. Dette kan ikke angres.";
-    if (!(await confirm(message, { title: "Slette konto?", confirmLabel: "Slett konto for godt" }))) return;
+        ? t("settings.konto.delete.confirmSoleOwnerWithMembers", { members: otherMembers.join(", ") })
+        : t("settings.konto.delete.confirmSoleOwner");
+    if (
+      !(await confirm(message, {
+        title: t("settings.konto.delete.confirmTitle"),
+        confirmLabel: t("settings.konto.delete.confirmLabel"),
+      }))
+    )
+      return;
     setDeleting(true);
     try {
       const res = await api("/account", {
@@ -121,13 +132,14 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: pwDelete }),
       });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         setDeleting(false);
         return;
       }
       logout();
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
       setDeleting(false);
     }
   }
@@ -135,15 +147,15 @@ export function KontoSubpage() {
   return (
     <section>
       <Card padding="lg" style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>Innlogget som</div>
+        <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.konto.loggedInAs")}</div>
         <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
         <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{user}</div>
 
-        <SubpageSection label="Navn">
-          <FieldLabel htmlFor="profile-name">Navn</FieldLabel>
+        <SubpageSection label={t("settings.konto.name.label")}>
+          <FieldLabel htmlFor="profile-name">{t("settings.konto.name.label")}</FieldLabel>
           <Input
             id="profile-name"
-            placeholder="Navn"
+            placeholder={t("settings.konto.name.label")}
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             onBlur={saveName}
@@ -151,39 +163,37 @@ export function KontoSubpage() {
         </SubpageSection>
 
         <SubpageSection
-          label={email ? "E-post" : "Legg til e-post"}
-          description="Brukes til innlogging, Google-innlogging og for å tilbakestille passord hvis du glemmer det. Endrer du e-posten, logges andre enheter ut."
+          label={t(email ? "settings.konto.email.label" : "settings.konto.email.addLabel")}
+          description={t("settings.konto.email.description")}
         >
-          <FieldLabel htmlFor="profile-email">E-post</FieldLabel>
-          <Input id="profile-email" type="email" placeholder="E-post" style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
-          <FieldLabel htmlFor="profile-email-pw">Nåværende passord</FieldLabel>
-          <Input id="profile-email-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 10 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
-          <Button variant="primary" onClick={saveEmail}>Lagre e-post</Button>
+          <FieldLabel htmlFor="profile-email">{t("settings.konto.email.label")}</FieldLabel>
+          <Input id="profile-email" type="email" placeholder={t("settings.konto.email.label")} style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
+          <FieldLabel htmlFor="profile-email-pw">{t("settings.konto.currentPassword")}</FieldLabel>
+          <Input id="profile-email-pw" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 10 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
+          <Button variant="primary" onClick={saveEmail}>{t("settings.konto.email.save")}</Button>
         </SubpageSection>
 
-        <SubpageSection label="Bytt passord">
-          <FieldLabel htmlFor="profile-pw-current">Nåværende passord</FieldLabel>
-          <Input id="profile-pw-current" type="password" placeholder="Nåværende passord" style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
-          <FieldLabel htmlFor="profile-pw-new">Nytt passord (min. 8 tegn)</FieldLabel>
-          <Input id="profile-pw-new" type="password" placeholder="Nytt passord (min. 8 tegn)" style={{ marginBottom: 10 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
-          <Button variant="primary" onClick={changePassword}>Lagre nytt passord</Button>
+        <SubpageSection label={t("settings.konto.changePassword.label")}>
+          <FieldLabel htmlFor="profile-pw-current">{t("settings.konto.currentPassword")}</FieldLabel>
+          <Input id="profile-pw-current" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
+          <FieldLabel htmlFor="profile-pw-new">{t("settings.konto.newPassword")}</FieldLabel>
+          <Input id="profile-pw-new" type="password" placeholder={t("settings.konto.newPassword")} style={{ marginBottom: 10 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+          <Button variant="primary" onClick={changePassword}>{t("settings.konto.changePassword.save")}</Button>
         </SubpageSection>
 
         <SubpageSection>
-          <Button variant="outline" onClick={() => logout()}>Logg ut</Button>
+          <Button variant="outline" onClick={() => logout()}>{t("settings.konto.logout")}</Button>
         </SubpageSection>
       </Card>
 
       <Card padding="lg" style={{ background: "var(--status-danger-subtle)" }}>
-        <div style={{ fontWeight: 700, marginBottom: 10, color: "var(--status-danger)" }}>Slett konto</div>
+        <div style={{ fontWeight: 700, marginBottom: 10, color: "var(--status-danger)" }}>{t("settings.konto.delete.label")}</div>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", marginBottom: 8 }}>
-          {isOwner
-            ? "Hvis du er listens eneste eier, slettes hele listen — handleliste, måltidsplan og alt annet innhold — når du sletter kontoen din. Har listen en annen eier, mister du bare din egen tilgang."
-            : "Du mister tilgang til listen. Dette kan ikke angres."}
+          {t(isOwner ? "settings.konto.delete.descriptionOwner" : "settings.konto.delete.descriptionMember")}
         </div>
-        <FieldLabel htmlFor="profile-delete-pw">Nåværende passord</FieldLabel>
-        <Input id="profile-delete-pw" type="password" placeholder="Nåværende passord" style={{ marginBottom: 10 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
-        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>Slett konto</Button>
+        <FieldLabel htmlFor="profile-delete-pw">{t("settings.konto.currentPassword")}</FieldLabel>
+        <Input id="profile-delete-pw" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 10 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
+        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>{t("settings.konto.delete.label")}</Button>
       </Card>
     </section>
   );

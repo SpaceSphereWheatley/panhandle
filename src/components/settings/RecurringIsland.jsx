@@ -3,7 +3,8 @@ import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { Input, Select } from "../../design-system/index.js";
-import { WEEKDAYS_NO } from "../../lib/mealUtils.js";
+import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
+import { weekdayNames } from "../../lib/i18n/dateLocale.js";
 import { SubpageSection } from "./SubpageSection.jsx";
 
 // "Vårt hjem" subpage, part 2: weekly recurring meal responsibility,
@@ -14,6 +15,9 @@ export function RecurringIsland() {
   const { people, nameFor, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
   const toast = useToast();
+  const t = useTranslation();
+  const { lang } = useLanguage();
+  const weekdays = weekdayNames(lang);
   const [otherDrafts, setOtherDrafts] = useState({});
 
   useEffect(() => {
@@ -32,8 +36,9 @@ export function RecurringIsland() {
       return next;
     });
     const res = await saveDay(dow, value);
+    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
     if (res.error) toast(res.error, { error: true });
-    else toast("Lagret.");
+    else toast(t("settings.hjem.recurring.saved"));
   }
 
   async function onOtherBlur(dow, value) {
@@ -43,8 +48,9 @@ export function RecurringIsland() {
     // through the field without typing doesn't spam a confirmation.
     if (val === (schedule[dow] || "")) return;
     const res = await saveDay(dow, val || "");
+    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
     if (res.error) toast(res.error, { error: true });
-    else toast("Lagret.");
+    else toast(t("settings.hjem.recurring.saved"));
     if (!val) {
       setOtherDrafts((prev) => {
         const next = { ...prev };
@@ -55,13 +61,12 @@ export function RecurringIsland() {
   }
 
   return (
-    <SubpageSection label="Fast ansvarlig per ukedag">
+    <SubpageSection label={t("settings.hjem.recurring.label")}>
       <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: "0 0 12px" }}>
-        Velg hvem som har ansvar for å lage middag på de ulike dagene. Dette vises som forslag når du planlegger,
-        og du kan alltid endre det for en enkelt dag.
+        {t("settings.hjem.recurring.description")}
       </div>
       <div>
-        {WEEKDAYS_NO.map((day, dow) => {
+        {weekdays.map((day, dow) => {
           const current = schedule[dow] || "";
           const isOther = dow in otherDrafts || (current && !people.includes(current));
           const selectValue = isOther ? "__other__" : current;
@@ -73,17 +78,17 @@ export function RecurringIsland() {
                 onChange={(e) => onSelectChange(dow, e.target.value)}
                 aria-labelledby={`recurring-day-${dow}`}
               >
-                <option value="">Ingen</option>
+                <option value="">{t("meals.responsible.none")}</option>
                 {people.map((p) => (
                   <option value={p} key={p}>{nameFor(p)}</option>
                 ))}
-                <option value="__other__">Annet...</option>
+                <option value="__other__">{t("meals.responsible.other")}</option>
               </Select>
               {isOther && (
                 <Input
                   type="text"
-                  placeholder="Beskriv ansvaret"
-                  aria-label={`Beskriv ansvar for ${day}`}
+                  placeholder={t("settings.hjem.recurring.describePlaceholder")}
+                  aria-label={t("settings.hjem.recurring.describeAria", { day })}
                   style={{ marginTop: 8 }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}

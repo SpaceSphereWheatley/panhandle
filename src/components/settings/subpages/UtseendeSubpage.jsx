@@ -3,6 +3,7 @@ import { Card, SegmentedControl, Switch } from "../../../design-system/index.js"
 import { currentTheme, setTheme } from "../../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../../lib/designIntensity.js";
 import { SubpageSection } from "../SubpageSection.jsx";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
 
 // "Utseende" subpage — the device-local personalization that used to sit
 // inline on the Settings root (design intensity, theme, haptics). Moved into
@@ -15,19 +16,18 @@ function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
 }
 
-const THEME_OPTIONS = [
-  { value: "light", label: "Lys" },
-  { value: "dark", label: "Mørk" },
-  { value: "system", label: "Følg systemet" },
-];
-
-const INTENSITY_OPTIONS = [
-  { value: "expressive", label: "Ekspressiv" },
-  { value: "muted", label: "Dempet" },
-  { value: "classic", label: "Klassisk" },
-];
-
 export function UtseendeSubpage() {
+  const t = useTranslation();
+  const themeOptions = [
+    { value: "light", label: t("settings.utseende.theme.light") },
+    { value: "dark", label: t("settings.utseende.theme.dark") },
+    { value: "system", label: t("settings.utseende.theme.system") },
+  ];
+  const intensityOptions = [
+    { value: "expressive", label: t("settings.utseende.intensity.expressive") },
+    { value: "muted", label: t("settings.utseende.intensity.muted") },
+    { value: "classic", label: t("settings.utseende.intensity.classic") },
+  ];
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
@@ -49,22 +49,22 @@ export function UtseendeSubpage() {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <SubpageSection
-        label="Designintensitet"
-        description="Hvor uttrykksfullt appen ser ut — farger, dybde og animasjon. Gjelder bare denne enheten."
+        label={t("settings.utseende.intensity.label")}
+        description={t("settings.utseende.intensity.description")}
       >
-        <SegmentedControl value={intensity} onChange={onSetIntensity} options={INTENSITY_OPTIONS} />
+        <SegmentedControl value={intensity} onChange={onSetIntensity} options={intensityOptions} />
       </SubpageSection>
 
       <SubpageSection
-        label="Tema"
-        description="Lyst eller mørkt utseende. «Følg systemet» bytter automatisk med enheten. Gjelder bare denne enheten."
+        label={t("settings.utseende.theme.label")}
+        description={t("settings.utseende.theme.description")}
       >
-        <SegmentedControl value={theme} onChange={onSetTheme} options={THEME_OPTIONS} />
+        <SegmentedControl value={theme} onChange={onSetTheme} options={themeOptions} />
       </SubpageSection>
 
       <SubpageSection
-        label="Vibrasjon ved handling"
-        description="Kort vibrasjon når du krysser av eller legger til varer. Gjelder bare denne enheten."
+        label={t("settings.utseende.haptics.label")}
+        description={t("settings.utseende.haptics.description")}
       >
         <Switch checked={haptics} onChange={onSetHaptics} />
       </SubpageSection>

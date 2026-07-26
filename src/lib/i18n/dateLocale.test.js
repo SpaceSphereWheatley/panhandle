@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dateLocale } from "./dateLocale.js";
+import { dateLocale, weekdayNames } from "./dateLocale.js";
 
 describe("dateLocale", () => {
   it("maps the supported UI languages to their date locales", () => {
@@ -23,5 +23,21 @@ describe("dateLocale", () => {
       const out = d.toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" });
       expect(out.indexOf("27")).toBeLessThan(out.search(/[a-zæøå]/i));
     }
+  });
+});
+
+describe("weekdayNames", () => {
+  it("returns seven Monday-first capitalized names", () => {
+    // Same order/casing recurring_schedule.day_of_week assumes (0 = Monday).
+    expect(weekdayNames("nb")).toEqual([
+      "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag",
+    ]);
+    expect(weekdayNames("en")).toEqual([
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    ]);
+  });
+
+  it("falls back to Norwegian for an unknown language", () => {
+    expect(weekdayNames("de")[0]).toBe("Mandag");
   });
 });
