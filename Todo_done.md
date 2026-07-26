@@ -7,6 +7,17 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+103. (15) Language support, phase 1: translation infrastructure + a
+     Settings → "Språk" switcher (Norsk/English, per-device, same instant-
+     no-reload pattern as Tema) + `ShoppingListTab` wired up end-to-end as
+     the proof of concept. New `src/lib/i18n/` (flat nb/en string-map
+     dictionaries, a `translate()` helper with `{param}` interpolation and
+     a one/other plural form) plus `LanguageContext`, since — unlike
+     theme.js's contextless module — a language switch has to re-render
+     already-committed translated JSX, not just flip a CSS attribute.
+     Extracting/translating the rest of the app stays open under #15.
+     (1.43.4)
+
 102. (114) Butikkoppsett's category-reorder row: moved the drag handle from
      between the name and the up/down arrows to the far right, after both
      arrows, per user request — a clearer, more predictable grab-target

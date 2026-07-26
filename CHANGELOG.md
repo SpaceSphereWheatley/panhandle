@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.4] — 2026-07-25
+
+### Added
+- **Language support, phase 1: a Norsk/English switcher.** Settings → "Språk"
+  now lets you pick the app's language, per device — it works like the
+  existing Tema setting (instant, no reload, no server round-trip). Only the
+  shopping list tab is translated so far; the rest of the app (meals,
+  settings, other screens) is still Norwegian-only for now and will follow in
+  a later update.
+
 ## [1.43.3] — 2026-07-25
 
 ### Changed

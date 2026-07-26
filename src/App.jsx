@@ -8,6 +8,7 @@ import { RecurringProvider } from "./context/RecurringContext.jsx";
 import { CategoryOrderProvider } from "./context/CategoryOrderContext.jsx";
 import { PushProvider } from "./context/PushContext.jsx";
 import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { AuthScreens } from "./components/AuthScreens.jsx";
 import { AppShell } from "./components/AppShell.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
@@ -51,15 +52,17 @@ export default function App() {
   }, []);
 
   return (
-    <InstallPromptProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <ConfirmProvider>
-            <SketchyFilterDefs />
-            <Root />
-          </ConfirmProvider>
-        </ToastProvider>
-      </AuthProvider>
-    </InstallPromptProvider>
+    <LanguageProvider>
+      <InstallPromptProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <SketchyFilterDefs />
+              <Root />
+            </ConfirmProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </InstallPromptProvider>
+    </LanguageProvider>
   );
 }

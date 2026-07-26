@@ -19,6 +19,7 @@ import { Input, Avatar, FabMenu, Skeleton, EmptyState } from "../design-system/i
 import { readCache, writeCache } from "../lib/localCache.js";
 import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useTranslation } from "../context/LanguageContext.jsx";
 
 const POLL_MS = 7000;
 // Last-fetched list, hydrated on mount so a returning user sees real items
@@ -76,6 +77,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const { order: categoryOrder } = useCategoryOrder();
   const confirm = useConfirm();
   const { user: currentUser } = useAuth();
+  const t = useTranslation();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
   // Other members who've polled the list in the last ~20s (see POST
@@ -291,20 +293,21 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     } catch (e) {
       if (e.message === "network") {
         queueOfflineAdd({ name, category, notes, qty, exact });
-        toast("Lagret – sendes når du er tilkoblet igjen");
+        toast(t("shoppingList.toast.savedOffline"));
         return;
       }
       setAddValue(typed);
-      toast("Kunne ikke legge til – sjekk nettforbindelsen", { error: true });
+      toast(t("shoppingList.toast.addFailed"), { error: true });
       return;
     }
     if (res?.error) {
       setAddValue(typed);
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
     if (res?.duplicate) {
-      toast(`«${cap(name)}» var alt på listen – antall økt til ${res.qty}`);
+      toast(t("shoppingList.toast.duplicateIncreased", { name: cap(name), qty: res.qty }));
     }
     await loadCatalogue();
     loadList();
@@ -317,10 +320,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     } catch (e) {
       if (e.message === "network") {
         queueOfflineAdd({ name: it.name, category: it.category, qty: 1 });
-        toast("Lagret – sendes når du er tilkoblet igjen");
+        toast(t("shoppingList.toast.savedOffline"));
         return;
       }
-      toast("Kunne ikke legge til – sjekk nettforbindelsen", { error: true });
+      toast(t("shoppingList.toast.addFailed"), { error: true });
       return;
     }
     await loadCatalogue();
@@ -379,7 +382,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought, important: wasImportant } : x)));
       clearResolving(id);
-      toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
+      toast(t("shoppingList.toast.updateFailed"), { error: true });
     }
   }
 
@@ -400,7 +403,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         return;
       }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, important: wasImportant } : x)));
-      toast("Kunne ikke oppdatere – sjekk nettforbindelsen", { error: true });
+      toast(t("shoppingList.toast.updateFailed"), { error: true });
     }
   }
 
@@ -414,12 +417,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     try {
       const res = await api("/push/ping", { method: "POST" });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         return;
       }
-      toast("Varsel sendt.");
+      toast(t("shoppingList.toast.pingSent"));
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
     }
   }
 
@@ -473,7 +477,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // scoped to add/toggle/important). The catalogue rows stay, so anything
   // cleared can be re-added and its purchase stats/suggestions are untouched.
   async function clearBought() {
-    if (!(await confirm("Fjerne alle handlede varer fra listen?", { title: "Tøm handlede?", confirmLabel: "Tøm" }))) return;
+    if (
+      !(await confirm(t("shoppingList.confirm.clearBought.body"), {
+        title: t("shoppingList.confirm.clearBought.title"),
+        confirmLabel: t("shoppingList.confirm.clearBought.confirmLabel"),
+      }))
+    )
+      return;
     const snapshot = items;
     haptic();
     setItems((prev) => prev.filter((it) => !it.bought));
@@ -481,7 +491,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       await api("/list/bought", { method: "DELETE" });
     } catch {
       setItems(snapshot);
-      toast("Kunne ikke tømme – sjekk nettforbindelsen", { error: true });
+      toast(t("shoppingList.toast.clearFailed"), { error: true });
       return;
     }
     loadList();
@@ -537,18 +547,23 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
   const summary = remaining
-    ? `${remaining} ${remaining === 1 ? "vare" : "varer"} igjen`
+    ? t("shoppingList.summary.itemsLeft", { count: remaining })
     : items.length
-      ? "Alt er handlet"
+      ? t("shoppingList.summary.allBought")
       : "";
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
+  const importantChipLabel = t(
+    pinImportant ? "shoppingList.importantChip.showAll" : "shoppingList.importantChip.showImportantFirst"
+  );
+  const gridViewLabel = t("shoppingList.viewToggle.grid");
+  const gridViewTitle = intensity === "classic" ? t("shoppingList.viewToggle.gridDisabledHint") : gridViewLabel;
 
   return (
     <section>
       <div style={{ marginBottom: 16, position: "relative" }}>
         <Input
           ref={addInputRef}
-          placeholder="Legg til vare – f.eks. «2 melk»"
+          placeholder={t("shoppingList.addInput.placeholder")}
           autoComplete="off"
           icon="carrot"
           value={addValue}
@@ -637,7 +652,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 onMouseEnter={() => setHighlightedIndex(suggestions.length)}
                 onClick={() => addItem(addValue, { exact: true })}
               >
-                Legg til «{addValue.trim()}» nøyaktig som skrevet
+                {t("shoppingList.addInput.exactOption", { value: addValue.trim() })}
               </div>
             )}
           </div>
@@ -649,7 +664,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
           {pendingWrites > 0 && (
             <span
-              title="Endringer lagret på enheten – sendes når du er tilkoblet igjen"
+              title={t("shoppingList.pendingWrites.tooltip")}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -681,8 +696,8 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 setPinImportant((prev) => !prev);
               }}
               aria-pressed={pinImportant}
-              aria-label={pinImportant ? "Vis alle varer" : "Vis kun viktige varer først"}
-              title={pinImportant ? "Vis alle varer" : "Vis kun viktige varer først"}
+              aria-label={importantChipLabel}
+              title={importantChipLabel}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -706,7 +721,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           {presentUsers.length > 0 && (
             <div
               style={{ display: "flex", alignItems: "center" }}
-              title={`${presentUsers.map(nameFor).join(", ")} er også her akkurat nå`}
+              title={t("shoppingList.presence.alsoHere", { names: presentUsers.map(nameFor).join(", ") })}
             >
               {presentUsers.map((u, i) => (
                 <div key={u} style={{ marginLeft: i === 0 ? 0 : -8, border: "2px solid var(--surface-page)", borderRadius: "50%" }}>
@@ -743,8 +758,8 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           />
           <button
             onClick={() => setView("list")}
-            aria-label="Listevisning"
-            title="Listevisning"
+            aria-label={t("shoppingList.viewToggle.list")}
+            title={t("shoppingList.viewToggle.list")}
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "list", intensity === "classic")}
           >
@@ -752,8 +767,8 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           </button>
           <button
             onClick={() => setView("grid")}
-            aria-label="Rutenettvisning"
-            title={intensity === "classic" ? "Rutenettvisning er slått av i klassisk visning" : "Rutenettvisning"}
+            aria-label={gridViewLabel}
+            title={gridViewTitle}
             disabled={intensity === "classic"}
             style={viewToggleBtnStyle(effectiveViewMode === "grid", intensity === "classic")}
           >
@@ -767,8 +782,8 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       ) : items.length === 0 ? (
         <EmptyState
           icon="shopping-cart-simple"
-          title="Ingen varer på listen"
-          description="Legg til en vare over for å komme i gang."
+          title={t("shoppingList.empty.title")}
+          description={t("shoppingList.empty.description")}
         />
       ) : (
         <>
@@ -784,7 +799,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   marginBottom: 8,
                 }}
               >
-                Viktig
+                {t("shoppingList.section.important")}
               </div>
               {renderItems(importantDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
             </div>
@@ -820,7 +835,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                     padding: 0,
                   }}
                 >
-                  <span>Nylig kjøpt</span>
+                  <span>{t("shoppingList.section.recentlyBought")}</span>
                   <UiIcon
                     name="chevronDown"
                     size={14}
@@ -835,7 +850,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                     FAB, so it reads as "clear this list", not a global action. */}
                 <button
                   onClick={clearBought}
-                  title="Fjern alle handlede varer"
+                  title={t("shoppingList.clearBought.tooltip")}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -851,7 +866,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   }}
                 >
                   <UiIcon name="broom" size={13} />
-                  Tøm handlede
+                  {t("shoppingList.clearBought.label")}
                 </button>
               </div>
               {/* No onToggleImportant here: a bought item's important flag is
@@ -866,23 +881,23 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       )}
 
       <FabMenu
-        label="Legg til vare"
+        label={t("shoppingList.fab.label")}
         haptic={haptic}
         actions={[
           {
             icon: "cooking-pot",
-            label: "Fra middagsplanen",
+            label: t("shoppingList.fab.fromMealPlan"),
             onClick: () => setModal({ type: "weekIngredients" }),
           },
           {
             icon: "sparkle",
-            label: "Forslag",
+            label: t("shoppingList.fab.suggestions"),
             badge: suggestedItems.length || null,
             onClick: () => setModal({ type: "suggestions" }),
           },
           {
             icon: "bell-ringing",
-            label: "Varsle husstanden",
+            label: t("shoppingList.fab.notifyHousehold"),
             onClick: pingHousehold,
           },
         ]}

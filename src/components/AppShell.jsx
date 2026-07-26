@@ -67,6 +67,7 @@ function ImportantLegendTrigger({ onClick }) {
 const SETTINGS_SUBPAGE_TITLES = {
   utseende: "Utseende",
   konto: "Konto",
+  sprak: "Språk",
   varsler: "Varsler",
   hjem: "Vårt hjem",
   butikk: "Butikkoppsett",
