@@ -1,5 +1,18 @@
 # i18n roadmap (language support)
 
+> **Updated for 1.48.0's English-first restructure.** The source of truth
+> flipped: `en.js` is now the authored dictionary and `nb.js` its translation,
+> `shared/errorCodes.js` holds canonical English text, and `CATEGORIES` /
+> `COMMON_ITEMS` are English strings. Norwegian is still the app's default UI
+> language (`language.js`'s `DEFAULT_UI_LANGUAGE`), and nothing a user sees
+> changed. The decisions below have been rewritten to describe the current
+> direction; where a rule reads "canonical", that now means English.
+>
+> The one genuinely new rule: **`translate.js`'s `DEFAULT_LANG` (base
+> dictionary, `"en"`) and `language.js`'s `DEFAULT_UI_LANGUAGE` (what a device
+> opens in, `"nb"`) are different things.** Changing the second is a visible
+> product change; changing the first is not.
+
 Tracks TODO #15 (language support) across sessions. **All phases are done as
 of 1.47.0 — the app is fully translated, including server error messages.**
 Phase 1 (infra + the Settings → "Språk" switcher + `ShoppingListTab`, 1.43.4),
@@ -24,21 +37,23 @@ rules there are what keep a translation from corrupting stored data.
   (item counts) — `params.count === 1` picks `one`.
 - **Storage**: `ph_language` in `localStorage`, mirroring `theme.js`'s
   pattern. Defaults to browser-detected language (`navigator.language`) when
-  nothing is stored yet, falling back to `nb` for anything unsupported.
+  nothing is stored yet, falling back to `DEFAULT_UI_LANGUAGE` (`nb`) for
+  anything unsupported — deliberately still Norwegian after the 1.48.0
+  restructure, since that's who uses the app.
   `LanguageProvider` is the **outermost** provider in `App.jsx` — every
   screen, including pre-auth ones, already has `useTranslation()`/
   `useLanguage()` available with no extra wiring.
-- **Item names** (`src/lib/i18n/itemNames.js`): a display-only nb→en lookup
+- **Item names** (`src/lib/i18n/itemNames.js`): a display-only en→nb lookup
   for the ~710 `COMMON_ITEMS` entries, keyed by the lowercased canonical
-  (Norwegian) name. **Never rewrite the stored name** — `item_catalogue.name`
+  (English) name. **Never rewrite the stored name** — `item_catalogue.name`
   is the identity `checkCatalogueSync` upserts on, and the name icon-matching
   (`itemIcons.js`) and duplicate-detection both key off; translation only
   ever swaps the *displayed* string. A custom/free-typed item (most of a
   real household's list, over time) has no lookup entry and displays as
   typed either way — there's no translation API, by design.
 - **Bidirectional catalogue matching**: `matchCatalogue(query, catalogue,
-  lang)` (`shoppingUtils.js`) also matches a candidate's English translation
-  when `lang === "en"`, so typing "milk" still finds "Melk" without ever
+  lang)` (`shoppingUtils.js`) also matches a candidate's Norwegian translation
+  when `lang === "nb"`, so typing "melk" still finds "Milk" without ever
   renaming the stored row. Any new search/autocomplete surface over
   `item_catalogue` should follow the same pattern rather than inventing a
   new one.
@@ -59,14 +74,15 @@ rules there are what keep a translation from corrupting stored data.
   and `MealEditModal`'s `similarNote` (now `{ kind, names }`). Follow the same
   shape for any new state that would otherwise cache translated text.
 - **`dictionaries.test.js` guards nb/en parity.** `translate()` silently falls
-  back to nb for a key missing from en, so a gap shows up as a stray Norwegian
+  back to en for a key missing from nb, so a gap shows up as a stray English
   string rather than a crash. The test fails on a missing key, a plural/plain
   mismatch, differing `{placeholders}`, or an empty value — it caught one real
   miss during phase 4. Run `npm test` after editing either dictionary.
 - **Category names were a landmine; it's fixed now (phase 7).** `CATEGORIES`
-  (`shared/categories.js`, e.g. `"Frukt og grønt"`) is a literal data key —
+  (`shared/categories.js`, e.g. `"Fruit and vegetables"`) is a literal data key —
   used by `clusterFor()`, `category_order`, and worker-side validation — not
-  just display text, so the stored/validated value is never translated.
+  just display text, so the stored/validated value is never translated. Since
+  1.48.0 that canonical value is English.
   `translateCategoryName(category, lang)` (`src/lib/i18n/categoryNames.js`)
   maps it through `CLUSTER_KEYS` to a `category.<id>` dictionary entry, display
   only. **Any new surface showing a category name must use it**, and any
@@ -83,7 +99,8 @@ rules there are what keep a translation from corrupting stored data.
 - **Server error strings are translated via codes, not text matching** (see
   the section at the end). `worker/index.js` answers `{ error, code }`; the
   client resolves the code through `apiErrorMessage(res, t)` and never
-  string-matches the message. Never surface `res.error` directly in new code —
+  string-matches the message. The canonical message text is English as of
+  1.48.0; `nb.js` hand-writes the translations. Never surface `res.error` directly in new code —
   use the helper, so an unknown code still degrades to the server's wording
   instead of a raw key.
 
@@ -93,13 +110,14 @@ rules there are what keep a translation from corrupting stored data.
    `src/context/LanguageContext.jsx`); add `const { lang } = useLanguage();`
    too if the component renders an item/catalogue name (needs
    `translateItemName`).
-2. Replace each literal Norwegian string/JSX text with `t("namespace.key")`,
-   using `{param}` interpolation for anything with a variable
+2. Replace each literal string/JSX text with `t("namespace.key")`, using
+   `{param}` interpolation for anything with a variable
    (`t("key", { name, qty })`). Reuse one `namespace` per component/feature
    area (see the suggested namespaces per phase below).
-3. Add the same keys to **both** `src/lib/i18n/dictionaries/nb.js` and
-   `en.js` — nb first (copy the existing literal), then a natural English
-   translation.
+3. Add the same keys to **both** `src/lib/i18n/dictionaries/en.js` and
+   `nb.js` — en first (it's the authored source since 1.48.0), then the
+   Norwegian translation. New UI should be written in English and translated,
+   not the other way round.
 4. Where a `title`/`aria-label` pair repeats the same computed string,
    compute it once into a local `const` and reuse it (established in
    `ShoppingListTab.jsx`/`ItemCard.jsx`).

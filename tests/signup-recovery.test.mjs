@@ -73,15 +73,15 @@ async function testRegisterValidation(BASE) {
   // username field to validate anymore, just name/password/email.
   let res = await register(BASE, { name: "", password: PASS, email: "a@b.com" });
   assert.equal(res.status, 400);
-  assert.match((await res.json()).error, /navn/i);
+  assert.equal((await res.json()).code, "ENTER_NAME");
 
   res = await register(BASE, { name: `Reg Shortpw ${RUN_ID}`, password: "short", email: "a@b.com" });
   assert.equal(res.status, 400);
-  assert.match((await res.json()).error, /passord/i);
+  assert.equal((await res.json()).code, "PASSWORD_TOO_SHORT");
 
   res = await register(BASE, { name: `Reg Bademail ${RUN_ID}`, password: PASS, email: "not-an-email" });
   assert.equal(res.status, 400);
-  assert.match((await res.json()).error, /e-post/i);
+  assert.equal((await res.json()).code, "INVALID_EMAIL");
 
   console.log("  - /register: rejects missing name, weak password, and malformed email (400) before touching Turnstile");
 }
@@ -94,7 +94,7 @@ async function testRegisterMissingTurnstileToken(BASE) {
     name: `Reg Noturnstile ${RUN_ID}`, password: PASS, email: `reg_noturnstile_${RUN_ID}@example.com`,
   });
   assert.equal(res.status, 403);
-  assert.match((await res.json()).error, /bot-verifisering/i);
+  assert.equal((await res.json()).code, "TURNSTILE_FAILED");
 
   console.log("  - /register: missing turnstile_token is rejected (403) without needing a live Turnstile round-trip");
 }
@@ -114,7 +114,7 @@ async function testRegisterRateLimiting(BASE) {
     name: `Reg Rl ${RUN_ID} over`, password: PASS, email: `reg_rl_${RUN_ID}_over@example.com`,
   }, { "CF-Connecting-IP": ip });
   assert.equal(res.status, 429);
-  assert.match((await res.json()).error, /mange registreringsforsøk/i);
+  assert.equal((await res.json()).code, "TOO_MANY_SIGNUP_ATTEMPTS");
 
   console.log("  - /register rate limiting: the 9th attempt within the window is blocked (429), even before Turnstile is checked");
 }
@@ -122,7 +122,7 @@ async function testRegisterRateLimiting(BASE) {
 async function testForgotPasswordMissingTurnstileToken(BASE) {
   const res = await forgotPassword(BASE, { email: "whoever@example.com" });
   assert.equal(res.status, 403);
-  assert.match((await res.json()).error, /bot-verifisering/i);
+  assert.equal((await res.json()).code, "TURNSTILE_FAILED");
 
   console.log("  - /forgot-password: missing turnstile_token is rejected (403) without needing a live Turnstile round-trip");
 }
@@ -136,7 +136,7 @@ async function testForgotPasswordRateLimiting(BASE) {
 
   const res = await forgotPassword(BASE, { email: `fp_rl_${RUN_ID}_over@example.com` }, { "CF-Connecting-IP": ip });
   assert.equal(res.status, 429);
-  assert.match((await res.json()).error, /mange forsøk/i);
+  assert.equal((await res.json()).code, "TOO_MANY_ATTEMPTS");
 
   console.log("  - /forgot-password rate limiting: the 6th attempt within the window is blocked (429)");
 }
@@ -147,7 +147,7 @@ async function testResetPasswordInvalidToken(BASE) {
     body: JSON.stringify({ token: "not-a-real-token", new_password: "New-password-456!" }),
   });
   assert.equal(res.status, 400);
-  assert.match((await res.json()).error, /ugyldig eller utløpt/i);
+  assert.equal((await res.json()).code, "INVALID_OR_EXPIRED_LINK");
 
   console.log("  - /reset-password: an unknown/invalid token is rejected (400), fully offline");
 }
@@ -161,7 +161,7 @@ async function testGoogleAuthRejectsMalformedCredential(BASE) {
     body: JSON.stringify({ credential: "not.a.jwt" }),
   });
   assert.equal(res.status, 401);
-  assert.match((await res.json()).error, /google-innlogging/i);
+  assert.equal((await res.json()).code, "GOOGLE_SIGNIN_FAILED");
 
   console.log("  - /auth/google: a malformed credential is rejected (401) without needing a live Google token");
 }

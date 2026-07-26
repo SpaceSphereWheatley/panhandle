@@ -31,14 +31,14 @@ export function SettingsRoot({ onNavigate }) {
         <SettingsRow
           icon="palette"
           label={t(SETTINGS_SUBPAGE_TITLE_KEYS.utseende)}
-          supportingText={t("settings.root.utseende.supporting")}
-          onClick={() => onNavigate(["utseende"])}
+          supportingText={t("settings.root.appearance.supporting")}
+          onClick={() => onNavigate(["appearance"])}
         />
         <SettingsRow
           icon="user-circle"
           label={t(SETTINGS_SUBPAGE_TITLE_KEYS.konto)}
           supportingText={name || user}
-          onClick={() => onNavigate(["konto"])}
+          onClick={() => onNavigate(["account"])}
         />
         <SettingsRow
           icon="translate"
@@ -46,7 +46,7 @@ export function SettingsRoot({ onNavigate }) {
           // Each language's own endonym, never translated — the point of this
           // row is to be recognisable to someone who can't read the current UI.
           supportingText={lang === "en" ? "English" : "Norsk"}
-          onClick={() => onNavigate(["sprak"])}
+          onClick={() => onNavigate(["language"])}
         />
       </SettingsGroup>
 
@@ -54,8 +54,8 @@ export function SettingsRoot({ onNavigate }) {
         <SettingsRow
           icon="bell"
           label={t(SETTINGS_SUBPAGE_TITLE_KEYS.varsler)}
-          supportingText={t(subscribed ? "settings.root.varsler.on" : "settings.root.varsler.off")}
-          onClick={() => onNavigate(["varsler"])}
+          supportingText={t(subscribed ? "settings.root.notifications.on" : "settings.root.notifications.off")}
+          onClick={() => onNavigate(["notifications"])}
         />
       </SettingsGroup>
 
@@ -63,14 +63,14 @@ export function SettingsRoot({ onNavigate }) {
         <SettingsRow
           icon="house"
           label={t(SETTINGS_SUBPAGE_TITLE_KEYS.hjem)}
-          supportingText={t("settings.root.hjem.supporting", { count: listUsers.length })}
-          onClick={() => onNavigate(["hjem"])}
+          supportingText={t("settings.root.household.supporting", { count: listUsers.length })}
+          onClick={() => onNavigate(["household"])}
         />
         <SettingsRow
           icon="storefront"
           label={t(SETTINGS_SUBPAGE_TITLE_KEYS.butikk)}
-          supportingText={t("settings.root.butikk.supporting")}
-          onClick={() => onNavigate(["butikk"])}
+          supportingText={t("settings.root.store.supporting")}
+          onClick={() => onNavigate(["store"])}
         />
         {isAdmin && (
           <SettingsRow

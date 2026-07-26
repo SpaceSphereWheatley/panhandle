@@ -33,9 +33,12 @@ Completed items live in `Todo_done.md`, not below.
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
-5. **i18n (#15)** — DONE (1.43.4-1.47.0, see `Todo_done.md`). The app is
+5. **i18n (#15)** — DONE (1.43.4-1.48.0, see `Todo_done.md`). The app is
    fully translated, server error messages included; phase 8 (free-text meal
-   names) is closed as a won't-do.
+   names) is closed as a won't-do. 1.48.0 additionally flipped the codebase's
+   source language to English (canonical data keys, authored dictionary,
+   filenames) while keeping Norwegian as the default UI language — so adding a
+   third language is now a translation job rather than a restructure.
 
 Notifications (#7) shipped in full (phases 1–2) and is closed — see
 `Todo_done.md`. Batched item-added notifications, the one theoretical

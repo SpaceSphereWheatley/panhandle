@@ -34,3 +34,8 @@ npm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+# tests/_helpers.mjs writes a bootstrap .sql into the repo root per account it
+# seeds, and unlinks it in a finally — so it's normally invisible. But it does
+# exist while the integration suite runs, and it contains a password hash, so
+# a `git add -A` overlapping a test run would otherwise commit it.
+.test-bootstrap-*.sql

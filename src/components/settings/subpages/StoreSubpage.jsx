@@ -22,9 +22,9 @@ const STALE_ITEM_DAYS_MAX = 90;
 //
 // The stale-item threshold is stored on /notification-settings, which now
 // holds only stale_item_days (the reminder preferences moved to per-device
-// storage — see VarslerSubpage), so this page just reads and writes that one
+// storage — see NotificationsSubpage), so this page just reads and writes that one
 // field.
-export function ButikkSubpage() {
+export function StoreSubpage() {
   const { order, refresh, save } = useCategoryOrder();
   const toast = useToast();
   const t = useTranslation();
@@ -66,7 +66,7 @@ export function ButikkSubpage() {
     haptic();
     const res = await save(CATEGORIES);
     if (res.error) toast(apiErrorMessage(res, t), { error: true });
-    else toast(t("settings.butikk.order.resetToast"));
+    else toast(t("settings.store.order.resetToast"));
   }
 
   const isDefault = localOrder.length === CATEGORIES.length && localOrder.every((c, i) => c === CATEGORIES[i]);
@@ -74,8 +74,8 @@ export function ButikkSubpage() {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <SubpageSection
-        label={t("settings.butikk.order.label")}
-        description={t("settings.butikk.order.description")}
+        label={t("settings.store.order.label")}
+        description={t("settings.store.order.description")}
       >
         <Reorder.Group as="div" axis="y" values={localOrder} onReorder={setLocalOrder}>
           {localOrder.map((cat, i) => (
@@ -91,7 +91,7 @@ export function ButikkSubpage() {
         </Reorder.Group>
         <div style={{ marginTop: 12 }}>
           <Button variant="ghost" size="sm" onClick={reset} disabled={isDefault}>
-            {t("settings.butikk.order.reset")}
+            {t("settings.store.order.reset")}
           </Button>
         </div>
       </SubpageSection>
@@ -161,12 +161,12 @@ function StaleItemSection({ toast, t }) {
 
   return (
     <SubpageSection
-      label={t("settings.butikk.stale.label")}
-      description={t("settings.butikk.stale.description")}
+      label={t("settings.store.stale.label")}
+      description={t("settings.store.stale.description")}
     >
-      <FieldLabel htmlFor="stale-item-days">{t("settings.butikk.stale.days")}</FieldLabel>
+      <FieldLabel htmlFor="stale-item-days">{t("settings.store.stale.days")}</FieldLabel>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <IconButton icon="minus" size="sm" variant="subtle" label={t("settings.butikk.stale.decrease")} onClick={() => adjust(-1)} />
+        <IconButton icon="minus" size="sm" variant="subtle" label={t("settings.store.stale.decrease")} onClick={() => adjust(-1)} />
         <Input
           id="stale-item-days"
           type="number"
@@ -178,7 +178,7 @@ function StaleItemSection({ toast, t }) {
           onBlur={onBlurText}
           style={{ maxWidth: 76 }}
         />
-        <IconButton icon="plus" size="sm" variant="subtle" label={t("settings.butikk.stale.increase")} onClick={() => adjust(1)} />
+        <IconButton icon="plus" size="sm" variant="subtle" label={t("settings.store.stale.increase")} onClick={() => adjust(1)} />
       </div>
     </SubpageSection>
   );
@@ -223,8 +223,8 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
-        aria-label={t("settings.butikk.order.moveUp", { category: label })}
-        title={t("settings.butikk.order.moveUpTitle")}
+        aria-label={t("settings.store.order.moveUp", { category: label })}
+        title={t("settings.store.order.moveUpTitle")}
         style={reorderBtnStyle(index === 0)}
       >
         <UiIcon name="caret-up" size={16} />
@@ -232,8 +232,8 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, 1)}
         disabled={index === total - 1}
-        aria-label={t("settings.butikk.order.moveDown", { category: label })}
-        title={t("settings.butikk.order.moveDownTitle")}
+        aria-label={t("settings.store.order.moveDown", { category: label })}
+        title={t("settings.store.order.moveDownTitle")}
         style={reorderBtnStyle(index === total - 1)}
       >
         <UiIcon name="caret-down" size={16} />

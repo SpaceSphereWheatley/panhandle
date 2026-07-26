@@ -28,7 +28,7 @@ const POLL_MS = 7000;
 // instantly instead of a skeleton/spinner on every cold open — see
 // loadList()/CLAUDE.md's loading-UI notes.
 const ITEMS_CACHE_KEY = "ph_cache_items_v1";
-// Fallback hold before a checked-off item re-sorts into "Nylig kjøpt" when
+// Fallback hold before a checked-off item re-sorts into "Recently bought" when
 // Framer's animation is off (reduced motion, or "classic" intensity) — there's
 // no pop animation to key off in that case, so this is a deliberately fixed,
 // standalone pause, not tied to any animation's duration. When Framer IS
@@ -99,20 +99,20 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  // "Nylig kjøpt" starts collapsed — it's a re-add palette, not something to
+  // "Recently bought" starts collapsed — it's a re-add palette, not something to
   // scroll past every time.
   const [boughtCollapsed, setBoughtCollapsed] = useState(() => localStorage.getItem("ph_bought_collapsed") !== "false");
   // Single active modal for the FAB menu's two destinations:
   // { type: "suggestions" | "weekIngredients" } | null
   const [modal, setModal] = useState(null);
   // Items mid "checked-off" animation: still rendered in their category, struck
-  // through and fading out, before they re-sort into "Nylig kjøpt".
+  // through and fading out, before they re-sort into "Recently bought".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
   // Stale-item marker threshold (days), a per-list preference — see
-  // /notification-settings and VarslerSubpage.jsx. Falls back to the app
+  // /notification-settings and NotificationsSubpage.jsx. Falls back to the app
   // default until the first fetch resolves.
   const [staleItemDays, setStaleItemDays] = useState(7);
-  // Pulls important, unbought items into their own "Viktig" section above the
+  // Pulls important, unbought items into their own "Important" section above the
   // normal aisle list instead of hiding the rest — useful for a trip where
   // you're not buying everything on the list. Not persisted: it's a
   // per-visit lens on the list, not a standing preference like ph_view.
@@ -269,7 +269,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     let name, category, notes, qty;
     if (exact) {
       name = typed.trim();
-      category = "Annet";
+      category = "Other";
       qty = 1;
     } else {
       const { name: rawName, qty: parsedQty, unit } = parseItemInput(typed, catalogue);
@@ -277,7 +277,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       const { name: baseName, gf } = extractGF(rawName);
       const match = matchCatalogue(baseName, catalogue, lang)[0];
       name = match ? match.name : baseName;
-      category = match ? match.category : "Annet";
+      category = match ? match.category : "Other";
+      // Deliberately still Norwegian, unlike the canonical names/categories
+      // around it: this is appended to list_items.notes, a free-text field
+      // rendered raw with no translation layer. An English canonical value
+      // here would surface untranslated in the Norwegian UI — same reasoning
+      // that keeps meal names and typed ingredients as-is (CLAUDE.md's
+      // Language support section). extractGF matches either language's marker.
       const noteParts = [unit, gf ? "Glutenfri" : null].filter(Boolean);
       notes = noteParts.length ? noteParts.join(", ") : undefined;
       qty = parsedQty;
@@ -366,7 +372,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       prev.map((x) => (x.id === id ? { ...x, bought: wasBought ? 0 : 1, important: wasBought ? x.important : 0 } : x))
     );
     // Checking off (not un-checking): hold the row in place so the
-    // strike-through + fade play before it re-sorts into "Nylig kjøpt". The
+    // strike-through + fade play before it re-sorts into "Recently bought". The
     // reorder is driven by this local timer, not by the network round-trip.
     if (!wasBought) {
       setResolvingIds((prev) => new Set(prev).add(id));
@@ -376,7 +382,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       await api(`/list/${id}/toggle`, { method: "POST" });
     } catch (e) {
       if (e.message === "network") {
-        // Keep the optimistic flip (and its "Nylig kjøpt" re-sort); queue the
+        // Keep the optimistic flip (and its "Recently bought" re-sort); queue the
         // toggle to replay on reconnect instead of reverting it.
         enqueue({ kind: "toggle", targetId: id });
         setPendingWrites(queueLength());
@@ -473,7 +479,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   }
 
   // End-of-trip sweep (TODO #100): clear every bought line at once instead of
-  // removing them one at a time from "Nylig kjøpt". Confirmed first since it's
+  // removing them one at a time from "Recently bought". Confirmed first since it's
   // a bulk delete; online-only (not part of the offline write queue, which is
   // scoped to add/toggle/important). The catalogue rows stay, so anything
   // cleared can be re-added and its purchase stats/suggestions are untouched.
@@ -499,7 +505,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   }
 
   // A just-checked item stays in its category (struck through, fading) until
-  // its resolve timer fires — only then does it move to "Nylig kjøpt".
+  // its resolve timer fires — only then does it move to "Recently bought".
   const unbought = items.filter((it) => !it.bought || resolvingIds.has(it.id));
   const bought = items
     .filter((it) => it.bought && !resolvingIds.has(it.id))
@@ -507,7 +513,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // Important-item count driving the pinImportant chip — bought items don't
   // count, since they're no longer something to look out for on this trip.
   const importantUnbought = unbought.filter((it) => it.important);
-  // Disarm the "Viktig" lens once nothing important remains unbought, so it
+  // Disarm the "Important" lens once nothing important remains unbought, so it
   // doesn't silently re-engage the next time an item is starred while the chip
   // is gone (#97). No render-generation bump needed: with the important list
   // empty, the pinned/unpinned layouts are identical, so nothing visibly moves.
@@ -525,14 +531,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // canonical CATEGORIES order until loaded). Recently bought items (capped,
   // re-add palette) render as their own section below instead of being folded
   // into the aisle list — see boughtDisplayItems. When pinImportant is on,
-  // important items are pulled out above into their own "Viktig" section (see
+  // important items are pulled out above into their own "Important" section (see
   // importantDisplayItems) instead of appearing here too — same "own section,
   // not a duplicate" split as bought items.
   const displayItems = categoryOrder.filter((c) => groups[c]).flatMap((c) =>
     groups[c].map((it) => ({ item: it, clusterKey: it.category }))
   );
   const importantDisplayItems = pinImportant
-    ? importantUnbought.map((it) => ({ item: it, clusterKey: "Viktig" }))
+    ? importantUnbought.map((it) => ({ item: it, clusterKey: "Important" }))
     : [];
   // Classic intensity flattens the density down to a plain linear list,
   // regardless of the user's stored grid/list preference — ph_view stays
@@ -543,7 +549,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // in list, to fill 3 grid rows vs. 3 list rows) made items appear/disappear
   // on toggle, which read as a bug rather than an intentional density choice.
   const BOUGHT_CAP = 9;
-  const boughtDisplayItems = bought.slice(0, BOUGHT_CAP).map((it) => ({ item: it, clusterKey: "Nylig kjøpt" }));
+  const boughtDisplayItems = bought.slice(0, BOUGHT_CAP).map((it) => ({ item: it, clusterKey: "Recently bought" }));
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -794,7 +800,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 style={{
                   fontSize: "var(--text-2xs)",
                   fontWeight: 700,
-                  color: clusterFor("Viktig").on,
+                  color: clusterFor("Important").on,
                   textTransform: "uppercase",
                   letterSpacing: "var(--tracking-wide)",
                   marginBottom: 8,
@@ -830,7 +836,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                     cursor: "pointer",
                     fontSize: "var(--text-2xs)",
                     fontWeight: 700,
-                    color: clusterFor("Nylig kjøpt").on,
+                    color: clusterFor("Recently bought").on,
                     textTransform: "uppercase",
                     letterSpacing: "var(--tracking-wide)",
                     padding: 0,

@@ -57,8 +57,8 @@ describe("parseIngredients", () => {
 
 describe("buildIngredientRows", () => {
   const catalogue = [
-    { name: "Melk", category: "Meieriprodukter" },
-    { name: "Egg", category: "Meieriprodukter" },
+    { name: "Melk", category: "Dairy" },
+    { name: "Egg", category: "Dairy" },
   ];
 
   it("dedupes by lowercased name", () => {
@@ -69,12 +69,12 @@ describe("buildIngredientRows", () => {
 
   it("sets category from a catalogue match", () => {
     const rows = buildIngredientRows(["Melk"], catalogue, new Set());
-    expect(rows[0].category).toBe("Meieriprodukter");
+    expect(rows[0].category).toBe("Dairy");
   });
 
-  it("falls back to 'Annet' category for an unmatched ingredient", () => {
+  it("falls back to 'Other' category for an unmatched ingredient", () => {
     const rows = buildIngredientRows(["Trylledrikk"], catalogue, new Set());
-    expect(rows[0].category).toBe("Annet");
+    expect(rows[0].category).toBe("Other");
     expect(rows[0].name).toBe("Trylledrikk");
   });
 

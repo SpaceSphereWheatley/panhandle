@@ -18,7 +18,7 @@ const MotionRow = motion(ManagementRow);
 
 // "Vårt hjem" subpage, part 1: member list + add member, each always-open
 // (no accordions — see SubpageSection.jsx). Content-only — no own Card
-// wrapper, since HjemSubpage.jsx merges this with RecurringIsland into one
+// wrapper, since HouseholdSubpage.jsx merges this with RecurringIsland into one
 // shared container.
 export function MembersIsland() {
   const { user: currentUser } = useAuth();
@@ -57,9 +57,9 @@ export function MembersIsland() {
 
   async function removeMember(username) {
     if (
-      !(await confirm(t("settings.hjem.members.confirmRemove.body", { name: username }), {
-        title: t("settings.hjem.members.confirmRemove.title"),
-        confirmLabel: t("settings.hjem.members.confirmRemove.confirmLabel"),
+      !(await confirm(t("settings.household.members.confirmRemove.body", { name: username }), {
+        title: t("settings.household.members.confirmRemove.title"),
+        confirmLabel: t("settings.household.members.confirmRemove.confirmLabel"),
       }))
     )
       return;
@@ -73,10 +73,10 @@ export function MembersIsland() {
 
   return (
     <>
-      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.hjem.members.eyebrow")}</div>
-      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{t("settings.hjem.members.count", { count: listUsers.length })}</div>
+      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.household.members.eyebrow")}</div>
+      <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{t("settings.household.members.count", { count: listUsers.length })}</div>
 
-      <SubpageSection label={t("settings.hjem.members.label")}>
+      <SubpageSection label={t("settings.household.members.label")}>
         <AnimatePresence initial={false}>
           {listUsers.map((u) => (
             <MotionRow
@@ -89,38 +89,38 @@ export function MembersIsland() {
               title={
                 <>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name || u.username}</span>
-                  {!!u.is_owner && <Badge tone="secondary">{t("settings.hjem.members.badgeOwner")}</Badge>}
-                  {!!u.is_admin && <Badge tone="primary">{t("settings.hjem.members.badgeAdmin")}</Badge>}
+                  {!!u.is_owner && <Badge tone="secondary">{t("settings.household.members.badgeOwner")}</Badge>}
+                  {!!u.is_admin && <Badge tone="primary">{t("settings.household.members.badgeAdmin")}</Badge>}
                 </>
               }
-              subtitle={u.username === currentUser ? t("settings.hjem.members.you") : u.username}
+              subtitle={u.username === currentUser ? t("settings.household.members.you") : u.username}
             >
-              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>{t("settings.hjem.members.remove")}</Button>
+              <Button variant="danger" size="sm" icon="trash" onClick={() => removeMember(u.username)}>{t("settings.household.members.remove")}</Button>
             </MotionRow>
           ))}
         </AnimatePresence>
       </SubpageSection>
 
-      <SubpageSection label={t("settings.hjem.members.add.label")}>
-        <FieldLabel htmlFor="members-new-name" visuallyHidden>{t("settings.hjem.members.add.nameField")}</FieldLabel>
+      <SubpageSection label={t("settings.household.members.add.label")}>
+        <FieldLabel htmlFor="members-new-name" visuallyHidden>{t("settings.household.members.add.nameField")}</FieldLabel>
         <Input
           id="members-new-name"
-          placeholder={t("settings.konto.name.label")}
+          placeholder={t("settings.account.name.label")}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           style={{ marginBottom: 8 }}
         />
-        <FieldLabel htmlFor="members-new-email" visuallyHidden>{t("settings.hjem.members.add.emailField")}</FieldLabel>
+        <FieldLabel htmlFor="members-new-email" visuallyHidden>{t("settings.household.members.add.emailField")}</FieldLabel>
         <Input
           id="members-new-email"
           type="email"
-          placeholder={t("settings.konto.email.label")}
+          placeholder={t("settings.account.email.label")}
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
           style={{ marginBottom: 10 }}
         />
         <Button variant="primary" icon="plus" onClick={addMember} disabled={full}>
-          {t("settings.hjem.members.add.submit")}
+          {t("settings.household.members.add.submit")}
         </Button>
       </SubpageSection>
 

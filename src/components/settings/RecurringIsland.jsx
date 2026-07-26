@@ -11,7 +11,7 @@ import { apiErrorMessage } from "../../lib/apiError.js";
 // "Vårt hjem" subpage, part 2: weekly recurring meal responsibility,
 // always-open like MembersIsland's sub-sections (no accordions — see
 // SubpageSection.jsx). Content-only — no own Card wrapper, see
-// MembersIsland.jsx / HjemSubpage.jsx.
+// MembersIsland.jsx / HouseholdSubpage.jsx.
 export function RecurringIsland() {
   const { people, nameFor, refresh } = useListUsers();
   const { schedule, ensureLoaded, saveDay } = useRecurring();
@@ -38,7 +38,7 @@ export function RecurringIsland() {
     });
     const res = await saveDay(dow, value);
     if (res.error) toast(apiErrorMessage(res, t), { error: true });
-    else toast(t("settings.hjem.recurring.saved"));
+    else toast(t("settings.household.recurring.saved"));
   }
 
   async function onOtherBlur(dow, value) {
@@ -49,7 +49,7 @@ export function RecurringIsland() {
     if (val === (schedule[dow] || "")) return;
     const res = await saveDay(dow, val || "");
     if (res.error) toast(apiErrorMessage(res, t), { error: true });
-    else toast(t("settings.hjem.recurring.saved"));
+    else toast(t("settings.household.recurring.saved"));
     if (!val) {
       setOtherDrafts((prev) => {
         const next = { ...prev };
@@ -60,9 +60,9 @@ export function RecurringIsland() {
   }
 
   return (
-    <SubpageSection label={t("settings.hjem.recurring.label")}>
+    <SubpageSection label={t("settings.household.recurring.label")}>
       <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", margin: "0 0 12px" }}>
-        {t("settings.hjem.recurring.description")}
+        {t("settings.household.recurring.description")}
       </div>
       <div>
         {weekdays.map((day, dow) => {
@@ -86,8 +86,8 @@ export function RecurringIsland() {
               {isOther && (
                 <Input
                   type="text"
-                  placeholder={t("settings.hjem.recurring.describePlaceholder")}
-                  aria-label={t("settings.hjem.recurring.describeAria", { day })}
+                  placeholder={t("settings.household.recurring.describePlaceholder")}
+                  aria-label={t("settings.household.recurring.describeAria", { day })}
                   style={{ marginTop: 8 }}
                   defaultValue={current}
                   onBlur={(e) => onOtherBlur(dow, e.target.value)}

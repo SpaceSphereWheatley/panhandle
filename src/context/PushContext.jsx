@@ -27,7 +27,7 @@ export function PushProvider({ children }) {
   );
   const [subscribed, setSubscribed] = useState(false);
   // This device's current push endpoint (or null). Reminder preferences are
-  // per-device and keyed by it (see /push/reminder-settings), so VarslerSubpage
+  // per-device and keyed by it (see /push/reminder-settings), so NotificationsSubpage
   // needs it to read/write this device's own settings.
   const [endpoint, setEndpoint] = useState(null);
 

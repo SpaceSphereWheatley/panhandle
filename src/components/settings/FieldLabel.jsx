@@ -1,6 +1,6 @@
 // The small caption that sits above a Settings input — one shared component
 // so every field label is the same size/tone instead of being re-inlined per
-// subpage (KontoSubpage's fieldLabelStyle const, VarslerSubpage's three
+// subpage (AccountSubpage's fieldLabelStyle const, NotificationsSubpage's three
 // copies, MembersIsland/AdminSubpage's sr-only labels). Pass `visuallyHidden`
 // for inputs whose adjacent context already names them (e.g. an "Legg til
 // medlem" section with a Navn placeholder) but that still need a programmatic

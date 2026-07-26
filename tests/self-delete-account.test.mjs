@@ -78,7 +78,7 @@ async function testWrongPasswordRefused(BASE) {
   // A 401 would make the frontend's api() force-log-out on a mere typo.
   assert.equal(res.status, 403);
   const body = await res.json();
-  assert.match(body.error, /feil passord/i);
+  assert.equal(body.code, "WRONG_PASSWORD");
 
   // Account must still exist and the token still work.
   const listRes = await fetch(`${BASE}/list`, { headers: authHeaders(token) });
@@ -205,7 +205,7 @@ async function testRefusesSuperAdminSelfDelete(BASE) {
     const res = await deleteAccount(BASE, token, PASS);
     assert.equal(res.status, 400, `${username} must not be able to self-delete, even with another superadmin present`);
     const body = await res.json();
-    assert.match(body.error, /app-eier/i);
+    assert.equal(body.code, "CANNOT_DELETE_SUPERADMIN");
     assert.equal((await login(BASE, username, PASS)).status, 200,
       `${username}'s account should still exist and be able to log in after the refused attempt`);
   }

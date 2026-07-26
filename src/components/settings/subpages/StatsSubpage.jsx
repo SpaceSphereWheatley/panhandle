@@ -4,7 +4,7 @@ import { MetricsSettings } from "../MetricsSettings.jsx";
 // Full-page charts dashboard (superadmin only) — previously buried inside
 // an AccordionRow nested inside AdminIsland; promoted to its own subpage
 // since a dashboard needs room, not a fold-out.
-export function StatistikkSubpage() {
+export function StatsSubpage() {
   return (
     <Card padding="lg">
       <MetricsSettings />

@@ -5,7 +5,7 @@
 import { test, describe } from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { ERROR_MESSAGES_NB, ERROR_CODES } from "../shared/errorCodes.js";
+import { ERROR_MESSAGES_EN, ERROR_CODES } from "../shared/errorCodes.js";
 import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
@@ -400,7 +400,7 @@ describe("normalizeCategoryOrder", () => {
   });
 
   test("appends any not-yet-placed categories in canonical order", () => {
-    const partial = ["Drikkevarer", "Meieriprodukter"];
+    const partial = ["Drinks", "Dairy"];
     const result = normalizeCategoryOrder(partial);
     assert.deepEqual(result.slice(0, 2), partial);
     // The rest are the remaining CATEGORIES, in their canonical order.
@@ -411,16 +411,16 @@ describe("normalizeCategoryOrder", () => {
   });
 
   test("drops unknown names and de-duplicates", () => {
-    const messy = ["Drikkevarer", "Drikkevarer", "Ikke en kategori", "Husholdning"];
+    const messy = ["Drinks", "Drinks", "Not a category", "Household"];
     const result = normalizeCategoryOrder(messy);
-    assert.deepEqual(result.slice(0, 2), ["Drikkevarer", "Husholdning"]);
+    assert.deepEqual(result.slice(0, 2), ["Drinks", "Household"]);
     assert.equal(result.length, CATEGORIES.length);
     assert.deepEqual([...result].sort(), [...CATEGORIES].sort());
   });
 });
 
 // Every error the Worker can return carries a stable code (shared/errorCodes.js)
-// so a translating client doesn't have to string-match Norwegian. These guard
+// so a translating client doesn't have to string-match the message text. These guard
 // the two ways that contract can silently rot: a code used in worker/index.js
 // that was never defined (the client would show a raw key or nothing), and a
 // defined code with no English translation (an English user gets Norwegian).
@@ -435,7 +435,7 @@ describe("error codes", () => {
   });
 
   test("every code used in the worker is defined", () => {
-    const undefinedCodes = [...new Set(usedCodes)].filter((c) => !(c in ERROR_MESSAGES_NB));
+    const undefinedCodes = [...new Set(usedCodes)].filter((c) => !(c in ERROR_MESSAGES_EN));
     assert.deepEqual(undefinedCodes, []);
   });
 
@@ -446,16 +446,18 @@ describe("error codes", () => {
     assert.deepEqual(unused, []);
   });
 
-  test("every code has a non-empty Norwegian message", () => {
-    const bad = ERROR_CODES.filter((c) => typeof ERROR_MESSAGES_NB[c] !== "string" || !ERROR_MESSAGES_NB[c].trim());
+  test("every code has a non-empty English message", () => {
+    const bad = ERROR_CODES.filter((c) => typeof ERROR_MESSAGES_EN[c] !== "string" || !ERROR_MESSAGES_EN[c].trim());
     assert.deepEqual(bad, []);
   });
 
-  test("every code has an English translation", () => {
-    // en.js is a plain object literal; read it as text rather than importing
-    // JSX-adjacent frontend code into this Node-only suite.
-    const enSrc = readFileSync(new URL("../src/lib/i18n/dictionaries/en.js", import.meta.url), "utf8");
-    const missing = ERROR_CODES.filter((c) => !enSrc.includes(`"error.${c}"`));
+  test("every code has a Norwegian translation", () => {
+    // en.js derives its error.* entries from ERROR_MESSAGES_EN, so it's nb.js
+    // that hand-writes them and can therefore fall behind. Read it as text
+    // rather than importing JSX-adjacent frontend code into this Node-only
+    // suite.
+    const nbSrc = readFileSync(new URL("../src/lib/i18n/dictionaries/nb.js", import.meta.url), "utf8");
+    const missing = ERROR_CODES.filter((c) => !nbSrc.includes(`"error.${c}"`));
     assert.deepEqual(missing, []);
   });
 

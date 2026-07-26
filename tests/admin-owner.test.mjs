@@ -86,7 +86,7 @@ async function testLastAdminProtection(BASE) {
   const refusedRes = await patchFlags(BASE, token, username, { is_admin: false });
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /siste admin/i);
+  assert.equal(refusedBody.code, "LAST_ADMIN_REMOVE");
 
   // Promote a second admin (any member works), then demoting one succeeds.
   const { username: memberUsername } = await addMember(BASE, token, `ao_lastadmin_m_${RUN_ID}`);
@@ -108,7 +108,7 @@ async function testLastOwnerProtectionViaFlags(BASE) {
   const refusedRes = await patchFlags(BASE, token, username, { is_owner: false });
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /eneste eier/i);
+  assert.equal(refusedBody.code, "WOULD_LOSE_ONLY_OWNER");
 
   const { username: memberUsername } = await addMember(BASE, token, `ao_lastowner_flags_m_${RUN_ID}`);
   assert.equal((await patchFlags(BASE, token, memberUsername, { is_owner: true })).status, 200);
@@ -129,7 +129,7 @@ async function testLastOwnerProtectionViaDelete(BASE) {
   });
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /eneste eier/i);
+  assert.equal(refusedBody.code, "LAST_OWNER_REMOVE");
 
   const { username: memberUsername } = await addMember(BASE, token, `ao_lastowner_del_m_${RUN_ID}`);
   assert.equal((await patchFlags(BASE, token, memberUsername, { is_owner: true })).status, 200);
@@ -168,7 +168,7 @@ async function testTenUserListCap(BASE) {
   });
   assert.equal(overflowRes.status, 400);
   const overflowBody = await overflowRes.json();
-  assert.match(overflowBody.error, /full/i);
+  assert.equal(overflowBody.code, "LIST_FULL");
 
   console.log("  - 10-user list cap: allows exactly 10 users on a list, refuses the 11th");
 }
@@ -236,7 +236,7 @@ async function testPermissionChecks(BASE) {
   const metricsAsAdminRes = await fetch(`${BASE}/admin/metrics`, { headers: authHeaders(ownerToken) });
   assert.equal(metricsAsAdminRes.status, 403);
   const metricsBody = await metricsAsAdminRes.json();
-  assert.match(metricsBody.error, /app-eier/i);
+  assert.equal(metricsBody.code, "REQUIRES_SUPERADMIN");
 
   // Same double-gate for POST /admin/owners — minting a new household is
   // superadmin-only, so a non-superadmin admin is refused too (TODO #90).
@@ -246,7 +246,7 @@ async function testPermissionChecks(BASE) {
   });
   assert.equal(ownersAsAdminRes.status, 403);
   const ownersBody = await ownersAsAdminRes.json();
-  assert.match(ownersBody.error, /app-eier/i);
+  assert.equal(ownersBody.code, "REQUIRES_SUPERADMIN");
 
   console.log("  - permission checks: plain members get 403 on every admin/owner endpoint; a non-superadmin admin still can't read /admin/metrics or create a new owner");
 }
@@ -339,11 +339,11 @@ async function testSuperAdminCrossListAccess(BASE) {
     method: "POST", headers: authHeaders(sameListAdminToken),
   });
   assert.equal(escalateRpRes.status, 403, "a same-list, non-superadmin admin must not be able to reset the superadmin's password");
-  assert.match((await escalateRpRes.json()).error, /app-eier/i);
+  assert.equal((await escalateRpRes.json()).code, "CANNOT_RESET_SUPERADMIN");
 
   const escalateFlagsRes = await patchFlags(BASE, sameListAdminToken, SUPERADMIN_USERNAME, { is_admin: false });
   assert.equal(escalateFlagsRes.status, 403, "a same-list, non-superadmin admin must not be able to change the superadmin's flags");
-  assert.match((await escalateFlagsRes.json()).error, /app-eier/i);
+  assert.equal((await escalateFlagsRes.json()).code, "CANNOT_CHANGE_SUPERADMIN");
 
   console.log("  - superadmin: still acts across every list; a same-list non-superadmin admin still can't touch the superadmin's account");
 }

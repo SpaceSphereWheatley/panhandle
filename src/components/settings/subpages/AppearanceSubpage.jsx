@@ -5,7 +5,7 @@ import { currentIntensity, setIntensity } from "../../../lib/designIntensity.js"
 import { SubpageSection } from "../SubpageSection.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 
-// "Utseende" subpage — the device-local personalization that used to sit
+// Appearance subpage (Settings → "Utseende") — the device-local personalization that used to sit
 // inline on the Settings root (design intensity, theme, haptics). Moved into
 // its own subpage so the root is a single uniform list of navigation rows,
 // consistent with Konto/Varsler/Vårt hjem/Butikkoppsett/Administrasjon, rather
@@ -16,17 +16,17 @@ function hapticsEnabled() {
   return localStorage.getItem("ph_haptics") !== "0";
 }
 
-export function UtseendeSubpage() {
+export function AppearanceSubpage() {
   const t = useTranslation();
   const themeOptions = [
-    { value: "light", label: t("settings.utseende.theme.light") },
-    { value: "dark", label: t("settings.utseende.theme.dark") },
-    { value: "system", label: t("settings.utseende.theme.system") },
+    { value: "light", label: t("settings.appearance.theme.light") },
+    { value: "dark", label: t("settings.appearance.theme.dark") },
+    { value: "system", label: t("settings.appearance.theme.system") },
   ];
   const intensityOptions = [
-    { value: "expressive", label: t("settings.utseende.intensity.expressive") },
-    { value: "muted", label: t("settings.utseende.intensity.muted") },
-    { value: "classic", label: t("settings.utseende.intensity.classic") },
+    { value: "expressive", label: t("settings.appearance.intensity.expressive") },
+    { value: "muted", label: t("settings.appearance.intensity.muted") },
+    { value: "classic", label: t("settings.appearance.intensity.classic") },
   ];
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
@@ -49,22 +49,22 @@ export function UtseendeSubpage() {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <SubpageSection
-        label={t("settings.utseende.intensity.label")}
-        description={t("settings.utseende.intensity.description")}
+        label={t("settings.appearance.intensity.label")}
+        description={t("settings.appearance.intensity.description")}
       >
         <SegmentedControl value={intensity} onChange={onSetIntensity} options={intensityOptions} />
       </SubpageSection>
 
       <SubpageSection
-        label={t("settings.utseende.theme.label")}
-        description={t("settings.utseende.theme.description")}
+        label={t("settings.appearance.theme.label")}
+        description={t("settings.appearance.theme.description")}
       >
         <SegmentedControl value={theme} onChange={onSetTheme} options={themeOptions} />
       </SubpageSection>
 
       <SubpageSection
-        label={t("settings.utseende.haptics.label")}
-        description={t("settings.utseende.haptics.description")}
+        label={t("settings.appearance.haptics.label")}
+        description={t("settings.appearance.haptics.description")}
       >
         <Switch checked={haptics} onChange={onSetHaptics} />
       </SubpageSection>

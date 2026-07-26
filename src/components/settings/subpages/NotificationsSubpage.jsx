@@ -33,7 +33,7 @@ function isStandalone() {
   return window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
-// Varsler subpage — Web Push opt-in plus the two meal-planning reminders,
+// Notifications subpage (Settings → "Varsler") — Web Push opt-in plus the two meal-planning reminders,
 // all now per-device (TODO #7 phases 1-2, made device-only). A push
 // subscription belongs to this browser, and the reminder preferences are
 // stored on it (see /push/reminder-settings), so everything on this page
@@ -42,7 +42,7 @@ function isStandalone() {
 // device subscription to store them against until then. The stale-item marker
 // threshold lives under Butikkoppsett (it's a shopping-list indicator, and a
 // shared per-list setting, not a per-device notification).
-export function VarslerSubpage() {
+export function NotificationsSubpage() {
   const { supported, subscribed, endpoint, subscribe, unsubscribe } = usePush();
   const toast = useToast();
   const t = useTranslation();
@@ -120,31 +120,31 @@ export function VarslerSubpage() {
   }
 
   const pushDescription = !supported
-    ? t("settings.varsler.push.unsupported")
+    ? t("settings.notifications.push.unsupported")
     : iosNeedsInstall
-      ? t("settings.varsler.push.iosHint")
-      : t("settings.varsler.push.description");
+      ? t("settings.notifications.push.iosHint")
+      : t("settings.notifications.push.description");
 
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
-      <SubpageSection label={t("settings.varsler.push.label")} description={pushDescription}>
-        <Switch checked={subscribed} onChange={onToggleNotifications} label={t("settings.varsler.push.toggle")} />
+      <SubpageSection label={t("settings.notifications.push.label")} description={pushDescription}>
+        <Switch checked={subscribed} onChange={onToggleNotifications} label={t("settings.notifications.push.toggle")} />
       </SubpageSection>
 
       {subscribed && (
         <>
           <SubpageSection
-            label={t("settings.varsler.meal.label")}
-            description={t("settings.varsler.deviceOnly")}
+            label={t("settings.notifications.meal.label")}
+            description={t("settings.notifications.deviceOnly")}
           >
             <Switch
               checked={mealReminderEnabled}
               onChange={onToggleMealReminder}
-              label={t("settings.varsler.meal.toggle")}
+              label={t("settings.notifications.meal.toggle")}
             />
             {mealReminderEnabled && (
               <div style={{ marginTop: 10 }}>
-                <FieldLabel htmlFor="meal-reminder-time">{t("settings.varsler.meal.time")}</FieldLabel>
+                <FieldLabel htmlFor="meal-reminder-time">{t("settings.notifications.meal.time")}</FieldLabel>
                 <Input
                   id="meal-reminder-time"
                   type="time"
@@ -158,17 +158,17 @@ export function VarslerSubpage() {
           </SubpageSection>
 
           <SubpageSection
-            label={t("settings.varsler.weekly.label")}
-            description={t("settings.varsler.deviceOnly")}
+            label={t("settings.notifications.weekly.label")}
+            description={t("settings.notifications.deviceOnly")}
           >
             <Switch
               checked={weeklyReminderEnabled}
               onChange={onToggleWeeklyReminder}
-              label={t("settings.varsler.weekly.toggle")}
+              label={t("settings.notifications.weekly.toggle")}
             />
             {weeklyReminderEnabled && (
               <div style={{ marginTop: 10 }}>
-                <FieldLabel htmlFor="weekly-reminder-time">{t("settings.varsler.weekly.time")}</FieldLabel>
+                <FieldLabel htmlFor="weekly-reminder-time">{t("settings.notifications.weekly.time")}</FieldLabel>
                 <Input
                   id="weekly-reminder-time"
                   type="time"

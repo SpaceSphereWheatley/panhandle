@@ -93,7 +93,7 @@ async function testPermissionChecks(BASE, superToken) {
   const adminOnlyRes = await deleteUser(BASE, ownerToken, `adu_perm_member_${RUN_ID}`);
   assert.equal(adminOnlyRes.status, 403);
   const adminOnlyBody = await adminOnlyRes.json();
-  assert.match(adminOnlyBody.error, /app-eier/i);
+  assert.equal(adminOnlyBody.code, "REQUIRES_SUPERADMIN");
 
   // The real superadmin can reach the endpoint (target doesn't exist, but
   // that's a 404 from further down the handler, not a 403 — proves the gate
@@ -131,7 +131,7 @@ async function testRefusesLastAdmin(BASE, superToken) {
   const refusedRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /app-eier/i);
+  assert.equal(refusedBody.code, "CANNOT_DELETE_SUPERADMIN");
   assert.equal((await login(BASE, SUPERADMIN_USERNAME, PASS)).status, 200,
     "the refused account should still exist and be able to log in");
 
@@ -152,7 +152,7 @@ async function testRefusesLastOwnerWithoutConfirmation(BASE, superToken) {
   const refusedRes = await deleteUser(BASE, superToken, ownerUsername);
   assert.equal(refusedRes.status, 400);
   const refusedBody = await refusedRes.json();
-  assert.match(refusedBody.error, /eneste eier/i);
+  assert.equal(refusedBody.code, "WOULD_LOSE_ONLY_OWNER");
 
   // The account and its list are untouched by the refused attempt.
   assert.equal((await login(BASE, ownerUsername, PASS)).status, 200,
@@ -192,12 +192,12 @@ async function testRefusesSuperAdminDeletion(BASE, superToken, secondToken) {
   const otherRes = await deleteUser(BASE, superToken, SECOND_SUPERADMIN_USERNAME);
   assert.equal(otherRes.status, 400, "a superadmin must not be able to force-delete another superadmin");
   const otherBody = await otherRes.json();
-  assert.match(otherBody.error, /app-eier/i);
+  assert.equal(otherBody.code, "CANNOT_DELETE_SUPERADMIN");
 
   const selfRes = await deleteUser(BASE, superToken, SUPERADMIN_USERNAME);
   assert.equal(selfRes.status, 400, "a superadmin must not be able to force-delete their own account here either");
   const selfBody = await selfRes.json();
-  assert.match(selfBody.error, /app-eier/i);
+  assert.equal(selfBody.code, "CANNOT_DELETE_SUPERADMIN");
 
   assert.equal((await login(BASE, SUPERADMIN_USERNAME, PASS)).status, 200);
   assert.equal((await login(BASE, SECOND_SUPERADMIN_USERNAME, PASS)).status, 200);

@@ -18,7 +18,7 @@ describe("cap", () => {
 });
 
 describe("parseItemInput", () => {
-  const catalogue = [{ name: "7 Up", category: "Drikkevarer" }];
+  const catalogue = [{ name: "7 Up", category: "Drinks" }];
 
   it("parses a leading '<qty> <name>' as a quantity", () => {
     expect(parseItemInput("2 melk", [])).toEqual({ name: "melk", qty: 2, unit: null });
@@ -93,25 +93,29 @@ describe("extractGF", () => {
 });
 
 describe("matchCatalogue", () => {
+  // Canonical (English) names, as stored in item_catalogue. "Milk" and
+  // "Low-fat milk" are real COMMON_ITEMS entries with Norwegian translations;
+  // "Chocolate milk" is a household's own custom item, so it has no
+  // translation and must still match on its stored name in either language.
   const catalogue = [
-    { name: "Lettmelk", category: "Meieriprodukter" },
-    { name: "Melk", category: "Meieriprodukter" },
-    { name: "Sjokolademelk", category: "Meieriprodukter" },
+    { name: "Low-fat milk", category: "Dairy" },
+    { name: "Milk", category: "Dairy" },
+    { name: "Chocolate milk", category: "Dairy" },
   ];
 
   it("matches regardless of token order", () => {
-    const results = matchCatalogue("melk lett", catalogue);
-    expect(results.map((r) => r.name)).toContain("Lettmelk");
+    const results = matchCatalogue("milk low", catalogue);
+    expect(results.map((r) => r.name)).toContain("Low-fat milk");
   });
 
   it("requires every token to appear somewhere in the name", () => {
-    const results = matchCatalogue("melk sjokolade", catalogue);
-    expect(results.map((r) => r.name)).toEqual(["Sjokolademelk"]);
+    const results = matchCatalogue("milk chocolate", catalogue);
+    expect(results.map((r) => r.name)).toEqual(["Chocolate milk"]);
   });
 
   it("sorts matches shortest-name-first", () => {
-    const results = matchCatalogue("melk", catalogue);
-    expect(results.map((r) => r.name)).toEqual(["Melk", "Lettmelk", "Sjokolademelk"]);
+    const results = matchCatalogue("milk", catalogue, "en");
+    expect(results.map((r) => r.name)).toEqual(["Milk", "Low-fat milk", "Chocolate milk"]);
   });
 
   it("returns [] for empty/whitespace-only query", () => {
@@ -119,19 +123,24 @@ describe("matchCatalogue", () => {
     expect(matchCatalogue("   ", catalogue)).toEqual([]);
   });
 
-  it("defaults to nb-only matching (no English token match) when lang is omitted", () => {
-    const results = matchCatalogue("milk", catalogue);
-    expect(results).toEqual([]);
+  it("matches the canonical name only, no translation, when lang is 'en'", () => {
+    expect(matchCatalogue("melk", catalogue, "en")).toEqual([]);
   });
 
-  it("also matches an item's English translation when lang is 'en'", () => {
-    const results = matchCatalogue("milk", catalogue, "en");
-    expect(results.map((r) => r.name)).toEqual(["Melk", "Lettmelk"]);
+  it("also matches an item's Norwegian translation when lang is 'nb'", () => {
+    const results = matchCatalogue("melk", catalogue, "nb");
+    expect(results.map((r) => r.name)).toEqual(["Milk", "Low-fat milk"]);
   });
 
-  it("still matches the stored (Norwegian) name directly when lang is 'en'", () => {
-    const results = matchCatalogue("melk", catalogue, "en");
-    expect(results.map((r) => r.name)).toEqual(["Melk", "Lettmelk", "Sjokolademelk"]);
+  it("still matches the stored (English) name directly when lang is 'nb'", () => {
+    const results = matchCatalogue("milk", catalogue, "nb");
+    expect(results.map((r) => r.name)).toEqual(["Milk", "Low-fat milk", "Chocolate milk"]);
+  });
+
+  // nb is the default because it's the app's default UI language — so the
+  // default path is the *translating* one, the reverse of before this flip.
+  it("defaults to nb matching when lang is omitted", () => {
+    expect(matchCatalogue("melk", catalogue).map((r) => r.name)).toEqual(["Milk", "Low-fat milk"]);
   });
 });
 
