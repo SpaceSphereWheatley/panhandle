@@ -6,6 +6,7 @@ import { api } from "../../lib/api.js";
 import { parseIngredients } from "../../lib/mealUtils.js";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 
 // Add (id=null) or edit (id given) a meal_catalogue entry directly, outside
 // of planning a specific day. Reachable from the Måltider tab's FAB and from
@@ -13,12 +14,16 @@ import { useToast } from "../../context/ToastContext.jsx";
 export function MealEditModal({ id, onClose, onSaved }) {
   const confirm = useConfirm();
   const toast = useToast();
+  const t = useTranslation();
   const [catalogue, setCatalogue] = useState([]);
   const [itemNames, setItemNames] = useState([]);
   const [name, setName] = useState("");
   const [ingredients, setIngredients] = useState([]);
   const [labels, setLabels] = useState([]);
-  const [similarNote, setSimilarNote] = useState({ text: "", danger: false });
+  // Held as structured data ({ kind, names }) rather than a finished string,
+  // so the note re-renders in the new language on a switch instead of being
+  // frozen in whichever language was active when it was last typed.
+  const [similarNote, setSimilarNote] = useState({ kind: null, names: [] });
 
   useEffect(() => {
     (async () => {
@@ -47,13 +52,13 @@ export function MealEditModal({ id, onClose, onSaved }) {
   function checkSimilar(value) {
     const n = value.trim().toLowerCase();
     if (!n) {
-      setSimilarNote({ text: "", danger: false });
+      setSimilarNote({ kind: null, names: [] });
       return;
     }
     const others = catalogue.filter((m) => m.id !== id);
     const exact = others.find((m) => m.name.toLowerCase() === n);
     if (exact) {
-      setSimilarNote({ text: `«${exact.name}» finnes allerede – navnet må være forskjellig.`, danger: true });
+      setSimilarNote({ kind: "duplicate", names: [exact.name] });
       return;
     }
     const similar = others.filter((m) => {
@@ -62,21 +67,22 @@ export function MealEditModal({ id, onClose, onSaved }) {
     });
     setSimilarNote(
       similar.length
-        ? { text: `Ligner på: ${similar.slice(0, 3).map((m) => m.name).join(", ")}`, danger: false }
-        : { text: "", danger: false }
+        ? { kind: "similar", names: similar.slice(0, 3).map((m) => m.name) }
+        : { kind: null, names: [] }
     );
   }
 
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast("Tomt navn", { error: true });
+      toast(t("meals.toast.emptyName"), { error: true });
       return;
     }
     const res = id
       ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
       : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -88,15 +94,27 @@ export function MealEditModal({ id, onClose, onSaved }) {
   async function deleteEntry() {
     const meal = catalogue.find((m) => m.id === id);
     if (!meal) return;
-    if (!(await confirm(`Slette «${meal.name}» fra måltidskatalogen? Dager den er planlagt på blir tomme.`, { title: "Slette måltid?", confirmLabel: "Slett" })))
+    if (
+      !(await confirm(t("meals.confirm.deleteMeal.body", { name: meal.name }), {
+        title: t("meals.confirm.deleteMeal.title"),
+        confirmLabel: t("meals.confirm.deleteMeal.confirmLabel"),
+      }))
+    )
       return;
     await api(`/meals/${id}`, { method: "DELETE" });
     onSaved();
   }
 
+  const isDuplicate = similarNote.kind === "duplicate";
+  const similarText = !similarNote.kind
+    ? ""
+    : isDuplicate
+      ? t("meals.edit.duplicateName", { name: similarNote.names[0] })
+      : t("meals.edit.similarTo", { names: similarNote.names.join(", ") });
+
   return (
-    <Modal onClose={onClose} title={id ? "Rediger måltid" : "Nytt måltid"}>
-      <label htmlFor="meal-edit-name">Navn</label>
+    <Modal onClose={onClose} title={t(id ? "meals.edit.title" : "meals.edit.newTitle")}>
+      <label htmlFor="meal-edit-name">{t("meals.edit.nameLabel")}</label>
       <Input
         id="meal-edit-name"
         value={name}
@@ -104,34 +122,35 @@ export function MealEditModal({ id, onClose, onSaved }) {
           setName(e.target.value);
           checkSimilar(e.target.value);
         }}
-        placeholder="F.eks. Taco"
+        placeholder={t("meals.mealNamePlaceholder")}
       />
-      <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: similarNote.danger ? "var(--status-danger)" : "var(--text-tertiary)" }}>
-        {similarNote.text}
+      <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: isDuplicate ? "var(--status-danger)" : "var(--text-tertiary)" }}>
+        {similarText}
       </div>
-      <label htmlFor="meal-edit-ingredients">Ingredienser</label>
+      <label htmlFor="meal-edit-ingredients">{t("meals.ingredientsLabel")}</label>
+      {/* Canonical (untranslated) suggestions on purpose — see MealPlanModal. */}
       <TokenInput
         id="meal-edit-ingredients"
         value={ingredients}
         onChange={setIngredients}
         suggestions={itemNames}
-        placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
+        placeholder={t("meals.ingredientsPlaceholder")}
       />
-      <label htmlFor="meal-edit-labels">Etiketter</label>
+      <label htmlFor="meal-edit-labels">{t("meals.edit.labelsLabel")}</label>
       <TokenInput
         id="meal-edit-labels"
         value={labels}
         onChange={setLabels}
         suggestions={knownLabels}
-        placeholder="F.eks. Middag, Vegetar"
+        placeholder={t("meals.edit.labelsPlaceholder")}
       />
       <div className="actions">
-        <Button variant="outline" onClick={onClose}>Avbryt</Button>
-        <Button variant="primary" onClick={save}>Lagre</Button>
+        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="primary" onClick={save}>{t("common.save")}</Button>
       </div>
       {id && (
         <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
-          Slett måltid fra katalog
+          {t("meals.edit.deleteFromCatalogue")}
         </Button>
       )}
     </Modal>

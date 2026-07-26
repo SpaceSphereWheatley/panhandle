@@ -7,6 +7,8 @@ import { useListUsers } from "../context/ListUsersContext.jsx";
 import { localIso, mondayOf, parseIngredients, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { avatarColorFor } from "../lib/avatarColor.js";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
@@ -74,6 +76,8 @@ function MealsSkeleton({ stackStyle }) {
 // either side during a drag are a preview, not live controls, until you
 // actually swipe to them.
 function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, stackStyle, paneWidth }) {
+  const t = useTranslation();
+  const { lang } = useLanguage();
   const days = weekDays(monday);
   // Horizontal padding, box-sizing:border-box so it insets the cards rather
   // than widening the pane itself — the row's drag math treats `paneWidth`
@@ -94,7 +98,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
             const iso = localIso(d);
             const p = byDate[iso];
             const isToday = iso === today;
-            const dayName = d.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
+            const dayName = d.toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
             const dow = (d.getDay() + 6) % 7;
             const recurring = !p?.responsible ? schedule[dow] : null;
             const CardComponent = shouldAnimate ? MotionCard : Card;
@@ -125,7 +129,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                       }
                     : undefined
                 }
-                aria-label={`${p?.meal_name ? "Endre" : "Legg til"} måltid, ${dayName}`}
+                aria-label={t(p?.meal_name ? "meals.day.aria.edit" : "meals.day.aria.add", { day: dayName })}
                 // Non-today cards are more compact (smaller padding, tighter
                 // title margin below) so the whole week takes up less vertical
                 // space — today's card keeps the full-size prominent treatment.
@@ -163,7 +167,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                         color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 70%, transparent)" : "var(--text-tertiary)",
                       }}
                     >
-                      {isToday ? "I dag" : dayName}
+                      {isToday ? t("meals.today") : dayName}
                     </div>
                     {p?.meal_name ? (
                       <div
@@ -208,7 +212,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                             color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
                           }}
                         >
-                          Legg til måltid
+                          {t("meals.addMeal")}
                         </span>
                       </div>
                     )}
@@ -234,7 +238,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                       <div style={{ marginTop: 6 }}>
                         <Tag tone="primary">
                           <i className="ph ph-repeat" style={{ marginRight: 4 }} aria-hidden="true" />
-                          Fast: {nameFor(recurring)}
+                          {t("meals.recurringTag", { name: nameFor(recurring) })}
                         </Tag>
                       </div>
                     ) : null}
@@ -258,7 +262,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                     {/* Only "Endre" needs the word — an unplanned day's card
                         already says "Legg til måltid" front and centre, so
                         repeating it here would be redundant, just the chevron. */}
-                    {p?.meal_name ? "Endre" : null}
+                    {p?.meal_name ? t("meals.change") : null}
                     <i className="ph ph-caret-right" style={{ fontSize: "0.95em" }} aria-hidden="true" />
                   </span>
                 </div>
@@ -271,6 +275,8 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
 
 export function MealsTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
+  const t = useTranslation();
+  const { lang } = useLanguage();
   const { schedule, ensureLoaded } = useRecurring();
   const { nameFor } = useListUsers();
   const intensity = useDesignIntensity();
@@ -334,7 +340,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       loadPlan(offset);
     } catch {
       setPlanCache((c) => ({ ...c, [offset]: { ...(c[offset] || {}), [planIso]: prevEntry } }));
-      toast("Kunne ikke lagre måltidet – sjekk nettforbindelsen", { error: true });
+      toast(t("meals.toast.saveFailed"), { error: true });
     }
   }
 
@@ -351,7 +357,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       loadPlan(offset);
     } catch {
       setPlanCache((c) => ({ ...c, [offset]: { ...(c[offset] || {}), [planIso]: prevEntry } }));
-      toast("Kunne ikke fjerne måltidet – sjekk nettforbindelsen", { error: true });
+      toast(t("meals.toast.deleteFailed"), { error: true });
     }
   }
 
@@ -504,15 +510,15 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     const activeDays = weekDays(targetMonday);
     const targetIso = activeDays.map(localIso).find((iso) => !byDate[iso]?.meal_name);
     if (!targetIso) {
-      toast("Alle dagene denne uken er allerede planlagt");
+      toast(t("meals.toast.weekFull"));
       return;
     }
     const dow = (new Date(targetIso).getDay() + 6) % 7;
     const responsible = byDate[targetIso]?.responsible || schedule[dow] || "";
-    const dayLabel = new Date(targetIso).toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "short" });
+    const dayLabel = new Date(targetIso).toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
     setModal(null);
     await savePlanDay(targetIso, { meal_name: meal.name, responsible, ingredients: parseIngredients(meal.ingredients) });
-    toast(`«${meal.name}» planlagt til ${dayLabel}`, { undoFn: () => deletePlanDay(targetIso) });
+    toast(t("meals.toast.planned", { name: meal.name, day: dayLabel }), { undoFn: () => deletePlanDay(targetIso) });
   }
 
   // Classic intensity is a plain linear list; expressive/muted use an
@@ -526,20 +532,20 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
-        <button disabled={weekOffset <= WEEK_MIN} style={{ ...weekNavBtnStyle, opacity: weekOffset <= WEEK_MIN ? 0.4 : 1 }} onClick={() => shiftWeek(-1)}>‹ Forrige</button>
+        <button disabled={weekOffset <= WEEK_MIN} style={{ ...weekNavBtnStyle, opacity: weekOffset <= WEEK_MIN ? 0.4 : 1 }} onClick={() => shiftWeek(-1)}>‹ {t("meals.nav.prev")}</button>
         <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-tertiary)", textAlign: "center", flex: 1 }}>
-          {targetMonday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – {" "}
-          {targetSunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}
+          {targetMonday.toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" })} – {" "}
+          {targetSunday.toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" })}
         </span>
-        <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>Denne uken</button>
-        <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>Neste ›</button>
+        <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>{t("meals.nav.thisWeek")}</button>
+        <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>{t("meals.nav.next")} ›</button>
       </div>
       <div style={{ marginBottom: 10 }}>
         <button
           onClick={() => setModal({ type: "browse" })}
           style={{ background: "none", border: "none", color: "var(--accent-primary)", fontSize: "var(--text-sm)", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer", padding: 0 }}
         >
-          Alle måltider ›
+          {t("meals.allMeals")} ›
         </button>
       </div>
 
@@ -583,11 +589,11 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       </div>
 
       <FabMenu
-        label="Måltider"
+        label={t("meals.fab.label")}
         haptic={haptic}
         actions={[
-          { icon: "plus", label: "Nytt måltid", onClick: () => setModal({ type: "edit", id: null }) },
-          { icon: "pencil-simple", label: "Rediger måltider", onClick: () => setModal({ type: "browse" }) },
+          { icon: "plus", label: t("meals.fab.newMeal"), onClick: () => setModal({ type: "edit", id: null }) },
+          { icon: "pencil-simple", label: t("meals.fab.editMeals"), onClick: () => setModal({ type: "browse" }) },
         ]}
       />
 

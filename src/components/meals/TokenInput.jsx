@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 
 // Chip/token editor for what used to be plain comma-separated text inputs
 // (meal ingredients, labels — see U21 in docs/ui-review-plan.md): existing
@@ -9,6 +10,7 @@ import { useState } from "react";
 // picked instead of retyped — same interaction as the meal-name field's
 // dropdown (.meal-name-dropdown in index.css), reused here as .token-dropdown.
 export function TokenInput({ id, value, onChange, suggestions = [], placeholder }) {
+  const t = useTranslation();
   const [draft, setDraft] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -46,7 +48,7 @@ export function TokenInput({ id, value, onChange, suggestions = [], placeholder 
         {value.map((token, i) => (
           <span className="token-chip" key={token}>
             {token}
-            <button type="button" aria-label={`Fjern ${token}`} onClick={() => removeAt(i)}>
+            <button type="button" aria-label={t("meals.tokenInput.remove", { token })} onClick={() => removeAt(i)}>
               <i className="ph ph-x" aria-hidden="true" />
             </button>
           </span>

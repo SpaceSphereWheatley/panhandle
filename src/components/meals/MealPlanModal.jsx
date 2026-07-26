@@ -11,6 +11,7 @@ import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
+import { useTranslation } from "../../context/LanguageContext.jsx";
 
 // Plans/edits a single day: meal name (with a dropdown of known meals),
 // ingredients, and a responsible person (list member, or free-text "Annet").
@@ -19,6 +20,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   const { schedule, ensureLoaded } = useRecurring();
   const toast = useToast();
   const confirm = useConfirm();
+  const t = useTranslation();
   const [loading, setLoading] = useState(true);
   const [mealCatalogue, setMealCatalogue] = useState([]);
   const [itemNames, setItemNames] = useState([]);
@@ -43,7 +45,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
           api("/catalogue").catch(() => []),
         ]);
       } catch {
-        toast("Kunne ikke laste – sjekk nettforbindelsen", { error: true });
+        toast(t("meals.toast.loadFailed"), { error: true });
         onClose();
         return;
       }
@@ -90,6 +92,10 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   }
 
   function getResp() {
+    // "Annet" here is a *stored* value (meal_plan.responsible), not display
+    // text — it's written to the DB and read back by every other device
+    // regardless of that device's language, so it stays canonical Norwegian.
+    // Only the picker's own option label above is translated.
     if (respSelect === "__other__") return respOther.trim() || "Annet";
     return respSelect;
   }
@@ -106,7 +112,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   }
 
   async function deletePlanDay() {
-    if (!(await confirm("Fjerne måltidet for denne dagen?", { title: "Fjerne måltid?", confirmLabel: "Fjern" })))
+    if (
+      !(await confirm(t("meals.confirm.deleteDay.body"), {
+        title: t("meals.confirm.deleteDay.title"),
+        confirmLabel: t("meals.confirm.deleteDay.confirmLabel"),
+      }))
+    )
       return;
     onClose();
     onDeletePlanDay(iso);
@@ -117,7 +128,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   async function pickIngredients() {
     const name = mealName.trim();
     if (!ingredients.length) {
-      toast("Legg inn ingredienser først");
+      toast(t("meals.toast.ingredientsFirst"));
       return;
     }
     if (name) {
@@ -127,7 +138,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
           body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients }),
         });
       } catch {
-        toast("Kunne ikke lagre måltidet – sjekk nettforbindelsen", { error: true });
+        toast(t("meals.toast.saveFailed"), { error: true });
         return;
       }
     }
@@ -136,7 +147,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
 
   if (loading) {
     return (
-      <Modal onClose={onClose} title="Planlegg måltid">
+      <Modal onClose={onClose} title={t("meals.plan.title")}>
         <LoadingState />
       </Modal>
     );
@@ -147,10 +158,10 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   );
 
   return (
-    <Modal onClose={onClose} title="Planlegg måltid">
+    <Modal onClose={onClose} title={t("meals.plan.title")}>
       {suggestions.length > 0 && (
         <>
-          <label>Forslag (lenge siden, ofte brukt)</label>
+          <label>{t("meals.plan.suggestionsLabel")}</label>
           <div className="meal-suggestions">
             {suggestions.map((m) => (
               <button
@@ -165,7 +176,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
           </div>
         </>
       )}
-      <label htmlFor="meal-plan-name">Måltid (velg eller skriv nytt)</label>
+      <label htmlFor="meal-plan-name">{t("meals.plan.mealLabel")}</label>
       <div className="meal-name-field" ref={fieldRef}>
         <input
           id="meal-plan-name"
@@ -173,14 +184,14 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
           value={mealName}
           onChange={(e) => onMealNameChange(e.target.value)}
           onFocus={() => setShowDropdown(true)}
-          placeholder="F.eks. Taco"
+          placeholder={t("meals.mealNamePlaceholder")}
         />
         <IconButton
           icon="caret-down"
           size="md"
           variant="ghost"
           onClick={() => setShowDropdown((v) => !v)}
-          label="Vis lagrede måltider"
+          label={t("meals.plan.showSaved")}
           style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
         />
         <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
@@ -192,50 +203,54 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
             ))
           ) : (
             <div className="meal-name-option meal-name-empty">
-              Ingen lagrede måltider{mealName.trim() ? " som matcher" : ""}
+              {t(mealName.trim() ? "meals.plan.noSavedMealsMatching" : "meals.plan.noSavedMeals")}
             </div>
           )}
         </div>
       </div>
-      <label htmlFor="meal-plan-ingredients">Ingredienser</label>
+      <label htmlFor="meal-plan-ingredients">{t("meals.ingredientsLabel")}</label>
+      {/* `suggestions` stay canonical (untranslated) on purpose: a committed
+          token is *stored* in meal_catalogue.ingredients and later matched
+          back against item_catalogue by name (buildIngredientRows), so
+          offering an English name here would persist one. */}
       <TokenInput
         id="meal-plan-ingredients"
         value={ingredients}
         onChange={setIngredients}
         suggestions={itemNames}
-        placeholder="F.eks. Kjøttdeig, Tortilla, Ost"
+        placeholder={t("meals.ingredientsPlaceholder")}
       />
       <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
-        Ingredienser huskes per måltid og deles for alle dager med samme navn.
+        {t("meals.plan.ingredientsHint")}
       </div>
       <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
-        Legg ingredienser på handlelisten
+        {t("meals.plan.addIngredientsToList")}
       </Button>
-      <label htmlFor="meal-plan-resp">Ansvarlig</label>
+      <label htmlFor="meal-plan-resp">{t("meals.responsibleLabel")}</label>
       <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
-        <option value="">Ingen</option>
+        <option value="">{t("meals.responsible.none")}</option>
         {people.map((p) => (
           <option value={p} key={p}>{nameFor(p)}</option>
         ))}
-        <option value="__other__">Annet...</option>
+        <option value="__other__">{t("meals.responsible.other")}</option>
       </select>
       {respSelect === "__other__" && (
         <Input
           type="text"
-          aria-label="Beskriv ansvarlig"
-          placeholder="Beskriv (f.eks. Ute og spiser)"
+          aria-label={t("meals.responsible.describeAria")}
+          placeholder={t("meals.responsible.describePlaceholder")}
           style={{ marginTop: 8 }}
           value={respOther}
           onChange={(e) => setRespOther(e.target.value)}
         />
       )}
       <div className="actions">
-        <Button variant="outline" onClick={onClose}>Avbryt</Button>
-        <Button variant="primary" onClick={savePlan}>Lagre</Button>
+        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="primary" onClick={savePlan}>{t("common.save")}</Button>
       </div>
       {(current.meal_name || current.responsible) && (
         <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
-          Fjern måltid for denne dagen
+          {t("meals.plan.removeDay")}
         </Button>
       )}
     </Modal>

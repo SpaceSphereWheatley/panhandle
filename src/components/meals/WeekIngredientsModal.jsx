@@ -4,6 +4,8 @@ import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
 import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
+import { dateLocale } from "../../lib/i18n/dateLocale.js";
 import { IngredientChecklist } from "./IngredientChecklist.jsx";
 
 // The shopping tab's FAB primary action: pull every ingredient from this (or
@@ -12,6 +14,8 @@ import { IngredientChecklist } from "./IngredientChecklist.jsx";
 // next week, since that's the week you're actually about to shop for.
 export function WeekIngredientsModal({ onClose, onAdded }) {
   const toast = useToast();
+  const t = useTranslation();
+  const { lang } = useLanguage();
   const [rows, setRows] = useState(null);
 
   const today = new Date();
@@ -35,7 +39,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       try {
         plan = await api(`/plan?from=${localIso(monday)}&to=${localIso(sunday)}`);
       } catch {
-        toast("Kunne ikke hente middagsplanen – sjekk nettforbindelsen", { error: true });
+        toast(t("meals.toast.planLoadFailed"), { error: true });
       }
       const catalogue = await api("/catalogue").catch(() => []);
       const ingredients = plan.flatMap((p) => parseIngredients(p.ingredients));
@@ -71,29 +75,28 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
     }
     await onAdded?.();
     onClose();
-    if (failed) toast(`${added} lagt til, ${failed} feilet – sjekk nettforbindelsen`, { error: true });
-    else if (added === 0 && merged > 0) toast("Alle valgte lå allerede på listen");
-    else toast(`${added} ${added === 1 ? "ingrediens" : "ingredienser"} lagt til på handlelisten`);
+    if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
+    else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
+    else toast(t("meals.toast.ingredientsAdded", { count: added }));
   }
 
-  const weekLabel = nextWeek ? "Neste uke" : "Denne uken";
-  const dateRange = `${monday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("no-NO", { day: "numeric", month: "short" })}`;
+  const weekLabel = t(nextWeek ? "meals.week.next" : "meals.week.this");
+  const fmt = { day: "numeric", month: "short" };
+  const dateRange = `${monday.toLocaleDateString(dateLocale(lang), fmt)} – ${sunday.toLocaleDateString(dateLocale(lang), fmt)}`;
 
   return (
-    <Modal onClose={onClose} title="Fra middagsplanen">
-      <p className="cred-note">
-        {weekLabel} ({dateRange}) · velg hvilke ingredienser som skal på listen.
-      </p>
+    <Modal onClose={onClose} title={t("meals.weekIngredients.title")}>
+      <p className="cred-note">{t("meals.weekIngredients.intro", { week: weekLabel, range: dateRange })}</p>
       {rows === null ? (
         <LoadingState />
       ) : rows.length === 0 ? (
-        <EmptyState description="Ingen ingredienser planlagt denne perioden." />
+        <EmptyState description={t("meals.weekIngredients.empty")} />
       ) : (
         <IngredientChecklist rows={rows} onToggle={toggleRow} />
       )}
       <div className="actions">
-        <Button variant="outline" onClick={onClose}>Avbryt</Button>
-        <Button variant="primary" onClick={confirmAdd}>Legg til valgte</Button>
+        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
       </div>
     </Modal>
   );
