@@ -97,7 +97,7 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## Feature
 
-~~15. Language support (nb/en)~~ — **DONE**, all phases, see `Todo_done.md` and `docs/i18n-roadmap.md`. The whole app UI translates, including catalogue item names, category labels and server error messages. Phase 8 (meal names / free-typed ingredients) is closed as a deliberate won't-do: no translation source exists and this app has no translation API by design.
+~~15. Language support (nb/en)~~ — **DONE**, all phases, see `Todo_done.md`. The whole app UI translates, including catalogue item names, category labels and server error messages. Phase 8 (meal names / free-typed ingredients) is closed as a deliberate won't-do: no translation source exists and this app has no translation API by design.
 
 ## Data model / Account lifecycle
 

@@ -36,8 +36,8 @@ export function ChangelogModal({ onClose }) {
 
   return (
     <Modal onClose={onClose} title={t("changelog.title")}>
-      {/* The rendered CHANGELOG.md content below stays Norwegian-only — it's
-          the release history, not app chrome (see docs/i18n-roadmap.md). */}
+      {/* The rendered CHANGELOG.md content below is never translated — it's
+          the release history, not app chrome. */}
       <div className="changelog-box">
         {failed && <p className="cred-note">{t("changelog.loadFailed")}</p>}
         {!failed && !entries && <p className="cred-note">{t("common.loading")}</p>}
