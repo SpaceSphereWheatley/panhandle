@@ -3,7 +3,8 @@ import { Reorder, useDragControls } from "framer-motion";
 import { Button, Card, Input, IconButton } from "../../../design-system/index.js";
 import { useCategoryOrder } from "../../../context/CategoryOrderContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
-import { useTranslation } from "../../../context/LanguageContext.jsx";
+import { useLanguage, useTranslation } from "../../../context/LanguageContext.jsx";
+import { translateCategoryName } from "../../../lib/i18n/categoryNames.js";
 import { api } from "../../../lib/api.js";
 import { clusterFor } from "../../../lib/categoryClusters.js";
 import { CATEGORIES, haptic } from "../../../lib/shoppingUtils.js";
@@ -186,7 +187,11 @@ function StaleItemSection({ toast, t }) {
 
 function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
   const t = useTranslation();
+  const { lang } = useLanguage();
   const dragControls = useDragControls();
+  // Label only — `cat` itself stays canonical everywhere else in this file
+  // (the Reorder value, the saved order, clusterFor's lookup).
+  const label = translateCategoryName(cat, lang);
 
   return (
     <Reorder.Item
@@ -215,11 +220,11 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
           border: `2px solid ${clusterFor(cat).on}`,
         }}
       />
-      <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{cat}</span>
+      <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
       <button
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
-        aria-label={t("settings.butikk.order.moveUp", { category: cat })}
+        aria-label={t("settings.butikk.order.moveUp", { category: label })}
         title={t("settings.butikk.order.moveUpTitle")}
         style={reorderBtnStyle(index === 0)}
       >
@@ -228,7 +233,7 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, 1)}
         disabled={index === total - 1}
-        aria-label={t("settings.butikk.order.moveDown", { category: cat })}
+        aria-label={t("settings.butikk.order.moveDown", { category: label })}
         title={t("settings.butikk.order.moveDownTitle")}
         style={reorderBtnStyle(index === total - 1)}
       >

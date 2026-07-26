@@ -3,6 +3,7 @@ import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
+import { useTranslation } from "../context/LanguageContext.jsx";
 
 // No dedicated design-system textarea exists yet (Input.jsx is hardcoded to
 // a single-line <input>) — this is the app's first free-text multi-line
@@ -12,40 +13,42 @@ export function FeedbackModal({ onClose }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const toast = useToast();
+  const t = useTranslation();
 
   async function send() {
     const trimmed = message.trim();
     if (!trimmed) {
-      toast("Skriv en melding", { error: true });
+      toast(t("feedback.empty"), { error: true });
       return;
     }
     setSending(true);
     try {
       const res = await api("/feedback", { method: "POST", body: JSON.stringify({ message: trimmed }) });
       if (res.error) {
+        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
         toast(res.error, { error: true });
         setSending(false);
         return;
       }
-      toast("Takk for tilbakemeldingen!");
+      toast(t("feedback.thanks"));
       onClose();
     } catch {
-      toast("Noe gikk galt", { error: true });
+      toast(t("shoppingList.toast.genericError"), { error: true });
       setSending(false);
     }
   }
 
   return (
-    <Modal onClose={onClose} title="Send tilbakemelding">
+    <Modal onClose={onClose} title={t("feedback.title")}>
       <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.5, margin: "0 0 12px" }}>
-        Funnet en feil, eller har du en idé til noe som mangler? Skriv det her.
+        {t("feedback.intro")}
       </p>
-      <label htmlFor="feedback-message" className="sr-only">Tilbakemelding</label>
+      <label htmlFor="feedback-message" className="sr-only">{t("feedback.label")}</label>
       <textarea
         id="feedback-message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Skriv tilbakemeldingen din her..."
+        placeholder={t("feedback.placeholder")}
         rows={5}
         style={{
           width: "100%",
@@ -61,8 +64,8 @@ export function FeedbackModal({ onClose }) {
         }}
       />
       <div className="actions">
-        <Button variant="outline" onClick={onClose} disabled={sending}>Avbryt</Button>
-        <Button variant="primary" onClick={send} disabled={sending || !message.trim()}>Send</Button>
+        <Button variant="outline" onClick={onClose} disabled={sending}>{t("common.cancel")}</Button>
+        <Button variant="primary" onClick={send} disabled={sending || !message.trim()}>{t("feedback.send")}</Button>
       </div>
     </Modal>
   );

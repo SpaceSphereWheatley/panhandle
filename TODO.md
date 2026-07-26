@@ -33,11 +33,10 @@ Completed items live in `Todo_done.md`, not below.
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
-5. **i18n (#15)** — phases 1-5 shipped (1.43.4-1.45.0); nearly the whole app
-   is translated. What remains is small (phase 6's shared confirm/modal
-   chrome) plus the one genuinely open design question (phase 7's category
-   display labels). Still lowest priority — no expressed need, the household
-   is Norwegian-only.
+5. **i18n (#15)** — phases 1-7 shipped (1.43.4-1.46.0); the app UI is fully
+   translated, including category labels. Only free-text meal names (phase 8,
+   optional) and server error strings (out of scope) remain, so this is
+   effectively closed as an effort.
 
 Notifications (#7) shipped in full (phases 1–2) and is closed — see
 `Todo_done.md`. Batched item-added notifications, the one theoretical
@@ -96,29 +95,21 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## Feature
 
-15. Finish the nb/en i18n layer — phases 6-8 of language support (see
-    `docs/i18n-roadmap.md`). Phases 1-2 shipped the infrastructure, the
-    Settings → "Språk" switcher and the ~710 catalogue item names (1.43.4,
-    1.44.0); phases 3-5 translated the meal planner, every Settings subpage,
-    the app shell (tab bar/header/sync status) and the auth screens (1.45.0).
-    What's left is much smaller than what's done:
-    - **Phase 6** — shared/global chrome: `ConfirmContext`'s default "Avbryt"
-      button (one fix, benefits every confirm dialog app-wide),
-      `ImportantInfoModal`, `FeedbackModal`, `InstallBanner`, `ChangelogModal`
-      chrome. The `common.*` namespace they'd use already exists.
-    - **Phase 7** — category display labels. `CATEGORIES`
-      (`shared/categories.js`) is used as a literal data key by
-      `clusterFor`/`category_order`/worker validation, so its *label* needs a
-      stable-key layer (reuse `CLUSTER_KEYS`) before it can be localized —
-      affects `ButikkSubpage` and `ItemEditModal`'s category picker. Not a
-      mechanical extraction; this is the real remaining design work.
-    - **Phase 8** — meal names/free-typed ingredients (`meal_catalogue`, free
-      text with no translation source). Plausibly stays untranslated forever.
-    Server-side error strings (`worker/index.js`, surfaced via
-    `toast(res.error)`) remain out of scope indefinitely — solving them needs
-    an API error-code redesign, not more `t()` calls; each call site carries a
-    `// TODO(i18n)` marker.
-    _Value: Medium · Importance: Low · Type: Feature / i18n_
+15. Language support is effectively complete — phases 1-7 shipped (1.43.4,
+    1.44.0, 1.45.0, 1.46.0; see `docs/i18n-roadmap.md`). The whole app UI
+    translates: shopping list, meals, settings, app shell, auth screens,
+    shared confirm/toast/modal chrome, catalogue item names and category
+    display labels. Two deliberate gaps remain, neither of them planned work:
+    - **Phase 8** — meal names and free-typed ingredients (`meal_catalogue`),
+      arbitrary per-household free text with no translation source. Plausibly
+      stays untranslated forever; revisit only if actually wanted.
+    - **Server error strings** (`worker/index.js`, surfaced via
+      `toast(res.error)`) — out of scope indefinitely. Solving them needs an
+      error-code redesign of the API contract, not more `t()` calls. Each call
+      site carries a `// TODO(i18n)` marker.
+    Keep #15 open only as the home for those two; there is no remaining
+    extraction work.
+    _Value: Low · Importance: Low · Type: Feature / i18n_
 
 ## Data model / Account lifecycle
 

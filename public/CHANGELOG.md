@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.46.0] — 2026-07-26
+
+### Added
+- **Aisle names are now translated.** Switching to English translates the
+  category names too — "Frukt og grønt" shows as "Fruit and vegetables" in the
+  item editor's category picker and in Butikkoppsett's aisle-order list. Your
+  saved aisle order is untouched by this; only the words on screen change.
+- **The last Norwegian bits of shared chrome are translated.** Confirmation
+  dialogs' Cancel button (it stayed Norwegian even inside otherwise-translated
+  dialogs), the "Undo" button on toasts, the feedback form, the "what's new"
+  dialog, the install banner and the important-items explainer all follow the
+  language now.
+
+### Not yet translated
+- Meal names and typed-in ingredients, the changelog's own text, and error
+  messages that come back from the server.
+
 ## [1.45.0] — 2026-07-26
 
 ### Added

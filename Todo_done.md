@@ -7,6 +7,40 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+106. (15) Language support, phases 6-7 — the app UI is now fully translated.
+     Phase 6, shared/global chrome: `ConfirmContext`'s default Cancel button
+     (one fix, every confirm dialog app-wide — phases 1-5's dialogs showed a
+     translated title next to a Norwegian "Avbryt"), plus `ImportantInfoModal`,
+     `FeedbackModal`, `InstallBanner` and `ChangelogModal`'s chrome. A sweep for
+     Norwegian literals found four more files the roadmap's checklist had
+     missed, all genuinely shared chrome and all included: `ToastContext`'s
+     default "Angre" undo label, `useDeployVersionCheck`'s two post-deploy
+     toasts, `PushContext`'s four client-side subscribe errors, and a
+     "Kunne ikke lagre" network-failure string in each of
+     `CategoryOrderContext`/`RecurringContext`. Provider-level defaults resolve
+     at render rather than at call time, so they follow a language switch
+     without changing `confirm`'s callback identity (it sits in several
+     components' dependency arrays).
+     Phase 7, the landmine flagged since phase 1: category display labels. New
+     `src/lib/i18n/categoryNames.js` maps the canonical Norwegian `CATEGORIES`
+     string through its `CLUSTER_KEYS` id (now exported from
+     `categoryClusters.js`) to a `category.<id>` dictionary entry — display
+     only, so `normalizeCategoryOrder`, the `category_order` table, the
+     Worker's validation and `clusterFor`'s colour lookup all keep matching on
+     the canonical string. Keying on the cluster id rather than the Norwegian
+     text keeps a Norwegian sentence out of the dictionary keys. Wired into
+     `ButikkSubpage`'s reorder list and `ItemEditModal`'s category picker — the
+     latter needed an explicit `value={c}` on each `<option>`, since without
+     one an option's value falls back to its text content and the *translated*
+     label would have been POSTed as the item's category. `ShoppingListTab`
+     needed no change: it renders one flat aisle-sorted list and uses the
+     category only for cluster colour, never as visible text.
+     `categoryNames.test.js` asserts every `CATEGORIES` entry resolves in both
+     languages and that the nb label round-trips to exactly the canonical
+     string. Remaining under #15, both deliberate: free-text meal names/
+     ingredients (phase 8, optional) and server-returned error strings (out of
+     scope — needs an API error-code redesign). (1.46.0)
+
 105. (15) Language support, phases 3-5: nearly everything left in the app is
      now translated. Phase 3 — the meal planner (`MealsTab` + all seven
      `src/components/meals/` components, namespace `meals.*`). Phase 4 — every

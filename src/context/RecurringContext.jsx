@@ -1,11 +1,13 @@
 import { createContext, useContext, useCallback, useRef, useState } from "react";
 import { api } from "../lib/api.js";
+import { useTranslation } from "./LanguageContext.jsx";
 
 const RecurringContext = createContext(null);
 
 // day_of_week (0=Mon…6=Sun) -> responsible, from GET /recurring. Cached and
 // lazily (re)loaded — mirrors the vanilla app's module-level recurringSchedule.
 export function RecurringProvider({ children }) {
+  const t = useTranslation();
   const [schedule, setSchedule] = useState({});
   const loadedRef = useRef(false);
 
@@ -31,7 +33,7 @@ export function RecurringProvider({ children }) {
     try {
       res = await api("/recurring", { method: "POST", body: JSON.stringify({ day_of_week: dow, responsible }) });
     } catch {
-      return { error: "Kunne ikke lagre – sjekk nettforbindelsen" };
+      return { error: t("common.saveFailed") };
     }
     if (res?.error) return { error: res.error };
     setSchedule((prev) => {

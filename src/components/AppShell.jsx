@@ -135,7 +135,7 @@ export function AppShell() {
     el.style.animation = "ph-pane-enter var(--spring-duration-soft) var(--ease-spring-soft) both";
   }, [tab]);
 
-  useDeployVersionCheck({ toast, onOpenChangelog: () => setShowChangelog(true) });
+  useDeployVersionCheck({ toast, onOpenChangelog: () => setShowChangelog(true), t });
 
   // Settings subpage navigations push a history entry so the hardware/browser
   // back button (and the subpage Header's back arrow) can step back out of

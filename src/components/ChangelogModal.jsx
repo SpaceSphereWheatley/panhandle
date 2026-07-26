@@ -3,6 +3,7 @@ import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { parseChangelog } from "../lib/changelogUtils.js";
 import { APP_VERSION } from "../lib/version.js";
+import { useTranslation } from "../context/LanguageContext.jsx";
 
 const FULL_CHANGELOG_URL = "/changelog.html";
 // Spotlight the last few releases, not the entire history — the full log is
@@ -10,8 +11,11 @@ const FULL_CHANGELOG_URL = "/changelog.html";
 const RECENT_VERSIONS_COUNT = 3;
 
 export function ChangelogModal({ onClose }) {
+  const t = useTranslation();
   const [entries, setEntries] = useState(null);
-  const [error, setError] = useState(null);
+  // A flag, not a message — the wording is resolved at render so it follows
+  // the current language.
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -25,16 +29,18 @@ export function ChangelogModal({ onClose }) {
         if (!res.ok) throw new Error("fetch failed");
         setEntries(parseChangelog(await res.text()));
       } catch {
-        setError("Kunne ikke laste endringslogg.");
+        setFailed(true);
       }
     })();
   }, []);
 
   return (
-    <Modal onClose={onClose} title="Hva er nytt">
+    <Modal onClose={onClose} title={t("changelog.title")}>
+      {/* The rendered CHANGELOG.md content below stays Norwegian-only — it's
+          the release history, not app chrome (see docs/i18n-roadmap.md). */}
       <div className="changelog-box">
-        {error && <p className="cred-note">{error}</p>}
-        {!error && !entries && <p className="cred-note">Laster...</p>}
+        {failed && <p className="cred-note">{t("changelog.loadFailed")}</p>}
+        {!failed && !entries && <p className="cred-note">{t("common.loading")}</p>}
         {entries?.slice(0, RECENT_VERSIONS_COUNT).map((entry) => (
           <section key={entry.version} className="changelog-entry">
             <h4>
@@ -54,11 +60,11 @@ export function ChangelogModal({ onClose }) {
           size="sm"
           onClick={() => window.open(FULL_CHANGELOG_URL, "_blank", "noopener,noreferrer")}
         >
-          Se hele endringsloggen
+          {t("changelog.seeFull")}
         </Button>
       </div>
       <div className="actions">
-        <Button variant="primary" onClick={onClose}>Lukk</Button>
+        <Button variant="primary" onClick={onClose}>{t("common.close")}</Button>
       </div>
     </Modal>
   );

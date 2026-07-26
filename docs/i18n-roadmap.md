@@ -4,8 +4,11 @@ Tracks TODO #15 (language support) across sessions. Phase 1 (translation
 infra + the Settings → "Språk" switcher + `ShoppingListTab` chrome, 1.43.4),
 phase 2 (the ~710 `COMMON_ITEMS` catalogue names + finishing
 `ItemCard`/`SuggestionsModal`/`ItemEditModal` + the dropdown switcher, 1.44.0)
-and phases 3-5 (meals, settings + the app shell, auth screens, 1.45.0) have
-shipped. Everything still open is phases 6-8 below. Organized so any session can
+phases 3-5 (meals, settings + the app shell, auth screens, 1.45.0) and phases
+6-7 (shared chrome, category display labels, 1.46.0) have all shipped. The
+only thing still open is phase 8 (meal names/free-typed ingredients), which
+is optional and may never be worth doing — plus the permanently-out-of-scope
+server error strings. **The app is otherwise fully translated.** Organized so any session can
 pick up one phase without re-deriving the architecture — read "Decisions
 already made" and "How to extract a component" first, then jump to whichever
 phase you're doing. Check items off as they ship, and add a `Todo_done.md`
@@ -62,18 +65,23 @@ entry + a one-line update to `TODO.md` #15 the same way phases 1/2 did.
   string rather than a crash. The test fails on a missing key, a plural/plain
   mismatch, differing `{placeholders}`, or an empty value — it caught one real
   miss during phase 4. Run `npm test` after editing either dictionary.
-- **Category names are the same kind of landmine, not yet fixed.**
-  `CATEGORIES` (`shared/categories.js`, e.g. `"Frukt og grønt"`) is a literal
-  data key — used by `clusterFor()`, `category_order`, and worker-side
-  validation — not just display text. Don't translate the stored/validated
-  value; Phase 7 below is where this actually gets solved (a stable-key
-  layer, same shape as `CLUSTER_KEYS` already has).
-- **`ConfirmContext.jsx`'s shared "Avbryt"** (the default Cancel button
-  every `confirm()` dialog uses) is still hardcoded Norwegian — translating
-  it once (Phase 6) fixes every confirm dialog across the whole app at once,
-  including ones already otherwise translated (phase 1/2's shopping-list
-  confirms currently show a translated title/body but a Norwegian Cancel
-  button).
+- **Category names were a landmine; it's fixed now (phase 7).** `CATEGORIES`
+  (`shared/categories.js`, e.g. `"Frukt og grønt"`) is a literal data key —
+  used by `clusterFor()`, `category_order`, and worker-side validation — not
+  just display text, so the stored/validated value is never translated.
+  `translateCategoryName(category, lang)` (`src/lib/i18n/categoryNames.js`)
+  maps it through `CLUSTER_KEYS` to a `category.<id>` dictionary entry, display
+  only. **Any new surface showing a category name must use it**, and any
+  `<option>` over `CATEGORIES` needs an explicit `value={canonical}` — without
+  one an option's value falls back to its text content, which would POST the
+  translated label as the category (this bit `ItemEditModal`).
+- **Provider-level defaults resolve at render, not at call time** (phase 6).
+  `ConfirmContext` stores `title`/`confirmLabel` as `null` when the caller
+  omits them and falls back to `t("common.confirm.*")` in its JSX; `ToastContext`
+  does the same for the undo button's label. Storing the translated default at
+  call time would have frozen it, and resolving it inside `confirm` itself
+  would have changed that callback's identity on every language switch — it
+  sits in several components' dependency arrays.
 - **Server-side error strings are out of scope indefinitely**, not just
   deferred to a later phase here. `worker/index.js` returns Norwegian
   strings directly in `error` fields (e.g. `"Feil e-post eller passord"`),
@@ -226,47 +234,64 @@ for a not-yet-logged-in visitor. Not decided; ask before assuming.
 - [x] `GoogleSignIn.jsx` (no own literals; passes `locale` to Google's widget)
 - [x] `AuthContext.jsx` (`expiredReason` is now a code, rendered by `LoginScreen`)
 
-## Phase 6 — Shared/global chrome
+## Phase 6 — Shared/global chrome — DONE (1.46.0)
 
-`ConfirmContext.jsx`'s default "Avbryt" — **one fix here benefits every
-confirm dialog app-wide**, including the shopping-list ones from phases
-1/2 that currently show a translated title/body next to a Norwegian Cancel
-button. Also: `ImportantInfoModal.jsx` (~9), `FeedbackModal.jsx` (~5),
-`InstallBanner.jsx` (~2), `ChangelogModal.jsx` (~2 — the modal's own chrome
-only; it renders `CHANGELOG.md`'s content directly, which stays
-Norwegian-only, out of scope). `Modal.jsx` itself has no own literals (pure
-wrapper).
+Namespace `common.*` (plus small per-component namespaces). `ConfirmContext`'s
+default Cancel button was the headline fix — one change, every confirm dialog
+app-wide, including phase 1-5 ones that showed a translated title next to a
+Norwegian "Avbryt".
 
-Namespace: `common.*` — **already exists** (see Decisions above); phase 3 added
-`common.cancel`/`common.save`/`common.close` and phases 3-5 use them, so
-`ConfirmContext`'s default Cancel button just needs to read `common.cancel`.
+The checklist below was incomplete. A sweep for Norwegian literals turned up
+four more files with user-facing text, all genuinely shared chrome, so they're
+included:
 
-- [ ] `ConfirmContext.jsx` (default Cancel button)
-- [ ] `ImportantInfoModal.jsx`
-- [ ] `FeedbackModal.jsx`
-- [ ] `InstallBanner.jsx`
-- [ ] `ChangelogModal.jsx` (chrome only, not the rendered changelog content)
+- [x] `ConfirmContext.jsx` (default Cancel button + default title/confirm label)
+- [x] `ImportantInfoModal.jsx` (its demo item names now display translated too,
+      while `ItemIcon` still receives the canonical name for icon matching)
+- [x] `FeedbackModal.jsx`
+- [x] `InstallBanner.jsx`
+- [x] `ChangelogModal.jsx` (chrome only — the rendered `CHANGELOG.md` content
+      stays Norwegian, as planned; its error message is now a flag, not a
+      stored sentence)
+- [x] `ToastContext.jsx` — the default "Angre" undo label (not on the original
+      list)
+- [x] `useDeployVersionCheck.js` — the two post-deploy toasts and their action
+      labels; takes `t` as a param and reads it through a ref, since its effect
+      is deliberately mount-only (not on the original list)
+- [x] `PushContext.jsx` — four client-generated subscribe errors surfaced via
+      `toast` (not on the original list; these are *client* strings, unlike the
+      server errors that stay out of scope)
+- [x] `CategoryOrderContext.jsx` / `RecurringContext.jsx` — each had a
+      client-side "Kunne ikke lagre" network-failure string (not on the
+      original list)
 
-## Phase 7 — Category display-label translation
+## Phase 7 — Category display-label translation — DONE (1.46.0)
 
-Not a mechanical string-extraction phase — this is the "fix the landmine"
-work flagged in Decisions above. `CLUSTER_KEYS`
-(`src/lib/categoryClusters.js`) already has a stable, language-neutral id
-per category (`"produce"`, `"dairy"`, …) that was invented for CSS token
-lookup, not translation — reuse it as the stable key for a new
-`src/lib/i18n/categoryNames.js`, same shape as `itemNames.js`:
-`translateCategoryName(category, lang)` mapping the canonical Norwegian
-`CATEGORIES` string → its `CLUSTER_KEYS` id → an `{nb, en}` label, display
-only. `normalizeCategoryOrder`/`category_order`/worker validation keep
-operating on the canonical `CATEGORIES` strings, unchanged.
+`src/lib/i18n/categoryNames.js` exposes `translateCategoryName(category, lang)`,
+mapping the canonical Norwegian `CATEGORIES` string → its `CLUSTER_KEYS` id →
+a `category.<id>` dictionary entry. `CLUSTER_KEYS` is now exported from
+`categoryClusters.js` for this. `normalizeCategoryOrder`/`category_order`/the
+Worker's validation all still operate on the canonical strings, unchanged —
+and `clusterFor()` still keys off them for colour.
 
-Affects: `ButikkSubpage.jsx`'s reorder editor (label only — drag/reorder
-logic still keys off the canonical array) and `ItemEditModal.jsx`'s
-category `<select>` (`<option value={canonical}>{translatedLabel}</option>`).
+Keying the dictionary on the cluster id rather than the Norwegian text means
+the entries don't embed a Norwegian sentence in their key, and renaming a
+Norwegian label later wouldn't orphan them. An unknown category passes through
+untranslated, same as `translateItemName` does for custom items.
 
-- [ ] `src/lib/i18n/categoryNames.js` (+ test)
-- [ ] `ButikkSubpage.jsx` reorder list labels
-- [ ] `ItemEditModal.jsx` category picker labels
+`categoryNames.test.js` asserts every `CATEGORIES` entry resolves in both
+languages (a missing one would render a raw `category.xyz` key) and that the
+nb label round-trips to exactly the canonical string.
+
+- [x] `src/lib/i18n/categoryNames.js` (+ test)
+- [x] `ButikkSubpage.jsx` reorder list labels (drag/reorder still keys off the
+      canonical array; the move up/down aria-labels use the translated name)
+- [x] `ItemEditModal.jsx` category picker labels (**with an explicit
+      `value={c}`** — see Decisions)
+
+Note: `ShoppingListTab` never displays a category name (it renders one flat,
+aisle-sorted list and uses the category only for cluster colour), so it needed
+no change.
 
 ## Phase 8 — Meal names/ingredients (open scope, lower priority)
 

@@ -15,8 +15,13 @@ const CHECK_MS = 60000;
 // - checkForNewDeploy: catches a deploy that happened *while this tab has
 //   been open* — polls the live Worker version and prompts rather than
 //   reloading silently, so an in-progress edit isn't lost.
-export function useDeployVersionCheck({ toast, onOpenChangelog }) {
+export function useDeployVersionCheck({ toast, onOpenChangelog, t }) {
   const updateAvailableRef = useRef(false);
+  // Read through a ref: the effect below is mount-only (its polling timer must
+  // not be torn down and rebuilt on every render), but `t` changes identity on
+  // a language switch — so a toast fired later still uses the current one.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     const last = localStorage.getItem("ph_last_version");
@@ -25,7 +30,10 @@ export function useDeployVersionCheck({ toast, onOpenChangelog }) {
       if (isFeatureVersionBump(last, APP_VERSION)) {
         onOpenChangelog();
       } else {
-        toast(`Oppdatert til v${APP_VERSION}`, { actionLabel: "Hva er nytt?", actionFn: onOpenChangelog });
+        toast(tRef.current("deploy.updatedTo", { version: APP_VERSION }), {
+          actionLabel: tRef.current("deploy.whatsNew"),
+          actionFn: onOpenChangelog,
+        });
       }
     }
 
@@ -39,7 +47,10 @@ export function useDeployVersionCheck({ toast, onOpenChangelog }) {
       }
       if (apiVersion && apiVersion !== APP_VERSION) {
         updateAvailableRef.current = true;
-        toast("En ny versjon er tilgjengelig", { actionLabel: "Oppdater", actionFn: () => location.reload() });
+        toast(tRef.current("deploy.newVersion"), {
+          actionLabel: tRef.current("deploy.reload"),
+          actionFn: () => location.reload(),
+        });
       }
     }
 

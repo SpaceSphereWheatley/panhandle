@@ -8,6 +8,7 @@ import { useToast } from "../context/ToastContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
+import { translateCategoryName } from "../lib/i18n/categoryNames.js";
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
   const confirm = useConfirm();
@@ -74,9 +75,13 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       <label htmlFor="item-edit-name">{t("itemEdit.nameLabel")}</label>
       <Input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
       <label htmlFor="item-edit-category">{t("itemEdit.categoryLabel")}</label>
+      {/* An explicit `value` is load-bearing now: without it an <option>'s
+          value falls back to its text content, so a translated label would be
+          what gets POSTed as the item's category. The value stays canonical;
+          only the label is translated. */}
       <select id="item-edit-category" value={category} onChange={(e) => setCategory(e.target.value)}>
         {CATEGORIES.map((c) => (
-          <option key={c}>{c}</option>
+          <option key={c} value={c}>{translateCategoryName(c, lang)}</option>
         ))}
       </select>
       <label htmlFor="item-edit-qty">{t("itemEdit.qtyLabel")}</label>
