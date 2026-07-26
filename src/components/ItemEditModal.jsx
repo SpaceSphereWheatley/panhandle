@@ -9,6 +9,7 @@ import { useListUsers } from "../context/ListUsersContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 import { translateCategoryName } from "../lib/i18n/categoryNames.js";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
   const confirm = useConfirm();
@@ -37,8 +38,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
     });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     onSaved();

@@ -3,7 +3,9 @@
 // D1, no network — matches this repo's no-added-tooling stance for the
 // backend. Run: node --test tests/worker-unit.test.mjs
 import { test, describe } from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
+import { ERROR_MESSAGES_NB, ERROR_CODES } from "../shared/errorCodes.js";
 import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
@@ -414,5 +416,54 @@ describe("normalizeCategoryOrder", () => {
     assert.deepEqual(result.slice(0, 2), ["Drikkevarer", "Husholdning"]);
     assert.equal(result.length, CATEGORIES.length);
     assert.deepEqual([...result].sort(), [...CATEGORIES].sort());
+  });
+});
+
+// Every error the Worker can return carries a stable code (shared/errorCodes.js)
+// so a translating client doesn't have to string-match Norwegian. These guard
+// the two ways that contract can silently rot: a code used in worker/index.js
+// that was never defined (the client would show a raw key or nothing), and a
+// defined code with no English translation (an English user gets Norwegian).
+describe("error codes", () => {
+  const workerSrc = readFileSync(new URL("../worker/index.js", import.meta.url), "utf8");
+  const usedCodes = [...workerSrc.matchAll(/(?:authedErr|err)\("([A-Z_0-9]+)"/g)].map((m) => m[1]);
+
+  test("the worker emits at least one coded error", () => {
+    // Guards the regex above against silently matching nothing if the helper
+    // is ever renamed, which would make every assertion below vacuous.
+    assert.ok(usedCodes.length > 50, `expected many coded errors, found ${usedCodes.length}`);
+  });
+
+  test("every code used in the worker is defined", () => {
+    const undefinedCodes = [...new Set(usedCodes)].filter((c) => !(c in ERROR_MESSAGES_NB));
+    assert.deepEqual(undefinedCodes, []);
+  });
+
+  test("every defined code is actually used", () => {
+    const used = new Set(usedCodes);
+    // DB_ERROR is emitted via authedErr too, so it should appear like the rest.
+    const unused = ERROR_CODES.filter((c) => !used.has(c));
+    assert.deepEqual(unused, []);
+  });
+
+  test("every code has a non-empty Norwegian message", () => {
+    const bad = ERROR_CODES.filter((c) => typeof ERROR_MESSAGES_NB[c] !== "string" || !ERROR_MESSAGES_NB[c].trim());
+    assert.deepEqual(bad, []);
+  });
+
+  test("every code has an English translation", () => {
+    // en.js is a plain object literal; read it as text rather than importing
+    // JSX-adjacent frontend code into this Node-only suite.
+    const enSrc = readFileSync(new URL("../src/lib/i18n/dictionaries/en.js", import.meta.url), "utf8");
+    const missing = ERROR_CODES.filter((c) => !enSrc.includes(`"error.${c}"`));
+    assert.deepEqual(missing, []);
+  });
+
+  test("no error response bypasses the code helper", () => {
+    // A raw `error: "..."` literal outside err()/authedErr() would be an
+    // uncoded response the client can't translate. The one legitimate match
+    // is err()'s own body construction.
+    const raw = [...workerSrc.matchAll(/error: "[^"]+"/g)].map((m) => m[0]);
+    assert.deepEqual(raw, []);
   });
 });

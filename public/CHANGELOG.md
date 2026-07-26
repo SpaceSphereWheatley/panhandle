@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.47.0] — 2026-07-26
+
+### Added
+- **Error messages are translated now too.** Anything the server told you —
+  "wrong email or password", "the list is full", "too many attempts" — used to
+  come back in Norwegian no matter which language the app was set to. All 50 of
+  those messages now follow your language. This was the last untranslated part
+  of the app.
+
+### Changed
+- Meal names and typed-in ingredients stay as you wrote them, in whichever
+  language you typed them. There's nothing to translate them against, and
+  guessing would be worse than leaving them alone — so that's now a settled
+  decision rather than an open one.
+
 ## [1.46.0] — 2026-07-26
 
 ### Added

@@ -11,6 +11,7 @@ import { CATEGORIES, haptic } from "../../../lib/shoppingUtils.js";
 import { UiIcon } from "../../UiIcon.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 const STALE_ITEM_DAYS_MIN = 1;
 const STALE_ITEM_DAYS_MAX = 90;
@@ -52,20 +53,19 @@ export function ButikkSubpage() {
     [next[index], next[target]] = [next[target], next[index]];
     haptic();
     const res = await save(next);
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
   }
 
   async function handleDragSettled() {
     haptic();
     const res = await save(localOrderRef.current);
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
   }
 
   async function reset() {
     haptic();
     const res = await save(CATEGORIES);
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
     else toast(t("settings.butikk.order.resetToast"));
   }
 
@@ -123,8 +123,7 @@ function StaleItemSection({ toast, t }) {
         method: "POST",
         body: JSON.stringify({ stale_item_days: days }),
       });
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (res.error) toast(res.error, { error: true });
+      if (res.error) toast(apiErrorMessage(res, t), { error: true });
     } catch {
       toast(t("shoppingList.toast.genericError"), { error: true });
     }

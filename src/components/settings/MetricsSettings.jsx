@@ -8,18 +8,19 @@ import { useTranslation } from "../../context/LanguageContext.jsx";
 export function MetricsSettings() {
   const t = useTranslation();
   const [data, setData] = useState(null);
-  const [error, setError] = useState("");
+  // The raw error body, not a resolved message — so a language switch
+  // re-renders it (see CLAUDE.md's Language support notes).
+  const [errorRes, setErrorRes] = useState(null);
 
   useEffect(() => {
     api("/admin/metrics").then((res) => {
-      if (res.error) setError(res.error);
+      if (res.error) setErrorRes(res);
       else setData(res);
     });
   }, []);
 
-  if (error) {
-    // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>{error}</div>;
+  if (errorRes) {
+    return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>{apiErrorMessage(errorRes, t)}</div>;
   }
   if (!data) {
     return <div className="setrow" style={{ textAlign: "center", color: "var(--text-secondary)" }}>{t("settings.metrics.loading")}</div>;

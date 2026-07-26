@@ -7,6 +7,42 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+107. (15) Language support, final phase — server error messages, and #15
+     closed. Was documented as "out of scope indefinitely, needs an error-code
+     redesign of the API contract"; measuring it changed the call. **No test
+     asserts on the error text** (the integration suite checks `res.status`
+     only), so the change could be purely additive rather than breaking.
+     `shared/errorCodes.js` is the single source: 50 `CODE → canonical
+     Norwegian message` pairs. `worker/index.js` gained `err(code, status,
+     { detail, extra })` plus a per-request `authedErr` mirroring
+     `authedJson`'s `X-Refresh-Token` header; all 108 error returns now go
+     through one of them and answer `{ error, code }`. The `error` string is
+     byte-identical to what it always was, so a client reading only `error` —
+     including a browser still on an older bundle — is unaffected.
+     Client side: `apiErrorMessage(res, t)` (`src/lib/apiError.js`) prefers
+     `error.<CODE>` and falls back to the server's own string for an unknown
+     or absent code, so a newer Worker against an older bundle degrades to
+     Norwegian rather than showing a raw key. The nb dictionary *derives* its
+     `error.*` entries from `shared/errorCodes.js` instead of restating 50
+     strings, so those two can't drift; only `en.js` is hand-written. All 15
+     `// TODO(i18n)` markers are gone. `AuthContext` now hands the whole error
+     body to the auth screens rather than a pre-baked Norwegian fallback, and
+     `MetricsSettings` holds the error body in state and resolves it at render
+     (the "never cache a rendered sentence" rule).
+     Guards in `tests/worker-unit.test.mjs`: every used code is defined, every
+     defined code is used, every code has a non-empty nb message and an `en.js`
+     entry, and **no `error: "..."` literal survives outside the helpers** — so
+     a new uncoded error response fails the build. Plus a vacuity guard, since
+     the checks read the worker source with a regex and renaming the helper
+     would otherwise silently disable them.
+     Phase 8 (meal names / free-typed `meal_catalogue` ingredients) is closed
+     as a deliberate won't-do: there is no translation source and no
+     translation API by design, and extending best-effort per-token
+     translation to `TokenInput`'s chips was rejected — a chip's text *is* the
+     stored token, and translating a subset yields a mixed-language ingredient
+     list that reads worse than a consistent one. With that, #15 is complete.
+     (1.47.0)
+
 106. (15) Language support, phases 6-7 — the app UI is now fully translated.
      Phase 6, shared/global chrome: `ConfirmContext`'s default Cancel button
      (one fix, every confirm dialog app-wide — phases 1-5's dialogs showed a

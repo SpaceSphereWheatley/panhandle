@@ -1,12 +1,24 @@
 // Norwegian (bokmål) strings. Flat dot-namespaced keys, one namespace per
-// wired-up component or feature area. Covered so far: the shopping list
+// wired-up component or feature area. Covers the whole UI: the shopping list
 // (shoppingList/itemCard/suggestions/itemEdit), meals, the app shell,
-// settings, the auth screens, the shared confirm/toast/modal chrome and the
-// category display labels, plus a small shared common.* for button words that
-// repeat everywhere. Deliberately still Norwegian: meal names and free-typed
-// ingredients, CHANGELOG.md's rendered content, and every server-returned
-// error string (see CLAUDE.md's Language support section).
+// settings, the auth screens, the shared confirm/toast/modal chrome, the
+// category display labels, and the server's error responses (error.*), plus a
+// small shared common.* for button words that repeat everywhere.
+// Deliberately still Norwegian: meal names and free-typed ingredients, and
+// CHANGELOG.md's rendered content (see CLAUDE.md's Language support section).
+import { ERROR_MESSAGES_NB } from "../../../../shared/errorCodes.js";
+
+// The error.* entries are derived from shared/errorCodes.js rather than
+// restated here: that file is what worker/index.js actually answers with, so
+// a hand-copied set would be 50 strings free to drift out of sync with the
+// real responses.
+const errorEntries = Object.fromEntries(
+  Object.entries(ERROR_MESSAGES_NB).map(([code, message]) => [`error.${code}`, message])
+);
+
 export const nb = {
+  ...errorEntries,
+
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
   "shoppingList.pendingWrites.tooltip": "Endringer lagret på enheten – sendes når du er tilkoblet igjen",
@@ -349,6 +361,9 @@ export const nb = {
   "auth.togglePasswordAria": "Vis eller skjul passord",
   "auth.or": "eller",
   "auth.networkError": "Nettverksfeil",
+  "auth.login.failed": "Innlogging feilet",
+  "auth.signup.failed": "Registrering feilet",
+  "auth.google.failed": "Google-innlogging feilet",
   "auth.sessionExpired": "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt.",
   "auth.login.submit": "Logg inn",
   "auth.login.busy": "Logger inn...",

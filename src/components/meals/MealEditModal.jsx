@@ -7,6 +7,7 @@ import { parseIngredients } from "../../lib/mealUtils.js";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
+import { apiErrorMessage } from "../../lib/apiError.js";
 
 // Add (id=null) or edit (id given) a meal_catalogue entry directly, outside
 // of planning a specific day. Reachable from the Måltider tab's FAB and from
@@ -82,8 +83,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
       ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
       : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     onSaved();

@@ -4,6 +4,7 @@ import { Button } from "../design-system/index.js";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useTranslation } from "../context/LanguageContext.jsx";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 // No dedicated design-system textarea exists yet (Input.jsx is hardcoded to
 // a single-line <input>) — this is the app's first free-text multi-line
@@ -25,8 +26,7 @@ export function FeedbackModal({ onClose }) {
     try {
       const res = await api("/feedback", { method: "POST", body: JSON.stringify({ message: trimmed }) });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         setSending(false);
         return;
       }

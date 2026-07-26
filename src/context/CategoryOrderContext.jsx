@@ -3,6 +3,7 @@ import { api } from "../lib/api.js";
 import { useAuth } from "./AuthContext.jsx";
 import { CATEGORIES, normalizeCategoryOrder } from "../../shared/categories.js";
 import { useTranslation } from "./LanguageContext.jsx";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 const CategoryOrderContext = createContext(null);
 
@@ -44,8 +45,7 @@ export function CategoryOrderProvider({ children }) {
     } catch {
       return { error: t("common.saveFailed") };
     }
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res?.error) return { error: res.error };
+    if (res?.error) return { error: apiErrorMessage(res, t) };
     return {};
   }, [t]);
 

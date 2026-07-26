@@ -1,18 +1,16 @@
 # i18n roadmap (language support)
 
-Tracks TODO #15 (language support) across sessions. Phase 1 (translation
-infra + the Settings → "Språk" switcher + `ShoppingListTab` chrome, 1.43.4),
-phase 2 (the ~710 `COMMON_ITEMS` catalogue names + finishing
-`ItemCard`/`SuggestionsModal`/`ItemEditModal` + the dropdown switcher, 1.44.0)
-phases 3-5 (meals, settings + the app shell, auth screens, 1.45.0) and phases
-6-7 (shared chrome, category display labels, 1.46.0) have all shipped. The
-only thing still open is phase 8 (meal names/free-typed ingredients), which
-is optional and may never be worth doing — plus the permanently-out-of-scope
-server error strings. **The app is otherwise fully translated.** Organized so any session can
-pick up one phase without re-deriving the architecture — read "Decisions
-already made" and "How to extract a component" first, then jump to whichever
-phase you're doing. Check items off as they ship, and add a `Todo_done.md`
-entry + a one-line update to `TODO.md` #15 the same way phases 1/2 did.
+Tracks TODO #15 (language support) across sessions. **All phases are done as
+of 1.47.0 — the app is fully translated, including server error messages.**
+Phase 1 (infra + the Settings → "Språk" switcher + `ShoppingListTab`, 1.43.4),
+phase 2 (the ~710 `COMMON_ITEMS` catalogue names, 1.44.0), phases 3-5 (meals,
+settings + the app shell, auth screens, 1.45.0), phases 6-7 (shared chrome,
+category display labels, 1.46.0) and the server error-code layer (1.47.0) have
+all shipped. Phase 8 is closed as a deliberate won't-do (see below).
+
+This file is now a record of the decisions rather than a plan. Read
+"Decisions already made" before touching anything translation-related — the
+rules there are what keep a translation from corrupting stored data.
 
 ## Decisions already made (read before touching any phase)
 
@@ -82,14 +80,12 @@ entry + a one-line update to `TODO.md` #15 the same way phases 1/2 did.
   call time would have frozen it, and resolving it inside `confirm` itself
   would have changed that callback's identity on every language switch — it
   sits in several components' dependency arrays.
-- **Server-side error strings are out of scope indefinitely**, not just
-  deferred to a later phase here. `worker/index.js` returns Norwegian
-  strings directly in `error` fields (e.g. `"Feil e-post eller passord"`),
-  consumed via `toast(res.error)`. Solving this needs an error-code
-  redesign of the API contract, not just more `t()` calls — a real
-  follow-up scope decision, not a mechanical extraction. Each call site
-  that surfaces `res.error` directly has a `// TODO(i18n)` comment; leave
-  those as-is.
+- **Server error strings are translated via codes, not text matching** (see
+  the section at the end). `worker/index.js` answers `{ error, code }`; the
+  client resolves the code through `apiErrorMessage(res, t)` and never
+  string-matches the message. Never surface `res.error` directly in new code —
+  use the helper, so an unknown code still degrades to the server's wording
+  instead of a raw key.
 
 ## How to extract a component (the established pattern)
 
@@ -293,17 +289,59 @@ Note: `ShoppingListTab` never displays a category name (it renders one flat,
 aisle-sorted list and uses the category only for cluster colour), so it needed
 no change.
 
-## Phase 8 — Meal names/ingredients (open scope, lower priority)
+## Phase 8 — Meal names/ingredients — CLOSED, won't do
 
-`meal_catalogue.name` and `.ingredients` are pure free text with zero
-relationship to `item_catalogue` — no pre-built translation source exists
-or is easy to build (unlike the fixed `COMMON_ITEMS` list, meal names are
-arbitrary per-household text). Revisit only if actually wanted; plausible
-this stays untranslated indefinitely, same reasoning as custom shopping
-items.
+`meal_catalogue.name` and `.ingredients` are arbitrary per-household free text
+with **no translation source** — unlike the fixed `COMMON_ITEMS` list there is
+nothing to look them up against, and this app deliberately has no translation
+API (see Decisions). The only two things that could have been built:
 
-## Ongoing / not a phase
+1. A translation API call — ruled out by the app's own design.
+2. Best-effort per-token translation of ingredients that happen to match a
+   `COMMON_ITEMS` name. This is *already* done where it's safe and useful
+   (`IngredientChecklist`, via `translateItemName`). Extending it to
+   `TokenInput`'s chips was considered and rejected: a chip's text **is** the
+   stored token, and translating a subset of a list produces a mixed
+   Norwegian/English ingredient list that reads worse than a consistent one.
 
-Server-side error strings (`worker/index.js`, surfaced via
-`toast(res.error)`) — see Decisions above. Don't attempt without a separate
-scope discussion on redesigning the API's error contract.
+Meal names have no path at all. Closed — reopen only if a concrete need shows
+up, and expect it to need a translation service, not more `t()` calls.
+
+## Server error strings — DONE (1.47.0)
+
+Was "out of scope indefinitely, needs an error-code redesign". It got done,
+because measuring it changed the picture: **no test asserts on the error
+text** (the integration suite checks `res.status` only), so the change could
+be purely additive instead of a breaking contract redesign.
+
+`shared/errorCodes.js` is the single source: 50 `CODE → canonical Norwegian
+message` pairs. `worker/index.js` gained `err(code, status, { detail, extra })`
+and its per-request `authedErr` counterpart (same `X-Refresh-Token` header as
+`authedJson`); all 108 error returns go through one of them and answer with
+`{ error, code }`. **`error` is still the same Norwegian string it always
+was**, so any client reading only `error` — including a browser running a
+bundle older than this deploy — is unaffected.
+
+Client side: `src/lib/apiError.js`'s `apiErrorMessage(res, t)` prefers
+`error.<CODE>` from the dictionary and falls back to the server's own `error`
+string for an unknown or absent code, so a newer Worker talking to an older
+bundle degrades to Norwegian rather than showing a raw key. The nb dictionary
+**derives** its `error.*` entries from `shared/errorCodes.js` rather than
+restating them, so the two can't drift; only `en.js` has hand-written
+translations.
+
+Guards (`tests/worker-unit.test.mjs`): every code used in the worker is
+defined, every defined code is used, every code has a non-empty nb message and
+an `error.<CODE>` entry in `en.js`, and **no `error: "..."` literal survives
+outside the helpers** — a new uncoded error response fails the build. There's
+also a vacuity guard asserting the source regex actually matches something, so
+renaming the helper can't silently disable the rest.
+
+`AuthContext` now hands the whole error body (`{ error, code }`) to the auth
+screens instead of a pre-baked Norwegian fallback; `MetricsSettings` holds the
+error *body* in state and resolves it at render, per the "never cache a
+rendered sentence" rule above.
+
+Adding an error: add the code + Norwegian message to `shared/errorCodes.js`,
+add `error.<CODE>` to `en.js`, return it via `err`/`authedErr`. Never rename or
+reuse a code — a deployed client may still be mapping the old one.

@@ -21,6 +21,7 @@ import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.j
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 const POLL_MS = 7000;
 // Last-fetched list, hydrated on mount so a returning user sees real items
@@ -304,8 +305,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
     if (res?.error) {
       setAddValue(typed);
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     if (res?.duplicate) {
@@ -419,8 +419,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     try {
       const res = await api("/push/ping", { method: "POST" });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         return;
       }
       toast(t("shoppingList.toast.pingSent"));

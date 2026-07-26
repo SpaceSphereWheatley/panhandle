@@ -12,6 +12,7 @@ import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
+import { apiErrorMessage } from "../../lib/apiError.js";
 
 const MotionRow = motion(ManagementRow);
 
@@ -45,8 +46,7 @@ export function MembersIsland() {
     }
     const res = await api("/list-users", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     setNewName("");
@@ -65,8 +65,7 @@ export function MembersIsland() {
       return;
     const res = await api(`/list-users/${encodeURIComponent(username)}`, { method: "DELETE" });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     await refresh();

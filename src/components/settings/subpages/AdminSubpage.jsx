@@ -15,6 +15,7 @@ import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 const MotionRow = motion(ManagementRow);
 
@@ -112,8 +113,7 @@ export function AdminSubpage({ onNavigate }) {
       method: "PATCH",
       body: JSON.stringify({ [flag]: value }),
     });
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
     loadAllUsers();
     refreshListUsers();
   }
@@ -128,8 +128,7 @@ export function AdminSubpage({ onNavigate }) {
       return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}/reset-password`, { method: "POST" });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     setCreds({ username: res.username, password: res.password });
@@ -153,8 +152,7 @@ export function AdminSubpage({ onNavigate }) {
         body: JSON.stringify({ delete_list: true }),
       });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         return;
       }
       toast(t("settings.admin.toast.userAndListDeleted", { name: username }));
@@ -172,8 +170,7 @@ export function AdminSubpage({ onNavigate }) {
       return;
     const res = await api(`/admin/users/${encodeURIComponent(username)}`, { method: "DELETE" });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     loadAllUsers();
@@ -193,8 +190,7 @@ export function AdminSubpage({ onNavigate }) {
     }
     const res = await api("/admin/owners", { method: "POST", body: JSON.stringify({ name, email }) });
     if (res.error) {
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      toast(res.error, { error: true });
+      toast(apiErrorMessage(res, t), { error: true });
       return;
     }
     setNewOwnerName("");

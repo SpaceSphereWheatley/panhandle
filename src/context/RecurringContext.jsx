@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { useTranslation } from "./LanguageContext.jsx";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 const RecurringContext = createContext(null);
 
@@ -35,7 +36,7 @@ export function RecurringProvider({ children }) {
     } catch {
       return { error: t("common.saveFailed") };
     }
-    if (res?.error) return { error: res.error };
+    if (res?.error) return { error: apiErrorMessage(res, t) };
     setSchedule((prev) => {
       const next = { ...prev };
       if (responsible) next[dow] = responsible;
