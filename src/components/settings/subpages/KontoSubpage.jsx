@@ -8,6 +8,7 @@ import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 // Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are direct
 // fields, each in a SubpageSection so every subpage's labeled blocks look like
@@ -54,8 +55,7 @@ export function KontoSubpage() {
         body: JSON.stringify({ name: next }),
       });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         return;
       }
       savedName.current = res.name;
@@ -73,8 +73,7 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: emailPw, email: emailInput.trim() }),
       });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         return;
       }
       setEmail(res.email);
@@ -97,8 +96,7 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: pwCurrent, new_password: pwNew }),
       });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         return;
       }
       if (res.token) localStorage.setItem("ph_token", res.token);
@@ -132,8 +130,7 @@ export function KontoSubpage() {
         body: JSON.stringify({ current_password: pwDelete }),
       });
       if (res.error) {
-        // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        toast(res.error, { error: true });
+        toast(apiErrorMessage(res, t), { error: true });
         setDeleting(false);
         return;
       }

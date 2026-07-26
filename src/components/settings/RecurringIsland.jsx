@@ -6,6 +6,7 @@ import { Input, Select } from "../../design-system/index.js";
 import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
 import { weekdayNames } from "../../lib/i18n/dateLocale.js";
 import { SubpageSection } from "./SubpageSection.jsx";
+import { apiErrorMessage } from "../../lib/apiError.js";
 
 // "Vårt hjem" subpage, part 2: weekly recurring meal responsibility,
 // always-open like MembersIsland's sub-sections (no accordions — see
@@ -36,8 +37,7 @@ export function RecurringIsland() {
       return next;
     });
     const res = await saveDay(dow, value);
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
     else toast(t("settings.hjem.recurring.saved"));
   }
 
@@ -48,8 +48,7 @@ export function RecurringIsland() {
     // through the field without typing doesn't spam a confirmation.
     if (val === (schedule[dow] || "")) return;
     const res = await saveDay(dow, val || "");
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
     else toast(t("settings.hjem.recurring.saved"));
     if (!val) {
       setOtherDrafts((prev) => {

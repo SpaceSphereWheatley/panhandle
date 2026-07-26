@@ -5,6 +5,7 @@ import { Turnstile } from "./Turnstile.jsx";
 import { GoogleSignIn } from "./GoogleSignIn.jsx";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 export function SignupScreen({ onBack }) {
   const t = useTranslation();
@@ -30,15 +31,14 @@ export function SignupScreen({ onBack }) {
     }
     setBusy(true);
     try {
-      const { error } = await register({
+      const res = await register({
         name: name.trim(),
         email: email.trim(),
         password,
         list_name: listName.trim() || undefined,
         turnstile_token: turnstileToken,
       });
-      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (error) setError(error);
+      if (res.error || res.code) setError(apiErrorMessage(res, t) || t("auth.signup.failed"));
     } catch {
       setError(t("auth.networkError"));
     } finally {
@@ -50,9 +50,8 @@ export function SignupScreen({ onBack }) {
     setError("");
     setBusy(true);
     try {
-      const { error } = await loginWithGoogle(credential, listName.trim() || undefined);
-      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (error) setError(error);
+      const res = await loginWithGoogle(credential, listName.trim() || undefined);
+      if (res.error || res.code) setError(apiErrorMessage(res, t) || t("auth.google.failed"));
     } catch {
       setError(t("auth.networkError"));
     } finally {

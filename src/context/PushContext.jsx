@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { useAuth } from "./AuthContext.jsx";
+import { useTranslation } from "./LanguageContext.jsx";
 
 const PushContext = createContext(null);
 
@@ -20,6 +21,7 @@ function urlBase64ToUint8Array(base64String) {
 // toggle the setting off).
 export function PushProvider({ children }) {
   const { token } = useAuth();
+  const t = useTranslation();
   const [supported] = useState(
     () => typeof navigator !== "undefined" && "serviceWorker" in navigator && "PushManager" in window
   );
@@ -60,13 +62,13 @@ export function PushProvider({ children }) {
   }, [token, refresh]);
 
   const subscribe = useCallback(async () => {
-    if (!supported) return { error: "Nettleseren støtter ikke push-varsler" };
+    if (!supported) return { error: t("push.unsupported") };
     try {
       const result = await Notification.requestPermission();
-      if (result !== "granted") return { error: "Tillatelse til varsler ble ikke gitt" };
+      if (result !== "granted") return { error: t("push.permissionDenied") };
 
       const { publicKey } = await api("/push/vapid-public-key");
-      if (!publicKey) return { error: "Push-varsler er ikke satt opp på serveren ennå" };
+      if (!publicKey) return { error: t("push.notConfigured") };
 
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
@@ -78,9 +80,9 @@ export function PushProvider({ children }) {
       setEndpoint(sub.endpoint);
       return { error: null };
     } catch {
-      return { error: "Kunne ikke aktivere varsler" };
+      return { error: t("push.subscribeFailed") };
     }
-  }, [supported]);
+  }, [supported, t]);
 
   const unsubscribe = useCallback(async () => {
     if (!supported) return;

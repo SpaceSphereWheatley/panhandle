@@ -4,6 +4,8 @@ import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { ItemIcon } from "./ItemIcon.jsx";
 import { cap } from "../lib/shoppingUtils.js";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { translateItemName } from "../lib/i18n/itemNames.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 
@@ -68,6 +70,7 @@ function ItemBadge({ isGrid, itemName }) {
 // (TapDemo) — badge + name, laid out like ItemCard's real row (list) or
 // column (grid).
 function DemoItemContent({ isGrid, itemName }) {
+  const { lang } = useLanguage();
   return (
     <div
       style={{
@@ -78,8 +81,10 @@ function DemoItemContent({ isGrid, itemName }) {
       }}
     >
       <ItemBadge isGrid={isGrid} itemName={itemName} />
+      {/* Displayed name only — ItemBadge above still gets the canonical
+          `itemName`, since itemIcons.js matches on the Norwegian name. */}
       <span style={{ fontSize: isGrid ? "var(--text-2xs)" : "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--text-primary)" }}>
-        {cap(itemName)}
+        {cap(translateItemName(itemName, lang))}
       </span>
     </div>
   );
@@ -179,6 +184,7 @@ function TapDemo({ isGrid, itemName }) {
 const textStyle = { margin: "0 0 16px", fontSize: "var(--text-sm)", lineHeight: 1.6, color: "var(--text-primary)" };
 
 export function ImportantInfoModal({ onClose }) {
+  const t = useTranslation();
   const { shouldAnimate } = useMotionConfig();
   const intensity = useDesignIntensity();
   // Mirrors ShoppingListTab's own effectiveViewMode: "classic" intensity
@@ -190,13 +196,13 @@ export function ImportantInfoModal({ onClose }) {
   // the swipe and tap demos, or flicker on an unrelated re-render.
   const [itemName] = useState(() => DEMO_ITEMS[Math.floor(Math.random() * DEMO_ITEMS.length)]);
   return (
-    <Modal onClose={onClose} title="Merk som viktig">
+    <Modal onClose={onClose} title={t("importantInfo.title")}>
       <SwipeDemo shouldAnimate={shouldAnimate} isGrid={isGrid} itemName={itemName} />
-      <p style={textStyle}>Sveip et element mot høyre for å merke det som viktig.</p>
+      <p style={textStyle}>{t("importantInfo.swipe")}</p>
       <TapDemo isGrid={isGrid} itemName={itemName} />
-      <p style={{ ...textStyle, margin: 0 }}>Eller trykk på den lille sirkelen øverst til venstre på ikonet.</p>
+      <p style={{ ...textStyle, margin: 0 }}>{t("importantInfo.tap")}</p>
       <div className="actions">
-        <Button variant="primary" onClick={onClose}>Lukk</Button>
+        <Button variant="primary" onClick={onClose}>{t("common.close")}</Button>
       </div>
     </Modal>
   );

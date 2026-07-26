@@ -1,11 +1,24 @@
 // Norwegian (bokmål) strings. Flat dot-namespaced keys, one namespace per
-// wired-up component or feature area. Covered so far: the shopping list
+// wired-up component or feature area. Covers the whole UI: the shopping list
 // (shoppingList/itemCard/suggestions/itemEdit), meals, the app shell,
-// settings, and the auth screens, plus a small shared common.* for button
-// words that repeat everywhere. Still hardcoded Norwegian: category display
-// labels (they're data keys — see docs/i18n-roadmap.md phase 7), meal names
-// and free-typed ingredients, and every server-returned error string.
+// settings, the auth screens, the shared confirm/toast/modal chrome, the
+// category display labels, and the server's error responses (error.*), plus a
+// small shared common.* for button words that repeat everywhere.
+// Deliberately still Norwegian: meal names and free-typed ingredients, and
+// CHANGELOG.md's rendered content (see CLAUDE.md's Language support section).
+import { ERROR_MESSAGES_NB } from "../../../../shared/errorCodes.js";
+
+// The error.* entries are derived from shared/errorCodes.js rather than
+// restated here: that file is what worker/index.js actually answers with, so
+// a hand-copied set would be 50 strings free to drift out of sync with the
+// real responses.
+const errorEntries = Object.fromEntries(
+  Object.entries(ERROR_MESSAGES_NB).map(([code, message]) => [`error.${code}`, message])
+);
+
 export const nb = {
+  ...errorEntries,
+
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
   "shoppingList.pendingWrites.tooltip": "Endringer lagret på enheten – sendes når du er tilkoblet igjen",
@@ -348,6 +361,9 @@ export const nb = {
   "auth.togglePasswordAria": "Vis eller skjul passord",
   "auth.or": "eller",
   "auth.networkError": "Nettverksfeil",
+  "auth.login.failed": "Innlogging feilet",
+  "auth.signup.failed": "Registrering feilet",
+  "auth.google.failed": "Google-innlogging feilet",
   "auth.sessionExpired": "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt.",
   "auth.login.submit": "Logg inn",
   "auth.login.busy": "Logger inn...",
@@ -381,4 +397,56 @@ export const nb = {
   "auth.credentials.copied": "Invitasjon kopiert",
   "auth.credentials.copyFailed": "Kunne ikke kopiere – merk og kopier teksten manuelt",
   "auth.credentials.invite": "Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com\nE-post (brukernavn): {username}\nPassord: {password}\n(Bytt passord etter at du har logget inn.)",
+
+  "common.undo": "Angre",
+  "common.confirm.defaultTitle": "Er du sikker?",
+  "common.confirm.defaultLabel": "Bekreft",
+  "common.loading": "Laster...",
+  "common.saveFailed": "Kunne ikke lagre – sjekk nettforbindelsen",
+
+  "importantInfo.title": "Merk som viktig",
+  "importantInfo.swipe": "Sveip et element mot høyre for å merke det som viktig.",
+  "importantInfo.tap": "Eller trykk på den lille sirkelen øverst til venstre på ikonet.",
+
+  "feedback.title": "Send tilbakemelding",
+  "feedback.intro": "Funnet en feil, eller har du en idé til noe som mangler? Skriv det her.",
+  "feedback.label": "Tilbakemelding",
+  "feedback.placeholder": "Skriv tilbakemeldingen din her...",
+  "feedback.send": "Send",
+  "feedback.empty": "Skriv en melding",
+  "feedback.thanks": "Takk for tilbakemeldingen!",
+
+  "installBanner.text": "Installer Panhandle på hjemskjermen for raskere tilgang.",
+  "installBanner.install": "Installer",
+  "installBanner.iosBefore": "Legg til Panhandle på hjemskjermen: trykk del-ikonet ",
+  "installBanner.iosStrong": "⎋",
+  "installBanner.iosAfter": " og velg «Legg til på Hjemskjerm».",
+
+  "changelog.title": "Hva er nytt",
+  "changelog.loadFailed": "Kunne ikke laste endringslogg.",
+  "changelog.seeFull": "Se hele endringsloggen",
+
+  "deploy.updatedTo": "Oppdatert til v{version}",
+  "deploy.whatsNew": "Hva er nytt?",
+  "deploy.newVersion": "En ny versjon er tilgjengelig",
+  "deploy.reload": "Oppdater",
+
+  "push.unsupported": "Nettleseren støtter ikke push-varsler",
+  "push.notConfigured": "Push-varsler er ikke satt opp på serveren ennå",
+  "push.permissionDenied": "Tillatelse til varsler ble ikke gitt",
+  "push.subscribeFailed": "Kunne ikke aktivere varsler",
+
+  "category.produce": "Frukt og grønt",
+  "category.bakery": "Brød og bakevarer",
+  "category.dairy": "Meieriprodukter",
+  "category.meat": "Kjøtt og fisk",
+  "category.spice": "Ingredienser og krydder",
+  "category.frozen": "Frysevarer og ferdigmåltid",
+  "category.grains": "Kornprodukter",
+  "category.snacks": "Snacks og godteri",
+  "category.drinks": "Drikkevarer",
+  "category.household": "Husholdning",
+  "category.care": "Omsorg og helse",
+  "category.pet": "Dyreprodukter",
+  "category.other": "Annet",
 };

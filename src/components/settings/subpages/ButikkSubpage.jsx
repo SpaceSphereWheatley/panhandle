@@ -3,13 +3,15 @@ import { Reorder, useDragControls } from "framer-motion";
 import { Button, Card, Input, IconButton } from "../../../design-system/index.js";
 import { useCategoryOrder } from "../../../context/CategoryOrderContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
-import { useTranslation } from "../../../context/LanguageContext.jsx";
+import { useLanguage, useTranslation } from "../../../context/LanguageContext.jsx";
+import { translateCategoryName } from "../../../lib/i18n/categoryNames.js";
 import { api } from "../../../lib/api.js";
 import { clusterFor } from "../../../lib/categoryClusters.js";
 import { CATEGORIES, haptic } from "../../../lib/shoppingUtils.js";
 import { UiIcon } from "../../UiIcon.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 const STALE_ITEM_DAYS_MIN = 1;
 const STALE_ITEM_DAYS_MAX = 90;
@@ -51,20 +53,19 @@ export function ButikkSubpage() {
     [next[index], next[target]] = [next[target], next[index]];
     haptic();
     const res = await save(next);
-    // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
   }
 
   async function handleDragSettled() {
     haptic();
     const res = await save(localOrderRef.current);
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
   }
 
   async function reset() {
     haptic();
     const res = await save(CATEGORIES);
-    if (res.error) toast(res.error, { error: true });
+    if (res.error) toast(apiErrorMessage(res, t), { error: true });
     else toast(t("settings.butikk.order.resetToast"));
   }
 
@@ -122,8 +123,7 @@ function StaleItemSection({ toast, t }) {
         method: "POST",
         body: JSON.stringify({ stale_item_days: days }),
       });
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (res.error) toast(res.error, { error: true });
+      if (res.error) toast(apiErrorMessage(res, t), { error: true });
     } catch {
       toast(t("shoppingList.toast.genericError"), { error: true });
     }
@@ -186,7 +186,11 @@ function StaleItemSection({ toast, t }) {
 
 function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
   const t = useTranslation();
+  const { lang } = useLanguage();
   const dragControls = useDragControls();
+  // Label only — `cat` itself stays canonical everywhere else in this file
+  // (the Reorder value, the saved order, clusterFor's lookup).
+  const label = translateCategoryName(cat, lang);
 
   return (
     <Reorder.Item
@@ -215,11 +219,11 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
           border: `2px solid ${clusterFor(cat).on}`,
         }}
       />
-      <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{cat}</span>
+      <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
       <button
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
-        aria-label={t("settings.butikk.order.moveUp", { category: cat })}
+        aria-label={t("settings.butikk.order.moveUp", { category: label })}
         title={t("settings.butikk.order.moveUpTitle")}
         style={reorderBtnStyle(index === 0)}
       >
@@ -228,7 +232,7 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
       <button
         onClick={() => onMove(index, 1)}
         disabled={index === total - 1}
-        aria-label={t("settings.butikk.order.moveDown", { category: cat })}
+        aria-label={t("settings.butikk.order.moveDown", { category: label })}
         title={t("settings.butikk.order.moveDownTitle")}
         style={reorderBtnStyle(index === total - 1)}
       >

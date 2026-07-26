@@ -105,7 +105,10 @@ export function AuthProvider({ children }) {
   async function login(username, password) {
     setExpiredReason(null);
     const { ok, data } = await rawLogin(username, password);
-    if (!ok) return { error: data.error || "Innlogging feilet" };
+    // Hand the whole error body back (string *and* code) rather than a
+    // pre-baked message — the screen translates it and supplies its own
+    // fallback wording. See src/lib/apiError.js.
+    if (!ok) return { error: data.error || null, code: data.code || null };
     completeAuth(data);
     return { error: null };
   }
@@ -113,7 +116,7 @@ export function AuthProvider({ children }) {
   async function register(fields) {
     setExpiredReason(null);
     const { ok, data } = await rawRegister(fields);
-    if (!ok) return { error: data.error || "Registrering feilet" };
+    if (!ok) return { error: data.error || null, code: data.code || null };
     completeAuth(data);
     return { error: null };
   }
@@ -121,7 +124,7 @@ export function AuthProvider({ children }) {
   async function loginWithGoogle(credential, listName) {
     setExpiredReason(null);
     const { ok, data } = await rawGoogleAuth(credential, listName);
-    if (!ok) return { error: data.error || "Google-innlogging feilet" };
+    if (!ok) return { error: data.error || null, code: data.code || null };
     completeAuth(data);
     return { error: null };
   }

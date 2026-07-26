@@ -10,6 +10,7 @@
 
 import { VERSION } from "../shared/version.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
+import { ERROR_MESSAGES_NB } from "../shared/errorCodes.js";
 import { buildPushHTTPRequest } from "@pushforge/builder";
 
 // Deployed Worker (API) version, imported from shared/version.js so it can't
@@ -993,6 +994,17 @@ const json = (data, status = 200, extra = {}) =>
     status, headers: { "Content-Type": "application/json", ...extra }
   });
 
+// Every error response carries a stable `code` alongside the human-readable
+// `error` string. The string stays exactly what it always was (canonical
+// Norwegian, from shared/errorCodes.js) so any client reading only `error`
+// is unaffected; the code is what a translating client maps to its own
+// wording. `detail` appends context to the message for the few errors that
+// carry a runtime value (e.g. a DB message) — never part of the code.
+const err = (code, status = 400, { detail = null, extra = {} } = {}) => {
+  const message = ERROR_MESSAGES_NB[code];
+  return json({ error: detail ? `${message}: ${detail}` : message, code }, status, extra);
+};
+
 // Parses a JSON request body, returning null on empty/malformed input so
 // callers can answer 400 instead of throwing an opaque 500.
 async function readJson(request) {
@@ -1411,10 +1423,10 @@ export default {
         "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
       ).bind(ip, windowStart).first();
       if (attempts >= LOGIN_MAX_ATTEMPTS) {
-        return json({ error: "For mange innloggingsforsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_LOGIN_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       const { username, password } = body;
       const row = await env.DB.prepare(
         "SELECT username, name, pass_hash, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
@@ -1425,7 +1437,7 @@ export default {
       if (!row || !ok) {
         await env.DB.prepare("INSERT INTO login_attempts (ip, created_at) VALUES (?1, ?2)")
           .bind(ip, Date.now()).run();
-        return json({ error: "Feil e-post eller passord" }, 401);
+        return err("BAD_CREDENTIALS", 401);
       }
       return json(await authResponse(row, env));
     }
@@ -1438,10 +1450,10 @@ export default {
     if (path === "/register" && method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!(await checkRateLimit(env, ip, "register"))) {
-        return json({ error: "For mange registreringsforsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_SIGNUP_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       // Recorded regardless of outcome below: account-creation *volume* is the
       // abuse vector here, not just guessing (unlike login_attempts, which
       // only counts failures).
@@ -1452,21 +1464,21 @@ export default {
       // is always the e-mail (see TODO #17) — there's no separate username
       // field to collect.
       const cleanName = sanitizeDisplayName(body.name);
-      if (!cleanName) return json({ error: "Skriv inn et navn" }, 400);
+      if (!cleanName) return err("ENTER_NAME", 400);
       if (!body.password || body.password.length < 8) {
-        return json({ error: "Passord må være minst 8 tegn" }, 400);
+        return err("PASSWORD_TOO_SHORT", 400);
       }
       const cleanEmail = (body.email || "").trim().toLowerCase();
       if (!isValidEmail(cleanEmail)) {
-        return json({ error: "Ugyldig e-post" }, 400);
+        return err("INVALID_EMAIL", 400);
       }
       if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
-        return json({ error: "Bot-verifisering feilet" }, 403);
+        return err("TURNSTILE_FAILED", 403);
       }
       const existingEmail = await env.DB.prepare(
         "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
       ).bind(cleanEmail).first();
-      if (existingEmail) return json({ error: "E-posten er allerede i bruk" }, 409);
+      if (existingEmail) return err("EMAIL_IN_USE", 409);
 
       const hash = await hashPassword(body.password);
       const listId = await createList(env, (body.list_name || "").trim() || null);
@@ -1487,9 +1499,9 @@ export default {
     if (path === "/auth/google" && method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       const payload = await verifyGoogleIdToken(body.credential);
-      if (!payload) return json({ error: "Google-innlogging feilet" }, 401);
+      if (!payload) return err("GOOGLE_SIGNIN_FAILED", 401);
       const email = payload.email.toLowerCase();
 
       let row = await env.DB.prepare(
@@ -1520,7 +1532,7 @@ export default {
 
       if (!row) {
         if (!(await checkRateLimit(env, ip, "register"))) {
-          return json({ error: "For mange registreringsforsøk. Prøv igjen senere." }, 429);
+          return err("TOO_MANY_SIGNUP_ATTEMPTS", 429);
         }
         await recordAttempt(env, ip, "register");
         // Username is always the e-mail (see TODO #17) — email is already
@@ -1546,14 +1558,14 @@ export default {
     if (path === "/forgot-password" && method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!(await checkRateLimit(env, ip, "forgot_password"))) {
-        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       await recordAttempt(env, ip, "forgot_password");
 
       if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
-        return json({ error: "Bot-verifisering feilet" }, 403);
+        return err("TURNSTILE_FAILED", 403);
       }
       // Always the same response regardless of whether the email matched, so
       // this endpoint can't be used to enumerate registered addresses.
@@ -1586,26 +1598,26 @@ export default {
     if (path === "/reset-password" && method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!(await checkRateLimit(env, ip, "forgot_password"))) {
-        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       if (!body.new_password || body.new_password.length < 8) {
-        return json({ error: "Passord må være minst 8 tegn" }, 400);
+        return err("PASSWORD_TOO_SHORT", 400);
       }
-      if (!body.token) return json({ error: "Ugyldig eller utløpt lenke" }, 400);
+      if (!body.token) return err("INVALID_OR_EXPIRED_LINK", 400);
 
       const tokenHash = await sha256Hex(body.token);
       const now = Date.now();
       const reset = await env.DB.prepare(
         "SELECT username FROM password_resets WHERE token_hash = ?1 AND expires_at > ?2"
       ).bind(tokenHash, now).first();
-      if (!reset) return json({ error: "Ugyldig eller utløpt lenke" }, 400);
+      if (!reset) return err("INVALID_OR_EXPIRED_LINK", 400);
 
       const userRow = await env.DB.prepare(
         "SELECT username, name, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(reset.username).first();
-      if (!userRow) return json({ error: "Fant ikke bruker" }, 404);
+      if (!userRow) return err("USER_NOT_FOUND", 404);
 
       const hash = await hashPassword(body.new_password);
       const newVersion = userRow.token_version + 1;
@@ -1621,7 +1633,7 @@ export default {
 
     // ===== AUTH REQUIRED BELOW =====
     const user = await requireAuth(request, env);
-    if (!user) return json({ error: "Ikke autorisert" }, 401);
+    if (!user) return err("UNAUTHORIZED", 401);
     const freshToken = await mintToken(user, env);
     // Sliding expiry: every authenticated response carries a freshly-minted
     // token so the session is extended no matter which endpoint is used (not
@@ -1630,6 +1642,9 @@ export default {
     // this header on that path.
     const authedJson = (data, status = 200, extra = {}) =>
       json(data, status, { "X-Refresh-Token": freshToken, ...extra });
+    // Error counterpart — same refresh-token header, err()'s { error, code } body.
+    const authedErr = (code, status = 400, opts = {}) =>
+      err(code, status, { ...opts, extra: { "X-Refresh-Token": freshToken, ...(opts.extra || {}) } });
 
     // ===== CHANGE PASSWORD =====
     if (path === "/change-password" && method === "POST") {
@@ -1642,13 +1657,13 @@ export default {
         "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
       ).bind(ip, windowStart).first();
       if (attempts >= LOGIN_MAX_ATTEMPTS) {
-        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       const { current_password, new_password } = body;
       if (!new_password || new_password.length < 8) {
-        return json({ error: "Nytt passord må være minst 8 tegn" }, 400);
+        return err("NEW_PASSWORD_TOO_SHORT", 400);
       }
       const row = await env.DB.prepare(
         "SELECT pass_hash, token_version FROM users WHERE username = ?1 COLLATE NOCASE"
@@ -1660,7 +1675,7 @@ export default {
         // current_password that's wrong. The frontend's api() wrapper treats
         // every 401 as an expired session and force-logs-out, so a 401 here
         // would eject the user on a simple typo instead of showing this error.
-        return json({ error: "Feil nåværende passord" }, 403);
+        return err("WRONG_CURRENT_PASSWORD", 403);
       }
       const newHash = await hashPassword(new_password);
       const newVersion = row.token_version + 1;
@@ -1684,9 +1699,9 @@ export default {
     // check is required.
     if (path === "/change-name" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const cleanName = sanitizeDisplayName(body.name);
-      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
+      if (!cleanName) return authedErr("ENTER_NAME", 400);
       await env.DB.prepare("UPDATE users SET name = ?1 WHERE username = ?2 COLLATE NOCASE")
         .bind(cleanName, user.username).run();
       return authedJson({ ok: true, name: cleanName });
@@ -1703,12 +1718,12 @@ export default {
         "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
       ).bind(ip, windowStart).first();
       if (attempts >= LOGIN_MAX_ATTEMPTS) {
-        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       const cleanEmail = (body.email || "").trim().toLowerCase();
-      if (!isValidEmail(cleanEmail)) return json({ error: "Ugyldig e-post" }, 400);
+      if (!isValidEmail(cleanEmail)) return err("INVALID_EMAIL", 400);
       const row = await env.DB.prepare(
         "SELECT pass_hash FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(user.username).first();
@@ -1717,12 +1732,12 @@ export default {
           .bind(ip, Date.now()).run();
         // 403, not 401 — see /change-password's note: the token is valid, the
         // supplied password is wrong, and api() force-logs-out on any 401.
-        return json({ error: "Feil passord" }, 403);
+        return err("WRONG_PASSWORD", 403);
       }
       const clash = await env.DB.prepare(
         "SELECT 1 FROM users WHERE (email = ?1 COLLATE NOCASE OR username = ?1 COLLATE NOCASE) AND username != ?2 COLLATE NOCASE"
       ).bind(cleanEmail, user.username).first();
-      if (clash) return json({ error: "E-posten er allerede i bruk av en annen konto" }, 409);
+      if (clash) return err("EMAIL_IN_USE_OTHER_ACCOUNT", 409);
       // Username always mirrors email (see TODO #17) — renaming cascades into
       // every other table that stores it by value, so this isn't a plain
       // single-column UPDATE. The caller's current JWT becomes stale the
@@ -1754,10 +1769,10 @@ export default {
         "SELECT COUNT(*) AS attempts FROM login_attempts WHERE ip = ?1 AND created_at >= ?2"
       ).bind(ip, windowStart).first();
       if (attempts >= LOGIN_MAX_ATTEMPTS) {
-        return json({ error: "For mange forsøk. Prøv igjen senere." }, 429);
+        return err("TOO_MANY_ATTEMPTS", 429);
       }
       const body = await readJson(request);
-      if (!body) return json({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return err("INVALID_REQUEST", 400);
       const row = await env.DB.prepare(
         "SELECT pass_hash FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(user.username).first();
@@ -1766,7 +1781,7 @@ export default {
           .bind(ip, Date.now()).run();
         // 403, not 401 — see /change-password's note: the token is valid, the
         // supplied password is wrong, and api() force-logs-out on any 401.
-        return json({ error: "Feil passord" }, 403);
+        return err("WRONG_PASSWORD", 403);
       }
 
       // Superadmin accounts can never be self-deleted, full stop — no count
@@ -1775,7 +1790,7 @@ export default {
       // no way to edit), so deleting the row is one-way: the only path back
       // is a developer editing that variable by hand.
       if (isSuperAdmin(user.username, env)) {
-        return json({ error: "Kan ikke slette en app-eier-konto" }, 400);
+        return err("CANNOT_DELETE_SUPERADMIN", 400);
       }
 
       let listDeleted = false;
@@ -1834,19 +1849,19 @@ export default {
     if (path === "/feedback" && method === "POST") {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!(await checkRateLimit(env, ip, "feedback"))) {
-        return authedJson({ error: "For mange tilbakemeldinger. Prøv igjen senere." }, 429);
+        return authedErr("TOO_MANY_FEEDBACK", 429);
       }
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       // Recorded regardless of outcome below, same as /register and
       // /forgot-password — request volume is the abuse vector, not just
       // successful sends.
       await recordAttempt(env, ip, "feedback");
       const message = (body.message || "").trim();
-      if (!message) return authedJson({ error: "Skriv en melding" }, 400);
-      if (message.length > 4000) return authedJson({ error: "Meldingen er for lang" }, 400);
+      if (!message) return authedErr("EMPTY_MESSAGE", 400);
+      if (message.length > 4000) return authedErr("MESSAGE_TOO_LONG", 400);
       if (!env.FEEDBACK_EMAIL) {
-        return authedJson({ error: "Tilbakemelding er ikke satt opp ennå" }, 500);
+        return authedErr("FEEDBACK_NOT_CONFIGURED", 500);
       }
       // Sender identity survives even through Resend's shared "from" address:
       // the username is in the subject line (visible in an inbox list without
@@ -1862,7 +1877,7 @@ export default {
         subject: `Tilbakemelding fra ${user.username}`,
         html: `<p><strong>${escapeHtml(user.username)}</strong> sendte en tilbakemelding fra Panhandle:</p><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
       });
-      if (!sent) return authedJson({ error: "Kunne ikke sende tilbakemelding. Prøv igjen senere." }, 502);
+      if (!sent) return authedErr("FEEDBACK_SEND_FAILED", 502);
       return authedJson({ ok: true });
     }
 
@@ -1872,18 +1887,18 @@ export default {
     // list to scope it against), so it's double-gated by isSuperAdmin like
     // /admin/metrics and DELETE /admin/users/{u} below.
     if (path === "/admin/owners" && method === "POST") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
-      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
+      if (!isSuperAdmin(user.username, env)) return authedErr("REQUIRES_SUPERADMIN", 403);
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const cleanEmail = (body.email || "").trim().toLowerCase();
-      if (!isValidEmail(cleanEmail)) return authedJson({ error: "Ugyldig e-post" }, 400);
+      if (!isValidEmail(cleanEmail)) return authedErr("INVALID_EMAIL", 400);
       const cleanName = sanitizeDisplayName(body.name);
-      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
+      if (!cleanName) return authedErr("ENTER_NAME", 400);
       const exists = await env.DB.prepare(
         "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
       ).bind(cleanEmail).first();
-      if (exists) return authedJson({ error: "E-posten er allerede i bruk" }, 409);
+      if (exists) return authedErr("EMAIL_IN_USE", 409);
       const password = genPassword();
       const hash = await hashPassword(password);
       const listId = await createList(env);
@@ -1897,7 +1912,7 @@ export default {
     // caller is superadmin, who sees every user in every list (needed for
     // the admin console's cross-household view).
     if (path === "/admin/users" && method === "GET") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
       const scoped = !isSuperAdmin(user.username, env);
       const { results } = await (scoped
         ? env.DB.prepare(
@@ -1918,17 +1933,17 @@ export default {
     // #90's "reset the superadmin's password" escalation path.
     const rpMatch = path.match(/^\/admin\/users\/([^/]+)\/reset-password$/);
     if (rpMatch && method === "POST") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
       const target = decodeURIComponent(rpMatch[1]);
       const row = await env.DB.prepare(
         "SELECT username, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
       const callerIsSuperAdmin = isSuperAdmin(user.username, env);
       if (!row || (!callerIsSuperAdmin && row.list_id !== user.list_id)) {
-        return authedJson({ error: "Fant ikke bruker" }, 404);
+        return authedErr("USER_NOT_FOUND", 404);
       }
       if (!callerIsSuperAdmin && isSuperAdmin(row.username, env)) {
-        return authedJson({ error: "Kan ikke nullstille passordet til en app-eier-konto" }, 403);
+        return authedErr("CANNOT_RESET_SUPERADMIN", 403);
       }
       const password = genPassword();
       const hash = await hashPassword(password);
@@ -1942,19 +1957,19 @@ export default {
     // Same list-scoping and superadmin-target guard as reset-password above.
     const flagMatch = path.match(/^\/admin\/users\/([^/]+)\/flags$/);
     if (flagMatch && method === "PATCH") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
       const target = decodeURIComponent(flagMatch[1]);
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const row = await env.DB.prepare(
         "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
       const callerIsSuperAdmin = isSuperAdmin(user.username, env);
       if (!row || (!callerIsSuperAdmin && row.list_id !== user.list_id)) {
-        return authedJson({ error: "Fant ikke bruker" }, 404);
+        return authedErr("USER_NOT_FOUND", 404);
       }
       if (!callerIsSuperAdmin && isSuperAdmin(row.username, env)) {
-        return authedJson({ error: "Kan ikke endre tilgangen til en app-eier-konto" }, 403);
+        return authedErr("CANNOT_CHANGE_SUPERADMIN", 403);
       }
       let newAdmin = row.is_admin, newOwner = row.is_owner;
       if (body.is_admin !== undefined) newAdmin = body.is_admin ? 1 : 0;
@@ -1964,14 +1979,14 @@ export default {
         const c = await env.DB.prepare(
           "SELECT COUNT(*) AS n FROM users WHERE is_admin = 1 AND list_id = ?1"
         ).bind(row.list_id).first();
-        if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne siste admin" }, 400);
+        if (c.n <= 1) return authedErr("LAST_ADMIN_REMOVE", 400);
       }
       // Never let a list lose its only owner.
       if (row.is_owner === 1 && newOwner === 0) {
         const c = await env.DB.prepare(
           "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
         ).bind(row.list_id).first();
-        if (c.n <= 1) return authedJson({ error: "Listen ville miste sin eneste eier" }, 400);
+        if (c.n <= 1) return authedErr("WOULD_LOSE_ONLY_OWNER", 400);
       }
       await env.DB.prepare(
         "UPDATE users SET is_admin = ?1, is_owner = ?2, token_version = token_version + 1 WHERE username = ?3 COLLATE NOCASE"
@@ -1998,23 +2013,23 @@ export default {
     // and only then resends the request with that flag set.
     const adminDelMatch = path.match(/^\/admin\/users\/([^/]+)$/);
     if (adminDelMatch && method === "DELETE") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
-      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
+      if (!isSuperAdmin(user.username, env)) return authedErr("REQUIRES_SUPERADMIN", 403);
       const target = decodeURIComponent(adminDelMatch[1]);
       const body = await readJson(request);
       const row = await env.DB.prepare(
         "SELECT username, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
-      if (!row) return authedJson({ error: "Fant ikke bruker" }, 404);
+      if (!row) return authedErr("USER_NOT_FOUND", 404);
       // Same unconditional guard as DELETE /account's self-delete path —
       // superadmins can't delete each other's accounts either, even here on
       // the superadmin-only force-delete endpoint. See that guard's comment.
       if (isSuperAdmin(row.username, env)) {
-        return authedJson({ error: "Kan ikke slette en app-eier-konto" }, 400);
+        return authedErr("CANNOT_DELETE_SUPERADMIN", 400);
       }
       if (row.is_admin === 1) {
         const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1").first();
-        if (c.n <= 1) return authedJson({ error: "Kan ikke slette siste admin" }, 400);
+        if (c.n <= 1) return authedErr("LAST_ADMIN_DELETE", 400);
       }
       let listDeleted = false;
       if (row.is_owner === 1) {
@@ -2022,7 +2037,7 @@ export default {
           "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
         ).bind(row.list_id).first();
         if (c.n <= 1) {
-          if (!body?.delete_list) return authedJson({ error: "Listen ville miste sin eneste eier" }, 400);
+          if (!body?.delete_list) return authedErr("WOULD_LOSE_ONLY_OWNER", 400);
           listDeleted = true;
           // Children before parents — same cascade as DELETE /account's
           // last-owner self-deletion path (see its comment for why each
@@ -2059,8 +2074,8 @@ export default {
     // Site-wide usage metrics, across all lists (not just the caller's own).
     // Gated beyond is_admin by isSuperAdmin — see its definition above.
     if (path === "/admin/metrics" && method === "GET") {
-      if (!user.is_admin) return authedJson({ error: "Krever admin" }, 403);
-      if (!isSuperAdmin(user.username, env)) return authedJson({ error: "Kun tilgjengelig for app-eier" }, 403);
+      if (!user.is_admin) return authedErr("REQUIRES_ADMIN", 403);
+      if (!isSuperAdmin(user.username, env)) return authedErr("REQUIRES_SUPERADMIN", 403);
 
       const [
         listCount, userCount, roleCounts,
@@ -2139,21 +2154,21 @@ export default {
 
     // Add a plain member to the caller's list (owner only). Capped at 10.
     if (path === "/list-users" && method === "POST") {
-      if (!user.is_owner) return authedJson({ error: "Krever eier" }, 403);
+      if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const cleanEmail = (body.email || "").trim().toLowerCase();
-      if (!isValidEmail(cleanEmail)) return authedJson({ error: "Ugyldig e-post" }, 400);
+      if (!isValidEmail(cleanEmail)) return authedErr("INVALID_EMAIL", 400);
       const cleanName = sanitizeDisplayName(body.name);
-      if (!cleanName) return authedJson({ error: "Skriv inn et navn" }, 400);
+      if (!cleanName) return authedErr("ENTER_NAME", 400);
       const c = await env.DB.prepare(
         "SELECT COUNT(*) AS n FROM users WHERE list_id = ?1"
       ).bind(user.list_id).first();
-      if (c.n >= 10) return authedJson({ error: "Listen er full (maks 10 brukere)" }, 400);
+      if (c.n >= 10) return authedErr("LIST_FULL", 400);
       const exists = await env.DB.prepare(
         "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
       ).bind(cleanEmail).first();
-      if (exists) return authedJson({ error: "E-posten er allerede i bruk" }, 409);
+      if (exists) return authedErr("EMAIL_IN_USE", 409);
       const password = genPassword();
       const hash = await hashPassword(password);
       // is_admin/is_owner are hardcoded 0 — never taken from the request body,
@@ -2167,19 +2182,19 @@ export default {
     // Remove a member from the caller's list (owner only).
     const luDelMatch = path.match(/^\/list-users\/([^/]+)$/);
     if (luDelMatch && method === "DELETE") {
-      if (!user.is_owner) return authedJson({ error: "Krever eier" }, 403);
+      if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
       const target = decodeURIComponent(luDelMatch[1]);
       const row = await env.DB.prepare(
         "SELECT username, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
       ).bind(target).first();
       if (!row || row.list_id !== user.list_id) {
-        return authedJson({ error: "Fant ikke bruker på listen" }, 404);
+        return authedErr("USER_NOT_IN_LIST", 404);
       }
       if (row.is_owner === 1) {
         const c = await env.DB.prepare(
           "SELECT COUNT(*) AS n FROM users WHERE is_owner = 1 AND list_id = ?1"
         ).bind(user.list_id).first();
-        if (c.n <= 1) return authedJson({ error: "Kan ikke fjerne listens eneste eier" }, 400);
+        if (c.n <= 1) return authedErr("LAST_OWNER_REMOVE", 400);
       }
       // A push subscription is a live credential, not historical data like
       // added_by/responsible — a removed member shouldn't keep receiving
@@ -2226,7 +2241,7 @@ export default {
 
     if (path === "/list" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const { name, category, notes, qty, exact } = body;
       // "Legg til nøyaktig som skrevet" means verbatim — skip the gluten-free
       // extraction and auto-capitalization normally applied to typed names.
@@ -2239,7 +2254,7 @@ export default {
         clean = capitalizeName(stripped);
         gf = gfFlag;
       }
-      if (!clean) return authedJson({ error: "Tomt navn" }, 400);
+      if (!clean) return authedErr("EMPTY_NAME", 400);
       const addQty = Math.max(1, parseInt(qty, 10) || 1);
       // A gluten-free marker pulled out of the name is recorded as a "Glutenfri"
       // note (regardless of how it was typed — "gf", "GF", "glutenfri"), without
@@ -2299,12 +2314,12 @@ export default {
     const patchMatch = path.match(/^\/list\/(\d+)$/);
     if (patchMatch && method === "PATCH") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const { qty, notes, category, name, important } = body;
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(patchMatch[1], user.list_id).first();
-      if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
+      if (!row) return authedErr("ITEM_NOT_FOUND", 404);
       if (important !== undefined) {
         await env.DB.prepare("UPDATE list_items SET important = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(important ? 1 : 0, patchMatch[1], user.list_id).run();
@@ -2324,11 +2339,11 @@ export default {
       }
       if (name !== undefined) {
         const cleanName = capitalizeName(name);
-        if (!cleanName) return authedJson({ error: "Tomt navn" }, 400);
+        if (!cleanName) return authedErr("EMPTY_NAME", 400);
         const clash = await env.DB.prepare(
           "SELECT id FROM item_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
         ).bind(cleanName, user.list_id, row.catalogue_id).first();
-        if (clash) return authedJson({ error: "En vare med dette navnet finnes allerede" }, 400);
+        if (clash) return authedErr("ITEM_NAME_EXISTS", 400);
         await env.DB.prepare("UPDATE item_catalogue SET name = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(cleanName, row.catalogue_id, user.list_id).run();
       }
@@ -2343,7 +2358,7 @@ export default {
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(delCatMatch[1], user.list_id).first();
-      if (!row) return authedJson({ error: "Fant ikke vare" }, 404);
+      if (!row) return authedErr("ITEM_NOT_FOUND", 404);
       await env.DB.prepare("DELETE FROM item_catalogue WHERE id = ?1 AND list_id = ?2")
         .bind(row.catalogue_id, user.list_id).run();
       return authedJson({ ok: true });
@@ -2429,7 +2444,7 @@ export default {
 
     if (path === "/category-order" && method === "POST") {
       const body = await readJson(request);
-      if (!body || !Array.isArray(body.order)) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body || !Array.isArray(body.order)) return authedErr("INVALID_REQUEST", 400);
       // Normalise before storing so the row set is always a full, valid,
       // duplicate-free ordering regardless of what the client sent.
       const order = normalizeCategoryOrder(body.order);
@@ -2474,15 +2489,15 @@ export default {
     // doesn't silently merge into an existing meal's row.
     if (path === "/meals" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const clean = capitalizeName(body.name);
-      if (!clean) return authedJson({ error: "Tomt navn" }, 400);
+      if (!clean) return authedErr("EMPTY_NAME", 400);
       const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
       const labelsJson = JSON.stringify(sanitizeLabels(body.labels));
       const clash = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
       ).bind(clean, user.list_id).first();
-      if (clash) return authedJson({ error: "Et måltid med dette navnet finnes allerede" }, 400);
+      if (clash) return authedErr("MEAL_NAME_EXISTS", 400);
       const meal = await env.DB.prepare(
         "INSERT INTO meal_catalogue (name, list_id, ingredients, labels) VALUES (?1, ?2, ?3, ?4) RETURNING id"
       ).bind(clean, user.list_id, ingredientsJson, labelsJson).first();
@@ -2492,18 +2507,18 @@ export default {
     const mealPatchMatch = path.match(/^\/meals\/(\d+)$/);
     if (mealPatchMatch && method === "PATCH") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const meal = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE id = ?1 AND list_id = ?2"
       ).bind(mealPatchMatch[1], user.list_id).first();
-      if (!meal) return authedJson({ error: "Fant ikke måltid" }, 404);
+      if (!meal) return authedErr("MEAL_NOT_FOUND", 404);
       if (body.name !== undefined) {
         const clean = capitalizeName(body.name);
-        if (!clean) return authedJson({ error: "Tomt navn" }, 400);
+        if (!clean) return authedErr("EMPTY_NAME", 400);
         const clash = await env.DB.prepare(
           "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
         ).bind(clean, user.list_id, meal.id).first();
-        if (clash) return authedJson({ error: "Et måltid med dette navnet finnes allerede" }, 400);
+        if (clash) return authedErr("MEAL_NAME_EXISTS", 400);
         await env.DB.prepare("UPDATE meal_catalogue SET name = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(clean, meal.id, user.list_id).run();
       }
@@ -2556,13 +2571,13 @@ export default {
 
     if (path === "/plan" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const { plan_date, meal_name, responsible, ingredients } = body;
       if (!plan_date || !/^\d{4}-\d{2}-\d{2}$/.test(plan_date)) {
-        return authedJson({ error: "Ugyldig dato" }, 400);
+        return authedErr("INVALID_DATE", 400);
       }
       // Require at least one of meal_name or responsible to be set.
-      if (!meal_name && !responsible) return authedJson({ error: "Mangler måltid eller ansvarlig" }, 400);
+      if (!meal_name && !responsible) return authedErr("MISSING_MEAL_OR_RESPONSIBLE", 400);
 
       // Also used to bump usage stats only when the meal is actually new/changed
       // (below), and now to preserve whichever field the caller omits: `meal_name`
@@ -2643,10 +2658,10 @@ export default {
 
     if (path === "/recurring" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const { day_of_week, responsible } = body;
       if (typeof day_of_week !== "number" || day_of_week < 0 || day_of_week > 6)
-        return authedJson({ error: "Ugyldig dag" }, 400);
+        return authedErr("INVALID_DAY", 400);
       try {
         if (!responsible) {
           await env.DB.prepare(
@@ -2660,7 +2675,7 @@ export default {
           `).bind(user.list_id, day_of_week, responsible).run();
         }
       } catch (e) {
-        return authedJson({ error: "DB-feil: " + (e?.message ?? String(e)) }, 500);
+        return authedErr("DB_ERROR", 500, { detail: e?.message ?? String(e) });
       }
       return authedJson({ ok: true });
     }
@@ -2679,7 +2694,7 @@ export default {
     if (path === "/push/subscribe" && method === "POST") {
       const body = await readJson(request);
       if (!body?.endpoint || !body?.keys?.p256dh || !body?.keys?.auth) {
-        return authedJson({ error: "Ugyldig abonnement" }, 400);
+        return authedErr("INVALID_SUBSCRIPTION", 400);
       }
       // The reminder columns (meal/weekly enabled+time) are per-device and
       // intentionally NOT touched here: on first insert they take their
@@ -2700,7 +2715,7 @@ export default {
     // handler when a browser silently rotates a subscription.
     if (path === "/push/subscribe" && method === "DELETE") {
       const body = await readJson(request);
-      if (!body?.endpoint) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body?.endpoint) return authedErr("INVALID_REQUEST", 400);
       await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1")
         .bind(body.endpoint).run();
       return authedJson({ ok: true });
@@ -2723,10 +2738,10 @@ export default {
 
     if (path === "/notification-settings" && method === "POST") {
       const body = await readJson(request);
-      if (!body) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
       const staleItemDays = Number(body.stale_item_days);
       if (!Number.isInteger(staleItemDays) || staleItemDays < STALE_ITEM_DAYS_MIN || staleItemDays > STALE_ITEM_DAYS_MAX) {
-        return authedJson({ error: "Ugyldig antall dager" }, 400);
+        return authedErr("INVALID_DAY_COUNT", 400);
       }
       // Only stale_item_days is written; the reminder columns still exist on
       // this table (expand/contract — not yet dropped) but are no longer read
@@ -2766,14 +2781,14 @@ export default {
 
     if (path === "/push/reminder-settings" && method === "POST") {
       const body = await readJson(request);
-      if (!body?.endpoint) return authedJson({ error: "Ugyldig forespørsel" }, 400);
+      if (!body?.endpoint) return authedErr("INVALID_REQUEST", 400);
       // 15-minute increments only, matching the cron's check granularity —
       // any other value would just never fire.
       if (!REMINDER_TIME_RE.test(body.meal_reminder_time || "")) {
-        return authedJson({ error: "Ugyldig tidspunkt" }, 400);
+        return authedErr("INVALID_TIME", 400);
       }
       if (!REMINDER_TIME_RE.test(body.weekly_reminder_time || "")) {
-        return authedJson({ error: "Ugyldig tidspunkt" }, 400);
+        return authedErr("INVALID_TIME", 400);
       }
       // Updates only this device's own subscription row (scoped to the
       // caller's list). A no-op if the device isn't subscribed — the
@@ -2790,7 +2805,7 @@ export default {
         body.endpoint, user.list_id
       ).run();
       if (res.meta.changes === 0) {
-        return authedJson({ error: "Ingen aktiv varsling på denne enheten" }, 404);
+        return authedErr("NO_ACTIVE_SUBSCRIPTION", 404);
       }
       return authedJson({ ok: true });
     }
@@ -2810,7 +2825,7 @@ export default {
         "SELECT 1 FROM notification_state WHERE list_id = ?1 AND type = 'ping' AND last_notified_at > datetime('now', '-2 minutes')"
       ).bind(user.list_id).first();
       if (recent) {
-        return authedJson({ error: "Vent litt før du pinger igjen" }, 429);
+        return authedErr("PING_COOLDOWN", 429);
       }
       await env.DB.prepare(`
         INSERT INTO notification_state (list_id, type, last_notified_at) VALUES (?1, 'ping', datetime('now'))
@@ -2829,7 +2844,7 @@ export default {
       return authedJson({ ok: true });
     }
 
-    return authedJson({ error: "Not found" }, 404);
+    return authedErr("NOT_FOUND", 404);
   },
 
   // Cron-driven (see [triggers] in wrangler.toml). Thin wrapper so the actual

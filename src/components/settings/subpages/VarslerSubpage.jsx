@@ -6,6 +6,7 @@ import { Card, Switch, Input } from "../../../design-system/index.js";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 // The server's REMINDER_TIME_RE only accepts :00/:15/:30/:45 (see
 // worker/index.js), but a desktop <input type="time"> lets you type any
@@ -79,8 +80,7 @@ export function VarslerSubpage() {
           weekly_reminder_time: next.weeklyReminderTime,
         }),
       });
-      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (res.error) toast(res.error, { error: true });
+      if (res.error) toast(apiErrorMessage(res, t), { error: true });
     } catch {
       toast(t("shoppingList.toast.genericError"), { error: true });
     }

@@ -1,6 +1,69 @@
 // English strings — same keys as nb.js. See that file for the namespacing
 // convention.
 export const en = {
+
+  // Server error responses, keyed by the code worker/index.js returns
+  // (shared/errorCodes.js). The nb side derives its copies from that same
+  // file; these are the translations.
+  "error.INVALID_REQUEST": "Invalid request",
+  "error.NOT_FOUND": "Not found",
+  "error.UNAUTHORIZED": "Not authorised",
+  "error.DB_ERROR": "Database error",
+
+  "error.BAD_CREDENTIALS": "Wrong email or password",
+  "error.WRONG_PASSWORD": "Wrong password",
+  "error.WRONG_CURRENT_PASSWORD": "Wrong current password",
+  "error.GOOGLE_SIGNIN_FAILED": "Google sign-in failed",
+  "error.TURNSTILE_FAILED": "Bot check failed",
+  "error.INVALID_EMAIL": "Invalid email",
+  "error.EMAIL_IN_USE": "That email is already in use",
+  "error.EMAIL_IN_USE_OTHER_ACCOUNT": "That email is already in use by another account",
+  "error.PASSWORD_TOO_SHORT": "The password must be at least 8 characters",
+  "error.NEW_PASSWORD_TOO_SHORT": "The new password must be at least 8 characters",
+  "error.INVALID_OR_EXPIRED_LINK": "Invalid or expired link",
+
+  "error.TOO_MANY_LOGIN_ATTEMPTS": "Too many sign-in attempts. Try again later.",
+  "error.TOO_MANY_SIGNUP_ATTEMPTS": "Too many sign-up attempts. Try again later.",
+  "error.TOO_MANY_ATTEMPTS": "Too many attempts. Try again later.",
+  "error.TOO_MANY_FEEDBACK": "Too much feedback sent. Try again later.",
+  "error.PING_COOLDOWN": "Wait a moment before pinging again",
+
+  "error.REQUIRES_ADMIN": "Requires admin",
+  "error.REQUIRES_OWNER": "Requires owner",
+  "error.REQUIRES_SUPERADMIN": "Only available to the app owner",
+  "error.CANNOT_DELETE_SUPERADMIN": "An app-owner account can't be deleted",
+  "error.CANNOT_RESET_SUPERADMIN": "An app-owner account's password can't be reset",
+  "error.CANNOT_CHANGE_SUPERADMIN": "An app-owner account's access can't be changed",
+
+  "error.USER_NOT_FOUND": "User not found",
+  "error.USER_NOT_IN_LIST": "That user isn't on the list",
+  "error.LIST_FULL": "The list is full (max 10 users)",
+  "error.LAST_ADMIN_DELETE": "The last admin can't be deleted",
+  "error.LAST_ADMIN_REMOVE": "The last admin can't be removed",
+  "error.LAST_OWNER_REMOVE": "The list's only owner can't be removed",
+  "error.WOULD_LOSE_ONLY_OWNER": "The list would lose its only owner",
+
+  "error.EMPTY_NAME": "Empty name",
+  "error.ENTER_NAME": "Enter a name",
+  "error.ITEM_NOT_FOUND": "Item not found",
+  "error.ITEM_NAME_EXISTS": "An item with that name already exists",
+
+  "error.MEAL_NOT_FOUND": "Meal not found",
+  "error.MEAL_NAME_EXISTS": "A meal with that name already exists",
+  "error.MISSING_MEAL_OR_RESPONSIBLE": "Missing a meal or someone responsible",
+  "error.INVALID_DATE": "Invalid date",
+  "error.INVALID_DAY": "Invalid day",
+
+  "error.INVALID_TIME": "Invalid time",
+  "error.INVALID_DAY_COUNT": "Invalid number of days",
+
+  "error.INVALID_SUBSCRIPTION": "Invalid subscription",
+  "error.NO_ACTIVE_SUBSCRIPTION": "No active notifications on this device",
+
+  "error.EMPTY_MESSAGE": "Write a message",
+  "error.MESSAGE_TOO_LONG": "The message is too long",
+  "error.FEEDBACK_NOT_CONFIGURED": "Feedback isn't set up yet",
+  "error.FEEDBACK_SEND_FAILED": "Couldn't send the feedback. Try again later.",
   "shoppingList.addInput.placeholder": 'Add an item – e.g. "2 milk"',
   "shoppingList.addInput.exactOption": 'Add "{value}" exactly as typed',
   "shoppingList.pendingWrites.tooltip": "Changes saved on this device – will send once you're back online",
@@ -338,6 +401,9 @@ export const en = {
   "auth.togglePasswordAria": "Show or hide the password",
   "auth.or": "or",
   "auth.networkError": "Network error",
+  "auth.login.failed": "Sign-in failed",
+  "auth.signup.failed": "Sign-up failed",
+  "auth.google.failed": "Google sign-in failed",
   "auth.sessionExpired": "Your session expired, or the password was changed on another device. Please sign in again.",
   "auth.login.submit": "Sign in",
   "auth.login.busy": "Signing in...",
@@ -371,4 +437,56 @@ export const en = {
   "auth.credentials.copied": "Invitation copied",
   "auth.credentials.copyFailed": "Couldn't copy – select and copy the text manually",
   "auth.credentials.invite": "You've been added to Panhandle! Sign in at https://shopping.mohibb.com\nEmail (username): {username}\nPassword: {password}\n(Change your password once you've signed in.)",
+
+  "common.undo": "Undo",
+  "common.confirm.defaultTitle": "Are you sure?",
+  "common.confirm.defaultLabel": "Confirm",
+  "common.loading": "Loading...",
+  "common.saveFailed": "Couldn't save – check your connection",
+
+  "importantInfo.title": "Mark as important",
+  "importantInfo.swipe": "Swipe an item to the right to mark it as important.",
+  "importantInfo.tap": "Or tap the small circle at the top left of the icon.",
+
+  "feedback.title": "Send feedback",
+  "feedback.intro": "Found a bug, or got an idea for something that's missing? Write it here.",
+  "feedback.label": "Feedback",
+  "feedback.placeholder": "Write your feedback here...",
+  "feedback.send": "Send",
+  "feedback.empty": "Write a message",
+  "feedback.thanks": "Thanks for the feedback!",
+
+  "installBanner.text": "Install Panhandle on your home screen for quicker access.",
+  "installBanner.install": "Install",
+  "installBanner.iosBefore": "Add Panhandle to your home screen: tap the share icon ",
+  "installBanner.iosStrong": "⎋",
+  "installBanner.iosAfter": ' and choose "Add to Home Screen".',
+
+  "changelog.title": "What's new",
+  "changelog.loadFailed": "Couldn't load the changelog.",
+  "changelog.seeFull": "See the full changelog",
+
+  "deploy.updatedTo": "Updated to v{version}",
+  "deploy.whatsNew": "What's new?",
+  "deploy.newVersion": "A new version is available",
+  "deploy.reload": "Reload",
+
+  "push.unsupported": "Your browser doesn't support push notifications",
+  "push.notConfigured": "Push notifications aren't set up on the server yet",
+  "push.permissionDenied": "Notification permission wasn't granted",
+  "push.subscribeFailed": "Couldn't turn on notifications",
+
+  "category.produce": "Fruit and vegetables",
+  "category.bakery": "Bread and bakery",
+  "category.dairy": "Dairy",
+  "category.meat": "Meat and fish",
+  "category.spice": "Ingredients and spices",
+  "category.frozen": "Frozen and ready meals",
+  "category.grains": "Grains and pasta",
+  "category.snacks": "Snacks and sweets",
+  "category.drinks": "Drinks",
+  "category.household": "Household",
+  "category.care": "Health and personal care",
+  "category.pet": "Pet supplies",
+  "category.other": "Other",
 };

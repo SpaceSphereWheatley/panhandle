@@ -4,6 +4,7 @@ import { Input, Button } from "../design-system/index.js";
 import { GoogleSignIn } from "./GoogleSignIn.jsx";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 export function LoginScreen({ onSignup, onForgot }) {
   const t = useTranslation();
@@ -18,9 +19,8 @@ export function LoginScreen({ onSignup, onForgot }) {
     setError("");
     setBusy(true);
     try {
-      const { error } = await login(username.trim(), password);
-      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (error) setError(error);
+      const res = await login(username.trim(), password);
+      if (res.error || res.code) setError(apiErrorMessage(res, t) || t("auth.login.failed"));
     } catch {
       setError(t("auth.networkError"));
     } finally {
@@ -32,9 +32,8 @@ export function LoginScreen({ onSignup, onForgot }) {
     setError("");
     setBusy(true);
     try {
-      const { error } = await loginWithGoogle(credential);
-      // TODO(i18n): error is a raw server string (worker/index.js), not run through t() — phase 2+.
-      if (error) setError(error);
+      const res = await loginWithGoogle(credential);
+      if (res.error || res.code) setError(apiErrorMessage(res, t) || t("auth.google.failed"));
     } catch {
       setError(t("auth.networkError"));
     } finally {

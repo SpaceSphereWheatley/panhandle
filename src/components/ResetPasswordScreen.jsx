@@ -4,6 +4,7 @@ import { rawResetPassword } from "../lib/api.js";
 import { Input, Button } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 export function ResetPasswordScreen({ token, onDone }) {
   const t = useTranslation();
@@ -27,8 +28,7 @@ export function ResetPasswordScreen({ token, onDone }) {
     try {
       const { ok, data } = await rawResetPassword(token, password);
       if (!ok) {
-        // TODO(i18n): data.error is a raw server string (worker/index.js), not run through t() — phase 2+.
-        setError(data.error || t("auth.reset.failed"));
+        setError(apiErrorMessage(data, t) || t("auth.reset.failed"));
         return;
       }
       completeAuth(data);

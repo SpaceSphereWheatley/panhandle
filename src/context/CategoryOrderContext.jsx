@@ -2,6 +2,8 @@ import { createContext, useContext, useCallback, useEffect, useState } from "rea
 import { api } from "../lib/api.js";
 import { useAuth } from "./AuthContext.jsx";
 import { CATEGORIES, normalizeCategoryOrder } from "../../shared/categories.js";
+import { useTranslation } from "./LanguageContext.jsx";
+import { apiErrorMessage } from "../lib/apiError.js";
 
 const CategoryOrderContext = createContext(null);
 
@@ -13,6 +15,7 @@ const CategoryOrderContext = createContext(null);
 // order. Loaded once on login and after a save; the order changes rarely, so
 // there's no polling.
 export function CategoryOrderProvider({ children }) {
+  const t = useTranslation();
   const { token } = useAuth();
   const [order, setOrder] = useState(CATEGORIES);
 
@@ -40,11 +43,11 @@ export function CategoryOrderProvider({ children }) {
     try {
       res = await api("/category-order", { method: "POST", body: JSON.stringify({ order: normalized }) });
     } catch {
-      return { error: "Kunne ikke lagre – sjekk nettforbindelsen" };
+      return { error: t("common.saveFailed") };
     }
-    if (res?.error) return { error: res.error };
+    if (res?.error) return { error: apiErrorMessage(res, t) };
     return {};
-  }, []);
+  }, [t]);
 
   return (
     <CategoryOrderContext.Provider value={{ order, refresh, save }}>

@@ -2,7 +2,13 @@
 // key backing the --cluster-<key>-bg/-on tokens in
 // src/design-system/tokens/clusters.css. Keep in sync with CATEGORIES, same
 // convention CLAUDE.md documents for CATEGORIES itself.
-const CLUSTER_KEYS = {
+//
+// Exported because it doubles as the app's only *stable, language-neutral* id
+// per category: the canonical Norwegian CATEGORIES string is a literal data
+// key (clusterFor, category_order, worker-side validation all match on it),
+// so it can't be translated — but it can be mapped through these ids to a
+// display label. See src/lib/i18n/categoryNames.js.
+export const CLUSTER_KEYS = {
   "Frukt og grønt": "produce",
   "Brød og bakevarer": "bakery",
   "Meieriprodukter": "dairy",

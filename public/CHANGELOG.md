@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.47.0] — 2026-07-26
+
+### Added
+- **Error messages are translated now too.** Anything the server told you —
+  "wrong email or password", "the list is full", "too many attempts" — used to
+  come back in Norwegian no matter which language the app was set to. All 50 of
+  those messages now follow your language. This was the last untranslated part
+  of the app.
+
+### Changed
+- Meal names and typed-in ingredients stay as you wrote them, in whichever
+  language you typed them. There's nothing to translate them against, and
+  guessing would be worse than leaving them alone — so that's now a settled
+  decision rather than an open one.
+
+## [1.46.0] — 2026-07-26
+
+### Added
+- **Aisle names are now translated.** Switching to English translates the
+  category names too — "Frukt og grønt" shows as "Fruit and vegetables" in the
+  item editor's category picker and in Butikkoppsett's aisle-order list. Your
+  saved aisle order is untouched by this; only the words on screen change.
+- **The last Norwegian bits of shared chrome are translated.** Confirmation
+  dialogs' Cancel button (it stayed Norwegian even inside otherwise-translated
+  dialogs), the "Undo" button on toasts, the feedback form, the "what's new"
+  dialog, the install banner and the important-items explainer all follow the
+  language now.
+
+### Not yet translated
+- Meal names and typed-in ingredients, the changelog's own text, and error
+  messages that come back from the server.
+
 ## [1.45.0] — 2026-07-26
 
 ### Added
