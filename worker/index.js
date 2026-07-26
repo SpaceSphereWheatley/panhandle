@@ -10,7 +10,7 @@
 
 import { VERSION } from "../shared/version.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
-import { ERROR_MESSAGES_NB } from "../shared/errorCodes.js";
+import { ERROR_MESSAGES_EN } from "../shared/errorCodes.js";
 import { buildPushHTTPRequest } from "@pushforge/builder";
 
 // Deployed Worker (API) version, imported from shared/version.js so it can't
@@ -1001,7 +1001,7 @@ const json = (data, status = 200, extra = {}) =>
 // wording. `detail` appends context to the message for the few errors that
 // carry a runtime value (e.g. a DB message) — never part of the code.
 const err = (code, status = 400, { detail = null, extra = {} } = {}) => {
-  const message = ERROR_MESSAGES_NB[code];
+  const message = ERROR_MESSAGES_EN[code];
   return json({ error: detail ? `${message}: ${detail}` : message, code }, status, extra);
 };
 

@@ -1,69 +1,29 @@
-// English strings — same keys as nb.js. See that file for the namespacing
-// convention.
+// English strings — the authored source dictionary. Flat dot-namespaced keys,
+// one namespace per wired-up component or feature area. Covers the whole UI:
+// the shopping list (shoppingList/itemCard/suggestions/itemEdit), meals, the
+// app shell, settings, the auth screens, the shared confirm/toast/modal
+// chrome, the category display labels, and the server's error responses
+// (error.*), plus a small shared common.* for button words that repeat
+// everywhere.
+//
+// This is the base language: translate() falls back here for a key missing
+// from another dictionary, and nb.js holds the translations of these strings.
+// Deliberately untranslated in either direction: meal names and free-typed
+// ingredients, and CHANGELOG.md's rendered content (see CLAUDE.md's Language
+// support section).
+import { ERROR_MESSAGES_EN } from "../../../../shared/errorCodes.js";
+
+// The error.* entries are derived from shared/errorCodes.js rather than
+// restated here: that file is what worker/index.js actually answers with, so
+// a hand-copied set would be 50 strings free to drift out of sync with the
+// real responses. nb.js writes its translations out by hand.
+const errorEntries = Object.fromEntries(
+  Object.entries(ERROR_MESSAGES_EN).map(([code, message]) => [`error.${code}`, message])
+);
+
 export const en = {
+  ...errorEntries,
 
-  // Server error responses, keyed by the code worker/index.js returns
-  // (shared/errorCodes.js). The nb side derives its copies from that same
-  // file; these are the translations.
-  "error.INVALID_REQUEST": "Invalid request",
-  "error.NOT_FOUND": "Not found",
-  "error.UNAUTHORIZED": "Not authorised",
-  "error.DB_ERROR": "Database error",
-
-  "error.BAD_CREDENTIALS": "Wrong email or password",
-  "error.WRONG_PASSWORD": "Wrong password",
-  "error.WRONG_CURRENT_PASSWORD": "Wrong current password",
-  "error.GOOGLE_SIGNIN_FAILED": "Google sign-in failed",
-  "error.TURNSTILE_FAILED": "Bot check failed",
-  "error.INVALID_EMAIL": "Invalid email",
-  "error.EMAIL_IN_USE": "That email is already in use",
-  "error.EMAIL_IN_USE_OTHER_ACCOUNT": "That email is already in use by another account",
-  "error.PASSWORD_TOO_SHORT": "The password must be at least 8 characters",
-  "error.NEW_PASSWORD_TOO_SHORT": "The new password must be at least 8 characters",
-  "error.INVALID_OR_EXPIRED_LINK": "Invalid or expired link",
-
-  "error.TOO_MANY_LOGIN_ATTEMPTS": "Too many sign-in attempts. Try again later.",
-  "error.TOO_MANY_SIGNUP_ATTEMPTS": "Too many sign-up attempts. Try again later.",
-  "error.TOO_MANY_ATTEMPTS": "Too many attempts. Try again later.",
-  "error.TOO_MANY_FEEDBACK": "Too much feedback sent. Try again later.",
-  "error.PING_COOLDOWN": "Wait a moment before pinging again",
-
-  "error.REQUIRES_ADMIN": "Requires admin",
-  "error.REQUIRES_OWNER": "Requires owner",
-  "error.REQUIRES_SUPERADMIN": "Only available to the app owner",
-  "error.CANNOT_DELETE_SUPERADMIN": "An app-owner account can't be deleted",
-  "error.CANNOT_RESET_SUPERADMIN": "An app-owner account's password can't be reset",
-  "error.CANNOT_CHANGE_SUPERADMIN": "An app-owner account's access can't be changed",
-
-  "error.USER_NOT_FOUND": "User not found",
-  "error.USER_NOT_IN_LIST": "That user isn't on the list",
-  "error.LIST_FULL": "The list is full (max 10 users)",
-  "error.LAST_ADMIN_DELETE": "The last admin can't be deleted",
-  "error.LAST_ADMIN_REMOVE": "The last admin can't be removed",
-  "error.LAST_OWNER_REMOVE": "The list's only owner can't be removed",
-  "error.WOULD_LOSE_ONLY_OWNER": "The list would lose its only owner",
-
-  "error.EMPTY_NAME": "Empty name",
-  "error.ENTER_NAME": "Enter a name",
-  "error.ITEM_NOT_FOUND": "Item not found",
-  "error.ITEM_NAME_EXISTS": "An item with that name already exists",
-
-  "error.MEAL_NOT_FOUND": "Meal not found",
-  "error.MEAL_NAME_EXISTS": "A meal with that name already exists",
-  "error.MISSING_MEAL_OR_RESPONSIBLE": "Missing a meal or someone responsible",
-  "error.INVALID_DATE": "Invalid date",
-  "error.INVALID_DAY": "Invalid day",
-
-  "error.INVALID_TIME": "Invalid time",
-  "error.INVALID_DAY_COUNT": "Invalid number of days",
-
-  "error.INVALID_SUBSCRIPTION": "Invalid subscription",
-  "error.NO_ACTIVE_SUBSCRIPTION": "No active notifications on this device",
-
-  "error.EMPTY_MESSAGE": "Write a message",
-  "error.MESSAGE_TOO_LONG": "The message is too long",
-  "error.FEEDBACK_NOT_CONFIGURED": "Feedback isn't set up yet",
-  "error.FEEDBACK_SEND_FAILED": "Couldn't send the feedback. Try again later.",
   "shoppingList.addInput.placeholder": 'Add an item – e.g. "2 milk"',
   "shoppingList.addInput.exactOption": 'Add "{value}" exactly as typed',
   "shoppingList.pendingWrites.tooltip": "Changes saved on this device – will send once you're back online",

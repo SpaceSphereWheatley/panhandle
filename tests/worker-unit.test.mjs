@@ -5,7 +5,7 @@
 import { test, describe } from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { ERROR_MESSAGES_NB, ERROR_CODES } from "../shared/errorCodes.js";
+import { ERROR_MESSAGES_EN, ERROR_CODES } from "../shared/errorCodes.js";
 import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
@@ -435,7 +435,7 @@ describe("error codes", () => {
   });
 
   test("every code used in the worker is defined", () => {
-    const undefinedCodes = [...new Set(usedCodes)].filter((c) => !(c in ERROR_MESSAGES_NB));
+    const undefinedCodes = [...new Set(usedCodes)].filter((c) => !(c in ERROR_MESSAGES_EN));
     assert.deepEqual(undefinedCodes, []);
   });
 
@@ -446,16 +446,18 @@ describe("error codes", () => {
     assert.deepEqual(unused, []);
   });
 
-  test("every code has a non-empty Norwegian message", () => {
-    const bad = ERROR_CODES.filter((c) => typeof ERROR_MESSAGES_NB[c] !== "string" || !ERROR_MESSAGES_NB[c].trim());
+  test("every code has a non-empty English message", () => {
+    const bad = ERROR_CODES.filter((c) => typeof ERROR_MESSAGES_EN[c] !== "string" || !ERROR_MESSAGES_EN[c].trim());
     assert.deepEqual(bad, []);
   });
 
-  test("every code has an English translation", () => {
-    // en.js is a plain object literal; read it as text rather than importing
-    // JSX-adjacent frontend code into this Node-only suite.
-    const enSrc = readFileSync(new URL("../src/lib/i18n/dictionaries/en.js", import.meta.url), "utf8");
-    const missing = ERROR_CODES.filter((c) => !enSrc.includes(`"error.${c}"`));
+  test("every code has a Norwegian translation", () => {
+    // en.js derives its error.* entries from ERROR_MESSAGES_EN, so it's nb.js
+    // that hand-writes them and can therefore fall behind. Read it as text
+    // rather than importing JSX-adjacent frontend code into this Node-only
+    // suite.
+    const nbSrc = readFileSync(new URL("../src/lib/i18n/dictionaries/nb.js", import.meta.url), "utf8");
+    const missing = ERROR_CODES.filter((c) => !nbSrc.includes(`"error.${c}"`));
     assert.deepEqual(missing, []);
   });
 

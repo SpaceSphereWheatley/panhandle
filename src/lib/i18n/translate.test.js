@@ -46,8 +46,10 @@ describe("translate", () => {
     expect(translate("en", "shoppingList.summary.itemsLeft", { count })).toBe(expected);
   });
 
-  it("falls back to the nb dictionary for an unsupported language", () => {
-    expect(translate("fr", "shoppingList.section.important")).toBe("Viktig");
+  // en is the base language (en.js is authored, nb.js translated), so an
+  // unsupported language resolves against en — see translate.js's DEFAULT_LANG.
+  it("falls back to the en dictionary for an unsupported language", () => {
+    expect(translate("fr", "shoppingList.section.important")).toBe("Important");
   });
 
   it("returns the key itself when it exists in no dictionary", () => {

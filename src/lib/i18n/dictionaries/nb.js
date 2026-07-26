@@ -1,23 +1,77 @@
-// Norwegian (bokmål) strings. Flat dot-namespaced keys, one namespace per
-// wired-up component or feature area. Covers the whole UI: the shopping list
-// (shoppingList/itemCard/suggestions/itemEdit), meals, the app shell,
-// settings, the auth screens, the shared confirm/toast/modal chrome, the
-// category display labels, and the server's error responses (error.*), plus a
-// small shared common.* for button words that repeat everywhere.
-// Deliberately still Norwegian: meal names and free-typed ingredients, and
-// CHANGELOG.md's rendered content (see CLAUDE.md's Language support section).
-import { ERROR_MESSAGES_NB } from "../../../../shared/errorCodes.js";
-
-// The error.* entries are derived from shared/errorCodes.js rather than
-// restated here: that file is what worker/index.js actually answers with, so
-// a hand-copied set would be 50 strings free to drift out of sync with the
-// real responses.
-const errorEntries = Object.fromEntries(
-  Object.entries(ERROR_MESSAGES_NB).map(([code, message]) => [`error.${code}`, message])
-);
-
+// Norwegian (bokmål) strings — the translation of en.js, which is the authored
+// source dictionary. Same flat dot-namespaced keys; see en.js for the
+// namespacing convention and what's covered.
+//
+// Norwegian remains the app's *default UI language* (see language.js's
+// DEFAULT_UI_LANGUAGE) even though English is the language the codebase is
+// written in — so this file is what most users actually read.
 export const nb = {
-  ...errorEntries,
+
+  // Server error responses, keyed by the code worker/index.js returns
+  // (shared/errorCodes.js). The en side derives its copies from that same
+  // file; these are the translations.
+  "error.INVALID_REQUEST": "Ugyldig forespørsel",
+  // Was literally "Not found" while nb was the canonical side — an
+  // untranslated leftover the derive-from-errorCodes loop hid. Now that nb is
+  // a hand-written translation it gets a real Norwegian string.
+  "error.NOT_FOUND": "Ikke funnet",
+  "error.UNAUTHORIZED": "Ikke autorisert",
+  "error.DB_ERROR": "DB-feil",
+
+  "error.BAD_CREDENTIALS": "Feil e-post eller passord",
+  "error.WRONG_PASSWORD": "Feil passord",
+  "error.WRONG_CURRENT_PASSWORD": "Feil nåværende passord",
+  "error.GOOGLE_SIGNIN_FAILED": "Google-innlogging feilet",
+  "error.TURNSTILE_FAILED": "Bot-verifisering feilet",
+  "error.INVALID_EMAIL": "Ugyldig e-post",
+  "error.EMAIL_IN_USE": "E-posten er allerede i bruk",
+  "error.EMAIL_IN_USE_OTHER_ACCOUNT": "E-posten er allerede i bruk av en annen konto",
+  "error.PASSWORD_TOO_SHORT": "Passord må være minst 8 tegn",
+  "error.NEW_PASSWORD_TOO_SHORT": "Nytt passord må være minst 8 tegn",
+  "error.INVALID_OR_EXPIRED_LINK": "Ugyldig eller utløpt lenke",
+
+  "error.TOO_MANY_LOGIN_ATTEMPTS": "For mange innloggingsforsøk. Prøv igjen senere.",
+  "error.TOO_MANY_SIGNUP_ATTEMPTS": "For mange registreringsforsøk. Prøv igjen senere.",
+  "error.TOO_MANY_ATTEMPTS": "For mange forsøk. Prøv igjen senere.",
+  "error.TOO_MANY_FEEDBACK": "For mange tilbakemeldinger. Prøv igjen senere.",
+  "error.PING_COOLDOWN": "Vent litt før du pinger igjen",
+
+  "error.REQUIRES_ADMIN": "Krever admin",
+  "error.REQUIRES_OWNER": "Krever eier",
+  "error.REQUIRES_SUPERADMIN": "Kun tilgjengelig for app-eier",
+  "error.CANNOT_DELETE_SUPERADMIN": "Kan ikke slette en app-eier-konto",
+  "error.CANNOT_RESET_SUPERADMIN": "Kan ikke nullstille passordet til en app-eier-konto",
+  "error.CANNOT_CHANGE_SUPERADMIN": "Kan ikke endre tilgangen til en app-eier-konto",
+
+  "error.USER_NOT_FOUND": "Fant ikke bruker",
+  "error.USER_NOT_IN_LIST": "Fant ikke bruker på listen",
+  "error.LIST_FULL": "Listen er full (maks 10 brukere)",
+  "error.LAST_ADMIN_DELETE": "Kan ikke slette siste admin",
+  "error.LAST_ADMIN_REMOVE": "Kan ikke fjerne siste admin",
+  "error.LAST_OWNER_REMOVE": "Kan ikke fjerne listens eneste eier",
+  "error.WOULD_LOSE_ONLY_OWNER": "Listen ville miste sin eneste eier",
+
+  "error.EMPTY_NAME": "Tomt navn",
+  "error.ENTER_NAME": "Skriv inn et navn",
+  "error.ITEM_NOT_FOUND": "Fant ikke vare",
+  "error.ITEM_NAME_EXISTS": "En vare med dette navnet finnes allerede",
+
+  "error.MEAL_NOT_FOUND": "Fant ikke måltid",
+  "error.MEAL_NAME_EXISTS": "Et måltid med dette navnet finnes allerede",
+  "error.MISSING_MEAL_OR_RESPONSIBLE": "Mangler måltid eller ansvarlig",
+  "error.INVALID_DATE": "Ugyldig dato",
+  "error.INVALID_DAY": "Ugyldig dag",
+
+  "error.INVALID_TIME": "Ugyldig tidspunkt",
+  "error.INVALID_DAY_COUNT": "Ugyldig antall dager",
+
+  "error.INVALID_SUBSCRIPTION": "Ugyldig abonnement",
+  "error.NO_ACTIVE_SUBSCRIPTION": "Ingen aktiv varsling på denne enheten",
+
+  "error.EMPTY_MESSAGE": "Skriv en melding",
+  "error.MESSAGE_TOO_LONG": "Meldingen er for lang",
+  "error.FEEDBACK_NOT_CONFIGURED": "Tilbakemelding er ikke satt opp ennå",
+  "error.FEEDBACK_SEND_FAILED": "Kunne ikke sende tilbakemelding. Prøv igjen senere.",
 
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
