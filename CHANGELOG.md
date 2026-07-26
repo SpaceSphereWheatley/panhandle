@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.45.0] — 2026-07-26
+
+### Added
+- **Nearly the whole app is now translated.** Switching to English (Settings →
+  "Språk") used to only change the shopping list; now the meal planner and all
+  its dialogs, every Settings page, the tab bar and page titles, and the
+  login/sign-up/forgotten-password screens follow the language too. Dates and
+  weekday names switch as well, so an English app no longer says "mandag 27.
+  juli", and the sign-in screens pick up your browser's language automatically
+  on a first visit.
+- The invitation text you copy when adding a household member is now written in
+  whichever language you're using.
+
+### Not yet translated
+- Aisle/category names (they're used as internal identifiers and need a
+  separate change first), meal names and typed-in ingredients, and error
+  messages that come back from the server.
+
 ## [1.44.0] — 2026-07-26
 
 ### Added

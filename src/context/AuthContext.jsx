@@ -52,11 +52,10 @@ export function AuthProvider({ children }) {
     // household device never inherits (and replays) the previous user's
     // queued mutations. Same shared-device reasoning as clearCache above.
     clearQueue();
-    if (reason === "expired") {
-      setExpiredReason(
-        "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt."
-      );
-    }
+    // A reason *code*, not a rendered sentence — LoginScreen runs it through
+    // t(), so the message follows the current language rather than whichever
+    // one was active at the moment the session expired.
+    if (reason === "expired") setExpiredReason("expired");
   }
 
   // Wired synchronously during render, not in a useEffect: child providers

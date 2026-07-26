@@ -1,6 +1,10 @@
 // Norwegian (bokmål) strings. Flat dot-namespaced keys, one namespace per
-// wired-up component — only shoppingList.* exists so far (phase 1 proof of
-// concept); every other tab/component is still hardcoded Norwegian JSX.
+// wired-up component or feature area. Covered so far: the shopping list
+// (shoppingList/itemCard/suggestions/itemEdit), meals, the app shell,
+// settings, and the auth screens, plus a small shared common.* for button
+// words that repeat everywhere. Still hardcoded Norwegian: category display
+// labels (they're data keys — see docs/i18n-roadmap.md phase 7), meal names
+// and free-typed ingredients, and every server-returned error string.
 export const nb = {
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
@@ -336,4 +340,45 @@ export const nb = {
   "settings.installHelp.note": "Ser du bare «Legg til på startskjerm»? Chrome bestemmer selv når appen regnes som installerbar, og kan trenge litt mer bruk av siden før den tilbyr full installasjon.",
   "settings.about.whatsNew": "Hva er nytt?",
   "settings.about.feedback": "Send tilbakemelding",
+
+  "auth.email": "E-post",
+  "auth.password": "Passord",
+  "auth.showPassword": "Vis",
+  "auth.hidePassword": "Skjul",
+  "auth.togglePasswordAria": "Vis eller skjul passord",
+  "auth.or": "eller",
+  "auth.networkError": "Nettverksfeil",
+  "auth.sessionExpired": "Økten utløp eller passordet ble endret på en annen enhet. Logg inn på nytt.",
+  "auth.login.submit": "Logg inn",
+  "auth.login.busy": "Logger inn...",
+  "auth.login.signupLink": "Opprett ny husstand",
+  "auth.login.forgotLink": "Glemt passord?",
+  "auth.signup.title": "Opprett ny husstand",
+  "auth.signup.name": "Navn",
+  "auth.signup.password": "Passord (minst 8 tegn)",
+  "auth.signup.repeatPassword": "Gjenta passord",
+  "auth.signup.listName": "Familienavn (valgfritt)",
+  "auth.signup.submit": "Opprett konto",
+  "auth.signup.busy": "Oppretter...",
+  "auth.signup.backLink": "Har du allerede en konto? Logg inn",
+  "auth.signup.passwordMismatch": "Passordene er ikke like",
+  "auth.signup.turnstileRequired": "Fullfør bot-verifiseringen",
+  "auth.forgot.title": "Glemt passord?",
+  "auth.forgot.sent": "Hvis e-posten finnes hos oss, har vi sendt en lenke for å tilbakestille passordet.",
+  "auth.forgot.submit": "Send lenke",
+  "auth.forgot.busy": "Sender...",
+  "auth.forgot.backLink": "Tilbake til innlogging",
+  "auth.reset.title": "Nytt passord",
+  "auth.reset.password": "Nytt passord (minst 8 tegn)",
+  "auth.reset.repeatPassword": "Gjenta nytt passord",
+  "auth.reset.submit": "Lagre nytt passord",
+  "auth.reset.busy": "Lagrer...",
+  "auth.reset.tooShort": "Passord må være minst 8 tegn",
+  "auth.reset.failed": "Tilbakestilling feilet",
+  "auth.credentials.title": "Konto opprettet",
+  "auth.credentials.note": "Dette passordet vises bare nå. Kopier og send det til brukeren.",
+  "auth.credentials.copy": "Kopier invitasjon",
+  "auth.credentials.copied": "Invitasjon kopiert",
+  "auth.credentials.copyFailed": "Kunne ikke kopiere – merk og kopier teksten manuelt",
+  "auth.credentials.invite": "Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com\nE-post (brukernavn): {username}\nPassord: {password}\n(Bytt passord etter at du har logget inn.)",
 };

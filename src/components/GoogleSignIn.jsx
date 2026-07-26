@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { GOOGLE_CLIENT_ID } from "../lib/google.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
 // Loads Google's Identity Services script and renders the standard
 // "Sign in with Google" button. `onCredential` receives the ID-token JWT
 // string, which the caller POSTs to /api/auth/google for server-side
 // verification — no client secret is ever needed for this flow.
 export function GoogleSignIn({ onCredential }) {
+  const { lang } = useLanguage();
   const ref = useRef(null);
   // Read through a ref so the load effect below doesn't need `onCredential`
   // in its dependency array — the parent (LoginScreen/SignupScreen) redefines
@@ -13,6 +15,13 @@ export function GoogleSignIn({ onCredential }) {
   // on every keystroke.
   const onCredentialRef = useRef(onCredential);
   onCredentialRef.current = onCredential;
+  // Read through a ref for the same reason: the button's own text ("Sign in
+  // with Google") is drawn by Google's widget, so it needs the UI language —
+  // but re-running the load effect on a language change would tear down and
+  // refetch the whole GIS script. The language can only be changed from
+  // Settings (behind auth), so this screen is always remounted afterwards.
+  const langRef = useRef(lang);
+  langRef.current = lang;
 
   useEffect(() => {
     function render() {
@@ -26,6 +35,7 @@ export function GoogleSignIn({ onCredential }) {
         theme: "outline",
         size: "large",
         width: 280,
+        locale: langRef.current,
       });
     }
 

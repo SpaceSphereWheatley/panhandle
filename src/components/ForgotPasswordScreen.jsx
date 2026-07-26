@@ -2,9 +2,11 @@ import { useState } from "react";
 import { rawForgotPassword } from "../lib/api.js";
 import { Input, Button } from "../design-system/index.js";
 import { Turnstile } from "./Turnstile.jsx";
+import { useTranslation } from "../context/LanguageContext.jsx";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 export function ForgotPasswordScreen({ onBack }) {
+  const t = useTranslation();
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [error, setError] = useState("");
@@ -14,7 +16,7 @@ export function ForgotPasswordScreen({ onBack }) {
   async function submit() {
     setError("");
     if (!turnstileToken) {
-      setError("Fullfør bot-verifiseringen");
+      setError(t("auth.signup.turnstileRequired"));
       return;
     }
     setBusy(true);
@@ -25,7 +27,7 @@ export function ForgotPasswordScreen({ onBack }) {
       await rawForgotPassword(email.trim(), turnstileToken);
       setSent(true);
     } catch {
-      setError("Nettverksfeil");
+      setError(t("auth.networkError"));
     } finally {
       setBusy(false);
     }
@@ -55,21 +57,21 @@ export function ForgotPasswordScreen({ onBack }) {
           textAlign: "center",
         }}
       >
-        Glemt passord?
+        {t("auth.forgot.title")}
       </h1>
       {sent ? (
         <p style={{ color: "var(--text-secondary)", textAlign: "center", maxWidth: 320 }}>
-          Hvis e-posten finnes hos oss, har vi sendt en lenke for å tilbakestille passordet.
+          {t("auth.forgot.sent")}
         </p>
       ) : (
         <>
           <div style={{ width: "100%", maxWidth: 320 }}>
-            <Input placeholder="E-post" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input placeholder={t("auth.email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <Turnstile onToken={setTurnstileToken} />
           <div style={{ marginTop: 6 }}>
             <Button variant="primary" size="lg" disabled={busy} onClick={submit}>
-              {busy ? "Sender..." : "Send lenke"}
+              {t(busy ? "auth.forgot.busy" : "auth.forgot.submit")}
             </Button>
           </div>
           <div style={{ color: "var(--status-danger)", fontSize: "var(--text-sm)", minHeight: 18, textAlign: "center" }}>
@@ -82,7 +84,7 @@ export function ForgotPasswordScreen({ onBack }) {
         onClick={onBack}
         style={{ background: "none", border: "none", color: "var(--accent-primary)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", cursor: "pointer", marginTop: 8 }}
       >
-        Tilbake til innlogging
+        {t("auth.forgot.backLink")}
       </button>
     </div>
   );

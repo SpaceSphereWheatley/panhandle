@@ -1,10 +1,11 @@
 # i18n roadmap (language support)
 
 Tracks TODO #15 (language support) across sessions. Phase 1 (translation
-infra + the Settings → "Språk" switcher + `ShoppingListTab` chrome, 1.43.4)
-and phase 2 (the ~710 `COMMON_ITEMS` catalogue names + finishing
+infra + the Settings → "Språk" switcher + `ShoppingListTab` chrome, 1.43.4),
+phase 2 (the ~710 `COMMON_ITEMS` catalogue names + finishing
 `ItemCard`/`SuggestionsModal`/`ItemEditModal` + the dropdown switcher, 1.44.0)
-have shipped. Everything below is what's left. Organized so any session can
+and phases 3-5 (meals, settings + the app shell, auth screens, 1.45.0) have
+shipped. Everything still open is phases 6-8 below. Organized so any session can
 pick up one phase without re-deriving the architecture — read "Decisions
 already made" and "How to extract a component" first, then jump to whichever
 phase you're doing. Check items off as they ship, and add a `Todo_done.md`
@@ -40,6 +41,27 @@ entry + a one-line update to `TODO.md` #15 the same way phases 1/2 did.
   renaming the stored row. Any new search/autocomplete surface over
   `item_catalogue` should follow the same pattern rather than inventing a
   new one.
+- **`common.*` exists now** (added in phase 3): the button words that repeat
+  in every modal — `common.cancel`/`common.save`/`common.close`. Phase 6 was
+  originally going to introduce this namespace; reuse and extend it rather
+  than inventing per-component copies. (`itemEdit.cancel`/`itemEdit.save`
+  predate it and were left alone.)
+- **Dates go through `src/lib/i18n/dateLocale.js`** (added in phase 3), not a
+  hardcoded `"no-NO"`. `dateLocale(lang)` maps nb→`nb-NO`, en→`en-GB` (en-GB
+  keeps day-before-month, so a language switch doesn't reflow date rows);
+  `weekdayNames(lang)` returns the Monday-first, capitalized weekday list that
+  `recurring_schedule.day_of_week` assumes. Unit-tested in `dateLocale.test.js`.
+- **Never store a rendered sentence in state** — a language switch has to
+  re-render it. Three places were converted to hold a code/structured value
+  and call `t()` at render time instead: `AuthContext`'s `expiredReason` (now
+  the code `"expired"`), `AppShell`'s `sync` (now `{ kind, at, offline }`),
+  and `MealEditModal`'s `similarNote` (now `{ kind, names }`). Follow the same
+  shape for any new state that would otherwise cache translated text.
+- **`dictionaries.test.js` guards nb/en parity.** `translate()` silently falls
+  back to nb for a key missing from en, so a gap shows up as a stray Norwegian
+  string rather than a crash. The test fails on a missing key, a plural/plain
+  mismatch, differing `{placeholders}`, or an empty value — it caught one real
+  miss during phase 4. Run `npm test` after editing either dictionary.
 - **Category names are the same kind of landmine, not yet fixed.**
   `CATEGORIES` (`shared/categories.js`, e.g. `"Frukt og grønt"`) is a literal
   data key — used by `clusterFor()`, `category_order`, and worker-side
@@ -93,7 +115,14 @@ entry + a one-line update to `TODO.md` #15 the same way phases 1/2 did.
    backend in-session) — switch to English, confirm the component's strings
    update instantly, switch back to nb, confirm nothing else regressed.
 
-## Phase 3 — Meal planning (`MealsTab` + `src/components/meals/`)
+## Phase 3 — Meal planning (`MealsTab` + `src/components/meals/`) — DONE (1.45.0)
+
+Namespace `meals.*`. Two things deliberately left canonical, not translated:
+`MealPlanModal`'s `"Annet"` fallback (a *stored* `meal_plan.responsible`
+value, read back by other devices) and `TokenInput`'s ingredient suggestions
+(a committed token is persisted to `meal_catalogue.ingredients` and later
+name-matched against `item_catalogue`). `IngredientChecklist` does translate
+matched ingredient names best-effort via `translateItemName` — display only.
 
 Rough string counts (hardcoded-literal grep, not exact): `MealsTab.jsx`
 (~15), `MealPlanModal.jsx` (~12), `MealEditModal.jsx` (~11),
@@ -111,16 +140,26 @@ most ingredient text (meal names especially) has no translation source —
 same "translate what we can, pass through the rest" shape as item names, but
 starting from zero infrastructure.
 
-- [ ] `MealsTab.jsx`
-- [ ] `MealPlanModal.jsx`
-- [ ] `MealEditModal.jsx`
-- [ ] `WeekIngredientsModal.jsx`
-- [ ] `MealCatalogueBrowseModal.jsx`
-- [ ] `IngredientPickerModal.jsx`
-- [ ] `TokenInput.jsx`
-- [ ] `IngredientChecklist.jsx`
+- [x] `MealsTab.jsx`
+- [x] `MealPlanModal.jsx`
+- [x] `MealEditModal.jsx`
+- [x] `WeekIngredientsModal.jsx`
+- [x] `MealCatalogueBrowseModal.jsx`
+- [x] `IngredientPickerModal.jsx`
+- [x] `TokenInput.jsx`
+- [x] `IngredientChecklist.jsx`
 
-## Phase 4 — Settings subpages
+## Phase 4 — Settings subpages — DONE (1.45.0)
+
+Namespace `settings.*`. Two duplicated label sources were single-sourced
+rather than kept in sync by hand: `SETTINGS_SUBPAGE_TITLE_KEYS`
+(`src/lib/settingsNav.js`) replaced the map `AppShell` and `SettingsRoot` each
+hardcoded, and `weekdayNames(lang)` replaced `mealUtils`'s `WEEKDAYS_NO`
+(now deleted). `AppShell`'s own chrome (tab-bar labels, header titles, sync
+status — namespace `shell.*`) was translated in the same pass: it was outside
+the original checklist, but leaving the tab bar Norwegian under translated
+subpage titles would have been the most visible untranslated text in the app.
+Category *names* in `ButikkSubpage` are still canonical — that's phase 7.
 
 Rough counts: `AdminSubpage.jsx` (~25), `KontoSubpage.jsx` (~22),
 `SettingsRoot.jsx` (~19 — the nav row labels, e.g. "Utseende"/"Konto"/
@@ -137,22 +176,32 @@ share a `settings.nav.*` namespace with `AppShell.jsx`'s
 `SETTINGS_SUBPAGE_TITLES` (both need the same string; consider a single
 lookup object built from the dictionary instead of hardcoding the map twice).
 
-- [ ] `SettingsRoot.jsx` (+ keep `AppShell.jsx`'s `SETTINGS_SUBPAGE_TITLES` in sync)
-- [ ] `UtseendeSubpage.jsx`
-- [ ] `KontoSubpage.jsx`
-- [ ] `VarslerSubpage.jsx`
-- [ ] `HjemSubpage.jsx`
-- [ ] `ButikkSubpage.jsx` (category *names* stay untranslated until Phase 7 — just this subpage's own chrome)
-- [ ] `AdminSubpage.jsx`
-- [ ] `StatistikkSubpage.jsx`
-- [ ] `MembersIsland.jsx`
-- [ ] `RecurringIsland.jsx`
-- [ ] `MetricsSettings.jsx`
-- [ ] `InstallHelpModal.jsx`
-- [ ] `PwaInstallCTA.jsx`
-- [ ] `AboutFooter.jsx`
+- [x] `SettingsRoot.jsx` (+ `AppShell.jsx` — now both read `SETTINGS_SUBPAGE_TITLE_KEYS`)
+- [x] `UtseendeSubpage.jsx`
+- [x] `KontoSubpage.jsx`
+- [x] `VarslerSubpage.jsx`
+- [x] `HjemSubpage.jsx` (no own literals — its content is Members/Recurring below)
+- [x] `ButikkSubpage.jsx` (category *names* stay untranslated until Phase 7 — just this subpage's own chrome)
+- [x] `AdminSubpage.jsx`
+- [x] `StatistikkSubpage.jsx` (no own literals — wraps `MetricsSettings`)
+- [x] `MembersIsland.jsx`
+- [x] `RecurringIsland.jsx`
+- [x] `MetricsSettings.jsx`
+- [x] `InstallHelpModal.jsx`
+- [x] `PwaInstallCTA.jsx`
+- [x] `AboutFooter.jsx`
+- [x] `SprakSubpage.jsx` (missed by the original list — its own chrome; the two
+      language options stay each language's endonym)
+- [x] `AppShell.jsx` (`shell.*` — tab bar, header titles, sync status)
 
-## Phase 5 — Auth screens
+## Phase 5 — Auth screens — DONE (1.45.0)
+
+Namespace `auth.*`. **The open question was decided: no pre-auth switcher.**
+The auth screens follow the stored `ph_language`, or the browser's language on
+a first visit — one less control on the login screen, and a returning user's
+choice already applies. `GoogleSignIn` passes `locale: lang` to
+`renderButton` so Google's own button text matches (read through a ref, so a
+language change can't tear down and refetch the GIS script).
 
 Rough counts: `LoginScreen.jsx` (~11), `SignupScreen.jsx` (~10),
 `ResetPasswordScreen.jsx` (~6), `ForgotPasswordScreen.jsx` (~5),
@@ -167,12 +216,15 @@ Settings, behind auth) — worth deciding whether a pre-auth language toggle
 is wanted, or whether relying on auto-detected browser language is enough
 for a not-yet-logged-in visitor. Not decided; ask before assuming.
 
-- [ ] `LoginScreen.jsx`
-- [ ] `SignupScreen.jsx`
-- [ ] `ForgotPasswordScreen.jsx`
-- [ ] `ResetPasswordScreen.jsx`
-- [ ] `CredentialsModal.jsx`
-- [ ] `GoogleSignIn.jsx`
+- [x] `LoginScreen.jsx`
+- [x] `SignupScreen.jsx`
+- [x] `ForgotPasswordScreen.jsx`
+- [x] `ResetPasswordScreen.jsx`
+- [x] `CredentialsModal.jsx` (the copied invite text follows the *inviter's*
+      language — they compose and send it, and the invitee has no stored
+      preference yet)
+- [x] `GoogleSignIn.jsx` (no own literals; passes `locale` to Google's widget)
+- [x] `AuthContext.jsx` (`expiredReason` is now a code, rendered by `LoginScreen`)
 
 ## Phase 6 — Shared/global chrome
 
@@ -185,7 +237,9 @@ only; it renders `CHANGELOG.md`'s content directly, which stays
 Norwegian-only, out of scope). `Modal.jsx` itself has no own literals (pure
 wrapper).
 
-Suggested namespace: `common.*`.
+Namespace: `common.*` — **already exists** (see Decisions above); phase 3 added
+`common.cancel`/`common.save`/`common.close` and phases 3-5 use them, so
+`ConfirmContext`'s default Cancel button just needs to read `common.cancel`.
 
 - [ ] `ConfirmContext.jsx` (default Cancel button)
 - [ ] `ImportantInfoModal.jsx`

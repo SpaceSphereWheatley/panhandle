@@ -7,6 +7,34 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+105. (15) Language support, phases 3-5: nearly everything left in the app is
+     now translated. Phase 3 — the meal planner (`MealsTab` + all seven
+     `src/components/meals/` components, namespace `meals.*`). Phase 4 — every
+     Settings subpage plus `MembersIsland`/`RecurringIsland`/`MetricsSettings`/
+     `InstallHelpModal`/`PwaInstallCTA`/`AboutFooter` (`settings.*`), and
+     `AppShell`'s own chrome — tab-bar labels, header titles, sync status
+     (`shell.*`), which was outside the roadmap's checklist but would have been
+     the most visible untranslated text left in the app. Phase 5 — the
+     login/sign-up/forgot-password/reset screens plus `CredentialsModal`
+     (`auth.*`); the open "should there be a pre-auth language switcher?"
+     question was decided as **no** — those screens follow the stored
+     `ph_language`, or the browser's language on a first visit.
+     New `src/lib/i18n/dateLocale.js` (`dateLocale(lang)`, `weekdayNames(lang)`)
+     replaces the hardcoded `"no-NO"` behind every date in the app and
+     `mealUtils`'s `WEEKDAYS_NO` array; `src/lib/settingsNav.js` single-sources
+     the subpage titles `AppShell` and `SettingsRoot` each used to hardcode
+     separately. Three pieces of state that cached a *rendered* Norwegian
+     sentence (`AuthContext`'s `expiredReason`, `AppShell`'s sync status,
+     `MealEditModal`'s similar-name note) now hold a code/structured value and
+     translate at render, so a language switch actually updates them. A new
+     `dictionaries.test.js` fails the build on nb/en drift (missing key,
+     plural mismatch, differing placeholders) — it caught one real gap.
+     Values that are *data*, not display text, were deliberately left
+     canonical: `meal_plan.responsible`'s "Annet" fallback and `TokenInput`'s
+     ingredient suggestions (both persisted and matched by name). Category
+     display labels (phase 7), meal names/free-typed ingredients (phase 8) and
+     server-returned error strings stay open under #15. (1.45.0)
+
 104. (15) Language support, phase 2: the ~710 `COMMON_ITEMS` catalogue item
      names are now translated too, not just chrome. New
      `src/lib/i18n/itemNames.js` — a display-only nb→en name lookup keyed
