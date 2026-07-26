@@ -400,7 +400,7 @@ describe("normalizeCategoryOrder", () => {
   });
 
   test("appends any not-yet-placed categories in canonical order", () => {
-    const partial = ["Drikkevarer", "Meieriprodukter"];
+    const partial = ["Drinks", "Dairy"];
     const result = normalizeCategoryOrder(partial);
     assert.deepEqual(result.slice(0, 2), partial);
     // The rest are the remaining CATEGORIES, in their canonical order.
@@ -411,16 +411,16 @@ describe("normalizeCategoryOrder", () => {
   });
 
   test("drops unknown names and de-duplicates", () => {
-    const messy = ["Drikkevarer", "Drikkevarer", "Ikke en kategori", "Husholdning"];
+    const messy = ["Drinks", "Drinks", "Not a category", "Household"];
     const result = normalizeCategoryOrder(messy);
-    assert.deepEqual(result.slice(0, 2), ["Drikkevarer", "Husholdning"]);
+    assert.deepEqual(result.slice(0, 2), ["Drinks", "Household"]);
     assert.equal(result.length, CATEGORIES.length);
     assert.deepEqual([...result].sort(), [...CATEGORIES].sort());
   });
 });
 
 // Every error the Worker can return carries a stable code (shared/errorCodes.js)
-// so a translating client doesn't have to string-match Norwegian. These guard
+// so a translating client doesn't have to string-match the message text. These guard
 // the two ways that contract can silently rot: a code used in worker/index.js
 // that was never defined (the client would show a raw key or nothing), and a
 // defined code with no English translation (an English user gets Norwegian).

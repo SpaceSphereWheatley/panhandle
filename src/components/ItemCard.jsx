@@ -360,7 +360,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
         // by the corner badge. Always rendered when shouldAnimate (list AND
         // grid) — only "classic"/reduced-motion users skip it, since they
         // still have the corner badge as an unconditional fallback. Gated on
-        // onToggleImportant same as that badge — e.g. "Nylig kjøpt" rows
+        // onToggleImportant same as that badge — e.g. "Recently bought" rows
         // don't get it, since a bought item's important flag is always 0
         // (see ShoppingListTab's toggleItem) and there'd be nothing to swipe
         // toward.

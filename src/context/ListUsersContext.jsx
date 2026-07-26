@@ -30,11 +30,11 @@ export function ListUsersProvider({ children }) {
   // recurring_schedule.responsible — all still keyed by username, see
   // CLAUDE.md's Auth model) to that member's display name for the UI, falling
   // back to the raw value for anything that isn't a current list member (a
-  // free-typed "Annet" responsible person, or a since-removed member).
+  // free-typed "Other" responsible person, or a since-removed member).
   // Match case-insensitively: stored copies (added_by, responsible) should
   // always be lowercased emails, but a mixed-case value would otherwise fail
   // to resolve and fall back to the raw username. The fallback keeps the
-  // original (unlowercased) value so a free-typed "Annet" reads as typed.
+  // original (unlowercased) value so a free-typed "Other" reads as typed.
   const nameFor = useCallback(
     (username) => {
       const key = (username || "").toLowerCase();

@@ -17,7 +17,7 @@ export function buildIngredientRows(rawIngredients, catalogue, onListNames) {
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push({ name, category: match ? match.category : "Annet", already: onListNames.has(key) });
+    rows.push({ name, category: match ? match.category : "Other", already: onListNames.has(key) });
   }
   return rows;
 }

@@ -6,8 +6,8 @@ describe("CATEGORIES", () => {
     expect(CATEGORIES.length).toBeGreaterThan(0);
   });
 
-  it("includes 'Annet' (the worker's fallback category for invalid input)", () => {
-    expect(CATEGORIES).toContain("Annet");
+  it("includes 'Other' (the worker's fallback category for invalid input)", () => {
+    expect(CATEGORIES).toContain("Other");
   });
 
   it("has no duplicate entries", () => {

@@ -1,11 +1,18 @@
 // Single source of truth for shopping-list categories. Imported by both the
 // Worker (server-side validation/default, worker/index.js) and the frontend
 // (display grouping, src/lib/shoppingUtils.js) so they can't drift.
+//
+// These strings are literal *data keys*, not display text: clusterFor() keys
+// off them, the category_order table stores them, and the Worker validates
+// incoming categories against them. They are never translated — a category's
+// display label goes through translateCategoryName() (src/lib/i18n/
+// categoryNames.js), which maps the canonical English string to a Norwegian
+// label via its language-neutral cluster id.
 export const CATEGORIES = [
-  "Frukt og grønt", "Brød og bakevarer", "Meieriprodukter", "Kjøtt og fisk",
-  "Ingredienser og krydder", "Frysevarer og ferdigmåltid", "Kornprodukter",
-  "Snacks og godteri", "Drikkevarer", "Husholdning", "Omsorg og helse",
-  "Dyreprodukter", "Annet"
+  "Fruit and vegetables", "Bread and bakery", "Dairy", "Meat and fish",
+  "Ingredients and spices", "Frozen and ready meals", "Grains and pasta",
+  "Snacks and sweets", "Drinks", "Household", "Health and personal care",
+  "Pet supplies", "Other"
 ];
 
 // Given a per-list custom category order (an array of category names, possibly

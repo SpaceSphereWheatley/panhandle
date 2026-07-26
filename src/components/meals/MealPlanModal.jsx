@@ -14,7 +14,7 @@ import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
 
 // Plans/edits a single day: meal name (with a dropdown of known meals),
-// ingredients, and a responsible person (list member, or free-text "Annet").
+// ingredients, and a responsible person (list member, or free-text "Other").
 export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpenIngredientPicker }) {
   const { people, nameFor } = useListUsers();
   const { schedule, ensureLoaded } = useRecurring();
@@ -92,11 +92,11 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   }
 
   function getResp() {
-    // "Annet" here is a *stored* value (meal_plan.responsible), not display
+    // "Other" here is a *stored* value (meal_plan.responsible), not display
     // text — it's written to the DB and read back by every other device
-    // regardless of that device's language, so it stays canonical Norwegian.
-    // Only the picker's own option label above is translated.
-    if (respSelect === "__other__") return respOther.trim() || "Annet";
+    // regardless of that device's language, so it stays canonical. Only the
+    // picker's own option label above is translated.
+    if (respSelect === "__other__") return respOther.trim() || "Other";
     return respSelect;
   }
 
