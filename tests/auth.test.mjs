@@ -114,7 +114,7 @@ async function testLoginRateLimiting(BASE) {
   const res = await login(BASE, username, PASS, { "CF-Connecting-IP": ip });
   assert.equal(res.status, 429);
   const body = await res.json();
-  assert.match(body.error, /mange innloggingsforsøk/i);
+  assert.equal(body.code, "TOO_MANY_LOGIN_ATTEMPTS");
 
   console.log("  - login rate limiting: the 11th attempt within the window is blocked (429), even with the correct password");
 }
@@ -252,7 +252,7 @@ async function testChangePasswordMinLength(BASE) {
   });
   assert.equal(shortRes.status, 400, "a 7-char new password should be rejected");
   const shortBody = await shortRes.json();
-  assert.match(shortBody.error, /minst 8 tegn/i);
+  assert.equal(shortBody.code, "NEW_PASSWORD_TOO_SHORT");
 
   const okRes = await fetch(`${BASE}/change-password`, {
     method: "POST",

@@ -62,11 +62,11 @@ async function testValidation(BASE) {
 
   const emptyRes = await sendFeedback(BASE, token, "   ", { "CF-Connecting-IP": `10.60.1.1` });
   assert.equal(emptyRes.status, 400);
-  assert.match((await emptyRes.json()).error, /melding/i);
+  assert.equal((await emptyRes.json()).code, "EMPTY_MESSAGE");
 
   const tooLongRes = await sendFeedback(BASE, token, "x".repeat(4001), { "CF-Connecting-IP": `10.60.1.2` });
   assert.equal(tooLongRes.status, 400);
-  assert.match((await tooLongRes.json()).error, /for lang/i);
+  assert.equal((await tooLongRes.json()).code, "MESSAGE_TOO_LONG");
 
   console.log("  - rejects an empty/whitespace-only message and one over 4000 characters (400)");
 }
@@ -79,7 +79,7 @@ async function testNotConfigured(BASE) {
 
   const res = await sendFeedback(BASE, token, "Dette er en tilbakemelding.", { "CF-Connecting-IP": `10.60.2.1` });
   assert.equal(res.status, 500);
-  assert.match((await res.json()).error, /ikke satt opp/i);
+  assert.equal((await res.json()).code, "FEEDBACK_NOT_CONFIGURED");
 
   console.log("  - returns a clear 500 (not a silent failure) when FEEDBACK_EMAIL isn't configured");
 }
@@ -97,7 +97,7 @@ async function testRateLimiting(BASE) {
 
   const overRes = await sendFeedback(BASE, token, "Hei", { "CF-Connecting-IP": ip });
   assert.equal(overRes.status, 429);
-  assert.match((await overRes.json()).error, /mange tilbakemeldinger/i);
+  assert.equal((await overRes.json()).code, "TOO_MANY_FEEDBACK");
 
   console.log("  - rate limiting: the 6th attempt within the window is blocked (429), even on invalid messages");
 }
