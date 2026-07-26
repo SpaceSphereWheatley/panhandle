@@ -33,7 +33,7 @@ function isStandalone() {
   return window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
-// Varsler subpage — Web Push opt-in plus the two meal-planning reminders,
+// Notifications subpage (Settings → "Varsler") — Web Push opt-in plus the two meal-planning reminders,
 // all now per-device (TODO #7 phases 1-2, made device-only). A push
 // subscription belongs to this browser, and the reminder preferences are
 // stored on it (see /push/reminder-settings), so everything on this page

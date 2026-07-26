@@ -5,7 +5,7 @@ import { currentIntensity, setIntensity } from "../../../lib/designIntensity.js"
 import { SubpageSection } from "../SubpageSection.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 
-// "Utseende" subpage — the device-local personalization that used to sit
+// Appearance subpage (Settings → "Utseende") — the device-local personalization that used to sit
 // inline on the Settings root (design intensity, theme, haptics). Moved into
 // its own subpage so the root is a single uniform list of navigation rows,
 // consistent with Konto/Varsler/Vårt hjem/Butikkoppsett/Administrasjon, rather

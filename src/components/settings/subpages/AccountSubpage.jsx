@@ -10,7 +10,7 @@ import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
 import { apiErrorMessage } from "../../../lib/apiError.js";
 
-// Konto subpage — a subpage has room, so Navn/E-post/Bytt passord are direct
+// Account subpage (Settings → "Konto") — a subpage has room, so Navn/E-post/Bytt passord are direct
 // fields, each in a SubpageSection so every subpage's labeled blocks look like
 // one system. Save model: Navn auto-saves on blur (no password needed, so it's
 // a preference, not an action); E-post and Bytt passord keep explicit buttons

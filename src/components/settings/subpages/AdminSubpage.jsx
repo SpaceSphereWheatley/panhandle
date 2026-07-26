@@ -33,7 +33,7 @@ const groupHeadingStyle = {
 
 // Administrasjon subpage — directly-visible 2x2 stats, then the heavier
 // management tools as always-open SubpageSections (no accordions — see
-// SubpageSection.jsx). Statistikk is promoted out to its own subpage/row
+// SubpageSection.jsx). StatsSubpage is promoted out to its own subpage/row
 // instead of a fold-out, since a full charts dashboard needs its own screen
 // (see StatsSubpage.jsx).
 export function AdminSubpage({ onNavigate }) {
