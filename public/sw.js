@@ -8,7 +8,13 @@
  * then refresh the cache from the network in the background for next time.
  */
 
-const CACHE_NAME = 'panhandle-shell-v1';
+// __SW_CACHE_VERSION__ is replaced with the app VERSION at build time
+// (scripts/stamp-sw-cache.mjs, a postbuild step) so each deploy gets a new
+// cache name — the `activate` handler below then deletes the previous
+// deploy's now-orphaned cache (and its accumulated content-hashed JS/CSS
+// entries, which otherwise persist forever since their filenames change on
+// every deploy and nothing else ever prunes them) instead of leaking it.
+const CACHE_NAME = 'panhandle-shell-__SW_CACHE_VERSION__';
 
 self.addEventListener('install', () => {
   // Activate this SW immediately rather than waiting for existing tabs to close.
