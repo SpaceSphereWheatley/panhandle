@@ -64,18 +64,18 @@ export function extractGF(name) {
 }
 
 // Token-based fuzzy match: every word in the query must appear somewhere in
-// the candidate name (any order), so "melk lett" matches "Lettmelk". The
-// stored catalogue name is always the canonical (Norwegian) one — when
-// `lang` is "en", also match against its English display translation (see
-// itemNames.js) so typing "milk" surfaces "Melk", displayed as "Milk",
+// the candidate name (any order), so "milk semi" matches "Semi-skimmed milk".
+// The stored catalogue name is always the canonical (English) one — when
+// `lang` is "nb", also match against its Norwegian display translation (see
+// itemNames.js) so typing "melk" surfaces "Milk", displayed as "Melk",
 // without ever renaming the stored row.
 export function matchCatalogue(query, catalogue, lang = "nb") {
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return [];
   return catalogue
     .filter((c) => {
-      const searchable = lang === "en"
-        ? `${c.name} ${translateItemName(c.name, "en")}`.toLowerCase()
+      const searchable = lang === "nb"
+        ? `${c.name} ${translateItemName(c.name, "nb")}`.toLowerCase()
         : c.name.toLowerCase();
       return tokens.every((t) => searchable.includes(t));
     })

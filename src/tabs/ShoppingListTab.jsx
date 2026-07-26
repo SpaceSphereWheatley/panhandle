@@ -278,6 +278,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       const match = matchCatalogue(baseName, catalogue, lang)[0];
       name = match ? match.name : baseName;
       category = match ? match.category : "Other";
+      // Deliberately still Norwegian, unlike the canonical names/categories
+      // around it: this is appended to list_items.notes, a free-text field
+      // rendered raw with no translation layer. An English canonical value
+      // here would surface untranslated in the Norwegian UI — same reasoning
+      // that keeps meal names and typed ingredients as-is (CLAUDE.md's
+      // Language support section). extractGF matches either language's marker.
       const noteParts = [unit, gf ? "Glutenfri" : null].filter(Boolean);
       notes = noteParts.length ? noteParts.join(", ") : undefined;
       qty = parsedQty;
