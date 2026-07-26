@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.48.0] — 2026-07-26
+
+### Changed
+- **Groundwork, not a new feature: nothing about the app looks or behaves
+  differently.** Under the hood the app's own "original" language is now
+  English, with Norwegian as a translation of it — the reverse of how it was
+  built. The app still opens in Norwegian, every screen still reads exactly the
+  same in both languages, and your shopping list, aisle order and meal plans are
+  all untouched. This only makes the next language easier to add.
+
+### Fixed
+- The "not found" error was the one message that stayed in English even with the
+  app set to Norwegian. It now reads "Ikke funnet".
+
 ## [1.47.0] — 2026-07-26
 
 ### Added
