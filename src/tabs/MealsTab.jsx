@@ -4,7 +4,7 @@ import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { localIso, mondayOf, parseIngredients, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
+import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { avatarColorFor } from "../lib/avatarColor.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
@@ -99,7 +99,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
             const p = byDate[iso];
             const isToday = iso === today;
             const dayName = d.toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
-            const dow = (d.getDay() + 6) % 7;
+            const dow = dayOfWeekMonFirst(d);
             const recurring = !p?.responsible ? schedule[dow] : null;
             const CardComponent = shouldAnimate ? MotionCard : Card;
             // `layout` gated on `active`, not just `shouldAnimate`: this tab stays
@@ -513,7 +513,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       toast(t("meals.toast.weekFull"));
       return;
     }
-    const dow = (new Date(targetIso).getDay() + 6) % 7;
+    const dow = dayOfWeekMonFirst(targetIso);
     const responsible = byDate[targetIso]?.responsible || schedule[dow] || "";
     const dayLabel = new Date(targetIso).toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
     setModal(null);

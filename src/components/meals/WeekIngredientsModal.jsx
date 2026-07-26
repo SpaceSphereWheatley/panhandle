@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { Button, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
-import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "../../lib/mealUtils.js";
+import { buildIngredientRows, parseIngredients, localIso, mondayOf, dayOfWeekMonFirst, addRowsToList } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
 import { dateLocale } from "../../lib/i18n/dateLocale.js";
@@ -19,7 +19,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
   const [rows, setRows] = useState(null);
 
   const today = new Date();
-  const dow = (today.getDay() + 6) % 7; // 0 = Monday .. 6 = Sunday
+  const dow = dayOfWeekMonFirst(today);
   const nextWeek = dow >= 4; // Fri/Sat/Sun
   const monday = mondayOf(today);
   if (nextWeek) monday.setDate(monday.getDate() + 7);
@@ -58,21 +58,7 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
       onClose();
       return;
     }
-    let added = 0,
-      merged = 0,
-      failed = 0;
-    for (const r of checked) {
-      try {
-        const res = await api("/list", { method: "POST", body: JSON.stringify({ name: r.name, qty: 1, category: r.category }) });
-        // A { duplicate: true } response means the qty was bumped on a line
-        // already on the list — not a genuinely new ingredient, so don't count
-        // it as one (it would otherwise overstate the "added" total).
-        if (res?.duplicate) merged++;
-        else added++;
-      } catch {
-        failed++;
-      }
-    }
+    const { added, merged, failed } = await addRowsToList(checked);
     await onAdded?.();
     onClose();
     if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });

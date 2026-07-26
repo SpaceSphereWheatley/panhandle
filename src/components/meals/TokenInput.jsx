@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "../../context/LanguageContext.jsx";
+import { useOutsideClick } from "../../hooks/useOutsideClick.js";
 
 // Chip/token editor for what used to be plain comma-separated text inputs
 // (meal ingredients, labels — see U21 in docs/ui-review-plan.md): existing
@@ -13,6 +14,9 @@ export function TokenInput({ id, value, onChange, suggestions = [], placeholder 
   const t = useTranslation();
   const [draft, setDraft] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const wrapRef = useRef(null);
+
+  useOutsideClick(wrapRef, () => setShowDropdown(false));
 
   function commit(raw) {
     const token = raw.trim();
@@ -43,7 +47,7 @@ export function TokenInput({ id, value, onChange, suggestions = [], placeholder 
   });
 
   return (
-    <div className="token-input">
+    <div className="token-input" ref={wrapRef}>
       <div className="token-input-chips">
         {value.map((token, i) => (
           <span className="token-chip" key={token}>
@@ -64,12 +68,7 @@ export function TokenInput({ id, value, onChange, suggestions = [], placeholder 
           }}
           onKeyDown={onKeyDown}
           onFocus={() => setShowDropdown(true)}
-          onBlur={() => {
-            commit(draft);
-            // Delay so a dropdown option's onMouseDown (which already
-            // preventDefault()s to keep focus) still lands before we hide it.
-            setTimeout(() => setShowDropdown(false), 150);
-          }}
+          onBlur={() => commit(draft)}
           placeholder={value.length ? "" : placeholder}
         />
       </div>

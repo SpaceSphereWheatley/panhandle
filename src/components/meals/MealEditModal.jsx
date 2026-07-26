@@ -3,7 +3,7 @@ import { Modal } from "../Modal.jsx";
 import { Button, Input } from "../../design-system/index.js";
 import { TokenInput } from "./TokenInput.jsx";
 import { api } from "../../lib/api.js";
-import { parseIngredients } from "../../lib/mealUtils.js";
+import { parseIngredients, sortMealsByUsage, collectLabels, findMealByName, findSimilarMeals } from "../../lib/mealUtils.js";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
@@ -29,7 +29,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
   useEffect(() => {
     (async () => {
       const [rows, items] = await Promise.all([api("/meals"), api("/catalogue").catch(() => [])]);
-      const sorted = [...rows].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name));
+      const sorted = sortMealsByUsage(rows);
       setCatalogue(sorted);
       setItemNames(items.map((it) => it.name));
       const meal = id ? sorted.find((m) => m.id === id) : null;
@@ -41,31 +41,23 @@ export function MealEditModal({ id, onClose, onSaved }) {
     })();
   }, [id]);
 
-  const knownLabels = useMemo(() => {
-    const set = new Set();
-    for (const m of catalogue) for (const l of parseIngredients(m.labels)) set.add(l);
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [catalogue]);
+  const knownLabels = useMemo(() => collectLabels(catalogue), [catalogue]);
 
   // Live feedback while typing a meal name: an exact (case-insensitive) match
   // against another meal is a hard block (mirrors the server's duplicate
   // check), a substring match is just a heads-up.
   function checkSimilar(value) {
-    const n = value.trim().toLowerCase();
-    if (!n) {
+    if (!value.trim()) {
       setSimilarNote({ kind: null, names: [] });
       return;
     }
     const others = catalogue.filter((m) => m.id !== id);
-    const exact = others.find((m) => m.name.toLowerCase() === n);
+    const exact = findMealByName(others, value);
     if (exact) {
       setSimilarNote({ kind: "duplicate", names: [exact.name] });
       return;
     }
-    const similar = others.filter((m) => {
-      const on = m.name.toLowerCase();
-      return on.includes(n) || n.includes(on);
-    });
+    const similar = findSimilarMeals(others, value);
     setSimilarNote(
       similar.length
         ? { kind: "similar", names: similar.slice(0, 3).map((m) => m.name) }
