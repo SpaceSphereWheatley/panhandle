@@ -38,7 +38,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
   const t = useTranslation();
   const displayName = cap(translateItemName(item.name, lang));
   // Discreet "been on the list a while" marker — purely visual, computed from
-  // added_at (see /notification-settings' stale_item_days, VarslerSubpage.jsx),
+  // added_at (see /notification-settings' stale_item_days, NotificationsSubpage.jsx),
   // never shown once the item's bought.
   const isStale =
     !item.bought &&

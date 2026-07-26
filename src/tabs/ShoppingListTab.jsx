@@ -109,7 +109,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // through and fading out, before they re-sort into "Recently bought".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
   // Stale-item marker threshold (days), a per-list preference — see
-  // /notification-settings and VarslerSubpage.jsx. Falls back to the app
+  // /notification-settings and NotificationsSubpage.jsx. Falls back to the app
   // default until the first fetch resolves.
   const [staleItemDays, setStaleItemDays] = useState(7);
   // Pulls important, unbought items into their own "Important" section above the

@@ -18,7 +18,7 @@ import { apiErrorMessage } from "../../../lib/apiError.js";
 // action. Logg ut / Slett konto sit in their own visually distinct blocks so a
 // casual tap can't stumble into them, and every button here is the shared
 // design-system <Button> (no bespoke .btn-primary/.logout classes).
-export function KontoSubpage() {
+export function AccountSubpage() {
   const { user, name, isOwner, logout, updateIdentity } = useAuth();
   const { listUsers } = useListUsers();
   const toast = useToast();
@@ -60,7 +60,7 @@ export function KontoSubpage() {
       }
       savedName.current = res.name;
       updateIdentity({ name: res.name });
-      toast(t("settings.konto.toast.nameSaved"));
+      toast(t("settings.account.toast.nameSaved"));
     } catch {
       toast(t("shoppingList.toast.genericError"), { error: true });
     }
@@ -79,7 +79,7 @@ export function KontoSubpage() {
       setEmail(res.email);
       setEmailPw("");
       updateIdentity({ token: res.token, user: res.username });
-      toast(t("settings.konto.toast.emailSaved"));
+      toast(t("settings.account.toast.emailSaved"));
     } catch {
       toast(t("shoppingList.toast.genericError"), { error: true });
     }
@@ -87,7 +87,7 @@ export function KontoSubpage() {
 
   async function changePassword() {
     if (pwNew.length < 8) {
-      toast(t("settings.konto.toast.passwordTooShort"), { error: true });
+      toast(t("settings.account.toast.passwordTooShort"), { error: true });
       return;
     }
     try {
@@ -100,7 +100,7 @@ export function KontoSubpage() {
         return;
       }
       if (res.token) localStorage.setItem("ph_token", res.token);
-      toast(t("settings.konto.toast.passwordChanged"));
+      toast(t("settings.account.toast.passwordChanged"));
       setPwCurrent("");
       setPwNew("");
     } catch {
@@ -112,14 +112,14 @@ export function KontoSubpage() {
     const soleOwner = isOwner && listUsers.filter((u) => u.is_owner).length <= 1;
     const otherMembers = listUsers.filter((u) => u.username !== user).map((u) => u.name || u.username);
     const message = !soleOwner
-      ? t("settings.konto.delete.confirmMember")
+      ? t("settings.account.delete.confirmMember")
       : otherMembers.length > 0
-        ? t("settings.konto.delete.confirmSoleOwnerWithMembers", { members: otherMembers.join(", ") })
-        : t("settings.konto.delete.confirmSoleOwner");
+        ? t("settings.account.delete.confirmSoleOwnerWithMembers", { members: otherMembers.join(", ") })
+        : t("settings.account.delete.confirmSoleOwner");
     if (
       !(await confirm(message, {
-        title: t("settings.konto.delete.confirmTitle"),
-        confirmLabel: t("settings.konto.delete.confirmLabel"),
+        title: t("settings.account.delete.confirmTitle"),
+        confirmLabel: t("settings.account.delete.confirmLabel"),
       }))
     )
       return;
@@ -144,15 +144,15 @@ export function KontoSubpage() {
   return (
     <section>
       <Card padding="lg" style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.konto.loggedInAs")}</div>
+        <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.account.loggedInAs")}</div>
         <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{name || user}</div>
         <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{user}</div>
 
-        <SubpageSection label={t("settings.konto.name.label")}>
-          <FieldLabel htmlFor="profile-name">{t("settings.konto.name.label")}</FieldLabel>
+        <SubpageSection label={t("settings.account.name.label")}>
+          <FieldLabel htmlFor="profile-name">{t("settings.account.name.label")}</FieldLabel>
           <Input
             id="profile-name"
-            placeholder={t("settings.konto.name.label")}
+            placeholder={t("settings.account.name.label")}
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             onBlur={saveName}
@@ -160,37 +160,37 @@ export function KontoSubpage() {
         </SubpageSection>
 
         <SubpageSection
-          label={t(email ? "settings.konto.email.label" : "settings.konto.email.addLabel")}
-          description={t("settings.konto.email.description")}
+          label={t(email ? "settings.account.email.label" : "settings.account.email.addLabel")}
+          description={t("settings.account.email.description")}
         >
-          <FieldLabel htmlFor="profile-email">{t("settings.konto.email.label")}</FieldLabel>
-          <Input id="profile-email" type="email" placeholder={t("settings.konto.email.label")} style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
-          <FieldLabel htmlFor="profile-email-pw">{t("settings.konto.currentPassword")}</FieldLabel>
-          <Input id="profile-email-pw" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 10 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
-          <Button variant="primary" onClick={saveEmail}>{t("settings.konto.email.save")}</Button>
+          <FieldLabel htmlFor="profile-email">{t("settings.account.email.label")}</FieldLabel>
+          <Input id="profile-email" type="email" placeholder={t("settings.account.email.label")} style={{ marginBottom: 8 }} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} />
+          <FieldLabel htmlFor="profile-email-pw">{t("settings.account.currentPassword")}</FieldLabel>
+          <Input id="profile-email-pw" type="password" placeholder={t("settings.account.currentPassword")} style={{ marginBottom: 10 }} value={emailPw} onChange={(e) => setEmailPw(e.target.value)} />
+          <Button variant="primary" onClick={saveEmail}>{t("settings.account.email.save")}</Button>
         </SubpageSection>
 
-        <SubpageSection label={t("settings.konto.changePassword.label")}>
-          <FieldLabel htmlFor="profile-pw-current">{t("settings.konto.currentPassword")}</FieldLabel>
-          <Input id="profile-pw-current" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
-          <FieldLabel htmlFor="profile-pw-new">{t("settings.konto.newPassword")}</FieldLabel>
-          <Input id="profile-pw-new" type="password" placeholder={t("settings.konto.newPassword")} style={{ marginBottom: 10 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
-          <Button variant="primary" onClick={changePassword}>{t("settings.konto.changePassword.save")}</Button>
+        <SubpageSection label={t("settings.account.changePassword.label")}>
+          <FieldLabel htmlFor="profile-pw-current">{t("settings.account.currentPassword")}</FieldLabel>
+          <Input id="profile-pw-current" type="password" placeholder={t("settings.account.currentPassword")} style={{ marginBottom: 8 }} value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
+          <FieldLabel htmlFor="profile-pw-new">{t("settings.account.newPassword")}</FieldLabel>
+          <Input id="profile-pw-new" type="password" placeholder={t("settings.account.newPassword")} style={{ marginBottom: 10 }} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+          <Button variant="primary" onClick={changePassword}>{t("settings.account.changePassword.save")}</Button>
         </SubpageSection>
 
         <SubpageSection>
-          <Button variant="outline" onClick={() => logout()}>{t("settings.konto.logout")}</Button>
+          <Button variant="outline" onClick={() => logout()}>{t("settings.account.logout")}</Button>
         </SubpageSection>
       </Card>
 
       <Card padding="lg" style={{ background: "var(--status-danger-subtle)" }}>
-        <div style={{ fontWeight: 700, marginBottom: 10, color: "var(--status-danger)" }}>{t("settings.konto.delete.label")}</div>
+        <div style={{ fontWeight: 700, marginBottom: 10, color: "var(--status-danger)" }}>{t("settings.account.delete.label")}</div>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", marginBottom: 8 }}>
-          {t(isOwner ? "settings.konto.delete.descriptionOwner" : "settings.konto.delete.descriptionMember")}
+          {t(isOwner ? "settings.account.delete.descriptionOwner" : "settings.account.delete.descriptionMember")}
         </div>
-        <FieldLabel htmlFor="profile-delete-pw">{t("settings.konto.currentPassword")}</FieldLabel>
-        <Input id="profile-delete-pw" type="password" placeholder={t("settings.konto.currentPassword")} style={{ marginBottom: 10 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
-        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>{t("settings.konto.delete.label")}</Button>
+        <FieldLabel htmlFor="profile-delete-pw">{t("settings.account.currentPassword")}</FieldLabel>
+        <Input id="profile-delete-pw" type="password" placeholder={t("settings.account.currentPassword")} style={{ marginBottom: 10 }} value={pwDelete} onChange={(e) => setPwDelete(e.target.value)} />
+        <Button variant="danger" onClick={deleteAccount} disabled={deleting || !pwDelete}>{t("settings.account.delete.label")}</Button>
       </Card>
     </section>
   );

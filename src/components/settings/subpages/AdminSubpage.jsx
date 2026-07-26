@@ -35,7 +35,7 @@ const groupHeadingStyle = {
 // management tools as always-open SubpageSections (no accordions — see
 // SubpageSection.jsx). Statistikk is promoted out to its own subpage/row
 // instead of a fold-out, since a full charts dashboard needs its own screen
-// (see StatistikkSubpage.jsx).
+// (see StatsSubpage.jsx).
 export function AdminSubpage({ onNavigate }) {
   const { user: currentUser, isSuperAdmin } = useAuth();
   const { refresh: refreshListUsers } = useListUsers();
@@ -229,7 +229,7 @@ export function AdminSubpage({ onNavigate }) {
           <FieldLabel htmlFor="admin-new-owner-name" visuallyHidden>{t("settings.admin.newOwner.nameField")}</FieldLabel>
           <Input
             id="admin-new-owner-name"
-            placeholder={t("settings.konto.name.label")}
+            placeholder={t("settings.account.name.label")}
             value={newOwnerName}
             onChange={(e) => setNewOwnerName(e.target.value)}
             style={{ marginBottom: 8 }}
@@ -238,7 +238,7 @@ export function AdminSubpage({ onNavigate }) {
           <Input
             id="admin-new-owner-email"
             type="email"
-            placeholder={t("settings.konto.email.label")}
+            placeholder={t("settings.account.email.label")}
             value={newOwnerEmail}
             onChange={(e) => setNewOwnerEmail(e.target.value)}
             style={{ marginBottom: 10 }}
@@ -305,9 +305,9 @@ export function AdminSubpage({ onNavigate }) {
         <div style={{ borderTop: "1px solid var(--border-default)", marginTop: 12, paddingTop: 4 }}>
           <SettingsRow
             flush
-            label={t("settings.nav.statistikk")}
-            supportingText={t("settings.admin.statistikk.supporting")}
-            onClick={() => onNavigate(["admin", "statistikk"])}
+            label={t("settings.nav.stats")}
+            supportingText={t("settings.admin.stats.supporting")}
+            onClick={() => onNavigate(["admin", "stats"])}
           />
         </div>
       )}
