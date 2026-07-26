@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.47.1] — 2026-07-26
+
+### Fixed
+- **Appen rydder nå opp gammel bufring ved oppdatering.** Hver gang appen ble
+  oppdatert, ble filene fra forrige versjon liggende igjen i telefonens/
+  nettleserens lokale lager i stedet for å bli slettet — over mange
+  oppdateringer bygde dette seg sakte opp. Nå fjernes forrige versjons filer
+  automatisk når en ny oppdatering tas i bruk. Ingen synlig endring i appen,
+  bare mindre lagringsplass brukt over tid.
+
 ## [1.47.0] — 2026-07-26
 
 ### Added
