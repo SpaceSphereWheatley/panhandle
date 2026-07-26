@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.44.0] — 2026-07-26
+
+### Added
+- **The shopping list's item names are now translated too.** Switching to
+  English (Settings → "Språk") no longer just translates the surrounding
+  buttons and labels — the ~710 common grocery items (e.g. "Melk") now show
+  their English name ("Milk") as well, in both list and grid view, in
+  suggestions, and while editing. Typing in English (e.g. "milk") also finds
+  the matching item so autocomplete keeps working regardless of which
+  language you're typing in. A household's own custom/typed-in items aren't
+  translated (there's no name to look up) and simply show as typed either
+  way.
+- **The Språk switcher is now a dropdown** instead of a two-button toggle,
+  matching how other pick-one settings look in the app.
+
 ## [1.43.4] — 2026-07-25
 
 ### Added

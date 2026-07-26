@@ -7,6 +7,25 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+104. (15) Language support, phase 2: the ~710 `COMMON_ITEMS` catalogue item
+     names are now translated too, not just chrome. New
+     `src/lib/i18n/itemNames.js` — a display-only nb→en name lookup keyed
+     off the canonical (stored) name, so it never touches `item_catalogue`
+     itself and can't desync `checkCatalogueSync`'s upsert-by-name identity.
+     `matchCatalogue` (`shoppingUtils.js`) now also matches an item's
+     English translation when typing in English mode, so autocomplete finds
+     "Melk" when you type "milk" without ever renaming the stored row;
+     `extractGF` gained the English "gluten free"/"gluten-free" marker to
+     match. Finished wiring `ItemCard`/`SuggestionsModal`/`ItemEditModal` —
+     phase 1 only translated `ShoppingListTab`'s own chrome, leaving the
+     actual item-row component (and the add-suggestions/edit-item modals)
+     still 100% Norwegian. The Settings → "Språk" switcher is now a dropdown
+     (design system's existing, previously-unused `Select`) instead of a
+     two-button toggle. A household's own custom/typed items have no
+     translation source and simply display as typed in either language.
+     Extracting/translating the rest of the app, category display labels,
+     and meal names/ingredients stay open under #15. (1.44.0)
+
 103. (15) Language support, phase 1: translation infrastructure + a
      Settings → "Språk" switcher (Norsk/English, per-device, same instant-
      no-reload pattern as Tema) + `ShoppingListTab` wired up end-to-end as

@@ -78,6 +78,11 @@ describe("extractGF", () => {
     expect(extractGF("pasta glutenfri")).toEqual({ name: "pasta", gf: true });
   });
 
+  it("recognizes the English 'gluten free'/'gluten-free' marker", () => {
+    expect(extractGF("pasta gluten free")).toEqual({ name: "pasta", gf: true });
+    expect(extractGF("pasta gluten-free")).toEqual({ name: "pasta", gf: true });
+  });
+
   it("matches on word boundaries only", () => {
     expect(extractGF("Giraffe")).toEqual({ name: "Giraffe", gf: false });
   });
@@ -112,6 +117,21 @@ describe("matchCatalogue", () => {
   it("returns [] for empty/whitespace-only query", () => {
     expect(matchCatalogue("", catalogue)).toEqual([]);
     expect(matchCatalogue("   ", catalogue)).toEqual([]);
+  });
+
+  it("defaults to nb-only matching (no English token match) when lang is omitted", () => {
+    const results = matchCatalogue("milk", catalogue);
+    expect(results).toEqual([]);
+  });
+
+  it("also matches an item's English translation when lang is 'en'", () => {
+    const results = matchCatalogue("milk", catalogue, "en");
+    expect(results.map((r) => r.name)).toEqual(["Melk", "Lettmelk"]);
+  });
+
+  it("still matches the stored (Norwegian) name directly when lang is 'en'", () => {
+    const results = matchCatalogue("melk", catalogue, "en");
+    expect(results.map((r) => r.name)).toEqual(["Melk", "Lettmelk", "Sjokolademelk"]);
   });
 });
 

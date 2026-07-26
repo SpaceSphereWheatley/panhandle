@@ -6,6 +6,8 @@ import { cap, parseSqliteDatetime, haptic } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { translateItemName } from "../lib/i18n/itemNames.js";
 
 const MotionCard = motion(Card);
 const MotionDiv = motion.div;
@@ -32,6 +34,9 @@ const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6
 // not currentColor) and as the pale per-aisle card backdrop.
 export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
   const isGrid = viewMode === "grid";
+  const { lang } = useLanguage();
+  const t = useTranslation();
+  const displayName = cap(translateItemName(item.name, lang));
   // Discreet "been on the list a while" marker — purely visual, computed from
   // added_at (see /notification-settings' stale_item_days, VarslerSubpage.jsx),
   // never shown once the item's bought.
@@ -168,8 +173,8 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
             role="button"
             tabIndex={0}
             aria-pressed={!!item.important}
-            aria-label={item.important ? "Fjern som viktig" : "Merk som viktig"}
-            title={item.important ? "Fjern som viktig" : "Merk som viktig"}
+            aria-label={item.important ? t("itemCard.unmarkImportant") : t("itemCard.markImportant")}
+            title={item.important ? t("itemCard.unmarkImportant") : t("itemCard.markImportant")}
             onClick={(e) => {
               e.stopPropagation();
               onToggleImportant(item.id);
@@ -220,7 +225,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
         ) : null}
         {isStale ? (
           <span
-            title={`På listen i over ${staleItemDays} dager`}
+            title={t("itemCard.staleTooltip", { days: staleItemDays })}
             style={{
               position: "absolute",
               top: -4,
@@ -271,7 +276,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
             WebkitLineClamp: isGrid ? 2 : undefined,
           }}
         >
-          {cap(item.name)}
+          {displayName}
         </div>
         <div
           style={{
@@ -322,7 +327,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
       padding={isGrid ? "none" : "sm"}
       role="button"
       tabIndex={0}
-      aria-label={`${cap(item.name)}${item.important ? ", viktig" : ""}${item.bought ? ", kjøpt" : ""}`}
+      aria-label={`${displayName}${item.important ? t("itemCard.importantSuffix") : ""}${item.bought ? t("itemCard.boughtSuffix") : ""}`}
       onClick={() => {
         if (swipeSuppressRef.current) return;
         onToggle(item.id);

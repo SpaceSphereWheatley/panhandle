@@ -94,16 +94,27 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
 
 ## Feature
 
-15. Extract/translate the rest of the app into the nb/en i18n layer (phase 2
-    of language support — phase 1, the translation infrastructure
-    (`src/lib/i18n/`), the Settings → "Språk" switcher, and `ShoppingListTab`
-    wired up as a proof of concept, shipped in 1.43.4). Every other
-    tab/component (`MealsTab`, the other Settings subpages, every modal,
-    `AuthScreens`, `ConfirmContext`'s shared "Avbryt" chrome) is still 100%
-    hardcoded Norwegian. Server-side error strings (`worker/index.js`,
-    surfaced via `toast(res.error)`) are a separate translation surface not
-    yet addressed either. Large, cross-cutting effort — touches nearly every
-    remaining component, still not a contained feature.
+15. Extract/translate the rest of the app into the nb/en i18n layer (phase 3
+    of language support — phase 1 shipped the translation infrastructure,
+    the Settings → "Språk" switcher, and `ShoppingListTab` as a proof of
+    concept (1.43.4); phase 2 translated the actual catalogue item names
+    (`src/lib/i18n/itemNames.js`, ~710 `COMMON_ITEMS` entries, display-only
+    over the canonical Norwegian stored name) plus finished wiring
+    `ItemCard`/`SuggestionsModal`/`ItemEditModal`, and made the switcher a
+    dropdown (1.44.0)). Every other tab/component (`MealsTab`, the other
+    Settings subpages, every remaining modal, `AuthScreens`,
+    `ConfirmContext`'s shared "Avbryt" chrome) is still 100% hardcoded
+    Norwegian. Two related, still-open follow-ons: category display-label
+    translation (`CATEGORIES` in `shared/categories.js` is used as a literal
+    data key by `clusterFor`/`category_order`/worker validation, so its
+    *label* needs a separate stable-key layer before it can be localized —
+    affects `ButikkSubpage`/`ItemEditModal`'s category picker) and meal
+    names/ingredients (`meal_catalogue` — free-text, not tied to
+    `item_catalogue` at all, lower priority). Server-side error strings
+    (`worker/index.js`, surfaced via `toast(res.error)`) are a separate
+    translation surface not yet addressed either. Large, cross-cutting
+    effort — touches nearly every remaining component, still not a
+    contained feature.
     _Value: Medium · Importance: Low · Type: Feature / i18n_
 
 ## Data model / Account lifecycle

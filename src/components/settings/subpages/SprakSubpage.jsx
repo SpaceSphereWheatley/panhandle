@@ -1,11 +1,6 @@
-import { Card, SegmentedControl } from "../../../design-system/index.js";
+import { Card, Select } from "../../../design-system/index.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
-
-const LANGUAGE_OPTIONS = [
-  { value: "nb", label: "Norsk" },
-  { value: "en", label: "English" },
-];
 
 export function SprakSubpage() {
   const { lang, setLang } = useLanguage();
@@ -13,7 +8,10 @@ export function SprakSubpage() {
   return (
     <Card padding="lg" style={{ overflow: "hidden" }}>
       <SubpageSection label="Språk" description="Språket appen vises på. Gjelder bare denne enheten.">
-        <SegmentedControl value={lang} onChange={setLang} options={LANGUAGE_OPTIONS} />
+        <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Språk">
+          <option value="nb">Norsk</option>
+          <option value="en">English</option>
+        </Select>
       </SubpageSection>
     </Card>
   );
