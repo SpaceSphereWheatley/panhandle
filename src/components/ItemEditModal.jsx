@@ -6,20 +6,29 @@ import { api } from "../lib/api.js";
 import { useConfirm } from "../context/ConfirmContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { translateItemName } from "../lib/i18n/itemNames.js";
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
   const confirm = useConfirm();
   const toast = useToast();
   const { nameFor } = useListUsers();
+  const { lang } = useLanguage();
+  const t = useTranslation();
+  // The edit input always operates on the canonical (Norwegian) stored name
+  // — translation is a display concern (see itemNames.js), not something a
+  // rename should rewrite. The modal title/confirm dialog below are
+  // read-only, so those DO show the translated name for recognition.
   const [name, setName] = useState(cap(item.name));
   const [category, setCategory] = useState(item.category);
   const [qty, setQty] = useState(item.qty || 1);
   const [notes, setNotes] = useState(item.notes || "");
+  const displayName = cap(translateItemName(item.name, lang));
 
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast("Tomt navn", { error: true });
+      toast(t("itemEdit.emptyName"), { error: true });
       return;
     }
     const res = await api(`/list/${item.id}`, {
@@ -27,6 +36,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
       body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
     });
     if (res.error) {
+      // TODO(i18n): res.error is a raw server string (worker/index.js), not run through t() — phase 2+.
       toast(res.error, { error: true });
       return;
     }
@@ -48,10 +58,10 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   // and it stops being auto-suggested. Other lists' catalogues are unaffected.
   async function deleteFromCatalogue() {
     if (
-      !(await confirm(
-        `Glemme «${cap(item.name)}» helt fra listens lagrede varer? Kjøpshistorikken nullstilles, og den blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)`,
-        { title: "Glemme vare?", confirmLabel: "Glem" }
-      ))
+      !(await confirm(t("itemEdit.confirmForget.body", { name: displayName }), {
+        title: t("itemEdit.confirmForget.title"),
+        confirmLabel: t("itemEdit.confirmForget.confirmLabel"),
+      }))
     )
       return;
     await api(`/list/${item.id}/catalogue`, { method: "DELETE" });
@@ -59,26 +69,31 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   }
 
   return (
-    <Modal onClose={onClose} title={cap(item.name)}>
-      <div className="meta">Lagt til av {nameFor(item.added_by)}</div>
-      <label htmlFor="item-edit-name">Navn</label>
+    <Modal onClose={onClose} title={displayName}>
+      <div className="meta">{t("itemEdit.addedBy", { name: nameFor(item.added_by) })}</div>
+      <label htmlFor="item-edit-name">{t("itemEdit.nameLabel")}</label>
       <Input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
-      <label htmlFor="item-edit-category">Kategori</label>
+      <label htmlFor="item-edit-category">{t("itemEdit.categoryLabel")}</label>
       <select id="item-edit-category" value={category} onChange={(e) => setCategory(e.target.value)}>
         {CATEGORIES.map((c) => (
           <option key={c}>{c}</option>
         ))}
       </select>
-      <label htmlFor="item-edit-qty">Antall</label>
+      <label htmlFor="item-edit-qty">{t("itemEdit.qtyLabel")}</label>
       <Input id="item-edit-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} />
-      <label htmlFor="item-edit-notes">Notat (mengde, beskrivelse o.l.)</label>
-      <Input id="item-edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="F.eks. 2 liter" />
+      <label htmlFor="item-edit-notes">{t("itemEdit.notesLabel")}</label>
+      <Input
+        id="item-edit-notes"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder={t("itemEdit.notesPlaceholder")}
+      />
       <div className="actions">
-        <Button variant="outline" onClick={onClose}>Avbryt</Button>
-        <Button variant="primary" onClick={save}>Lagre</Button>
+        <Button variant="outline" onClick={onClose}>{t("itemEdit.cancel")}</Button>
+        <Button variant="primary" onClick={save}>{t("itemEdit.save")}</Button>
       </div>
       <Button variant="danger" icon="trash" onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
-        Fjern fra listen
+        {t("itemEdit.removeFromList")}
       </Button>
       <button
         type="button"
@@ -95,7 +110,7 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
           cursor: "pointer",
         }}
       >
-        Glem vare og kjøpshistorikk helt
+        {t("itemEdit.forgetCompletely")}
       </button>
     </Modal>
   );

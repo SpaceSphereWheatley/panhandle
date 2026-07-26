@@ -1,5 +1,6 @@
 // Pure helpers ported from public/app.html's shopping-list script section.
 export { CATEGORIES } from "../../shared/categories.js";
+import { translateItemName } from "./i18n/itemNames.js";
 
 // Upper-cases the first character of an item/catalogue name for display,
 // leaving the rest as stored. Mirrors the server's capitalizeName.
@@ -45,12 +46,14 @@ export function parseItemInput(raw, catalogue) {
   return { name: text, qty: 1, unit: null };
 }
 
-// Pulls a gluten-free marker (GF / gf / glutenfri / glutenfritt) out of a
-// typed name so it can become a "GF" note instead of part of the item name.
+// Pulls a gluten-free marker (GF / gf / glutenfri / glutenfritt / "gluten
+// free"/"gluten-free") out of a typed name so it can become a "GF" note
+// instead of part of the item name — bilingual since a household in English
+// mode still types in English.
 export function extractGF(name) {
   let gf = false;
   const cleaned = (name || "")
-    .replace(/\b(gf|glutenfri|glutenfritt)\b/gi, () => {
+    .replace(/\b(gf|glutenfri|glutenfritt|gluten.?free)\b/gi, () => {
       gf = true;
       return " ";
     })
@@ -61,14 +64,20 @@ export function extractGF(name) {
 }
 
 // Token-based fuzzy match: every word in the query must appear somewhere in
-// the candidate name (any order), so "melk lett" matches "Lettmelk".
-export function matchCatalogue(query, catalogue) {
+// the candidate name (any order), so "melk lett" matches "Lettmelk". The
+// stored catalogue name is always the canonical (Norwegian) one — when
+// `lang` is "en", also match against its English display translation (see
+// itemNames.js) so typing "milk" surfaces "Melk", displayed as "Milk",
+// without ever renaming the stored row.
+export function matchCatalogue(query, catalogue, lang = "nb") {
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return [];
   return catalogue
     .filter((c) => {
-      const ln = c.name.toLowerCase();
-      return tokens.every((t) => ln.includes(t));
+      const searchable = lang === "en"
+        ? `${c.name} ${translateItemName(c.name, "en")}`.toLowerCase()
+        : c.name.toLowerCase();
+      return tokens.every((t) => searchable.includes(t));
     })
     .sort((a, b) => a.name.length - b.name.length);
 }

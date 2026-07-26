@@ -19,7 +19,8 @@ import { Input, Avatar, FabMenu, Skeleton, EmptyState } from "../design-system/i
 import { readCache, writeCache } from "../lib/localCache.js";
 import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useTranslation } from "../context/LanguageContext.jsx";
+import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
+import { translateItemName } from "../lib/i18n/itemNames.js";
 
 const POLL_MS = 7000;
 // Last-fetched list, hydrated on mount so a returning user sees real items
@@ -78,6 +79,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const confirm = useConfirm();
   const { user: currentUser } = useAuth();
   const t = useTranslation();
+  const { lang } = useLanguage();
   const [catalogue, setCatalogue] = useState([]);
   const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
   // Other members who've polled the list in the last ~20s (see POST
@@ -272,7 +274,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       const { name: rawName, qty: parsedQty, unit } = parseItemInput(typed, catalogue);
       if (!rawName) return;
       const { name: baseName, gf } = extractGF(rawName);
-      const match = matchCatalogue(baseName, catalogue)[0];
+      const match = matchCatalogue(baseName, catalogue, lang)[0];
       name = match ? match.name : baseName;
       category = match ? match.category : "Annet";
       const noteParts = [unit, gf ? "Glutenfri" : null].filter(Boolean);
@@ -307,7 +309,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       return;
     }
     if (res?.duplicate) {
-      toast(t("shoppingList.toast.duplicateIncreased", { name: cap(name), qty: res.qty }));
+      toast(t("shoppingList.toast.duplicateIncreased", { name: cap(translateItemName(name, lang)), qty: res.qty }));
     }
     await loadCatalogue();
     loadList();
@@ -450,7 +452,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
     const { name: query } = parseItemInput(v, catalogue);
     const { name: base } = extractGF(query);
-    setSuggestions(matchCatalogue(base, catalogue).slice(0, 6));
+    setSuggestions(matchCatalogue(base, catalogue, lang).slice(0, 6));
   }
 
   useEffect(() => {
@@ -594,7 +596,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
                 const m = suggestions[highlightedIndex];
                 const { gf } = extractGF(parseItemInput(addValue, catalogue).name);
-                addItem(cap(m.name) + (gf ? " GF" : ""));
+                addItem(cap(translateItemName(m.name, lang)) + (gf ? " GF" : ""));
               } else if (highlightedIndex === suggestions.length && exactOptionShown) {
                 addItem(addValue, { exact: true });
               } else {
@@ -621,7 +623,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           >
             {suggestions.map((m, i) => {
               const { gf } = extractGF(parseItemInput(addValue, catalogue).name);
-              const label = cap(m.name) + (gf ? " GF" : "");
+              const label = cap(translateItemName(m.name, lang)) + (gf ? " GF" : "");
               return (
                 <div
                   key={m.id}
