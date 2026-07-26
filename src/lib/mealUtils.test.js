@@ -1,5 +1,23 @@
-import { describe, it, expect } from "vitest";
-import { buildIngredientRows, parseIngredients, localIso, mondayOf } from "./mealUtils.js";
+import { describe, it, expect, vi } from "vitest";
+
+const mockApi = vi.fn();
+vi.mock("./api.js", () => ({
+  api: (...args) => mockApi(...args),
+}));
+
+const {
+  buildIngredientRows,
+  parseIngredients,
+  localIso,
+  mondayOf,
+  dayOfWeekMonFirst,
+  sortMealsByUsage,
+  collectLabels,
+  findMealByName,
+  mealNameMatches,
+  findSimilarMeals,
+  addRowsToList,
+} = await import("./mealUtils.js");
 
 describe("localIso", () => {
   it("formats a Date using its local calendar date, zero-padded", () => {
@@ -83,5 +101,107 @@ describe("buildIngredientRows", () => {
     const rows = buildIngredientRows(["Melk", "Egg"], catalogue, onList);
     expect(rows.find((r) => r.name === "Melk").already).toBe(true);
     expect(rows.find((r) => r.name === "Egg").already).toBe(false);
+  });
+});
+
+describe("dayOfWeekMonFirst", () => {
+  it("returns 0 for Monday and 6 for Sunday", () => {
+    expect(dayOfWeekMonFirst(new Date(2024, 0, 1))).toBe(0); // Monday
+    expect(dayOfWeekMonFirst(new Date(2024, 0, 7))).toBe(6); // Sunday
+  });
+
+  it("accepts an ISO date string", () => {
+    expect(dayOfWeekMonFirst("2024-01-03")).toBe(2); // Wednesday
+  });
+});
+
+describe("sortMealsByUsage", () => {
+  it("sorts by times_planned descending, then name ascending", () => {
+    const meals = [
+      { name: "Zebra", times_planned: 1 },
+      { name: "Taco", times_planned: 5 },
+      { name: "Apple", times_planned: 5 },
+    ];
+    expect(sortMealsByUsage(meals).map((m) => m.name)).toEqual(["Apple", "Taco", "Zebra"]);
+  });
+
+  it("doesn't mutate the input array", () => {
+    const meals = [{ name: "B", times_planned: 1 }, { name: "A", times_planned: 2 }];
+    const copy = [...meals];
+    sortMealsByUsage(meals);
+    expect(meals).toEqual(copy);
+  });
+});
+
+describe("collectLabels", () => {
+  it("collects distinct labels across meals, sorted alphabetically", () => {
+    const meals = [
+      { labels: '["Vegetar", "Rask"]' },
+      { labels: '["Rask", "Barnevennlig"]' },
+    ];
+    expect(collectLabels(meals)).toEqual(["Barnevennlig", "Rask", "Vegetar"]);
+  });
+
+  it("returns [] when no meal has labels", () => {
+    expect(collectLabels([{ labels: null }, { labels: "" }])).toEqual([]);
+  });
+});
+
+describe("findMealByName", () => {
+  const catalogue = [{ id: 1, name: "Taco" }, { id: 2, name: "Pizza" }];
+
+  it("matches case-insensitively and trims the query", () => {
+    expect(findMealByName(catalogue, "  taco  ")).toEqual(catalogue[0]);
+  });
+
+  it("returns undefined for an empty query or no match", () => {
+    expect(findMealByName(catalogue, "")).toBeUndefined();
+    expect(findMealByName(catalogue, "Sushi")).toBeUndefined();
+  });
+});
+
+describe("mealNameMatches", () => {
+  it("matches a case-insensitive substring", () => {
+    expect(mealNameMatches("Fish Tacos", "taco")).toBe(true);
+    expect(mealNameMatches("Fish Tacos", "sushi")).toBe(false);
+  });
+
+  it("treats an empty/whitespace query as matching everything", () => {
+    expect(mealNameMatches("Fish Tacos", "")).toBe(true);
+    expect(mealNameMatches("Fish Tacos", "   ")).toBe(true);
+  });
+});
+
+describe("findSimilarMeals", () => {
+  const catalogue = [{ name: "Tacos" }, { name: "Fish tacos" }, { name: "Pizza" }];
+
+  it("matches either direction of substring containment", () => {
+    expect(findSimilarMeals(catalogue, "Taco").map((m) => m.name)).toEqual(["Tacos", "Fish tacos"]);
+  });
+
+  it("returns [] for an empty query", () => {
+    expect(findSimilarMeals(catalogue, "")).toEqual([]);
+  });
+});
+
+describe("addRowsToList", () => {
+  it("tallies added/merged/failed across POST /list calls", async () => {
+    mockApi
+      .mockResolvedValueOnce({ id: 1 })
+      .mockResolvedValueOnce({ id: 2, duplicate: true })
+      .mockRejectedValueOnce(new Error("network"));
+    const result = await addRowsToList([
+      { name: "Melk", category: "Dairy" },
+      { name: "Egg", category: "Dairy" },
+      { name: "Smør", category: "Dairy" },
+    ]);
+    expect(result).toEqual({ added: 1, merged: 1, failed: 1 });
+    expect(mockApi).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns all zeroes for an empty row list", async () => {
+    mockApi.mockClear();
+    expect(await addRowsToList([])).toEqual({ added: 0, merged: 0, failed: 0 });
+    expect(mockApi).not.toHaveBeenCalled();
   });
 });

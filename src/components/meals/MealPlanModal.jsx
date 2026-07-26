@@ -6,7 +6,8 @@ import { IconButton } from "../../design-system/components/forms/IconButton.jsx"
 import { LoadingState } from "../../design-system/components/data-display/Spinner.jsx";
 import { TokenInput } from "./TokenInput.jsx";
 import { api } from "../../lib/api.js";
-import { parseIngredients } from "../../lib/mealUtils.js";
+import { parseIngredients, dayOfWeekMonFirst, findMealByName, mealNameMatches } from "../../lib/mealUtils.js";
+import { useOutsideClick } from "../../hooks/useOutsideClick.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
@@ -56,7 +57,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       setCurrent(cur);
       setMealName(cur.meal_name || "");
       setIngredients(parseIngredients(cur.ingredients));
-      const dow = (new Date(iso).getDay() + 6) % 7;
+      const dow = dayOfWeekMonFirst(iso);
       const def = !cur.responsible ? schedule[dow] || "" : "";
       const resp = cur.responsible || "";
       const knownPeople = people;
@@ -67,20 +68,11 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
     })();
   }, [iso]);
 
-  useEffect(() => {
-    function onDocClick(e) {
-      if (!fieldRef.current?.contains(e.target)) setShowDropdown(false);
-    }
-    // Capture phase: the Sheet content wrapper stops click propagation, so a
-    // bubble-phase document listener never fires for clicks inside the modal
-    // and the dropdown would stay open. Capture runs before that stopPropagation.
-    document.addEventListener("click", onDocClick, true);
-    return () => document.removeEventListener("click", onDocClick, true);
-  }, []);
+  useOutsideClick(fieldRef, () => setShowDropdown(false));
 
   function onMealNameChange(v) {
     setMealName(v);
-    const match = mealCatalogue.find((m) => m.name.toLowerCase() === v.trim().toLowerCase());
+    const match = findMealByName(mealCatalogue, v);
     if (match) setIngredients(parseIngredients(match.ingredients));
     setShowDropdown(true);
   }
@@ -153,9 +145,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
     );
   }
 
-  const dropdownMatches = mealCatalogue.filter(
-    (m) => !mealName.trim() || m.name.toLowerCase().includes(mealName.trim().toLowerCase())
-  );
+  const dropdownMatches = mealCatalogue.filter((m) => mealNameMatches(m.name, mealName));
 
   return (
     <Modal onClose={onClose} title={t("meals.plan.title")}>

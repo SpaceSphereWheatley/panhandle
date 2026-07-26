@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { Button, LoadingState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
-import { buildIngredientRows } from "../../lib/mealUtils.js";
+import { buildIngredientRows, addRowsToList } from "../../lib/mealUtils.js";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
 import { IngredientChecklist } from "./IngredientChecklist.jsx";
@@ -40,18 +40,10 @@ export function IngredientPickerModal({ ingredients, onClose }) {
       onClose();
       return;
     }
-    let added = 0,
-      failed = 0;
-    for (const r of checked) {
-      try {
-        await api("/list", { method: "POST", body: JSON.stringify({ name: r.name, qty: 1, category: r.category }) });
-        added++;
-      } catch {
-        failed++;
-      }
-    }
+    const { added, merged, failed } = await addRowsToList(checked);
     onClose();
     if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
+    else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
     else toast(t("meals.toast.ingredientsAdded", { count: added }));
   }
 

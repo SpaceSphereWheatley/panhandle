@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../Modal.jsx";
 import { Button, IconButton, LoadingState, EmptyState } from "../../design-system/index.js";
 import { api } from "../../lib/api.js";
-import { parseIngredients } from "../../lib/mealUtils.js";
+import { parseIngredients, sortMealsByUsage, collectLabels, mealNameMatches } from "../../lib/mealUtils.js";
 import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
 import { dateLocale } from "../../lib/i18n/dateLocale.js";
 
@@ -21,23 +21,17 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit, onPlanAgain }) {
   useEffect(() => {
     (async () => {
       const rows = await api("/meals");
-      setMeals([...rows].sort((a, b) => b.times_planned - a.times_planned || a.name.localeCompare(b.name)));
+      setMeals(sortMealsByUsage(rows));
     })();
   }, []);
 
-  const labels = useMemo(() => {
-    if (!meals) return [];
-    const set = new Set();
-    for (const m of meals) for (const l of parseIngredients(m.labels)) set.add(l);
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [meals]);
+  const labels = useMemo(() => (meals ? collectLabels(meals) : []), [meals]);
 
   const rows = useMemo(() => {
     if (!meals) return [];
-    const f = filter.trim().toLowerCase();
     const lf = labelFilter.toLowerCase();
     return meals.filter((m) => {
-      const nameMatch = !f || m.name.toLowerCase().includes(f);
+      const nameMatch = mealNameMatches(m.name, filter);
       const labelMatch = !lf || parseIngredients(m.labels).some((l) => l.toLowerCase() === lf);
       return nameMatch && labelMatch;
     });

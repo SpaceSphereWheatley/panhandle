@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.48.1] — 2026-07-26
+
+### Fixed
+- Picking ingredients from a single meal (rather than a whole week) to add to
+  the shopping list now tells you when everything you picked was already on
+  the list, instead of silently saying "0 added". Adding a whole week's
+  ingredients already did this; now both places behave the same way.
+- A meal-name or ingredient dropdown could occasionally stay open after
+  tapping elsewhere on screen. It now always closes.
+
 ## [1.48.0] — 2026-07-26
 
 ### Changed
