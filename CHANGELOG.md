@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.48.3] — 2026-07-27
+
+### Changed
+- **The list/grid toggle on the shopping list is now one button.** It used to
+  be two icon buttons that only reacted if you tapped the exact icon — miss it
+  by a few pixels and nothing happened. Now the whole pill is a single button:
+  tap anywhere on it, including directly on the icon that's already selected,
+  and it switches.
+
 ## [1.48.2] — 2026-07-27
 
 ### Fixed
