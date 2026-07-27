@@ -8,8 +8,18 @@ export const SETTINGS_SUBPAGE_TITLE_KEYS = {
   account: "settings.nav.account",
   language: "settings.nav.language",
   notifications: "settings.nav.notifications",
-  household: "settings.nav.household",
+  members: "settings.nav.members",
+  "dinner-duty": "settings.nav.dinnerDuty",
   store: "settings.nav.store",
   admin: "settings.nav.admin",
   "admin/stats": "settings.nav.stats",
 };
+
+// Looks the title key up from a settingsPath *array* — the same value a row
+// passes to onNavigate. SettingsRoot used to index the object by hand with a
+// separate literal per row, which silently drifted from the real property
+// names (six rows rendered with an empty label until 1.48.2). Going through
+// the destination path means a label and its navigation target can't diverge.
+export function settingsTitleKey(path) {
+  return SETTINGS_SUBPAGE_TITLE_KEYS[path.join("/")];
+}

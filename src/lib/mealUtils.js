@@ -1,7 +1,7 @@
 import { matchCatalogue } from "./shoppingUtils.js";
 import { api } from "./api.js";
 
-// (WEEKDAYS_NO used to live here. Its only consumer, RecurringIsland, now
+// (WEEKDAYS_NO used to live here. Its only consumer, DinnerDutySubpage, now
 // builds the same Monday-first list per language via i18n/dateLocale.js's
 // weekdayNames(lang) instead of a hardcoded Norwegian array.)
 

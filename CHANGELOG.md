@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.48.2] — 2026-07-27
+
+### Fixed
+- **Most of the rows in Settings had lost their names.** Appearance, Account,
+  Language, Notifications, Our home and Store layout all showed a blank line
+  where the title should be — only their grey description text was left. All of
+  them read properly again.
+
+### Changed
+- **"Our home" is split into two pages that make sense on their own.** It used
+  to be one row labelled with the member count that opened a page containing
+  both the member list and the weekly dinner schedule — and if you weren't an
+  owner, the member list wasn't there at all, so the row promised "3 / 10
+  members" and delivered a dinner plan. Now there's **Household members**
+  (owners only — the roster and adding/removing people) and **Dinner duty**
+  (everyone — who cooks on each weekday).
+- **Dinner duty is a lot shorter.** Each weekday and its picker now sit on one
+  line instead of stacked, so the whole week fits on screen without scrolling.
+
 ## [1.48.1] — 2026-07-26
 
 ### Fixed
