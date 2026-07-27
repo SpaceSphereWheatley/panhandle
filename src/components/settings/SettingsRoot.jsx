@@ -2,7 +2,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { usePush } from "../../context/PushContext.jsx";
 import { useLanguage, useTranslation } from "../../context/LanguageContext.jsx";
-import { SETTINGS_SUBPAGE_TITLE_KEYS } from "../../lib/settingsNav.js";
+import { settingsTitleKey } from "../../lib/settingsNav.js";
 import { PwaInstallCTA } from "./PwaInstallCTA.jsx";
 import { SettingsGroup } from "./SettingsGroup.jsx";
 import { SettingsRow } from "./SettingsRow.jsx";
@@ -16,8 +16,22 @@ import { AboutFooter } from "./AboutFooter.jsx";
 // nothing renders controls inline anymore. (Appearance — theme/design/haptics
 // — used to live inline here under an "Appinnstillinger" label; it's now the
 // "Utseende" subpage, so the root is consistent.)
+//
+// Each row's destination is declared once below and drives both the label and
+// onNavigate via settingsTitleKey — see settingsNav.js for why.
+const PATHS = {
+  appearance: ["appearance"],
+  account: ["account"],
+  language: ["language"],
+  notifications: ["notifications"],
+  members: ["members"],
+  dinnerDuty: ["dinner-duty"],
+  store: ["store"],
+  admin: ["admin"],
+};
+
 export function SettingsRoot({ onNavigate }) {
-  const { user, name, isAdmin } = useAuth();
+  const { user, name, isAdmin, isOwner } = useAuth();
   const { listUsers } = useListUsers();
   const { subscribed } = usePush();
   const { lang } = useLanguage();
@@ -30,54 +44,66 @@ export function SettingsRoot({ onNavigate }) {
       <SettingsGroup label={t("settings.root.group.me")}>
         <SettingsRow
           icon="palette"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.utseende)}
+          label={t(settingsTitleKey(PATHS.appearance))}
           supportingText={t("settings.root.appearance.supporting")}
-          onClick={() => onNavigate(["appearance"])}
+          onClick={() => onNavigate(PATHS.appearance)}
         />
         <SettingsRow
           icon="user-circle"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.konto)}
+          label={t(settingsTitleKey(PATHS.account))}
           supportingText={name || user}
-          onClick={() => onNavigate(["account"])}
+          onClick={() => onNavigate(PATHS.account)}
         />
         <SettingsRow
           icon="translate"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.sprak)}
+          label={t(settingsTitleKey(PATHS.language))}
           // Each language's own endonym, never translated — the point of this
           // row is to be recognisable to someone who can't read the current UI.
           supportingText={lang === "en" ? "English" : "Norsk"}
-          onClick={() => onNavigate(["language"])}
+          onClick={() => onNavigate(PATHS.language)}
         />
       </SettingsGroup>
 
       <SettingsGroup>
         <SettingsRow
           icon="bell"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.varsler)}
+          label={t(settingsTitleKey(PATHS.notifications))}
           supportingText={t(subscribed ? "settings.root.notifications.on" : "settings.root.notifications.off")}
-          onClick={() => onNavigate(["notifications"])}
+          onClick={() => onNavigate(PATHS.notifications)}
         />
       </SettingsGroup>
 
       <SettingsGroup label={t("settings.root.group.household")}>
+        {/* Owners only — adding/removing members is the whole page, and both
+            /list-users writes are owner-gated server-side. Members and dinner
+            duty used to share one "Vårt hjem" row whose "x / 10 members"
+            subtitle led a plain member straight to the dinner schedule. */}
+        {isOwner && (
+          <SettingsRow
+            icon="users"
+            label={t(settingsTitleKey(PATHS.members))}
+            supportingText={t("settings.root.members.supporting", { count: listUsers.length })}
+            onClick={() => onNavigate(PATHS.members)}
+          />
+        )}
         <SettingsRow
-          icon="house"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.hjem)}
-          supportingText={t("settings.root.household.supporting", { count: listUsers.length })}
-          onClick={() => onNavigate(["household"])}
+          icon="calendar-check"
+          label={t(settingsTitleKey(PATHS.dinnerDuty))}
+          supportingText={t("settings.root.dinnerDuty.supporting")}
+          onClick={() => onNavigate(PATHS.dinnerDuty)}
         />
         <SettingsRow
           icon="storefront"
-          label={t(SETTINGS_SUBPAGE_TITLE_KEYS.butikk)}
+          label={t(settingsTitleKey(PATHS.store))}
           supportingText={t("settings.root.store.supporting")}
-          onClick={() => onNavigate(["store"])}
+          onClick={() => onNavigate(PATHS.store)}
         />
         {isAdmin && (
           <SettingsRow
             icon="shield-check"
-            label={t(SETTINGS_SUBPAGE_TITLE_KEYS.admin)}
+            label={t(settingsTitleKey(PATHS.admin))}
             supportingText={t("settings.root.admin.supporting")}
-            onClick={() => onNavigate(["admin"])}
+            onClick={() => onNavigate(PATHS.admin)}
           />
         )}
       </SettingsGroup>

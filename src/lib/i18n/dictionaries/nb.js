@@ -232,7 +232,8 @@ export const nb = {
   "settings.nav.account": "Konto",
   "settings.nav.language": "Språk",
   "settings.nav.notifications": "Varsler",
-  "settings.nav.household": "Vårt hjem",
+  "settings.nav.members": "Husstandsmedlemmer",
+  "settings.nav.dinnerDuty": "Middagsansvar",
   "settings.nav.store": "Butikkoppsett",
   "settings.nav.admin": "Administrasjon",
   "settings.nav.stats": "Statistikk",
@@ -241,7 +242,8 @@ export const nb = {
   "settings.root.appearance.supporting": "Tema, design og vibrasjon",
   "settings.root.notifications.on": "Aktivert",
   "settings.root.notifications.off": "Av",
-  "settings.root.household.supporting": "{count} / 10 medlemmer",
+  "settings.root.members.supporting": "{count} / 10 medlemmer",
+  "settings.root.dinnerDuty.supporting": "Hvem lager middag hvilke dager",
   "settings.root.store.supporting": "Varegrupper og gamle varer",
   "settings.root.admin.supporting": "Brukere, lister og statistikk",
 
@@ -312,7 +314,6 @@ export const nb = {
   "settings.store.stale.decrease": "Reduser antall dager",
   "settings.store.stale.increase": "Øk antall dager",
 
-  "settings.household.members.eyebrow": "Medlemmer",
   "settings.household.members.count": "{count} / 10 brukere",
   "settings.household.members.label": "Medlemmer",
   "settings.household.members.you": "deg",

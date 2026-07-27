@@ -181,7 +181,8 @@ export const en = {
   "settings.nav.account": "Account",
   "settings.nav.language": "Language",
   "settings.nav.notifications": "Notifications",
-  "settings.nav.household": "Our home",
+  "settings.nav.members": "Household members",
+  "settings.nav.dinnerDuty": "Dinner duty",
   "settings.nav.store": "Store layout",
   "settings.nav.admin": "Administration",
   "settings.nav.stats": "Statistics",
@@ -190,7 +191,8 @@ export const en = {
   "settings.root.appearance.supporting": "Theme, design and vibration",
   "settings.root.notifications.on": "On",
   "settings.root.notifications.off": "Off",
-  "settings.root.household.supporting": "{count} / 10 members",
+  "settings.root.members.supporting": "{count} / 10 members",
+  "settings.root.dinnerDuty.supporting": "Who cooks on each day",
   "settings.root.store.supporting": "Aisles and stale items",
   "settings.root.admin.supporting": "Users, lists and statistics",
 
@@ -261,7 +263,6 @@ export const en = {
   "settings.store.stale.decrease": "Decrease the number of days",
   "settings.store.stale.increase": "Increase the number of days",
 
-  "settings.household.members.eyebrow": "Members",
   "settings.household.members.count": "{count} / 10 users",
   "settings.household.members.label": "Members",
   "settings.household.members.you": "you",
