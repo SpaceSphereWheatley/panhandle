@@ -98,31 +98,16 @@ _High value, low effort:_
      "need 2, not 1" adjustment doesn't require opening the edit modal.
      _Value: Medium · Importance: Low · Type: Idea / Shopping list_
 
-102. Surface the purchase-history stats already tracked per catalogue item
-     (`times_bought`/`first_bought`/`last_bought`) in the edit modal — e.g.
-     "kjøpt 12×, ca. hver 9. dag" — making the data behind the smart
-     suggestions visible, not just predictive.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
-
-_High value, medium effort:_
-
-103. Recipe → meal ingredient import. Meals already carry a free-form
-     `ingredients` JSON; let a meal pull a starter ingredient list (paste a
-     recipe, or a small built-in library) to strengthen the "Fra
-     middagsplanen" flow.
-     _Value: Medium · Importance: Low · Type: Idea / Meals_
-
-104. Assign/claim shopping-list items, mirroring meal `responsible` — "you grab
-     the pharmacy stuff, I'll do groceries." Reuses the existing avatar/presence
-     UI and the by-value username pattern.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+109. Wire up the bottom-sheet drag-grabber to actually dismiss on drag. The
+     grabber pill (`Sheet.jsx`) is currently a static visual affordance with no
+     touch/drag handler behind it — swiping down on it does nothing, which
+     misleads users familiar with the iOS/Android bottom-sheet convention.
+     `framer-motion`'s `drag="y"` with a dismiss threshold (already a
+     dependency, used elsewhere for `Reorder`/swipe gestures) would wire it up;
+     desktop's `dialog` placement has no grabber and needs no change.
+     _Value: Medium · Importance: Low · Type: Idea / UI polish_
 
 _Exploratory / higher ceiling:_
-
-106. Optional spending log — capture price-per-purchase on toggle-bought, turning
-     the existing purchase-stats tables into a lightweight budget view. Adds a
-     schema column + UI; genuinely differentiating for a grocery app.
-     _Value: Medium · Importance: Low · Type: Idea / Meals + Shopping_
 
 107. Pantry / "have at home" state to suppress suggestions for staples you keep
      stocked, complementing the current overdue-interval suggestions.
