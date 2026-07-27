@@ -1,0 +1,20 @@
+// TWA (Trusted Web Activity) wrapper project — see docs/android-publishing.md.
+// This is a standard bubblewrap-shaped project; running `bubblewrap build`
+// from this directory (with twa-manifest.json as the source of truth) will
+// regenerate/refresh these files rather than requiring them hand-maintained.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

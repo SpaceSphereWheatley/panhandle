@@ -35,8 +35,25 @@ database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 [triggers]
 crons = ["*/15 * * * *"]
 
-# Custom domain: shopping.mohibb.com (set under Worker -> Settings -> Domains & Routes).
-# The Worker proxies frontend requests to the Pages project URL.
+# Public domain: historically a custom domain (shopping.mohibb.com, set under
+# Worker -> Settings -> Domains & Routes) fronting this Worker, which proxies
+# frontend requests to the Pages project URL. Moving to a free Cloudflare
+# subdomain (the Worker's own workers.dev route, or a custom domain of your
+# choosing) that doesn't reveal a personal domain/name — see
+# docs/android-publishing.md for the cutover steps and why (Android/Play Store
+# publishing surfaces this domain publicly). `workers_dev = true` below keeps
+# the workers.dev route enabled alongside any custom domain, so both can work
+# during the transition.
+workers_dev = true
+
+# Non-secret config, safe to version-control. APP_ORIGIN is used to build
+# links in emails (e.g. the password-reset URL) — update this the day the
+# custom domain above is retired, then push. EMAIL_FROM_ADDRESS is separate
+# because Resend needs its own DNS-verified sending domain, which doesn't
+# have to be the same domain users see in the browser.
+[vars]
+APP_ORIGIN = "https://shopping.mohibb.com"
+EMAIL_FROM_ADDRESS = "Panhandle <noreply@shopping.mohibb.com>"
 
 # Secrets (set under Worker -> Settings -> Variables and Secrets):
 #   JWT_SECRET            - long random string, signs login tokens
