@@ -9,7 +9,7 @@ import { SettingsTab } from "../tabs/SettingsTab.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
-import { SETTINGS_SUBPAGE_TITLE_KEYS } from "../lib/settingsNav.js";
+import { settingsTitleKey } from "../lib/settingsNav.js";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
 import { haptic } from "../lib/shoppingUtils.js";
 
@@ -89,8 +89,8 @@ export function AppShell() {
   const [sync, setSync] = useState({ kind: null, at: 0, offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
   const [showImportantInfo, setShowImportantInfo] = useState(false);
-  // Nav stack for the Settings tab only (e.g. [], ["konto"],
-  // ["admin","statistikk"]) — lives here rather than in SettingsTab so it
+  // Nav stack for the Settings tab only (e.g. [], ["account"],
+  // ["admin","stats"]) — lives here rather than in SettingsTab so it
   // shares the one history/popstate mechanism below instead of a second one.
   // Not reset on tab switch, so returning to Settings resumes where you left off
   // — see pushNav below for how that stays compatible with back navigation.
@@ -170,7 +170,7 @@ export function AppShell() {
     history.replaceState({ tab: nextTab, settingsPath }, "");
   }
 
-  // Pushes a new Settings subpage (e.g. ["konto"], ["admin","statistikk"]).
+  // Pushes a new Settings subpage (e.g. ["account"], ["admin","stats"]).
   // Back navigation — hardware/browser back or a subpage's Header back
   // arrow — always goes through history.back(), which lands on onPopState
   // above, so both back mechanisms share one code path and can't drift.
@@ -205,7 +205,7 @@ export function AppShell() {
   }
 
   const subpageTitleKey = tab === "settings" && settingsPath.length > 0
-    ? SETTINGS_SUBPAGE_TITLE_KEYS[settingsPath.join("/")]
+    ? settingsTitleKey(settingsPath)
     : null;
   const settingsSubpageTitle = subpageTitleKey ? t(subpageTitleKey) : null;
   const title = settingsSubpageTitle || t(TITLE_KEYS[tab]);

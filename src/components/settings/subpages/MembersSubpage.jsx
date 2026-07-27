@@ -1,27 +1,28 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "../../lib/api.js";
-import { Badge, Button, Input } from "../../design-system/index.js";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { useListUsers } from "../../context/ListUsersContext.jsx";
-import { CredentialsModal } from "../CredentialsModal.jsx";
-import { SubpageSection } from "./SubpageSection.jsx";
-import { FieldLabel } from "./FieldLabel.jsx";
-import { ManagementRow } from "./ManagementRow.jsx";
-import { useConfirm } from "../../context/ConfirmContext.jsx";
-import { useToast } from "../../context/ToastContext.jsx";
-import { useTranslation } from "../../context/LanguageContext.jsx";
-import { useMotionConfig } from "../../hooks/useMotionConfig.js";
-import { apiErrorMessage } from "../../lib/apiError.js";
+import { api } from "../../../lib/api.js";
+import { Badge, Button, Card, Input } from "../../../design-system/index.js";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import { useListUsers } from "../../../context/ListUsersContext.jsx";
+import { CredentialsModal } from "../../CredentialsModal.jsx";
+import { SubpageSection } from "../SubpageSection.jsx";
+import { FieldLabel } from "../FieldLabel.jsx";
+import { ManagementRow } from "../ManagementRow.jsx";
+import { useConfirm } from "../../../context/ConfirmContext.jsx";
+import { useToast } from "../../../context/ToastContext.jsx";
+import { useTranslation } from "../../../context/LanguageContext.jsx";
+import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
+import { apiErrorMessage } from "../../../lib/apiError.js";
 
 const MotionRow = motion(ManagementRow);
 
-// "Vårt hjem" subpage, part 1: member list + add member, each always-open
-// (no accordions — see SubpageSection.jsx). Content-only — no own Card
-// wrapper, since HouseholdSubpage.jsx merges this with RecurringIsland into one
-// shared container.
-export function MembersIsland() {
-  const { user: currentUser } = useAuth();
+// "Husstandsmedlemmer" subpage: who's on the list, plus add/remove. Owners
+// only — the nav row into it is owner-gated in SettingsRoot, and the isOwner
+// check below is the backstop for a stale history entry restoring this path
+// for someone who has since lost owner. Used to be half of "Vårt hjem",
+// sharing a page with the (everyone-can-use) dinner schedule.
+export function MembersSubpage() {
+  const { user: currentUser, isOwner } = useAuth();
   const { listUsers, refresh } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
@@ -71,9 +72,12 @@ export function MembersIsland() {
     await refresh();
   }
 
+  if (!isOwner) return null;
+
   return (
-    <>
-      <div style={{ fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>{t("settings.household.members.eyebrow")}</div>
+    <Card padding="lg" style={{ overflow: "hidden" }}>
+      {/* The count stays even though the page title says "members" — it's what
+          explains the Add button going disabled at the 10-user cap. */}
       <div style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--text-primary)" }}>{t("settings.household.members.count", { count: listUsers.length })}</div>
 
       <SubpageSection label={t("settings.household.members.label")}>
@@ -127,6 +131,6 @@ export function MembersIsland() {
       {creds && (
         <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />
       )}
-    </>
+    </Card>
   );
 }

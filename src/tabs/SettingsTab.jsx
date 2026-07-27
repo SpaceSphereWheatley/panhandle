@@ -3,7 +3,8 @@ import { AppearanceSubpage } from "../components/settings/subpages/AppearanceSub
 import { AccountSubpage } from "../components/settings/subpages/AccountSubpage.jsx";
 import { LanguageSubpage } from "../components/settings/subpages/LanguageSubpage.jsx";
 import { NotificationsSubpage } from "../components/settings/subpages/NotificationsSubpage.jsx";
-import { HouseholdSubpage } from "../components/settings/subpages/HouseholdSubpage.jsx";
+import { MembersSubpage } from "../components/settings/subpages/MembersSubpage.jsx";
+import { DinnerDutySubpage } from "../components/settings/subpages/DinnerDutySubpage.jsx";
 import { StoreSubpage } from "../components/settings/subpages/StoreSubpage.jsx";
 import { AdminSubpage } from "../components/settings/subpages/AdminSubpage.jsx";
 import { StatsSubpage } from "../components/settings/subpages/StatsSubpage.jsx";
@@ -18,7 +19,8 @@ export function SettingsTab({ settingsPath = [], onNavigate }) {
   if (root === "account") return <AccountSubpage />;
   if (root === "language") return <LanguageSubpage />;
   if (root === "notifications") return <NotificationsSubpage />;
-  if (root === "household") return <HouseholdSubpage />;
+  if (root === "members") return <MembersSubpage />;
+  if (root === "dinner-duty") return <DinnerDutySubpage />;
   if (root === "store") return <StoreSubpage />;
   if (root === "admin" && sub === "stats") return <StatsSubpage />;
   if (root === "admin") return <AdminSubpage onNavigate={onNavigate} />;
