@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Panhandle</string>
+
+    <!-- YOUR_APP_DOMAIN: replace everywhere in this project once the public
+         domain is decided (see docs/android-publishing.md's cutover
+         checklist). Keep launchUrl/hostName/asset_statements in sync. -->
+    <string name="launchUrl">https://YOUR_APP_DOMAIN/app.html</string>
+    <string name="hostName">YOUR_APP_DOMAIN</string>
+    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://YOUR_APP_DOMAIN\"}}]</string>
+</resources>

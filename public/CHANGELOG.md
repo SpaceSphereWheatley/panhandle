@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.50.2] — 2026-07-27
+
+### Added
+- Groundwork for a Google Play Store listing (Android app), alongside the
+  existing "Add to Home Screen" install option. No visible change yet — this
+  adds the pieces needed to package and verify the app for Play, and makes
+  the app's public domain configurable instead of hardcoded so it can move
+  off a personal domain before that listing goes live.
+
 ## [1.50.1] — 2026-07-27
 
 ### Changed

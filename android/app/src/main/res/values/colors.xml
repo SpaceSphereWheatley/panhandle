@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches public/manifest.json's theme_color / background_color. -->
+    <color name="colorPrimary">#C1592A</color>
+    <color name="backgroundColor">#FAF6EF</color>
+</resources>

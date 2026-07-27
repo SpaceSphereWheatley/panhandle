@@ -1,6 +1,8 @@
 // Worker API for shared shopping list + meal planner
-// Served at shopping.mohibb.com. Frontend on Cloudflare Pages,
-// API = this Worker under /api/*. Proxies other paths to Pages.
+// Public origin is whatever domain fronts this Worker (see wrangler.toml's
+// APP_ORIGIN var — historically shopping.mohibb.com, moving to a Cloudflare
+// free subdomain, see docs/android-publishing.md). Frontend on Cloudflare
+// Pages. API = this Worker under /api/*. Proxies other paths to Pages.
 // Auth: users in D1 with PBKDF2 password hashes, JWT with token versioning,
 //       sliding expiry, in-app password change that logs out other devices.
 // Multi-tenant: every user belongs to exactly one list (users.list_id); all
@@ -1129,15 +1131,18 @@ export function escapeHtml(str) {
 }
 
 // ---------- transactional email (Resend) ----------
-// Update once a sending domain is verified in Resend's dashboard (manual,
-// one-time — see CLAUDE.md/the signup feature's PR description).
-const EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
+// The sending address needs a domain DNS-verified in Resend's dashboard
+// (manual, one-time — see CLAUDE.md/the signup feature's PR description), so
+// it's configured via wrangler.toml's EMAIL_FROM_ADDRESS var rather than
+// hardcoded — it can legitimately stay pinned to a different domain than
+// APP_ORIGIN (the user-facing app URL) if that's where Resend is verified.
+const DEFAULT_EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
 async function sendEmail(env, { to, subject, html, replyTo }) {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html, ...(replyTo ? { reply_to: [replyTo] } : {}) }),
+      body: JSON.stringify({ from: env.EMAIL_FROM_ADDRESS || DEFAULT_EMAIL_FROM, to: [to], subject, html, ...(replyTo ? { reply_to: [replyTo] } : {}) }),
     });
     if (!res.ok) console.error("Resend send failed", res.status, await res.text());
     return res.ok;
@@ -1585,7 +1590,7 @@ export default {
         "INSERT INTO password_resets (username, token_hash, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
       ).bind(row.username, tokenHash, now, now + 30 * 60 * 1000).run();
 
-      const resetUrl = `https://shopping.mohibb.com/app.html?reset_token=${rawToken}`;
+      const resetUrl = `${env.APP_ORIGIN || "https://shopping.mohibb.com"}/app.html?reset_token=${rawToken}`;
       await sendEmail(env, {
         to: cleanEmail,
         subject: "Tilbakestill passordet ditt - Panhandle",

@@ -13,7 +13,7 @@ A shared shopping list and meal planner PWA for a household (works solo, or shar
 - **Real-time sync** between devices (polling every 7 seconds)
 - **In-app password change** that logs out other devices
 - **Sliding token expiry** — you stay logged in as long as the app is used
-- **Installable** as a home-screen app on Android/iOS
+- **Installable** as a home-screen app on Android/iOS, or as a proper Google Play Store listing via the Trusted Web Activity wrapper in `android/` — see `docs/android-publishing.md`
 
 ## Architecture
 
@@ -53,6 +53,7 @@ Both halves deploy automatically on push to `main`:
   - `icon-*.png` — app icons
 - `migrations/` — D1 schema; `0001_init.sql` is the consolidated base schema, `0002`/`0003` seed the ~710-item catalogue, and later numbered files add suggestion stats, recurring schedules, and self-service signup/recovery — see `CLAUDE.md`'s Architecture section for the full breakdown
 - `CHANGELOG.md` — released versions and what changed
+- `android/` — Trusted Web Activity wrapper for a Google Play Store listing (see `docs/android-publishing.md`)
 
 ## Known Limitations
 
