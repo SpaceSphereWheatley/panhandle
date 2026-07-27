@@ -69,7 +69,7 @@ export const en = {
   "suggestions.addOther": "Add another item",
 
   "itemEdit.emptyName": "Empty name",
-  "itemEdit.confirmForget.body": '"{name}" will be forgotten entirely from this list\'s saved items. Purchase history resets, and it will no longer be suggested automatically. (Only affects this list.)',
+  "itemEdit.confirmForget.body": '"{name}" will be forgotten entirely — this deletes it from this list\'s "Recently bought" history too, not just future suggestions. Purchase stats reset and it won\'t be auto-suggested again. (Only affects this list.)',
   "itemEdit.confirmForget.title": "Forget item?",
   "itemEdit.confirmForget.confirmLabel": "Forget",
   "itemEdit.addedBy": "Added by {name}",

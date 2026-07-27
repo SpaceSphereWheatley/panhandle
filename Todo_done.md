@@ -7,6 +7,17 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+109. (98) Clarified the "forget item completely" confirmation in
+     `ItemEditModal`. `DELETE /list/:id/catalogue` cascades via FK to delete
+     every `list_items` row referencing the catalogue entry — including past
+     "Recently bought"/"Nylig kjøpt" occurrences, not just future
+     suggestions — but the confirm dialog's wording only said "purchase
+     history resets," which reads like stats zeroing out rather than
+     existing rows being deleted. The en/nb copy (`itemEdit.confirmForget.
+     body`) now says plainly that it also removes the item from "Recently
+     bought" history; the misleading code comment above
+     `deleteFromCatalogue()` was tightened to match. (1.48.2)
+
 108. (15) English-first restructure — the codebase's source language flipped
      from Norwegian to English, with no change to what a user sees. `en.js` is
      now the authored dictionary and `nb.js` its translation;

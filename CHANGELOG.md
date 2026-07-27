@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.2] — 2026-07-27
+
+### Changed
+- Clearer warning when forgetting an item completely from Settings/the item
+  editor: it now says plainly that this also removes it from "Recently
+  bought" history, not just future suggestions.
+
 ## [1.48.1] — 2026-07-26
 
 ### Fixed

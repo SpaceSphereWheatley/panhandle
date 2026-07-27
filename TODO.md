@@ -15,7 +15,6 @@ Completed items live in `Todo_done.md`, not below.
    - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
-   - **#98** catalogue-delete blast-radius wording (from the 2026-07-20 audit)
 3. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
@@ -97,13 +96,6 @@ fixed — see `Todo_done.md`.
    two-pane or sidebar layout), not just raising the cap; low priority
    since this is a 2-person app used mostly on phones.
    _Value: Low · Importance: Low · Type: UI / Layout_
-
-98. Catalogue delete from the shopping list is more destructive than it looks.
-    `DELETE /list/:id/catalogue` removes the catalogue row and cascades to
-    every `list_items` line referencing it (history included), not just the one
-    occurrence. Confirm `ItemEditModal`'s wording makes that blast radius
-    clear, or add a distinct confirmation.
-    _Value: Low · Importance: Low · Type: UI / Shopping list_
 
 ## Ideas (unvetted)
 
