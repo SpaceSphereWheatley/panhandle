@@ -21,23 +21,30 @@ this repo is set up to move off that (see `wrangler.toml`'s new `APP_ORIGIN`
 var and the comment above `[triggers]`), since the point of publishing this
 way is to not carry a personal domain into a public store listing.
 
-**Pick one:**
+**Confirmed via this PR's own Cloudflare deploy-preview comment: the
+account's `workers.dev` subdomain is `mohibb91`** (the preview URL was
+`https://<branch>-panhandle.mohibb91.workers.dev`) — i.e. `panhandle.
+mohibb91.workers.dev` would be exactly as identifying as `shopping.
+mohibb.com`. **The Worker's default `workers.dev` route does not satisfy the
+"no personal name" goal as-is.** `workers_dev = true` is still set in
+`wrangler.toml` (harmless, and useful for testing), but don't treat that
+route as the final public URL without first doing one of:
 
-- **The Worker's own `workers.dev` route** (recommended — no purchase, and
-  the existing single-origin architecture — one domain serving both the
-  frontend and `/api/*` — keeps working unchanged, since the Worker already
-  proxies static content to the Pages project internally regardless of which
-  domain fronts it). `workers_dev = true` is already set in `wrangler.toml`.
-  Check what your route actually is in the Cloudflare dashboard (Workers &
-  Pages → `panhandle` → Settings → Domains & Routes, or the account
-  Overview page's "Your subdomain" section) — it's `panhandle.<your
-  account subdomain>.workers.dev`. **If `<your account subdomain>` is your
-  name or handle**, Cloudflare lets you change it once (Account Home →
-  Websites → ⋯ → "Change" next to the workers.dev subdomain, or similar —
-  check current dashboard wording) before you rely on it publicly.
-- **A domain you buy just for this.** More polished for a public listing,
-  costs money/DNS setup, and re-introduces a domain-ownership record — your
+- **Rename the account's `workers.dev` subdomain.** Cloudflare allows
+  changing it once, from Account Home → your account → Workers & Pages
+  section (wording varies by dashboard version — look for "Change" next to
+  the `*.workers.dev` subdomain). Pick something that isn't your name/handle
+  (e.g. something derived from the app itself). This is the only path that
+  keeps the current single-origin architecture (one domain serving both the
+  frontend and `/api/*`, since the Worker already proxies static content to
+  the Pages project internally) with zero code changes beyond `APP_ORIGIN`.
+- **Buy a small domain just for this.** More polished for a public listing,
+  costs money/DNS setup, and re-introduces a domain-ownership record (though
+  not necessarily one that identifies you, if registered privately) — your
   call.
+
+Either way, **do not publish anything pointing at a `mohibb91`-derived
+domain.**
 
 Once decided, replace `YOUR_APP_DOMAIN` everywhere it appears:
 
