@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Sheet } from "../design-system/index.js";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 
 // Module-scoped (not per-instance) since every modal in the app shares one
 // "is a modal open" gate: only the first modal to open pushes a history
@@ -11,6 +12,9 @@ let historyEntryPushed = false;
 
 export function Modal({ onClose, title, children }) {
   const closedByPopRef = useRef(false);
+  // Modal is the only consumer of Sheet, so this one call site decides the
+  // placement for every modal in the app.
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     openModalCount += 1;
@@ -46,7 +50,7 @@ export function Modal({ onClose, title, children }) {
   }, []);
 
   return (
-    <Sheet open onClose={onClose} title={title} className="modal">
+    <Sheet open onClose={onClose} title={title} className="modal" placement={isDesktop ? "dialog" : "sheet"}>
       {children}
     </Sheet>
   );

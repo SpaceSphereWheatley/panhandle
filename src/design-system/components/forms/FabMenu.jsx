@@ -3,9 +3,11 @@ import FocusTrap from 'focus-trap-react';
 import { Fab } from './Fab.jsx';
 import { useRipple, Ripples } from '../../lib/useRipple.jsx';
 
-/* Shared positioning with the Fab (keep in sync with Fab.jsx). */
-const FAB_BOTTOM = 'calc(84px + env(safe-area-inset-bottom))';
-const FAB_RIGHT = 'max(16px, calc(50vw - 224px))';
+/* Shared positioning with the Fab — both read the same two tokens (defined in
+   design-system/tokens/layout.css), so they stay in sync by construction
+   rather than by comment, and follow the content column in either layout. */
+const FAB_BOTTOM = 'var(--fab-bottom)';
+const FAB_RIGHT = 'var(--fab-right)';
 
 /**
  * Material 3 FAB menu (speed-dial). The FAB stays pinned bottom-right; tapping

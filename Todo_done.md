@@ -7,6 +7,40 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+110. (6) Proper desktop layout, reversing done-item 9's "cap the width instead
+     of a separate desktop layout" decision. At >= 1024px the bottom tab bar
+     becomes a full-height left rail (labeled, 232px, with the product mark),
+     the content column widens to 960px, every modal becomes a centered dialog
+     instead of a bottom sheet (all corners rounded, no drag grabber,
+     right-aligned action buttons), the shopping grid drops its deliberate
+     3-column cap for `auto-fill` (~6 columns; `auto-fill` rather than
+     `auto-fit` so a 1-2 item "Important" section doesn't stretch), list view
+     goes 2-up (except classic intensity, which keeps its plain linear list),
+     and MealsTab's swipe-paging is disabled in favour of its existing
+     prev/next buttons.
+     Two mechanisms, split deliberately: every *dimension* is a CSS custom
+     property redefined under `:root[data-layout="desktop"]`
+     (`design-system/tokens/layout.css`), while the four *structural* switches
+     go through a `useIsDesktop()` hook — needed because 4 of the 7 hardcoded
+     480s were inline JS styles that a media query can't reach, and because the
+     rail indicator needs a different formula (horizontal `left`-percentage ->
+     vertical `top`-pitch) rather than a restyle. The breakpoint number lives
+     only in `src/lib/layoutMode.js`, which stamps `data-layout` on `<html>`
+     (same shape as `designIntensity.js`), so no `@media` restates it and the
+     CSS/JS halves can't drift.
+     Phone values live in bare `:root` and desktop values behind the attribute,
+     so a browser that never gets `data-layout` renders exactly the old phone
+     layout. The 700px framing block is overridden, not edited, leaving the
+     700-1023px tablet band byte-identical. The rail offset is `padding-left`
+     on `#app` rather than `body` — `#app` only exists inside `AppShell`, so the
+     auth screens stay centered instead of being pushed 232px right — and it's
+     padding rather than a transform, which would have hijacked the
+     fixed-positioned FabMenu. The FAB's magic `max(16px, calc(50vw - 224px))`
+     (224 = 480/2 - 16) became a token that generalizes to both layouts;
+     verified algebraically identical on phone. Deliberately not done: spanning
+     the "today" meal card, which only sits flush on Mondays and otherwise
+     leaves a mid-row hole that reads as a bug. (1.49.0)
+
 109. (98) Clarified the "forget item completely" confirmation in
      `ItemEditModal`. `DELETE /list/:id/catalogue` cascades via FK to delete
      every `list_items` row referencing the catalogue entry — including past

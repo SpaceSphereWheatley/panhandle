@@ -12,7 +12,6 @@ Completed items live in `Todo_done.md`, not below.
    passes (2026-07-18, 2026-07-20): #87, #88, #89, #92, #94. Everything else
    from both passes, plus #114, is fixed — see `Todo_done.md`.
 2. **Small UI/polish items — low value, low risk, good filler:**
-   - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
 3. **Multi-list data model (#1)** — high ceiling if this app ever needs
@@ -85,17 +84,6 @@ fixed — see `Todo_done.md`.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-
-## UI / Polish
-
-6. Create a proper viewing window for desktop. Today the layout is
-   deliberately mobile-first with a fixed `max-width: 480px` centered
-   column at any viewport size (`src/index.css:34`) — a past decision
-   documented in `Todo_done.md` chose this over a separate desktop layout.
-   Revisiting it means an actual desktop design (wider content, maybe a
-   two-pane or sidebar layout), not just raising the cap; low priority
-   since this is a 2-person app used mostly on phones.
-   _Value: Low · Importance: Low · Type: UI / Layout_
 
 ## Ideas (unvetted)
 

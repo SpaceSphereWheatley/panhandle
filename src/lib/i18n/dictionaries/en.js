@@ -170,6 +170,7 @@ export const en = {
   "shell.tab.list": "Shopping list",
   "shell.tab.meals": "Meals",
   "shell.tab.settings": "Settings",
+  "shell.nav.primaryAria": "Main navigation",
   "shell.sync.updated": "Updated {time}",
   "shell.sync.offline": "Offline",
   "shell.sync.failed": "Couldn't update",

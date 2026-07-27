@@ -221,6 +221,7 @@ export const nb = {
   "shell.tab.list": "Handleliste",
   "shell.tab.meals": "Måltider",
   "shell.tab.settings": "Innstillinger",
+  "shell.nav.primaryAria": "Hovednavigasjon",
   "shell.sync.updated": "Oppdatert {time}",
   "shell.sync.offline": "Offline",
   "shell.sync.failed": "Kunne ikke oppdatere",

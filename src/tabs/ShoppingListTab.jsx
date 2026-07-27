@@ -9,6 +9,7 @@ import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
 import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
@@ -43,6 +44,17 @@ const FALLBACK_RESOLVE_MS = 400;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, (100% - 16px) / 3), 1fr))", gap: 8 };
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 
+// Desktop equivalents. The 3-column clamp above is a *cap*, not a minimum —
+// its min track grows with the container, so on a 960px column it would lay
+// out 3 enormous tiles rather than more of them; dropped here in favour of a
+// plain minimum track. auto-FILL rather than auto-fit is load-bearing: the
+// "Important" section routinely holds one or two items, which auto-fit would
+// stretch across the full width instead of leaving them item-sized.
+// List view becomes 2-up, since one grocery item per 960px row is worse than
+// the grid it replaced (classic intensity opts out — see below).
+const desktopGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 };
+const desktopListStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8 };
+
 // Same star path ItemCard's importance badge/swipe-reveal draws — kept as a
 // literal here too (not imported), same self-contained-illustration reasoning
 // as ImportantInfoModal's copy: this is the pinImportant toggle chip's icon,
@@ -53,14 +65,16 @@ const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6
 // a category label bar plus a handful of item-card-shaped blocks — so first
 // paint reserves roughly the real layout instead of a spinner with nothing
 // underneath it.
-function ShoppingListSkeleton({ viewMode }) {
+function ShoppingListSkeleton({ viewMode, containerStyle }) {
   const groups = [3, 2];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {groups.map((count, i) => (
         <div key={i}>
           <Skeleton width={100} height={11} radius={4} style={{ marginBottom: 8 }} />
-          <div style={viewMode === "grid" ? gridStyle : listStyle}>
+          {/* Same container style as the real list, or the cold-load
+              placeholder is 3-up while the list it stands in for is 6-up. */}
+          <div style={containerStyle}>
             {Array.from({ length: count }).map((_, j) => (
               <Skeleton key={j} height={viewMode === "grid" ? 64 : 44} radius={12} />
             ))}
@@ -74,6 +88,7 @@ function ShoppingListSkeleton({ viewMode }) {
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
+  const isDesktop = useIsDesktop();
   const { shouldAnimate } = useMotionConfig();
   const { nameFor } = useListUsers();
   const { order: categoryOrder } = useCategoryOrder();
@@ -544,6 +559,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // regardless of the user's stored grid/list preference — ph_view stays
   // untouched so switching back to muted/expressive restores it exactly.
   const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
+  // Desktop widens both views into multi-column grids — except classic, whose
+  // documented contract is a plain linear list, which multi-columning would
+  // contradict. On phone these resolve to the exact same two style objects as
+  // before.
+  const containerStyle = effectiveViewMode === "grid"
+    ? (isDesktop ? desktopGridStyle : gridStyle)
+    : (isDesktop && intensity !== "classic" ? desktopListStyle : listStyle);
   // Fixed regardless of view mode so toggling grid/list only changes layout,
   // not which items show — a view-dependent cap (previously 9 in grid vs. 3
   // in list, to fill 3 grid rows vs. 3 list rows) made items appear/disappear
@@ -785,7 +807,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       </div>
 
       {loading ? (
-        <ShoppingListSkeleton viewMode={effectiveViewMode} />
+        <ShoppingListSkeleton viewMode={effectiveViewMode} containerStyle={containerStyle} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="shopping-cart-simple"
@@ -808,10 +830,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               >
                 {t("shoppingList.section.important")}
               </div>
-              {renderItems(importantDisplayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+              {renderItems(importantDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
             </div>
           )}
-          {renderItems(displayItems, effectiveViewMode, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+          {renderItems(displayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
@@ -881,7 +903,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   handler), so marking one important here would have nothing
                   to persist — ItemCard hides the badge and swipe gesture
                   entirely when this is undefined. */}
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving)}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving)}
             </div>
           )}
         </>
@@ -975,9 +997,9 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays) {
+function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays) {
   return (
-    <div key={renderGeneration} style={viewMode === "grid" ? gridStyle : listStyle}>
+    <div key={renderGeneration} style={containerStyle}>
       <AnimatePresence initial={false} mode="popLayout">
         {displayItems.map(({ item, clusterKey }, index) => {
           const { bg, on } = clusterFor(clusterKey);

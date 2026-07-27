@@ -31,7 +31,7 @@ body {
 .grid-badge .item-icon { width: 36px; height: 36px; display: block; }
 .item-badge, .grid-badge { line-height: 1; }
 
-main { padding: 16px; max-width: 480px; margin: 0 auto; }
+main { padding: var(--content-gutter); max-width: var(--content-max-width); margin: 0 auto; }
 
 /* Tab-switch enter animation — see AppShell.jsx's pane-ref effect. --pane-dir
    is set to 1 (tab moved right, e.g. list -> meals) or -1 (moved left) right
@@ -65,9 +65,38 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
   }
 }
 
+/* Desktop layout (>= the breakpoint in src/lib/layoutMode.js, which stamps
+   data-layout on <html>). The nav rail plus a wide content column IS the app
+   frame here, so the 700px "floating 480px card" framing above is undone —
+   overridden rather than edited, so the 700-1023px tablet band stays exactly
+   as it is today. These selectors outrank the media block on specificity, so
+   source order doesn't matter.
+
+   The rail offset goes on #app, NOT body: #app only exists inside AppShell, so
+   the auth screens (a separate branch in App.jsx that never renders a rail)
+   keep their own full-width centering instead of being pushed 232px right.
+   It's `padding-left`, never a transform — a transform on an ancestor of the
+   tab panes would hijack the fixed-positioned FabMenu, see the comment above
+   the ph-pane-enter keyframe. */
+:root[data-layout="desktop"] body {
+  background: var(--surface-page);
+  padding-bottom: 0;
+}
+:root[data-layout="desktop"] #app { padding-left: var(--nav-rail-width); }
+:root[data-layout="desktop"] #root {
+  max-width: none;
+  margin: 0;
+  background: var(--surface-page);
+  box-shadow: none;
+}
+
 /* Toast / snackbar (action feedback + undo) */
+/* position: fixed resolves against the viewport, so #app's desktop
+   padding-left doesn't move the toast — it has to add the rail offset itself
+   to stay centered over the content column. --nav-rail-width is 0px on phone,
+   so this expression is identical to a plain `left: 50%` there. */
 #toast {
-  position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+  position: fixed; left: calc(50% + var(--nav-rail-width) / 2); bottom: var(--toast-bottom); transform: translateX(-50%) translateY(20px);
   background: var(--warm-900); color: var(--text-on-accent); border-radius: var(--radius-md);
   padding: 12px 16px; font-family: var(--font-sans); font-size: var(--text-sm); max-width: 90%; width: max-content;
   display: flex; align-items: center; gap: 14px; z-index: 200;
@@ -85,7 +114,7 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 
 /* Install prompt banner */
 #installBanner {
-  max-width: 480px; margin: 12px auto 0; background: var(--surface-card);
+  max-width: var(--content-max-width); margin: 12px auto 0; background: var(--surface-card);
   border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 12px 14px;
   display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-card);
 }
@@ -192,6 +221,10 @@ main { padding: 16px; max-width: 480px; margin: 0 auto; }
 }
 .modal .actions { display: flex; gap: 8px; margin-top: 20px; }
 .modal .actions button { flex: 1; }
+/* Desktop: full-bleed action buttons stretched across a 560px dialog are the
+   second-biggest "phone app in a window" tell after the bottom sheet itself. */
+:root[data-layout="desktop"] .modal .actions { justify-content: flex-end; }
+:root[data-layout="desktop"] .modal .actions button { flex: 0 0 auto; min-width: 128px; }
 
 /* Meal name field: text input + clickable arrow that toggles a dropdown of
    known meal names (replaces a plain <input list> datalist, whose native

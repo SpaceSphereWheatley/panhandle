@@ -14,13 +14,23 @@ function unlockBodyScroll() {
   if (openSheetCount === 0) document.body.style.overflow = '';
 }
 
-/** Bottom sheet overlay — used for all modal-style flows.
+/** Modal overlay — used for all modal-style flows, in two placements:
+ *
+ *  - `sheet` (default) — the phone bottom sheet: docked to the bottom edge,
+ *    top corners rounded, drag-grabber affordance, safe-area bottom padding.
+ *  - `dialog` — the desktop centered dialog: centered in the viewport, all
+ *    four corners rounded, no grabber (a drag affordance means nothing with a
+ *    mouse) and none of the bottom-edge padding compensation.
+ *
+ * The default keeps every caller on today's phone behaviour unless it opts in.
+ *
  * Source: Panhandle Design System (components/overlays/Sheet.jsx), extended
  * with a `className` passthrough on the content wrapper so callers (e.g.
  * Modal.jsx) can hook the many pre-existing `.modal …` descendant selectors
  * in src/index.css (labels, inputs, selects, action rows) without every
  * modal's internal markup needing to move onto design-system components. */
-export function Sheet({ open = true, onClose, title, children, className }) {
+export function Sheet({ open = true, onClose, title, children, className, placement = 'sheet' }) {
+  const isDialog = placement === 'dialog';
   const titleId = React.useId();
   const containerRef = React.useRef(null);
 
@@ -46,8 +56,13 @@ export function Sheet({ open = true, onClose, title, children, className }) {
       inset: 0,
       background: 'rgba(43, 38, 33, 0.4)',
       display: 'flex',
-      alignItems: 'flex-end',
+      // flex-end is what docks the sheet to the bottom edge; centering it is
+      // the whole structural difference between the two placements.
+      alignItems: isDialog ? 'center' : 'flex-end',
       justifyContent: 'center',
+      // Keeps a tall dialog off the viewport edges; the sheet is deliberately
+      // flush instead.
+      padding: isDialog ? 'var(--space-6)' : undefined,
       zIndex: 100,
       animation: 'ph-scrim-in var(--duration-base) var(--ease-out)',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
@@ -73,15 +88,20 @@ export function Sheet({ open = true, onClose, title, children, className }) {
           onClick={e => e.stopPropagation()}
           style={{
             background: 'var(--surface-card)',
-            borderTopLeftRadius: 'var(--radius-xl)',
-            borderTopRightRadius: 'var(--radius-xl)',
+            ...(isDialog
+              ? { borderRadius: 'var(--radius-xl)' }
+              : { borderTopLeftRadius: 'var(--radius-xl)', borderTopRightRadius: 'var(--radius-xl)' }),
             boxShadow: 'var(--shadow-sheet)',
             width: '100%',
-            maxWidth: 480,
-            maxHeight: '88vh',
+            maxWidth: 'var(--dialog-max-width)',
+            maxHeight: isDialog ? 'min(80vh, 720px)' : '88vh',
             overflowY: 'auto',
-            padding: '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
-            animation: 'ph-sheet-in var(--spring-duration) var(--ease-spring)',
+            // The sheet's 28px bottom overshoot and safe-area inset are
+            // bottom-edge affordances; a centered dialog wants even padding.
+            padding: isDialog ? '20px 24px 24px' : '12px 20px calc(28px + env(safe-area-inset-bottom, 0px))',
+            animation: isDialog
+              ? 'ph-dialog-in var(--spring-duration) var(--ease-spring)'
+              : 'ph-sheet-in var(--spring-duration) var(--ease-spring)',
             // Sheets can be triggered from anywhere in the tree (e.g. a
             // centered footer) — position: fixed detaches the sheet
             // visually but not from CSS inheritance, so without this a
@@ -90,7 +110,11 @@ export function Sheet({ open = true, onClose, title, children, className }) {
             textAlign: 'left',
           }}
         >
-          <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />
+          {/* Drag-grabber pill — a touch affordance, so omitted on the
+              centered dialog where there's nothing to drag. */}
+          {isDialog ? null : (
+            <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px' }} />
+          )}
           {title ? (
             <h2 id={titleId} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 14px', color: 'var(--text-primary)' }}>{title}</h2>
           ) : null}
