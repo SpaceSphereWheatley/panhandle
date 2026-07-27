@@ -584,8 +584,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const importantChipLabel = t(
     pinImportant ? "shoppingList.importantChip.showAll" : "shoppingList.importantChip.showImportantFirst"
   );
-  const gridViewLabel = t("shoppingList.viewToggle.grid");
-  const gridViewTitle = intensity === "classic" ? t("shoppingList.viewToggle.gridDisabledHint") : gridViewLabel;
+  // Label names the action the press performs (like a play/pause button),
+  // not the current state — there's only one hit target now, so "which view
+  // is this" isn't a separate question from "what does pressing it do."
+  const viewToggleLabel = t(effectiveViewMode === "list" ? "shoppingList.viewToggle.switchToGrid" : "shoppingList.viewToggle.switchToList");
+  const viewToggleTitle = intensity === "classic" ? t("shoppingList.viewToggle.gridDisabledHint") : viewToggleLabel;
 
   return (
     <section>
@@ -760,18 +763,28 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             </div>
           )}
         </div>
-        <div
+        <button
+          onClick={() => setView(effectiveViewMode === "list" ? "grid" : "list")}
+          aria-label={viewToggleLabel}
+          title={viewToggleTitle}
+          disabled={intensity === "classic"}
           style={{
             position: "relative",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 4,
             background: "var(--surface-sunken)",
+            border: "none",
             borderRadius: "var(--radius-pill)",
             padding: 3,
+            margin: 0,
+            font: "inherit",
+            cursor: intensity === "classic" ? "default" : "pointer",
+            opacity: intensity === "classic" ? 0.4 : 1,
           }}
         >
           <span
+            aria-hidden="true"
             style={{
               position: "absolute",
               zIndex: 0,
@@ -785,25 +798,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               transition: "transform var(--spring-duration-soft) var(--ease-spring-soft)",
             }}
           />
-          <button
-            onClick={() => setView("list")}
-            aria-label={t("shoppingList.viewToggle.list")}
-            title={t("shoppingList.viewToggle.list")}
-            disabled={intensity === "classic"}
-            style={viewToggleBtnStyle(effectiveViewMode === "list", intensity === "classic")}
-          >
+          <span style={viewToggleIconStyle(effectiveViewMode === "list")}>
             <UiIcon name="list" size={16} />
-          </button>
-          <button
-            onClick={() => setView("grid")}
-            aria-label={gridViewLabel}
-            title={gridViewTitle}
-            disabled={intensity === "classic"}
-            style={viewToggleBtnStyle(effectiveViewMode === "grid", intensity === "classic")}
-          >
+          </span>
+          <span style={viewToggleIconStyle(effectiveViewMode === "grid")}>
             <UiIcon name="grid" size={16} />
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
 
       {loading ? (
@@ -1025,18 +1026,16 @@ function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onTog
   );
 }
 
-function viewToggleBtnStyle(active, disabled) {
+// The two icons are inert labels riding on top of the single toggle button
+// now (see the view-toggle button above), not separate click targets — a
+// press anywhere on the pill flips effectiveViewMode regardless of which
+// icon it lands on.
+function viewToggleIconStyle(active) {
   return {
     position: "relative",
     zIndex: 1,
-    border: "none",
-    background: "transparent",
     color: active ? "var(--text-on-accent)" : "var(--text-tertiary)",
-    borderRadius: "var(--radius-pill)",
-    fontSize: 16,
     padding: "6px 10px",
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.4 : 1,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

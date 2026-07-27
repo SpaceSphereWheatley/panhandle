@@ -50,7 +50,7 @@ lives there, not here. See `TODO.md` for open items.
      existing rows being deleted. The en/nb copy (`itemEdit.confirmForget.
      body`) now says plainly that it also removes the item from "Recently
      bought" history; the misleading code comment above
-     `deleteFromCatalogue()` was tightened to match. (1.48.3)
+     `deleteFromCatalogue()` was tightened to match. (1.48.4)
 
 108. (15) English-first restructure — the codebase's source language flipped
      from Norwegian to English, with no change to what a user sees. `en.js` is
