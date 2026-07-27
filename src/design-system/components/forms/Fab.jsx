@@ -29,8 +29,11 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
       onPointerCancel={() => setPress(false)}
       style={{
         position: 'fixed',
-        bottom: 'calc(84px + env(safe-area-inset-bottom))',
-        right: 'max(16px, calc(50vw - 224px))',
+        // Tracks the content column's right edge in both layouts — see
+        // --fab-right in design-system/tokens/layout.css. Keep in sync with
+        // FabMenu.jsx, which pins its action stack to the same two tokens.
+        bottom: 'var(--fab-bottom)',
+        right: 'var(--fab-right)',
         width: 56,
         height: 56,
         // Circle at rest, squircle when active — an M3-Expressive shape morph.

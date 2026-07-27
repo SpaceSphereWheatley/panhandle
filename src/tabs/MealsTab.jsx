@@ -10,6 +10,7 @@ import { avatarColorFor } from "../lib/avatarColor.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
@@ -280,6 +281,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const { schedule, ensureLoaded } = useRecurring();
   const { nameFor } = useListUsers();
   const intensity = useDesignIntensity();
+  const isDesktop = useIsDesktop();
   const { shouldAnimate, transition } = useMotionConfig();
   const [weekOffset, setWeekOffset] = useState(0);
   const weekOffsetRef = useRef(weekOffset);
@@ -524,10 +526,13 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // Classic intensity is a plain linear list; expressive/muted use an
   // adaptive grid (same repeat(auto-fit, minmax(...)) mechanism as
   // Handleliste's clusters, for consistency) so "I dag" can stand apart.
+  // The 220px min track already flows to ~4 columns in the wider desktop
+  // column with no change; only the gap opens up. (WeekPane derives its own
+  // gutter from this gap, so that follows automatically.)
   const stackStyle =
     intensity === "classic"
       ? { display: "flex", flexDirection: "column", gap: 6 }
-      : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
+      : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: isDesktop ? 16 : 12 };
 
   return (
     <section>
@@ -556,15 +561,21 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         {loading || !paneWidth ? (
           <MealsSkeleton stackStyle={stackStyle} />
         ) : (
+          /* Swipe-paging is a touch affordance; on desktop the prev / "this
+             week" / next buttons above are the sole control. Turning drag off
+             also makes the settle effect the only writer of `x`, which is
+             exactly the invariant that effect's comment depends on. */
           <motion.div
             style={{ display: "flex", width: paneWidth * WEEK_OFFSETS.length, x, touchAction: "pan-y" }}
-            drag="x"
-            dragConstraints={{ left: -((WEEK_OFFSETS.length - 1) * paneWidth), right: 0 }}
-            dragElastic={0.3}
-            dragMomentum={false}
-            onDragStart={onDragStart}
-            onDrag={onDrag}
-            onDragEnd={onDragEnd}
+            drag={isDesktop ? false : "x"}
+            {...(isDesktop ? {} : {
+              dragConstraints: { left: -((WEEK_OFFSETS.length - 1) * paneWidth), right: 0 },
+              dragElastic: 0.3,
+              dragMomentum: false,
+              onDragStart,
+              onDrag,
+              onDragEnd,
+            })}
           >
             {WEEK_OFFSETS.map((offset) => (
               <WeekPane

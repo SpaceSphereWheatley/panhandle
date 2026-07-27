@@ -54,9 +54,10 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   }
 
   // Advanced: forgets this list's catalogue entry for the item entirely
-  // (scoped to the user's list_id server-side) — resets its purchase-history
-  // stats (the "you're probably low on X" suggestions start from zero again)
-  // and it stops being auto-suggested. Other lists' catalogues are unaffected.
+  // (scoped to the user's list_id server-side) — cascades to delete every
+  // list_items row referencing it, so past "Recently bought" entries
+  // disappear too, not just future suggestions/stats. Other lists'
+  // catalogues are unaffected.
   async function deleteFromCatalogue() {
     if (
       !(await confirm(t("itemEdit.confirmForget.body", { name: displayName }), {

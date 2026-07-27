@@ -1,6 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './design-system/styles.css'
+// Imported for its module-level side effect (stamping <html data-layout>) and
+// deliberately before App, so the attribute is set before the first render
+// reads it via useIsDesktop — otherwise desktop would paint the phone layout
+// for one frame.
+import './lib/layoutMode.js'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(

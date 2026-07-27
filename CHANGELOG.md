@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.49.0] — 2026-07-27
+
+### Added
+- **Panhandle now has a real desktop layout.** On a wide screen the app no
+  longer sits in a narrow phone-shaped column: the tab bar becomes a proper
+  sidebar down the left, the shopping list spreads out over the full width
+  (six items across instead of three), the week's meals show more days at a
+  glance, and pop-ups open as centred windows rather than sliding up from the
+  bottom like on a phone. Phones and tablets are completely unchanged.
+
+## [1.48.4] — 2026-07-27
+
+### Changed
+- Clearer warning when forgetting an item completely from Settings/the item
+  editor: it now says plainly that this also removes it from "Recently
+  bought" history, not just future suggestions.
+
 ## [1.48.3] — 2026-07-27
 
 ### Changed

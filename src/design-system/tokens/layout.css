@@ -1,0 +1,48 @@
+/* Layout dimensions — the one place the app's content width, nav rail width
+   and the fixed-element insets that depend on them are defined.
+
+   THE INVARIANT: phone values live in bare :root; desktop values live behind
+   :root[data-layout="desktop"], which src/lib/layoutMode.js stamps onto <html>.
+   So if data-layout is never set — an old browser with no matchMedia, a
+   tree-shaking accident, a stylesheet load-order surprise — the app renders
+   exactly the phone layout. Never invert that by putting a desktop value in
+   bare :root.
+
+   The breakpoint itself is deliberately NOT here: it lives only in
+   layoutMode.js, so the CSS and JS halves can't drift. */
+:root {
+  /* 0px, not 0 — this is divided in a calc() by #toast's `left`, and
+     calc(50% + 0/2) with a unitless zero is invalid CSS, which would drop the
+     declaration entirely and slam the toast to the viewport's left edge. */
+  --nav-rail-width: 0px;
+  --content-max-width: 480px;
+  --content-gutter: 16px;
+  --dialog-max-width: 480px;
+
+  /* Fixed-position insets. These can't inherit the content column's centering
+     from a parent's padding (position: fixed resolves against the viewport),
+     so they recompute it: half the leftover space, plus the edge inset. This
+     is the old hardcoded `max(16px, calc(50vw - 224px))` generalized — 224 was
+     480/2 - 16, i.e. this same expression with the phone values baked in. */
+  --fab-inset: 16px;
+  --fab-bottom: calc(84px + env(safe-area-inset-bottom));
+  --fab-right: max(
+    var(--fab-inset),
+    calc((100vw - var(--nav-rail-width) - var(--content-max-width)) / 2 + var(--fab-inset))
+  );
+  --toast-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+:root[data-layout="desktop"] {
+  --nav-rail-width: 232px;
+  --content-max-width: 960px;
+  --content-gutter: var(--space-8);
+  /* Header sets its own gutter from --screen-margin; without this override the
+     header title would sit 12px left of the content below it. */
+  --screen-margin: var(--space-8);
+  --dialog-max-width: 560px;
+  --fab-inset: 24px;
+  /* No bottom bar to clear once the nav is a left rail. */
+  --fab-bottom: 24px;
+  --toast-bottom: 96px;
+}

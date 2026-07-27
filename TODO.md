@@ -8,56 +8,24 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-21):
-0. **Reliability — offline write durability (#113)** — DONE (1.39.0, see
-   `Todo_done.md`). A persisted outbound queue now keeps an add/toggle made
-   with no signal and replays it on reconnect.
-1. **Bugs (#87–#99)** — #87–#89 from the 2026-07-18 QA/QC pass; #91–#99
-   from a second full app-audit pass 2026-07-20. The
-   two P0s (#79, #80), all three P1s (#81–#83) plus the 2026-07-20-audit P1
-   (#90), P2 #84–#86, the 1.39.1 batch (#91, #93, #95, #96, #97, #99), and
-   #114 (stale/inconsistent in-app changelog right after a deploy, fixed
-   1.42.2) are fixed (see `Todo_done.md`); #87, #88, #89, #92, #94, #98
-   remain low-priority latent/edge issues.
+1. **Bugs** — 5 low-priority latent/edge issues remain from the two QA/audit
+   passes (2026-07-18, 2026-07-20): #87, #88, #89, #92, #94. Everything else
+   from both passes, plus #114, is fixed — see `Todo_done.md`.
 2. **Small UI/polish items — low value, low risk, good filler:**
-   - ~~**#100** "Tøm handlede" bulk-clear (end-of-trip sweep)~~ — DONE (1.40.0,
-     see `Todo_done.md`).
-   - **#6** Proper desktop layout (not just raising the width cap)
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
-   - **#98** catalogue-delete blast-radius wording (from the 2026-07-20 audit)
-3. **Custom aisle/store ordering (#105)** — DONE (1.40.0, see `Todo_done.md`).
-   A per-list `category_order` store now lets a household reorder aisles to
-   match their store's layout.
-4. **Multi-list data model (#1)** — high ceiling if this app ever needs
+3. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
-5. **i18n (#15)** — DONE (1.43.4-1.48.0, see `Todo_done.md`). The app is
-   fully translated, server error messages included; phase 8 (free-text meal
-   names) is closed as a won't-do. 1.48.0 additionally flipped the codebase's
-   source language to English (canonical data keys, authored dictionary,
-   filenames) while keeping Norwegian as the default UI language — so adding a
-   third language is now a translation job rather than a restructure.
-
-Notifications (#7) shipped in full (phases 1–2) and is closed — see
-`Todo_done.md`. Batched item-added notifications, the one theoretical
-remaining phase, were considered and explicitly declined: not worth it
-for a 2-person household that already has the on-demand "Varsle
-husstanden" ping.
 
 ## Bugs
 
-Found in a full QA/QC review pass (2026-07-18). File:line refs are from that
-pass — verify before fixing.
-
-P0 items #79 and #80, P1 items #81–#83 and #90, and P2 items #84–#86 are
-fixed — see `Todo_done.md`. Items #91–#99 were found in a second full
-app-audit pass (2026-07-20); file:line refs are from that pass — verify
-before fixing. Of those, #91, #93, #95 (and UI-section #96, #97, #99) are
-now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
-#114 (bug, reported by the user 2026-07-23) is also fixed — see
-`Todo_done.md`.
+5 low-priority latent/edge bugs remain, found across two QA/audit passes
+(2026-07-18 and 2026-07-20; file:line refs below are from those passes —
+verify before fixing). Everything else from both passes, plus #114, is
+fixed — see `Todo_done.md`.
 
 ### P2 — Low (latent / edge)
 
@@ -95,10 +63,6 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
     versioned cache name on release.
     _Value: Low · Importance: Low · Type: Bug / Offline / Caching_
 
-## Feature
-
-~~15. Language support (nb/en)~~ — **DONE**, all phases, see `Todo_done.md`. The whole app UI translates, including catalogue item names, category labels and server error messages. Phase 8 (meal names / free-typed ingredients) is closed as a deliberate won't-do: no translation source exists and this app has no translation API by design.
-
 ## Data model / Account lifecycle
 
 1. Let a user exist without a list, and let anyone create lists, be members
@@ -120,35 +84,6 @@ now fixed too (1.39.1, see `Todo_done.md`); #87, #88, #89, #92, #94 remain.
    after returning from idle) for load savings, so don't add it
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
-
-## UI / Polish
-
-6. Create a proper viewing window for desktop. Today the layout is
-   deliberately mobile-first with a fixed `max-width: 480px` centered
-   column at any viewport size (`src/index.css:34`) — a past decision
-   documented in `Todo_done.md` chose this over a separate desktop layout.
-   Revisiting it means an actual desktop design (wider content, maybe a
-   two-pane or sidebar layout), not just raising the cap; low priority
-   since this is a 2-person app used mostly on phones.
-   _Value: Low · Importance: Low · Type: UI / Layout_
-
-98. Catalogue delete from the shopping list is more destructive than it looks.
-    `DELETE /list/:id/catalogue` removes the catalogue row and cascades to
-    every `list_items` line referencing it (history included), not just the one
-    occurrence. Confirm `ItemEditModal`'s wording makes that blast radius
-    clear, or add a distinct confirmation.
-    _Value: Low · Importance: Low · Type: UI / Shopping list_
-
-## Dev process / policy
-
-Process/documentation improvements from the 2026-07-20 dev-policy review (see
-that pass for the reasoning). All internal housekeeping — CLAUDE.md/docs only,
-no `VERSION` bump. #1–#3 from the same review are larger and have their own
-implementation plans (not listed here).
-
-~~#109 (clarify "wait for checks/review"), #110 (never merge on red CI), #111
-(rollback runbook), #112 (`d1_migrations` drift reconcile)~~ — all DONE, see
-`Todo_done.md` and CLAUDE.md's Workflow conventions / Deployment sections.
 
 ## Ideas (unvetted)
 
@@ -198,9 +133,6 @@ _Exploratory / higher ceiling:_
      `worker/index.js` and migrations 0002/0003 — kills a documented drift
      hazard. Refactor, not a user-facing feature.
      _Value: Low · Importance: Low · Type: Idea / Refactor_
-
-(Batched "item added" push was already considered and declined — see the
-Notifications note at the top — noted here only so it isn't re-proposed.)
 
 ## Done
 

@@ -15,7 +15,7 @@ export function Header({ title, onBack, action }) {
       position: 'sticky',
       top: 0,
       zIndex: 10,
-      maxWidth: 480,
+      maxWidth: 'var(--content-max-width)',
       margin: '0 auto',
       width: '100%',
     }}>

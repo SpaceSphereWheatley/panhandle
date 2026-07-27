@@ -11,7 +11,9 @@ import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { settingsTitleKey } from "../lib/settingsNav.js";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { haptic } from "../lib/shoppingUtils.js";
+import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", settings: "shell.tab.settings" };
 const TAB_ORDER = ["list", "meals", "settings"];
@@ -97,6 +99,7 @@ export function AppShell() {
   const [settingsPath, setSettingsPath] = useState([]);
   const toast = useToast();
   const t = useTranslation();
+  const isDesktop = useIsDesktop();
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -210,8 +213,37 @@ export function AppShell() {
   const settingsSubpageTitle = subpageTitleKey ? t(subpageTitleKey) : null;
   const title = settingsSubpageTitle || t(TITLE_KEYS[tab]);
 
+  // One <TabBar> rendered into one of two slots: the desktop left rail is a
+  // sibling *before* the header (so it reads first in the DOM, matching its
+  // visual position), the phone bottom bar stays last exactly as before.
+  const nav = (
+    <TabBar
+      tabs={[
+        { key: "list", label: t("shell.tab.list"), icon: "shopping-cart-simple" },
+        { key: "meals", label: t("shell.tab.meals"), icon: "cooking-pot" },
+        { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
+      ]}
+      active={tab}
+      onChange={switchTab}
+      navLabel={t("shell.nav.primaryAria")}
+      orientation={isDesktop ? "vertical" : "horizontal"}
+      brand={
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 var(--space-4)" }}>
+          <img src={logoMark} alt="" style={{ width: 28, height: 28 }} />
+          <span style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--md-title-medium-size)",
+            fontWeight: 700,
+            color: "var(--text-primary)",
+          }}>Panhandle</span>
+        </div>
+      }
+    />
+  );
+
   return (
     <div id="app">
+      {isDesktop ? nav : null}
       <Header
         title={title}
         onBack={settingsSubpageTitle ? () => history.back() : undefined}
@@ -251,15 +283,7 @@ export function AppShell() {
           </div>
         )}
       </main>
-      <TabBar
-        tabs={[
-          { key: "list", label: t("shell.tab.list"), icon: "shopping-cart-simple" },
-          { key: "meals", label: t("shell.tab.meals"), icon: "cooking-pot" },
-          { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
-        ]}
-        active={tab}
-        onChange={switchTab}
-      />
+      {isDesktop ? null : nav}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
       {showImportantInfo && <ImportantInfoModal onClose={() => setShowImportantInfo(false)} />}
     </div>

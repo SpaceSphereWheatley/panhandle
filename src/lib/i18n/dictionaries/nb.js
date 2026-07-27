@@ -118,7 +118,7 @@ export const nb = {
   "suggestions.addOther": "Legg til annen vare",
 
   "itemEdit.emptyName": "Tomt navn",
-  "itemEdit.confirmForget.body": "Glemme «{name}» helt fra listens lagrede varer? Kjøpshistorikken nullstilles, og den blir ikke lenger foreslått automatisk. (Påvirker bare denne listen.)",
+  "itemEdit.confirmForget.body": "«{name}» blir glemt helt – dette fjerner den også fra «Nylig kjøpt»-historikken, ikke bare fra fremtidige forslag. Kjøpsstatistikken nullstilles, og den blir ikke foreslått automatisk igjen. (Påvirker bare denne listen.)",
   "itemEdit.confirmForget.title": "Glemme vare?",
   "itemEdit.confirmForget.confirmLabel": "Glem",
   "itemEdit.addedBy": "Lagt til av {name}",
@@ -221,6 +221,7 @@ export const nb = {
   "shell.tab.list": "Handleliste",
   "shell.tab.meals": "Måltider",
   "shell.tab.settings": "Innstillinger",
+  "shell.nav.primaryAria": "Hovednavigasjon",
   "shell.sync.updated": "Oppdatert {time}",
   "shell.sync.offline": "Offline",
   "shell.sync.failed": "Kunne ikke oppdatere",
