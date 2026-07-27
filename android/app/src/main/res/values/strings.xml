@@ -2,10 +2,11 @@
 <resources>
     <string name="app_name">Panhandle</string>
 
-    <!-- YOUR_APP_DOMAIN: replace everywhere in this project once the public
-         domain is decided (see docs/android-publishing.md's cutover
-         checklist). Keep launchUrl/hostName/asset_statements in sync. -->
-    <string name="launchUrl">https://YOUR_APP_DOMAIN/app.html</string>
-    <string name="hostName">YOUR_APP_DOMAIN</string>
-    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://YOUR_APP_DOMAIN\"}}]</string>
+    <!-- Domain: panhandle.app (bought for this purpose, see
+         docs/android-publishing.md's cutover checklist for the remaining
+         DNS/Cloudflare/Resend steps before this actually resolves). Keep
+         launchUrl/hostName/asset_statements in sync if it ever changes. -->
+    <string name="launchUrl">https://panhandle.app/app.html</string>
+    <string name="hostName">panhandle.app</string>
+    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://panhandle.app\"}}]</string>
 </resources>
