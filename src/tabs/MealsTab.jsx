@@ -99,6 +99,9 @@ function agendaListStyle(density) {
 function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
   if (!muted) return <Avatar name={nameFor(name)} color={avatarColorFor(name)} size={size} />;
   const initial = (nameFor(name) || name)[0]?.toUpperCase();
+  // Badge scales with the avatar itself so it stays proportional across the
+  // two call sites' very different sizes, instead of one fixed pixel size.
+  const badgeSize = Math.round(size * 0.5);
   return (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       <div
@@ -123,10 +126,10 @@ function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
         title={t("meals.recurringTag", { name: nameFor(name) })}
         style={{
           position: "absolute",
-          right: -3,
-          bottom: -3,
-          width: 16,
-          height: 16,
+          right: -2,
+          bottom: -2,
+          width: badgeSize,
+          height: badgeSize,
           borderRadius: "50%",
           background: "var(--accent-secondary)",
           border: "2px solid var(--surface-page)",
@@ -135,7 +138,7 @@ function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
           justifyContent: "center",
         }}
       >
-        <i className="ph ph-repeat" style={{ fontSize: 9, color: "var(--text-on-accent)" }} aria-hidden="true" />
+        <i className="ph ph-repeat" style={{ fontSize: badgeSize * 0.55, color: "var(--text-on-accent)" }} aria-hidden="true" />
       </span>
     </div>
   );
@@ -314,7 +317,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                       )}
                       {cozy && responsible && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                          <ResponsibleAvatar name={responsible} nameFor={nameFor} size={20} muted={muted} t={t} />
+                          <ResponsibleAvatar name={responsible} nameFor={nameFor} size={32} muted={muted} t={t} />
                           <span
                             style={{
                               fontFamily: "var(--font-sans)",
@@ -346,7 +349,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                         {t("meals.today")}
                       </span>
                     )}
-                    {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} size={24} muted={muted} t={t} />}
+                    {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} size={40} muted={muted} t={t} />}
                     <i className="ph ph-caret-right" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", flexShrink: 0 }} aria-hidden="true" />
                   </div>
                 </CardComponent>

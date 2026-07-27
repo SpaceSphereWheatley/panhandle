@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.50.1] — 2026-07-27
+
+### Changed
+- The person avatar on each day in the weekly meal plan is noticeably bigger,
+  in both Kompakt and Behagelig view.
+
 ## [1.50.0] — 2026-07-27
 
 ### Changed
