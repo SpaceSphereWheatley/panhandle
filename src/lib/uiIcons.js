@@ -18,6 +18,8 @@ export const UI_ICON_SLUGS = {
   back: "caret-left",
   plus: "plus",
   caretRight: "caret-right",
+  rowsCompact: "arrows-in-vertical",
+  rowsComfortable: "arrows-out-vertical",
 };
 
 export function uiIconSlug(name) {

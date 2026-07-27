@@ -9,14 +9,14 @@ import { haptic } from "../lib/shoppingUtils.js";
 import { avatarColorFor } from "../lib/avatarColor.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
-import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, Tag, FabMenu, Skeleton } from "../design-system/index.js";
+import { Card, Avatar, FabMenu, Skeleton } from "../design-system/index.js";
+import { UiIcon } from "../components/UiIcon.jsx";
 import { readCache, writeCache } from "../lib/localCache.js";
 
 const POLL_MS = 7000;
@@ -58,218 +58,301 @@ function cachedCurrentWeekPlan() {
   return cached && cached.monday === currentMonday ? cached.plan : null;
 }
 
-// Cold-load placeholder shaped like a week of day cards, so first paint
+// Cold-load placeholder shaped like a week of agenda rows, so first paint
 // reserves the real layout instead of a spinner (and never reads as "every
-// day is unplanned", which a blank/empty plan would).
-function MealsSkeleton({ stackStyle }) {
+// day is unplanned", which a blank/empty plan would). Uniform row height —
+// unlike the old hero-card layout, no day is taller than the rest now.
+function MealsSkeleton({ density }) {
   return (
-    <div style={stackStyle}>
+    <div style={agendaListStyle(density)}>
       {Array.from({ length: 7 }).map((_, i) => (
-        <Skeleton key={i} height={i === 0 ? 88 : 56} radius={16} />
+        <Skeleton key={i} height={density === "comfortable" ? 64 : 48} radius={16} />
       ))}
     </div>
   );
 }
 
-// One week's worth of day cards, sized to a fixed pane width so it can sit
+// Shared by MealsSkeleton and WeekPane's own loading branch, and by the real
+// row list — capped narrower than the tab's own content column (960px on
+// desktop) so rows stay readable single lines instead of stretching one
+// thin line across the wide column; centered so the cap doesn't just leave
+// dead space on the right. A no-op on phones, whose viewport is already
+// narrower than the cap.
+function agendaListStyle(density) {
+  return {
+    maxWidth: 520,
+    margin: "0 auto",
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: density === "comfortable" ? 8 : 6,
+  };
+}
+
+// Who's responsible always renders in the same slot regardless of whether
+// it's confirmed or just a recurring default — see WeekPane below. A
+// confirmed day gets the person's normal colored Avatar; a day that only has
+// a recurring default (nobody's confirmed it yet) gets the same shape/size,
+// muted, with a small "usual" badge instead of a differently-placed text
+// hint. `Avatar` has no style/border prop, so the muted state is hand-built
+// rather than extending the shared component for this one Meals-specific case.
+function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
+  if (!muted) return <Avatar name={nameFor(name)} color={avatarColorFor(name)} size={size} />;
+  const initial = (nameFor(name) || name)[0]?.toUpperCase();
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--surface-sunken)",
+          color: "var(--text-tertiary)",
+          border: "1.5px solid var(--accent-secondary)",
+          fontFamily: "var(--font-sans)",
+          fontWeight: 700,
+          fontSize: size * 0.42,
+        }}
+      >
+        {initial}
+      </div>
+      <span
+        title={t("meals.recurringTag", { name: nameFor(name) })}
+        style={{
+          position: "absolute",
+          right: -3,
+          bottom: -3,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          background: "var(--accent-secondary)",
+          border: "2px solid var(--surface-page)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <i className="ph ph-repeat" style={{ fontSize: 9, color: "var(--text-on-accent)" }} aria-hidden="true" />
+      </span>
+    </div>
+  );
+}
+
+// One week's worth of agenda rows, sized to a fixed pane width so it can sit
 // inside the horizontally-scrolling row in MealsTab below. Only the active
-// (currently selected) week's cards are tappable — the ones peeking in from
+// (currently selected) week's rows are tappable — the ones peeking in from
 // either side during a drag are a preview, not live controls, until you
 // actually swipe to them.
-function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, stackStyle, paneWidth }) {
+function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, density, paneWidth }) {
   const t = useTranslation();
   const { lang } = useLanguage();
   const days = weekDays(monday);
-  // Horizontal padding, box-sizing:border-box so it insets the cards rather
+  const cozy = density === "comfortable";
+  // Horizontal padding, box-sizing:border-box so it insets the rows rather
   // than widening the pane itself — the row's drag math treats `paneWidth`
   // as an exact one-week pitch, so the pane's *outer* size can't change.
-  // Without this, two adjacent weeks' cards touch with zero gap at the seam
-  // while cards within a week keep their usual gap, which reads as one
-  // merged card rather than two separate pages while peeking mid-swipe.
+  // Without this, two adjacent weeks' rows touch with zero gap at the seam
+  // while rows within a week keep their usual gap, which reads as one
+  // merged row rather than two separate pages while peeking mid-swipe.
   // Half the intra-week gap on each side keeps the rhythm the same as
   // everywhere else instead of an arbitrary gutter width.
-  const gutter = (stackStyle.gap || 12) / 2;
+  const gutter = (cozy ? 8 : 6) / 2;
   return (
-    <div style={{ ...stackStyle, width: paneWidth, flexShrink: 0, boxSizing: "border-box", padding: `0 ${gutter}px` }}>
-      {!byDate
-        ? Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} height={i === 0 ? 88 : 56} radius={16} />
-          ))
-        : days.map((d) => {
-            const iso = localIso(d);
-            const p = byDate[iso];
-            const isToday = iso === today;
-            const dayName = d.toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
-            const dow = dayOfWeekMonFirst(d);
-            const recurring = !p?.responsible ? schedule[dow] : null;
-            const CardComponent = shouldAnimate ? MotionCard : Card;
-            // `layout` gated on `active`, not just `shouldAnimate`: this tab stays
-            // mounted (hidden via `display: none`) when switched away from (see
-            // AppShell.jsx), and a display:none subtree measures as a zero-size
-            // box at (0,0) — if Framer kept tracking layout through that, it'd
-            // see a jump from (0,0) to the real position on reactivation and
-            // animate it, i.e. cards visibly flying in from the top-left on
-            // every tab switch. Layout tracking only turns on once visible, so
-            // its first measurement is the real position with nothing to
-            // interpolate from.
-            const motionProps = shouldAnimate ? { layout: active, transition } : {};
-            return (
-              <CardComponent
-                key={iso}
-                {...motionProps}
-                interactive={isActive}
-                onClick={
-                  isActive
-                    ? () => {
-                        // A released swipe can leave the pointer sitting on top of
-                        // whatever card is now underneath it, which fires this as a
-                        // genuine click — see dragActiveRef/suppressClickRef in
-                        // MealsTab below.
-                        if (suppressClickRef.current) return;
-                        onOpenDay(iso);
-                      }
-                    : undefined
-                }
-                aria-label={t(p?.meal_name ? "meals.day.aria.edit" : "meals.day.aria.add", { day: dayName })}
-                // Non-today cards are more compact (smaller padding, tighter
-                // title margin below) so the whole week takes up less vertical
-                // space — today's card keeps the full-size prominent treatment.
-                padding={isToday ? "md" : "sm"}
-                style={
-                  isToday
-                    ? {
-                        background: "var(--md-inverse-surface)",
-                        color: "var(--md-inverse-on-surface)",
-                        borderRadius: "var(--radius-card)",
-                        boxShadow: "var(--elevation-shadow-3)",
-                      }
-                    : p?.meal_name
-                      ? { borderRadius: "var(--radius-md)" }
-                      // Unplanned, non-today: an empty slot, not a card with muted
-                      // text in it — drop the fill for a dashed outline instead of
-                      // reusing the same solid surface every other day gets.
-                      : {
-                          borderRadius: "var(--radius-md)",
-                          background: "transparent",
-                          boxShadow: "none",
-                          border: "1.5px dashed var(--border-default)",
+    <div style={{ width: paneWidth, flexShrink: 0, boxSizing: "border-box", padding: `0 ${gutter}px` }}>
+      <div style={agendaListStyle(density)}>
+        {!byDate
+          ? Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} height={cozy ? 64 : 48} radius={16} />
+            ))
+          : days.map((d) => {
+              const iso = localIso(d);
+              const p = byDate[iso];
+              const isToday = iso === today;
+              const dayName = d.toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
+              const dayAbbr = d.toLocaleDateString(dateLocale(lang), { weekday: "short" }).replace(/\./g, "").slice(0, 3).toUpperCase();
+              const dow = dayOfWeekMonFirst(d);
+              // The responsible slot is filled the same way whether it's a
+              // confirmed assignment or just a recurring default — see
+              // ResponsibleAvatar above. Only truly nobody (neither) leaves
+              // it empty.
+              const recurring = !p?.responsible ? schedule[dow] : null;
+              const responsible = p?.responsible || recurring || null;
+              const muted = !p?.responsible;
+              const CardComponent = shouldAnimate ? MotionCard : Card;
+              // `layout` gated on `active`, not just `shouldAnimate`: this tab stays
+              // mounted (hidden via `display: none`) when switched away from (see
+              // AppShell.jsx), and a display:none subtree measures as a zero-size
+              // box at (0,0) — if Framer kept tracking layout through that, it'd
+              // see a jump from (0,0) to the real position on reactivation and
+              // animate it, i.e. cards visibly flying in from the top-left on
+              // every tab switch. Layout tracking only turns on once visible, so
+              // its first measurement is the real position with nothing to
+              // interpolate from.
+              const motionProps = shouldAnimate ? { layout: active, transition } : {};
+              const basePadding = cozy ? "11px 14px" : "9px 10px";
+              const rowStyle = isToday
+                ? {
+                    background: "var(--accent-primary-subtle)",
+                    borderLeft: "3px solid var(--accent-primary)",
+                    borderRadius: "var(--radius-md)",
+                    padding: basePadding,
+                    paddingLeft: cozy ? 12 : 8,
+                  }
+                : p?.meal_name
+                  ? { background: "var(--surface-card)", borderRadius: "var(--radius-md)", padding: basePadding }
+                  // Unplanned: an empty slot, not a row with muted text in it —
+                  // drop the fill for a dashed outline instead of reusing the
+                  // same solid surface every other day gets.
+                  : {
+                      background: "transparent",
+                      boxShadow: "none",
+                      border: "1.5px dashed var(--border-default)",
+                      borderRadius: "var(--radius-md)",
+                      padding: basePadding,
+                    };
+              return (
+                <CardComponent
+                  key={iso}
+                  {...motionProps}
+                  interactive={isActive}
+                  onClick={
+                    isActive
+                      ? () => {
+                          // A released swipe can leave the pointer sitting on top of
+                          // whatever card is now underneath it, which fires this as a
+                          // genuine click — see dragActiveRef/suppressClickRef in
+                          // MealsTab below.
+                          if (suppressClickRef.current) return;
+                          onOpenDay(iso);
                         }
-                }
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "var(--text-2xs)",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "var(--tracking-wide)",
-                        color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 70%, transparent)" : "var(--text-tertiary)",
-                      }}
-                    >
-                      {isToday ? t("meals.today") : dayName}
-                    </div>
-                    {p?.meal_name ? (
+                      : undefined
+                  }
+                  aria-label={t(p?.meal_name ? "meals.day.aria.edit" : "meals.day.aria.add", { day: dayName })}
+                  padding="none"
+                  style={rowStyle}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: cozy ? 12 : 10 }}>
+                    <div style={{ width: cozy ? 40 : 34, flexShrink: 0, textAlign: "center" }}>
                       <div
                         style={{
                           fontFamily: "var(--font-sans)",
-                          fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
-                          lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
-                          fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
-                          color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-primary)",
-                          margin: isToday ? "4px 0" : "2px 0",
+                          fontSize: cozy ? "10px" : "var(--text-2xs)",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "var(--tracking-wide)",
+                          color: isToday ? "var(--accent-primary)" : "var(--text-tertiary)",
                         }}
                       >
-                        {p.meal_name}
+                        {dayAbbr}
                       </div>
-                    ) : (
-                      // Unplanned: an active invite ("Legg til måltid" + a plus
-                      // chip), not a passive statement in muted italic — italic
-                      // reads as disabled, not tappable, and this card is now a
-                      // tap target in its own right (see `interactive` above).
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: isToday ? "4px 0" : "2px 0" }}>
-                        <span
-                          style={{
-                            width: isToday ? 26 : 22,
-                            height: isToday ? 26 : 22,
-                            borderRadius: "50%",
-                            background: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 18%, transparent)" : "var(--surface-sunken)",
-                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-tertiary)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <i className="ph ph-plus" style={{ fontSize: isToday ? 14 : 12 }} aria-hidden="true" />
-                        </span>
-                        <span
+                      <div
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: cozy ? "17px" : "15px",
+                          fontWeight: 700,
+                          color: isToday ? "var(--accent-primary)" : "var(--text-primary)",
+                        }}
+                      >
+                        {d.getDate()}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {p?.meal_name ? (
+                        <div
                           style={{
                             fontFamily: "var(--font-sans)",
-                            fontSize: isToday ? "var(--md-headline-emphasized-size)" : "var(--md-title-large-size)",
-                            lineHeight: isToday ? "var(--md-headline-emphasized-line)" : "var(--md-title-large-line)",
-                            fontWeight: isToday ? "var(--weight-display-max)" : "var(--md-title-emphasized-weight)",
-                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
+                            fontSize: cozy ? "15.5px" : "14.5px",
+                            fontWeight: cozy ? 700 : 600,
+                            color: "var(--text-primary)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           }}
                         >
-                          {t("meals.addMeal")}
-                        </span>
-                      </div>
+                          {p.meal_name}
+                        </div>
+                      ) : (
+                        // Unplanned: an active invite ("Legg til måltid" + a plus
+                        // chip), not a passive statement in muted italic — italic
+                        // reads as disabled, not tappable, and this row is now a
+                        // tap target in its own right (see `interactive` above).
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: "50%",
+                              background: "var(--surface-sunken)",
+                              color: "var(--text-tertiary)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <i className="ph ph-plus" style={{ fontSize: 10 }} aria-hidden="true" />
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: "var(--font-sans)",
+                              fontSize: cozy ? "15.5px" : "14.5px",
+                              fontWeight: 600,
+                              color: "var(--text-secondary)",
+                            }}
+                          >
+                            {t("meals.addMeal")}
+                          </span>
+                        </div>
+                      )}
+                      {!cozy && isToday && (
+                        <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", marginTop: 1 }}>
+                          {t("meals.today")}
+                        </div>
+                      )}
+                      {cozy && responsible && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                          <ResponsibleAvatar name={responsible} nameFor={nameFor} size={20} muted={muted} t={t} />
+                          <span
+                            style={{
+                              fontFamily: "var(--font-sans)",
+                              fontSize: "var(--text-xs)",
+                              fontWeight: 600,
+                              color: isToday ? "var(--accent-primary)" : "var(--text-secondary)",
+                            }}
+                          >
+                            {muted ? t("meals.recurringTag", { name: nameFor(responsible) }) : nameFor(responsible)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {cozy && isToday && (
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "var(--tracking-wide)",
+                          color: "var(--text-on-accent)",
+                          background: "var(--accent-primary)",
+                          padding: "3px 7px",
+                          borderRadius: "var(--radius-pill)",
+                        }}
+                      >
+                        {t("meals.today")}
+                      </span>
                     )}
-                    {p?.responsible ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                        <Avatar
-                          name={nameFor(p.responsible)}
-                          color={isToday ? "var(--md-inverse-primary)" : avatarColorFor(p.responsible)}
-                          size={isToday ? 40 : 32}
-                        />
-                        <span
-                          style={{
-                            fontFamily: "var(--font-sans)",
-                            fontSize: "var(--text-xs)",
-                            fontWeight: 600,
-                            color: isToday ? "var(--md-inverse-on-surface)" : "var(--text-secondary)",
-                          }}
-                        >
-                          {nameFor(p.responsible)}
-                        </span>
-                      </div>
-                    ) : recurring ? (
-                      <div style={{ marginTop: 6 }}>
-                        <Tag tone="primary">
-                          <i className="ph ph-repeat" style={{ marginRight: 4 }} aria-hidden="true" />
-                          {t("meals.recurringTag", { name: nameFor(recurring) })}
-                        </Tag>
-                      </div>
-                    ) : null}
+                    {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} size={24} muted={muted} t={t} />}
+                    <i className="ph ph-caret-right" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", flexShrink: 0 }} aria-hidden="true" />
                   </div>
-                  {/* The card itself is the tap target now (see `interactive`
-                      above) — this is a quiet label, not a second control, so
-                      it can't nest inside the card's own button semantics. */}
-                  <span
-                    style={{
-                      position: "relative",
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "var(--text-xs)",
-                      fontWeight: 600,
-                      color: isToday ? "color-mix(in oklch, var(--md-inverse-on-surface) 80%, transparent)" : "var(--text-tertiary)",
-                    }}
-                  >
-                    {/* Only "Endre" needs the word — an unplanned day's card
-                        already says "Legg til måltid" front and centre, so
-                        repeating it here would be redundant, just the chevron. */}
-                    {p?.meal_name ? t("meals.change") : null}
-                    <i className="ph ph-caret-right" style={{ fontSize: "0.95em" }} aria-hidden="true" />
-                  </span>
-                </div>
-              </CardComponent>
-            );
-          })}
+                </CardComponent>
+              );
+            })}
+      </div>
     </div>
   );
 }
@@ -280,9 +363,18 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const { lang } = useLanguage();
   const { schedule, ensureLoaded } = useRecurring();
   const { nameFor } = useListUsers();
-  const intensity = useDesignIntensity();
   const isDesktop = useIsDesktop();
   const { shouldAnimate, transition } = useMotionConfig();
+  // Kompakt (one line/day) vs Behagelig (adds a second line spelling out
+  // who's responsible) — a per-device preference, same persistence pattern
+  // as Handleliste's grid/list toggle (`ph_view`), just a different key.
+  const [density, setDensityState] = useState(() =>
+    localStorage.getItem("ph_meals_density") === "comfortable" ? "comfortable" : "compact"
+  );
+  function setDensity(next) {
+    setDensityState(next);
+    localStorage.setItem("ph_meals_density", next);
+  }
   const [weekOffset, setWeekOffset] = useState(0);
   const weekOffsetRef = useRef(weekOffset);
   weekOffsetRef.current = weekOffset;
@@ -523,17 +615,6 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     toast(t("meals.toast.planned", { name: meal.name, day: dayLabel }), { undoFn: () => deletePlanDay(targetIso) });
   }
 
-  // Classic intensity is a plain linear list; expressive/muted use an
-  // adaptive grid (same repeat(auto-fit, minmax(...)) mechanism as
-  // Handleliste's clusters, for consistency) so "I dag" can stand apart.
-  // The 220px min track already flows to ~4 columns in the wider desktop
-  // column with no change; only the gap opens up. (WeekPane derives its own
-  // gutter from this gap, so that follows automatically.)
-  const stackStyle =
-    intensity === "classic"
-      ? { display: "flex", flexDirection: "column", gap: 6 }
-      : { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: isDesktop ? 16 : 12 };
-
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
@@ -545,12 +626,52 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
         <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>{t("meals.nav.thisWeek")}</button>
         <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>{t("meals.nav.next")} ›</button>
       </div>
-      <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
         <button
           onClick={() => setModal({ type: "browse" })}
           style={{ background: "none", border: "none", color: "var(--accent-primary)", fontSize: "var(--text-sm)", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer", padding: 0 }}
         >
           {t("meals.allMeals")} ›
+        </button>
+        <button
+          onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
+          aria-label={t(density === "compact" ? "meals.densityToggle.switchToComfortable" : "meals.densityToggle.switchToCompact")}
+          title={t(density === "compact" ? "meals.densityToggle.switchToComfortable" : "meals.densityToggle.switchToCompact")}
+          style={{
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 4,
+            background: "var(--surface-sunken)",
+            border: "none",
+            borderRadius: "var(--radius-pill)",
+            padding: 3,
+            margin: 0,
+            font: "inherit",
+            cursor: "pointer",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              zIndex: 0,
+              top: 3,
+              bottom: 3,
+              left: 3,
+              width: "calc(50% - 5px)",
+              background: "var(--accent-primary)",
+              borderRadius: "var(--radius-pill)",
+              transform: density === "comfortable" ? "translateX(calc(100% + 4px))" : "translateX(0)",
+              transition: "transform var(--spring-duration-soft) var(--ease-spring-soft)",
+            }}
+          />
+          <span style={densityToggleIconStyle(density === "compact")}>
+            <UiIcon name="rowsCompact" size={16} />
+          </span>
+          <span style={densityToggleIconStyle(density === "comfortable")}>
+            <UiIcon name="rowsComfortable" size={16} />
+          </span>
         </button>
       </div>
 
@@ -559,7 +680,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           as possible instead of only once the row itself first renders. */}
       <div ref={containerRef} style={{ position: "relative", overflow: "hidden" }}>
         {loading || !paneWidth ? (
-          <MealsSkeleton stackStyle={stackStyle} />
+          <MealsSkeleton density={density} />
         ) : (
           /* Swipe-paging is a touch affordance; on desktop the prev / "this
              week" / next buttons above are the sole control. Turning drag off
@@ -591,7 +712,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                 active={active}
                 suppressClickRef={suppressClickRef}
                 onOpenDay={(iso) => setModal({ type: "plan", iso })}
-                stackStyle={stackStyle}
+                density={density}
                 paneWidth={paneWidth}
               />
             ))}
@@ -654,3 +775,20 @@ const weekNavBtnStyle = {
   color: "var(--text-primary)",
   cursor: "pointer",
 };
+
+// Mirrors ShoppingListTab's viewToggleIconStyle: the two icons are inert
+// labels riding on top of the single toggle button, not separate click
+// targets — a press anywhere on the pill flips the density regardless of
+// which icon it lands on.
+function densityToggleIconStyle(active) {
+  return {
+    position: "relative",
+    zIndex: 1,
+    color: active ? "var(--text-on-accent)" : "var(--text-tertiary)",
+    padding: "6px 10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "color 150ms var(--ease-out)",
+  };
+}

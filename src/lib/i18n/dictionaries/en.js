@@ -92,6 +92,8 @@ export const en = {
   "meals.change": "Change",
   "meals.allMeals": "All meals",
   "meals.recurringTag": "Usually: {name}",
+  "meals.densityToggle.switchToCompact": "Switch to compact view",
+  "meals.densityToggle.switchToComfortable": "Switch to comfortable view",
   "meals.addSelected": "Add selected",
   "meals.alreadyOnList": "Already on the list",
   "meals.ingredientsLabel": "Ingredients",
