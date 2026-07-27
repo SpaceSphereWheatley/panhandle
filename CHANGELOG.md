@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.50.0] — 2026-07-27
+
+### Changed
+- **The weekly meal plan is redesigned to show the whole week at a glance.**
+  Days are now compact rows instead of big cards, so all 7 days fit on screen
+  together without scrolling. A new toggle next to "Alle måltider" switches
+  between Kompakt (one line per day) and Behagelig (a bit more room, spelling
+  out who's cooking).
+- **A day with a usual cook now shows that person consistently.** If nobody's
+  confirmed a day yet but someone is normally responsible for it (e.g. every
+  Wednesday), their avatar now shows up in the same spot a confirmed day's
+  avatar would — just greyed out with a small badge — instead of a separate
+  line of text elsewhere on the row.
+
 ## [1.49.0] — 2026-07-27
 
 ### Added

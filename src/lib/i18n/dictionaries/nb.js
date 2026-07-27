@@ -143,6 +143,8 @@ export const nb = {
   "meals.change": "Endre",
   "meals.allMeals": "Alle måltider",
   "meals.recurringTag": "Fast: {name}",
+  "meals.densityToggle.switchToCompact": "Bytt til kompakt visning",
+  "meals.densityToggle.switchToComfortable": "Bytt til behagelig visning",
   "meals.addSelected": "Legg til valgte",
   "meals.alreadyOnList": "Allerede på listen",
   "meals.ingredientsLabel": "Ingredienser",
