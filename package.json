@@ -13,6 +13,7 @@
     "test:integration": "for f in tests/*.test.mjs; do [ \"$f\" = \"tests/worker-unit.test.mjs\" ] && continue; node \"$f\" || exit 1; done"
   },
   "dependencies": {
+    "@phosphor-icons/web": "2.1.1",
     "@pushforge/builder": "^2.0.5",
     "focus-trap-react": "^12.0.3",
     "framer-motion": "^11.18.2",

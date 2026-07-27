@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@phosphor-icons/web/regular'
 import './design-system/styles.css'
 // Imported for its module-level side effect (stamping <html data-layout>) and
 // deliberately before App, so the attribute is set before the first render
