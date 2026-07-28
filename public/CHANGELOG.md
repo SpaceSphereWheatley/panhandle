@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.51.6] — 2026-07-28
+
+### Changed
+- A device that opens the app for the first time now defaults to English
+  instead of Norwegian, unless its browser reports a Norwegian locale — the
+  app is no longer assumed to be Norwegian-only. The static changelog page
+  (`/changelog.html`) is now in English too, matching the landing and
+  privacy pages. Anyone can still switch languages any time in Settings →
+  Language.
+
 ## [1.51.5] — 2026-07-28
 
 ### Changed
