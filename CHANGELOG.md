@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.51.1] — 2026-07-28
+
+### Fixed
+- Filled in several missing fields in the PWA manifest (`id`, `scope`,
+  `lang`, `dir`, `orientation`, `categories`) flagged by PWABuilder's
+  install-readiness check — improves the Play Store packaging score, no
+  visible change to the app itself.
+
 ## [1.51.0] — 2026-07-28
 
 ### Added
