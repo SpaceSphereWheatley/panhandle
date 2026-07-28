@@ -13,65 +13,52 @@ account, a private signing key, and store-listing content (screenshots, a
 privacy policy) all require you personally, in your own browser/accounts.
 This doc is the checklist for what's left.
 
-## 0. Decide the public domain first
+## 0. Domain: panhandle.app — cutover checklist
 
-Play Store listings and the TWA itself expose whatever domain the app points
-at — that becomes public. The app currently lives at `shopping.mohibb.com`;
-this repo is set up to move off that (see `wrangler.toml`'s new `APP_ORIGIN`
-var and the comment above `[triggers]`), since the point of publishing this
-way is to not carry a personal domain into a public store listing.
+**Decided.** `panhandle.app` is bought and already filled in throughout
+`android/` (`twa-manifest.json`, `strings.xml`) — no more `YOUR_APP_DOMAIN`
+placeholders in that directory. It isn't live yet, though: nothing below is
+done automatically, and each step is a manual dashboard action (no MCP tool
+here can touch Cloudflare zones/DNS, Resend, Google Cloud Console, or
+Turnstile). Do these **in order** — later steps depend on earlier ones:
 
-**Confirmed via this PR's own Cloudflare deploy-preview comment: the
-account's `workers.dev` subdomain is `mohibb91`** (the preview URL was
-`https://<branch>-panhandle.mohibb91.workers.dev`) — i.e. `panhandle.
-mohibb91.workers.dev` would be exactly as identifying as `shopping.
-mohibb.com`. **The Worker's default `workers.dev` route does not satisfy the
-"no personal name" goal as-is.** `workers_dev = true` is still set in
-`wrangler.toml` (harmless, and useful for testing), but don't treat that
-route as the final public URL without first doing one of:
+1. ✅ **Add `panhandle.app` to Cloudflare as a zone** — done (bought through
+   Cloudflare Registrar, so it was on Cloudflare nameservers from the start).
+2. ✅ **Attach it to the Worker as a Custom Domain** — done, alongside the
+   existing `shopping.mohibb.com` custom domain, which stays in place for
+   now — don't remove it until step 6 confirms the new one fully works.
+3. ✅ **Verify it actually serves the app** — confirmed: `panhandle.app/app.html`
+   and `/api/version` both work correctly (verified over mobile data; the
+   `ERR_CERT_AUTHORITY_INVALID` seen briefly beforehand was local DNS/router
+   caching, not a real Cloudflare config problem, and cleared after a DNS
+   flush / on a different network).
+4. **Verify `panhandle.app` for email sending in Resend** (dashboard:
+   resend.com → Domains → Add Domain → `panhandle.app`), then add the
+   SPF/DKIM/DMARC records Resend gives you to the `panhandle.app` zone in
+   Cloudflare DNS. Verification can take a few minutes. Needed only if you
+   want password-reset emails to come from `@panhandle.app` too — optional,
+   see the caveat below.
+5. ✅ **Flip `wrangler.toml`'s `APP_ORIGIN` and push** — done:
+   `APP_ORIGIN = "https://panhandle.app"`. `EMAIL_FROM_ADDRESS` is still on
+   `shopping.mohibb.com` pending step 4 — tell me once that's verified in
+   Resend and I'll flip it too.
+6. **Remove the old custom domain** (`shopping.mohibb.com`, Worker →
+   Settings → Domains & Routes) once `panhandle.app` has been live and
+   working for a while — no rush, and easy to leave both attached
+   indefinitely if you'd rather.
+7. **Re-register on the new domain in each dashboard that currently
+   allow-lists `shopping.mohibb.com`:** Google Cloud Console ("Sign in with
+   Google" OAuth client's authorized origins/redirect URIs —
+   `src/lib/google.js`) and the Cloudflare Turnstile dashboard (CAPTCHA
+   widget domain — `src/lib/turnstile.js`). Both are one-time dashboard
+   edits; do them before removing the old domain in step 6, so existing
+   sessions/logins don't break mid-transition.
 
-- **Rename the account's `workers.dev` subdomain.** Cloudflare allows
-  changing it once, from Account Home → your account → Workers & Pages
-  section (wording varies by dashboard version — look for "Change" next to
-  the `*.workers.dev` subdomain). Pick something that isn't your name/handle
-  (e.g. something derived from the app itself). This is the only path that
-  keeps the current single-origin architecture (one domain serving both the
-  frontend and `/api/*`, since the Worker already proxies static content to
-  the Pages project internally) with zero code changes beyond `APP_ORIGIN`.
-- **Buy a small domain just for this.** More polished for a public listing,
-  costs money/DNS setup, and re-introduces a domain-ownership record (though
-  not necessarily one that identifies you, if registered privately) — your
-  call.
-
-Either way, **do not publish anything pointing at a `mohibb91`-derived
-domain.**
-
-Once decided, replace `YOUR_APP_DOMAIN` everywhere it appears:
-
-```
-grep -rl YOUR_APP_DOMAIN android/ public/.well-known
-```
-
-— that's `android/twa-manifest.json`, `android/app/src/main/res/values/strings.xml`,
-and `public/.well-known/assetlinks.json`. Also update `wrangler.toml`'s
-`APP_ORIGIN` var to match, push, and remove the old custom domain under the
-Worker's Settings → Domains & Routes once you've confirmed the new one works.
-
-**Caveat — email sending stays on a real domain for now.** Password-reset
-emails go through Resend, which needs a domain with DNS you control for
-SPF/DKIM (a `workers.dev`/`pages.dev` subdomain can't be DNS-verified this
-way). `wrangler.toml`'s `EMAIL_FROM_ADDRESS` var can stay pointed at
-`shopping.mohibb.com` independently of `APP_ORIGIN` — it's only visible in
-the "From" header of a password-reset email, not in the app or Play Store
-listing. If you want that gone too, it needs its own small DNS-capable
-domain (or a Resend-hosted sending option, if they offer one) — a separate
-decision from the Android work here.
-
-**You'll also need to re-register, on the new domain, in each dashboard
-that currently allow-lists `shopping.mohibb.com`:** Google Cloud Console
-("Sign in with Google" OAuth client's authorized origins/redirect URIs —
-`src/lib/google.js`) and the Cloudflare Turnstile dashboard (CAPTCHA widget
-domain — `src/lib/turnstile.js`). Both are one-time dashboard edits.
+**Caveat — step 4 (email) is optional and separable.** If you'd rather not
+deal with Resend DNS verification right now, `EMAIL_FROM_ADDRESS` can stay
+pointed at `shopping.mohibb.com` independently of `APP_ORIGIN` — it's only
+visible in the "From" header of a password-reset email, not in the app or
+Play Store listing, so it doesn't block anything below.
 
 ## 1. Generate a signing key
 
@@ -94,7 +81,7 @@ keytool -list -v -keystore panhandle-release.keystore -alias panhandle
 Copy the `SHA256:` value (colons and all, or without — either form works)
 into `public/.well-known/assetlinks.json`'s `sha256_cert_fingerprints`,
 replacing the placeholder. Push that change so the file is live at
-`https://YOUR_APP_DOMAIN/.well-known/assetlinks.json` before you try to
+`https://panhandle.app/.well-known/assetlinks.json` before you try to
 launch the app — Chrome checks it at launch, and a mismatch means the app
 opens as an ordinary browser tab (URL bar visible) instead of full-screen.
 
@@ -114,7 +101,7 @@ keyPassword=...
 
 The cleanest path is [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap),
 Google's CLI for exactly this. `android/twa-manifest.json` is already filled
-in (once you've replaced `YOUR_APP_DOMAIN`) — Bubblewrap reads it directly:
+in with `panhandle.app` — Bubblewrap reads it directly:
 
 ```sh
 cd android
@@ -172,7 +159,7 @@ the right domain).
   web app itself keeps deploying independently on every push to `main`
   (see `CLAUDE.md`'s Deployment section) — most day-to-day changes need no
   Android rebuild at all, since the TWA just displays whatever's live at
-  `YOUR_APP_DOMAIN`. A rebuild is only needed for things that live in the
+  `panhandle.app`. A rebuild is only needed for things that live in the
   native shell: the app icon/name, theme colors, or `twa-manifest.json`
   itself.
 - Losing the keystore means you can never update the Play Store listing

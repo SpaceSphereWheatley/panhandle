@@ -35,24 +35,23 @@ database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 [triggers]
 crons = ["*/15 * * * *"]
 
-# Public domain: historically a custom domain (shopping.mohibb.com, set under
-# Worker -> Settings -> Domains & Routes) fronting this Worker, which proxies
-# frontend requests to the Pages project URL. Moving to a free Cloudflare
-# subdomain (the Worker's own workers.dev route, or a custom domain of your
-# choosing) that doesn't reveal a personal domain/name — see
-# docs/android-publishing.md for the cutover steps and why (Android/Play Store
-# publishing surfaces this domain publicly). `workers_dev = true` below keeps
-# the workers.dev route enabled alongside any custom domain, so both can work
-# during the transition.
+# Public domain: panhandle.app is now attached as a custom domain (Worker ->
+# Settings -> Domains & Routes) alongside the historical shopping.mohibb.com,
+# which stays attached until the cutover is fully verified (see
+# docs/android-publishing.md's checklist) — Android/Play Store publishing
+# surfaces this domain publicly, hence the move off a personal one.
+# `workers_dev = true` keeps the workers.dev route enabled too, alongside
+# both custom domains.
 workers_dev = true
 
 # Non-secret config, safe to version-control. APP_ORIGIN is used to build
-# links in emails (e.g. the password-reset URL) — update this the day the
-# custom domain above is retired, then push. EMAIL_FROM_ADDRESS is separate
-# because Resend needs its own DNS-verified sending domain, which doesn't
-# have to be the same domain users see in the browser.
+# links in emails (e.g. the password-reset URL). EMAIL_FROM_ADDRESS is
+# separate and still on shopping.mohibb.com because Resend needs its own
+# DNS-verified sending domain, which doesn't have to be the same domain
+# users see in the browser — flip it to noreply@panhandle.app once that
+# domain is verified in Resend (docs/android-publishing.md step 4).
 [vars]
-APP_ORIGIN = "https://shopping.mohibb.com"
+APP_ORIGIN = "https://panhandle.app"
 EMAIL_FROM_ADDRESS = "Panhandle <noreply@shopping.mohibb.com>"
 
 # Secrets (set under Worker -> Settings -> Variables and Secrets):

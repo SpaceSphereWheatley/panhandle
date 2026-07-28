@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.50.3] — 2026-07-28
+
+### Changed
+- Password-reset emails now link back to `panhandle.app` instead of the old
+  personal domain, now that it's live — part of moving the app off a
+  personal domain ahead of a Play Store listing. No other behavior changes;
+  the app is still reachable at the old address too during the transition.
+
 ## [1.50.2] — 2026-07-27
 
 ### Added
