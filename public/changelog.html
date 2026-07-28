@@ -175,24 +175,70 @@
   // Small hand-rolled renderer for this repo's CHANGELOG.md, not a general
   // markdown parser — it only needs to handle the shapes that file actually
   // uses (see CHANGELOG.md's own "About this file" section): #/##/### headings,
-  // one level of nested bullets, and wrapped continuation lines.
+  // one level of nested bullets, and wrapped continuation lines. Each bullet
+  // (top-level or nested) is truncated to its lead sentence via extractLead —
+  // same rule src/lib/changelogUtils.js's extractTitle applies for the in-app
+  // "What's new" modal, reimplemented here since public/ has no build step and
+  // can't import from src/ — so this page shows a plain-language summary per
+  // release rather than the fuller technical detail CHANGELOG.md itself keeps.
+  // Unlike changelogUtils.js's extractTitle (which strips ** globally before
+  // matching, since its output is plain text), this keeps markdown intact for
+  // inline() to render — so the sentence-boundary match has to explicitly
+  // tolerate closing punctuation (bold **, a closing quote) landing between
+  // the period and the following whitespace (e.g. "**Bold lead.** Detail." or
+  // a sentence ending inside quotes), and include it in the slice so any
+  // bold span stays properly closed.
+  const SENTENCE_END_RE = /(?<![eE]\.[gG])(?<![iI]\.[eE])\.([*"'”]*)\s+(?=[A-ZÆØÅ`"'(])/;
+  const MAX_LEAD_LENGTH = 160;
+
+  function extractLead(text) {
+    const joined = text.replace(/\s+/g, " ").trim();
+    const match = SENTENCE_END_RE.exec(joined);
+    let lead = match ? joined.slice(0, match.index + 1 + match[1].length) : joined;
+    if (lead.length > MAX_LEAD_LENGTH) {
+      lead = `${lead.slice(0, MAX_LEAD_LENGTH).trimEnd()}…`;
+    }
+    return lead;
+  }
+
   function renderChangelog(md) {
     const lines = md.split("\n");
     let html = "";
-    let inTop = false, inSub = false, topOpen = false, subOpen = false;
+    let inTop = false, inSub = false, topOpen = false;
     let para = null; // buffered plain-paragraph lines, joined into one <p> on flush
+    let topBuf = null, subBuf = null; // buffered bullet text, truncated to its lead sentence on flush
 
     function flushPara() {
       if (para !== null) { html += `<p>${inline(para)}</p>`; para = null; }
     }
+    function flushSub() {
+      if (subBuf !== null) { html += `<li>${inline(extractLead(subBuf))}</li>`; subBuf = null; }
+    }
+    // Opens (but doesn't close) the current top bullet's <li>, so a nested
+    // <ul> can be inserted inside it — called right as a nested bullet is
+    // encountered. Without this, buffering the top bullet's text until a
+    // clean flush (as flushTop does) would emit its <li> *after* the nested
+    // list instead of wrapping it, since the parent's lead sentence isn't
+    // known until its buffer is complete.
+    function openTop() {
+      if (topBuf !== null) {
+        html += `<li>${inline(extractLead(topBuf))}`;
+        topBuf = null;
+        topOpen = true;
+      }
+    }
+    function flushTop() {
+      if (topBuf !== null) { html += `<li>${inline(extractLead(topBuf))}</li>`; topBuf = null; }
+      else if (topOpen) { html += "</li>"; topOpen = false; }
+    }
     function closeSub() {
-      if (subOpen) { html += "</li>"; subOpen = false; }
+      flushSub();
       if (inSub) { html += "</ul>"; inSub = false; }
     }
     function closeTop() {
       flushPara();
       closeSub();
-      if (topOpen) { html += "</li>"; topOpen = false; }
+      flushTop();
       if (inTop) { html += "</ul>"; inTop = false; }
     }
 
@@ -220,27 +266,27 @@
         const nested = bullet[1].length >= 2;
         if (nested) {
           if (!inTop) { html += "<ul>"; inTop = true; }
-          if (!inSub) { html += "<ul>"; inSub = true; } else if (subOpen) { html += "</li>"; }
-          html += `<li>${inline(bullet[2])}`;
-          subOpen = true;
+          openTop();
+          if (!inSub) { html += "<ul>"; inSub = true; } else { flushSub(); }
+          subBuf = bullet[2];
         } else {
           closeSub();
-          if (!inTop) { html += "<ul>"; inTop = true; } else if (topOpen) { html += "</li>"; }
-          html += `<li>${inline(bullet[2])}`;
-          topOpen = true;
+          if (!inTop) { html += "<ul>"; inTop = true; } else { flushTop(); }
+          topBuf = bullet[2];
         }
         continue;
       }
 
       if (raw.trim() === "") { flushPara(); continue; }
 
-      if (/^\s+\S/.test(raw) && (subOpen || topOpen)) {
-        html += " " + inline(raw.trim());
+      if (/^\s+\S/.test(raw) && (subBuf !== null || topBuf !== null)) {
+        if (subBuf !== null) subBuf += ` ${raw.trim()}`;
+        else topBuf += ` ${raw.trim()}`;
         continue;
       }
 
       closeSub();
-      if (topOpen) { html += "</li>"; topOpen = false; }
+      flushTop();
       if (inTop) { html += "</ul>"; inTop = false; }
       para = para === null ? raw.trim() : `${para} ${raw.trim()}`;
     }
