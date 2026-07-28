@@ -1418,6 +1418,15 @@ export default {
     if (!isApi) {
       const pagesUrl = new URL(request.url);
       pagesUrl.hostname = "panhandle-ecj.pages.dev";
+      // shop.panhandle.app's bare root is the app's own dedicated address, so
+      // it serves app.html directly — rewritten (proxied), not redirected, so
+      // the URL bar stays shop.panhandle.app with no visible /app.html.
+      // Gated strictly on this exact hostname so a Cloudflare branch/commit
+      // preview's own hostname keeps using /app.html for click-testing (see
+      // CLAUDE.md's testing conventions).
+      if (url.hostname === "shop.panhandle.app" && url.pathname === "/") {
+        pagesUrl.pathname = "/app.html";
+      }
       return fetch(new Request(pagesUrl.toString(), request));
     }
 
