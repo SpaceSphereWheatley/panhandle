@@ -5,18 +5,15 @@
 export const SUPPORTED_LANGUAGES = ["nb", "en"];
 
 // The language a device opens in when nothing is stored and the browser's own
-// locale isn't one we support (a Norwegian browser reporting "no" rather than
-// "nb" lands here). Norwegian: this app's users are a Norwegian household, and
-// English being the codebase's source language doesn't change who reads it.
-// Distinct from translate.js's DEFAULT_LANG, which is the missing-key
-// fallback dictionary and *is* English — don't conflate the two.
-const DEFAULT_UI_LANGUAGE = "nb";
+// locale isn't one we support. English: the app is now open to non-Norwegian
+// testers/users, so the unrecognized-locale fallback shouldn't assume a
+// Norwegian household anymore. A Norwegian browser ("nb"/"no") is still
+// detected explicitly below and opens in Norwegian either way.
+const DEFAULT_UI_LANGUAGE = "en";
 
-// No ph_language has ever been stored before this shipped, so this also
-// decides the language for every existing user's next visit, not just new
-// ones — an accepted tradeoff (see CHANGELOG) rather than an oversight.
 function detectBrowserLanguage() {
   const short = navigator.language?.slice(0, 2);
+  if (short === "no") return "nb";
   return SUPPORTED_LANGUAGES.includes(short) ? short : DEFAULT_UI_LANGUAGE;
 }
 

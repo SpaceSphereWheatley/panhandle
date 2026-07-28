@@ -23,8 +23,13 @@ describe("currentLanguage", () => {
     expect(currentLanguage()).toBe("en");
   });
 
-  it("falls back to nb when the browser language is unsupported", () => {
+  it("falls back to en when the browser language is unsupported", () => {
     mockNavigatorLanguage("de-DE");
+    expect(currentLanguage()).toBe("en");
+  });
+
+  it("maps a Norwegian browser locale (no) to nb", () => {
+    mockNavigatorLanguage("no-NO");
     expect(currentLanguage()).toBe("nb");
   });
 

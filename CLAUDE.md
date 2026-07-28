@@ -94,10 +94,10 @@ Deliberately *not* done: a two-pane Settings (its title/back button are owned by
 
 ### Language support (i18n)
 
-**English is the source language; Norwegian is the default one.** These are two different things and conflating them is the easiest mistake to make here:
+**English is both the source language and the default one.** These used to be two different things — worth remembering when reading old commits/history, since conflating them was the easiest mistake to make here:
 
 - **`en.js` is the authored dictionary** and `nb.js` its translation. `translate.js`'s `DEFAULT_LANG` (`"en"`) is the *base* language — which dictionary a key falls back to when missing from the active one. Every canonical stored value is English too (see below).
-- **`language.js`'s `DEFAULT_UI_LANGUAGE` (`"nb"`) is what a device actually opens in** when nothing is stored and the browser's locale isn't supported. The users are a Norwegian household; the codebase's source language doesn't change that.
+- **`language.js`'s `DEFAULT_UI_LANGUAGE` (`"en"`) is what a device actually opens in** when nothing is stored and the browser's locale isn't supported — changed from `"nb"` once the app opened up beyond the original Norwegian household. A browser reporting a Norwegian locale (`"no"`/`"nb"`) is still detected explicitly and opens in Norwegian; only the *unrecognized*-locale fallback moved to English.
 
 Two languages, `nb` and `en`, per-device. `src/lib/i18n/` holds flat dot-namespaced dictionaries (`dictionaries/en.js`/`nb.js`), a pure `translate(lang, key, params)` + `interpolate()` (`translate.js`), and the `ph_language` storage/`<html lang>` side effect (`language.js`). `src/context/LanguageContext.jsx` is the React half — `LanguageProvider` is the **outermost** provider in `App.jsx`, so `useTranslation()` (returns `t`) and `useLanguage()` (returns `{ lang, setLang, t }`) work everywhere including pre-auth screens and the other context providers. Settings → "Språk" (`LanguageSubpage`) is the switcher. Dictionary entries are a plain string or `{ one, other }` for the single plural case the app has (`params.count === 1` picks `one`). `dateLocale(lang)`/`weekdayNames(lang)` (`i18n/dateLocale.js`) localize dates — never hardcode a locale tag in a `toLocale*String` call.
 

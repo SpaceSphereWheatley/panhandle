@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#C1592A">
-<meta name="description" content="Panhandle: full endringslogg over alle versjoner.">
+<meta name="description" content="Panhandle: full changelog of every version.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
-<title>Endringslogg — Panhandle</title>
+<title>Changelog — Panhandle</title>
 <style>
   :root {
     /* Manually mirrored from src/design-system/tokens/*.css — public/ has no build
@@ -143,20 +143,20 @@
       </svg>
       <span class="word">panhandle</span>
     </a>
-    <a class="btn btn-outline" href="https://shop.panhandle.app/">Logg inn</a>
+    <a class="btn btn-outline" href="https://shop.panhandle.app/">Sign in</a>
   </div>
 </header>
 
 <main class="content">
   <div class="wrap">
-    <h1>Endringslogg</h1>
-    <p class="page-sub">Alle versjoner av Panhandle, nyeste først.</p>
-    <div id="log"><p class="state-note">Laster...</p></div>
+    <h1>Changelog</h1>
+    <p class="page-sub">Every version of Panhandle, newest first.</p>
+    <div id="log"><p class="state-note">Loading...</p></div>
   </div>
 </main>
 
 <footer class="site">
-  <div class="wrap">© Panhandle · <a href="/privacy.html">Personvern</a></div>
+  <div class="wrap">© Panhandle · <a href="/privacy.html">Privacy</a></div>
 </footer>
 
 <script>
@@ -256,9 +256,9 @@
       const md = await res.text();
       el.innerHTML = renderChangelog(md);
       const firstH1 = el.querySelector("h1");
-      if (firstH1) firstH1.remove(); // page already has its own "Endringslogg" <h1>
+      if (firstH1) firstH1.remove(); // page already has its own "Changelog" <h1>
     } catch {
-      el.innerHTML = '<p class="state-note">Kunne ikke laste endringsloggen.</p>';
+      el.innerHTML = '<p class="state-note">Couldn’t load the changelog.</p>';
     }
   })();
 </script>
