@@ -1,8 +1,10 @@
 // Worker API for shared shopping list + meal planner
 // Public origin is whatever domain fronts this Worker (see wrangler.toml's
-// APP_ORIGIN var — historically shopping.mohibb.com, moving to a Cloudflare
-// free subdomain, see docs/android-publishing.md). Frontend on Cloudflare
-// Pages. API = this Worker under /api/*. Proxies other paths to Pages.
+// APP_ORIGIN var — historically shopping.mohibb.com, now shop.panhandle.app;
+// see docs/android-publishing.md). panhandle.app itself serves the marketing
+// landing page and a 301 redirect from /app.html to the app's real home
+// (see the ROUTING section below). Frontend on Cloudflare Pages. API = this
+// Worker under /api/*. Proxies other paths to Pages.
 // Auth: users in D1 with PBKDF2 password hashes, JWT with token versioning,
 //       sliding expiry, in-app password change that logs out other devices.
 // Multi-tenant: every user belongs to exactly one list (users.list_id); all
@@ -1136,7 +1138,7 @@ export function escapeHtml(str) {
 // it's configured via wrangler.toml's EMAIL_FROM_ADDRESS var rather than
 // hardcoded — it can legitimately stay pinned to a different domain than
 // APP_ORIGIN (the user-facing app URL) if that's where Resend is verified.
-const DEFAULT_EMAIL_FROM = "Panhandle <noreply@shopping.mohibb.com>";
+const DEFAULT_EMAIL_FROM = "Panhandle <noreply@panhandle.app>";
 async function sendEmail(env, { to, subject, html, replyTo }) {
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -1401,6 +1403,17 @@ export default {
     const method = request.method;
 
     // ===== ROUTING =====
+    // panhandle.app is the marketing landing page's home; the app itself now
+    // lives at shop.panhandle.app (see wrangler.toml's APP_ORIGIN comment).
+    // Gated strictly on the apex hostname — never on "isn't shop.panhandle.app"
+    // — so a Cloudflare branch/commit preview's own hostname (which also
+    // serves /app.html for click-testing, see CLAUDE.md's testing
+    // conventions) is never redirected away from itself.
+    if (url.hostname === "panhandle.app" && url.pathname === "/app.html") {
+      const target = new URL(url.pathname + url.search, "https://shop.panhandle.app");
+      return Response.redirect(target.toString(), 301);
+    }
+
     const isApi = url.pathname.startsWith("/api");
     if (!isApi) {
       const pagesUrl = new URL(request.url);
@@ -1590,7 +1603,7 @@ export default {
         "INSERT INTO password_resets (username, token_hash, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
       ).bind(row.username, tokenHash, now, now + 30 * 60 * 1000).run();
 
-      const resetUrl = `${env.APP_ORIGIN || "https://shopping.mohibb.com"}/app.html?reset_token=${rawToken}`;
+      const resetUrl = `${env.APP_ORIGIN || "https://shop.panhandle.app"}/app.html?reset_token=${rawToken}`;
       await sendEmail(env, {
         to: cleanEmail,
         subject: "Tilbakestill passordet ditt - Panhandle",

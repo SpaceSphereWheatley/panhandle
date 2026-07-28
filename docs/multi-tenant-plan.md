@@ -85,7 +85,7 @@ Backfill, in this order: (1) create one `lists` row and note its id, (2) set Moh
 - Add a small "Manage users" panel (visible when `is_owner` is true, from the login response): list current members with their member count vs. the 10-user cap, a "+ Add user" form that calls `POST /list-users` (disabled once the list is full), and a remove button per member calling `DELETE /list-users/{username}`.
 - On successful add, show the generated `{username, password}` once in a dialog with a **"Copy invite text"** button — clipboard write of a templated string, e.g.:
   ```
-  You've been added to Panhandle! Log in at https://shopping.mohibb.com
+  You've been added to Panhandle! Log in at https://shop.panhandle.app
   Username: <username>
   Password: <password>
   (Change your password after logging in.)

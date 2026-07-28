@@ -1,4 +1,5 @@
-// Same-origin: the Worker handles /api/* on shopping.mohibb.com.
+// Same-origin: the Worker handles /api/* on whatever domain fronts it
+// (shop.panhandle.app for the live app; historically shopping.mohibb.com).
 // Ported from public/app.html's `api()` wrapper — auth state itself lives in
 // AuthContext; this module is wired to it via configureApi() so it stays a
 // plain fetch helper with no React dependency.

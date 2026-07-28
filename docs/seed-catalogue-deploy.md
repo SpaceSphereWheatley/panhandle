@@ -64,7 +64,7 @@ The 13 categories should be:
 
 ## Step 5 — Verify in the live app
 
-1. Open <https://shopping.mohibb.com> and hard-refresh (or reopen the PWA) so the
+1. Open <https://shop.panhandle.app> and hard-refresh (or reopen the PWA) so the
    new `index.html` loads.
 2. Start typing in the add bar — suggestions should now come from the 500-item
    catalogue.

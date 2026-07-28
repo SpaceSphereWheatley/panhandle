@@ -1,6 +1,6 @@
 {
   "packageId": "com.panhandle.app",
-  "host": "panhandle.app",
+  "host": "shop.panhandle.app",
   "name": "Panhandle",
   "launcherName": "Panhandle",
   "display": "standalone",
@@ -14,14 +14,14 @@
   "backgroundColorDark": "#2A2420",
   "enableNotifications": true,
   "startUrl": "/app.html",
-  "iconUrl": "https://panhandle.app/icon-512.png",
-  "maskableIconUrl": "https://panhandle.app/icon-maskable-512.png",
+  "iconUrl": "https://shop.panhandle.app/icon-512.png",
+  "maskableIconUrl": "https://shop.panhandle.app/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "hand-authored, see docs/android-publishing.md",
-  "webManifestUrl": "https://panhandle.app/manifest.json",
+  "webManifestUrl": "https://shop.panhandle.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "playBilling": { "enabled": false }
