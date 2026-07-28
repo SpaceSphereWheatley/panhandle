@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#C1592A">
-<meta name="description" content="Panhandle: full endringslogg over alle versjoner.">
+<meta name="description" content="Panhandle: personvernerklæring.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -13,12 +13,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
-<title>Endringslogg — Panhandle</title>
+<title>Personvern — Panhandle</title>
 <style>
   :root {
     /* Manually mirrored from src/design-system/tokens/*.css — public/ has no build
        step, so nothing keeps these in sync automatically if the design system changes.
-       (Same tokens as public/index.html — keep both in sync by hand.) */
+       (Same tokens as public/index.html/changelog.html — keep all three in sync by hand.) */
     --warm-50:#FAF6EF; --warm-100:#F3ECDD; --warm-200:#E7DCC5; --warm-300:#DCCFAF;
     --warm-400:#C3B393; --warm-500:#A5936F; --warm-600:#7D6D50; --warm-700:#5B4E39;
     --warm-800:#3D3425; --warm-900:#2B2621;
@@ -98,38 +98,19 @@
     letter-spacing: var(--tracking-tight); margin: 0 0 8px;
   }
   .page-sub { color: var(--text-secondary); font-size: var(--text-sm); margin: 0 0 36px; }
-
-  h2.v-heading {
-    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-    margin: 40px 0 14px; padding-top: 8px;
-  }
-  h2.v-heading .v-num {
-    font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--text-primary);
-  }
-  h2.v-heading .v-date { font-size: var(--text-xs); color: var(--text-tertiary); font-weight: var(--weight-regular); }
-  main.content h2:not(.v-heading) {
-    font-size: var(--text-xl); font-weight: var(--weight-bold); margin: 44px 0 12px;
-  }
-  main.content h3 {
-    font-size: var(--text-sm); font-weight: var(--weight-bold); text-transform: uppercase;
-    letter-spacing: 0.04em; color: var(--text-tertiary); margin: 18px 0 8px;
+  main.content h2 {
+    font-size: var(--text-xl); font-weight: var(--weight-bold); margin: 40px 0 12px;
   }
   main.content ul { margin: 0 0 4px; padding-left: 22px; }
-  main.content ul ul { margin-top: 4px; }
   main.content li { font-size: var(--text-sm); line-height: 1.6; color: var(--text-secondary); margin-bottom: 8px; }
   main.content li strong { color: var(--text-primary); }
   main.content p { font-size: var(--text-sm); line-height: 1.6; color: var(--text-secondary); }
-  main.content code {
-    background: var(--surface-sunken); border-radius: 4px; padding: 1px 5px;
-    font-size: 0.9em; font-family: ui-monospace, monospace;
-  }
-  main.content hr { border: none; border-top: 1px solid var(--border-default); margin: 32px 0; }
-  .state-note { color: var(--text-tertiary); font-size: var(--text-sm); }
 
   footer.site {
     border-top: 1px solid var(--border-default); padding: 28px 0; text-align: center;
     color: var(--text-tertiary); font-size: var(--text-xs);
   }
+  footer.site a { text-decoration: underline; text-underline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -149,119 +130,64 @@
 
 <main class="content">
   <div class="wrap">
-    <h1>Endringslogg</h1>
-    <p class="page-sub">Alle versjoner av Panhandle, nyeste først.</p>
-    <div id="log"><p class="state-note">Laster...</p></div>
+    <h1>Personvernerklæring</h1>
+    <p class="page-sub">Sist oppdatert: 28. juli 2026</p>
+
+    <p>
+      Panhandle er en delt handleliste og måltidsplanlegger for husstander.
+      Denne siden forklarer hvilke opplysninger appen lagrer om deg, hvorfor,
+      og hvordan du kan få dem slettet.
+    </p>
+
+    <h2>Hvilke opplysninger lagres</h2>
+    <ul>
+      <li><strong>E-post og navn</strong> — brukt til pålogging, og til å vise hvem som la til en vare eller er ansvarlig for et måltid.</li>
+      <li><strong>Passord</strong> — lagres aldri i klartekst. Kun en énveis-hash (PBKDF2) lagres, som ikke kan brukes til å gjenskape passordet ditt.</li>
+      <li><strong>Handlelisten og måltidsplanen</strong> for husstanden din, samt hvilken husstand (liste) kontoen din tilhører.</li>
+      <li><strong>Push-varsler</strong> (valgfritt) — hvis du slår på varsler, lagres et abonnement knyttet til nettleseren/enheten din, ikke til kontoen som sådan.</li>
+      <li><strong>Google-konto-ID</strong> (kun hvis du velger «Logg inn med Google») — en unik id brukt til å koble kontoen din. Ingen annen informasjon hentes fra Google-profilen din.</li>
+    </ul>
+
+    <h2>Hvorfor opplysningene samles inn</h2>
+    <p>
+      Utelukkende for å levere appens funksjon: en delt handleliste og
+      måltidsplan for husstanden din. Opplysningene selges aldri videre og
+      brukes ikke til annonsering eller sporing.
+    </p>
+
+    <h2>Hvem opplysningene deles med</h2>
+    <ul>
+      <li><strong>Resend</strong> (e-posttjeneste) — sender e-post for tilbakestilling av passord. Mottar e-postadressen din og en engangslenke når du ber om det.</li>
+      <li><strong>Google</strong> — kun hvis du velger «Logg inn med Google»: Google bekrefter identiteten din, og appen mottar bare det som trengs for å opprette eller logge inn på kontoen.</li>
+      <li><strong>Cloudflare</strong> — drifter appen (server og database), og kjører en enkel bot-sjekk ved registrering/tilbakestilling av passord for å hindre misbruk.</li>
+    </ul>
+    <p>Ingen andre tredjeparter får tilgang til opplysningene dine.</p>
+
+    <h2>Hvor lenge opplysningene lagres</h2>
+    <p>
+      Så lenge kontoen din finnes. Du kan når som helst slette kontoen din
+      selv, i appen under Innstillinger → Konto — dette fjerner
+      opplysningene dine.
+    </p>
+
+    <h2>Dine rettigheter</h2>
+    <p>
+      Du kan når som helst se, endre eller slette opplysningene dine direkte
+      i appen. Har du spørsmål om personvern, bruk tilbakemeldingsskjemaet i
+      appen (Innstillinger → Tilbakemelding).
+    </p>
+
+    <h2>Barn</h2>
+    <p>
+      Appen er ikke rettet mot barn, og samler ikke bevisst inn opplysninger
+      om barn.
+    </p>
   </div>
 </main>
 
 <footer class="site">
-  <div class="wrap">© Panhandle · <a href="/privacy.html">Personvern</a></div>
+  <div class="wrap">© Panhandle · <a href="/changelog.html">Endringslogg</a></div>
 </footer>
-
-<script>
-  function esc(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-
-  function inline(s) {
-    s = esc(s);
-    s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-    return s;
-  }
-
-  // Small hand-rolled renderer for this repo's CHANGELOG.md, not a general
-  // markdown parser — it only needs to handle the shapes that file actually
-  // uses (see CHANGELOG.md's own "About this file" section): #/##/### headings,
-  // one level of nested bullets, and wrapped continuation lines.
-  function renderChangelog(md) {
-    const lines = md.split("\n");
-    let html = "";
-    let inTop = false, inSub = false, topOpen = false, subOpen = false;
-    let para = null; // buffered plain-paragraph lines, joined into one <p> on flush
-
-    function flushPara() {
-      if (para !== null) { html += `<p>${inline(para)}</p>`; para = null; }
-    }
-    function closeSub() {
-      if (subOpen) { html += "</li>"; subOpen = false; }
-      if (inSub) { html += "</ul>"; inSub = false; }
-    }
-    function closeTop() {
-      flushPara();
-      closeSub();
-      if (topOpen) { html += "</li>"; topOpen = false; }
-      if (inTop) { html += "</ul>"; inTop = false; }
-    }
-
-    for (const raw of lines) {
-      if (/^\[.+\]:\s+\S+/.test(raw)) continue; // link reference definitions, not rendered content
-      if (/^---\s*$/.test(raw)) { closeTop(); html += "<hr>"; continue; }
-
-      const h1 = /^#\s+(.*)$/.exec(raw);
-      const h2 = /^##\s+(.*)$/.exec(raw);
-      const h3 = /^###\s+(.*)$/.exec(raw);
-      if (h1) { closeTop(); html += `<h1>${inline(h1[1])}</h1>`; continue; }
-      if (h2) {
-        closeTop();
-        const versioned = /^\[(.+?)\]\s*(?:—|-)\s*(.+)$/.exec(h2[1]);
-        html += versioned
-          ? `<h2 class="v-heading"><span class="v-num">${esc(versioned[1])}</span><span class="v-date">${esc(versioned[2])}</span></h2>`
-          : `<h2>${inline(h2[1])}</h2>`;
-        continue;
-      }
-      if (h3) { closeTop(); html += `<h3>${inline(h3[1])}</h3>`; continue; }
-
-      const bullet = /^(\s*)-\s+(.*)$/.exec(raw);
-      if (bullet) {
-        flushPara();
-        const nested = bullet[1].length >= 2;
-        if (nested) {
-          if (!inTop) { html += "<ul>"; inTop = true; }
-          if (!inSub) { html += "<ul>"; inSub = true; } else if (subOpen) { html += "</li>"; }
-          html += `<li>${inline(bullet[2])}`;
-          subOpen = true;
-        } else {
-          closeSub();
-          if (!inTop) { html += "<ul>"; inTop = true; } else if (topOpen) { html += "</li>"; }
-          html += `<li>${inline(bullet[2])}`;
-          topOpen = true;
-        }
-        continue;
-      }
-
-      if (raw.trim() === "") { flushPara(); continue; }
-
-      if (/^\s+\S/.test(raw) && (subOpen || topOpen)) {
-        html += " " + inline(raw.trim());
-        continue;
-      }
-
-      closeSub();
-      if (topOpen) { html += "</li>"; topOpen = false; }
-      if (inTop) { html += "</ul>"; inTop = false; }
-      para = para === null ? raw.trim() : `${para} ${raw.trim()}`;
-    }
-    closeTop();
-    return html;
-  }
-
-  (async () => {
-    const el = document.getElementById("log");
-    try {
-      const res = await fetch("/CHANGELOG.md");
-      if (!res.ok) throw new Error("fetch failed");
-      const md = await res.text();
-      el.innerHTML = renderChangelog(md);
-      const firstH1 = el.querySelector("h1");
-      if (firstH1) firstH1.remove(); // page already has its own "Endringslogg" <h1>
-    } catch {
-      el.innerHTML = '<p class="state-note">Kunne ikke laste endringsloggen.</p>';
-    }
-  })();
-</script>
 
 </body>
 </html>

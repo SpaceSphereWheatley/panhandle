@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.51.0] — 2026-07-28
+
+### Added
+- A privacy policy page (`/privacy.html`), linked from the marketing page's
+  and changelog page's footers — needed ahead of a Play Store listing.
+
 ## [1.50.4] — 2026-07-28
 
 ### Changed
