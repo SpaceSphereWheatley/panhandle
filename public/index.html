@@ -403,5 +403,18 @@
   <div class="wrap">© Panhandle · <a href="/changelog.html">Changelog</a> · <a href="/privacy.html">Privacy</a></div>
 </footer>
 
+<script>
+  // Same registration as src/main.jsx's, duplicated here because this page
+  // has no build step and isn't part of the Vite bundle — without it, a
+  // visitor landing here (or an audit tool like PWABuilder scanning the
+  // root domain) never sees a service worker registered, even though
+  // app.html registers one once you're signed in.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    })
+  }
+</script>
+
 </body>
 </html>
