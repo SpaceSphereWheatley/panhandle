@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.51.4] — 2026-07-28
+
+### Fixed
+- Closed a gap where `panhandle.app` could still serve the app directly at a
+  few path variants (`/app`, `/app/`, a doubled leading slash) instead of
+  redirecting to `shop.panhandle.app` — the redirect only matched the exact
+  literal `/app.html` path, so Cloudflare Pages' extension-stripped canonical
+  URL (`/app`) and some slash variants slipped through unredirected. The
+  redirect now normalizes the path first, so `shop.panhandle.app` is
+  reliably the only place the app itself is ever served.
+
 ## [1.51.3] — 2026-07-28
 
 ### Changed

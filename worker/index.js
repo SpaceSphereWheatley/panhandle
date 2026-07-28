@@ -1409,8 +1409,14 @@ export default {
     // — so a Cloudflare branch/commit preview's own hostname (which also
     // serves /app.html for click-testing, see CLAUDE.md's testing
     // conventions) is never redirected away from itself.
-    if (url.hostname === "panhandle.app" && url.pathname === "/app.html") {
-      const target = new URL(url.pathname + url.search, "https://shop.panhandle.app");
+    // Path is normalized (collapse repeated slashes, drop a trailing slash)
+    // before matching "/app.html"/"/app", since Cloudflare Pages also serves
+    // the app at its .html-stripped canonical path ("/app") and at
+    // slash-variant paths — matching the literal string "/app.html" alone
+    // let all of those slip through and serve the app on the wrong domain.
+    const normalizedPath = url.pathname.replace(/\/{2,}/g, "/").replace(/(.)\/$/, "$1");
+    if (url.hostname === "panhandle.app" && (normalizedPath === "/app.html" || normalizedPath === "/app")) {
+      const target = new URL("/app.html" + url.search, "https://shop.panhandle.app");
       return Response.redirect(target.toString(), 301);
     }
 

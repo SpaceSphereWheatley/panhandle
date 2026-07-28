@@ -51,26 +51,29 @@ steps depend on earlier ones:
    Settings → Domains & Routes) once `shop.panhandle.app` has been live and
    working for a while — no rush, and easy to leave all three attached
    indefinitely if you'd rather.
-7. **Re-register on `shop.panhandle.app` in each dashboard that currently
+7. ✅ **Re-register on `shop.panhandle.app` in each dashboard that currently
    allow-lists `shopping.mohibb.com`:** Google Cloud Console ("Sign in with
    Google" OAuth client's authorized origins/redirect URIs —
    `src/lib/google.js`) and the Cloudflare Turnstile dashboard (CAPTCHA
-   widget domain — `src/lib/turnstile.js`). Both are one-time dashboard
-   edits; do them before removing the old domain in step 6, so existing
-   sessions/logins don't break mid-transition. **Still pending** — not yet
-   done as of the `shop.panhandle.app` move.
-8. **Add `shop` as a DNS record under the `panhandle.app` zone** (Cloudflare
+   widget domain — `src/lib/turnstile.js`) — done.
+8. ✅ **Add `shop` as a DNS record under the `panhandle.app` zone** (Cloudflare
    dashboard → `panhandle.app` → DNS) and **attach `shop.panhandle.app` to
    the Worker as an additional Custom Domain** (Worker → Settings → Domains
-   & Routes) — neither step can be done via an MCP tool in this repo's
-   Claude Code sessions (only D1/KV/R2/Hyperdrive and read-only Worker info
-   are exposed here, no zone/DNS/custom-domain tool). **Still pending.**
+   & Routes) — done. Neither step could be done via an MCP tool in this
+   repo's Claude Code sessions (only D1/KV/R2/Hyperdrive and read-only
+   Worker info are exposed here, no zone/DNS/custom-domain tool), so this
+   was a manual dashboard action.
 9. ✅ **Flip `wrangler.toml`'s `APP_ORIGIN` to `https://shop.panhandle.app`
    and push** — done. `EMAIL_FROM_ADDRESS` deliberately stays on the apex
    `panhandle.app` (already verified in Resend; no need to re-verify a
    subdomain just for sending). The Worker also 301-redirects
    `panhandle.app/app.html` → `shop.panhandle.app/app.html` so existing
    bookmarks and already-sent emails keep working.
+10. ✅ **Verified live**: `shop.panhandle.app/app.html` (and its bare root)
+    load, `/api/version` responds, `panhandle.app/app.html` 301-redirects to
+    `shop.panhandle.app/app.html`, and `assetlinks.json` is reachable at
+    `shop.panhandle.app/.well-known/assetlinks.json` (still the placeholder
+    fingerprint — see step 1 below).
 
 ## 1. Generate a signing key
 
