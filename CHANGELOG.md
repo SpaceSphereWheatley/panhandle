@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.5] — 2026-07-28
+
+### Changed
+- The "what's new" changelog no longer pops up automatically for every new
+  version — only for a major version. Smaller updates still show a quiet
+  "what's new" toast instead of interrupting you.
+
 ## [1.51.4] — 2026-07-28
 
 ### Fixed
