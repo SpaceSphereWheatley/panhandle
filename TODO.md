@@ -85,6 +85,17 @@ fixed — see `Todo_done.md`.
    speculatively.
    _Value: Low · Importance: Low · Type: Performance_
 
+## Ops
+
+115. Set up a `feedback@panhandle.app` alias (Cloudflare Email Routing on the
+     already-Resend-verified `panhandle.app` zone, forwarded to the personal
+     inbox `FEEDBACK_EMAIL` points at) and add it as a Gmail "Send mail as"
+     alias, so replies to user feedback show the alias instead of the real
+     personal address. Dashboard-only setup, no code change; optionally also
+     repoint `FEEDBACK_EMAIL` at the alias instead of the raw personal
+     address.
+     _Value: Medium · Importance: Low · Type: Ops / Privacy_
+
 ## Ideas (unvetted)
 
 Raw suggestions from the 2026-07-20 app-audit — **not** accepted work like the
