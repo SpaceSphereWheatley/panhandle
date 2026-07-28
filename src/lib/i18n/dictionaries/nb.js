@@ -454,7 +454,7 @@ export const nb = {
   "auth.credentials.copy": "Kopier invitasjon",
   "auth.credentials.copied": "Invitasjon kopiert",
   "auth.credentials.copyFailed": "Kunne ikke kopiere – merk og kopier teksten manuelt",
-  "auth.credentials.invite": "Du er lagt til i Panhandle! Logg inn på https://shopping.mohibb.com\nE-post (brukernavn): {username}\nPassord: {password}\n(Bytt passord etter at du har logget inn.)",
+  "auth.credentials.invite": "Du er lagt til i Panhandle! Logg inn på https://shop.panhandle.app\nE-post (brukernavn): {username}\nPassord: {password}\n(Bytt passord etter at du har logget inn.)",
 
   "common.undo": "Angre",
   "common.confirm.defaultTitle": "Er du sikker?",

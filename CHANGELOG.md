@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.51.3] — 2026-07-28
+
+### Changed
+- The app now lives at `shop.panhandle.app` instead of `panhandle.app/app.html`
+  — a clearer, dedicated address for the shopping-list/meal-planner app itself.
+  `panhandle.app` keeps serving the marketing landing page, and old links to
+  `panhandle.app/app.html` (bookmarks, password-reset emails already sent,
+  etc.) redirect automatically to the new address. No other behavior changes.
+
 ## [1.51.2] — 2026-07-28
 
 ### Fixed

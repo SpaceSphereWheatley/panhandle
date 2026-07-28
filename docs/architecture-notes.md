@@ -8,7 +8,7 @@ The frontend was rewritten from a hand-rolled, no-build vanilla JS/HTML app to t
 
 ## Why the Vite entry is named `app.html`
 
-The Vite entry is named `app.html` (not `index.html`) specifically so it builds to `dist/app.html`, matching the real app's URL (`shopping.mohibb.com/app.html`) and leaving `public/index.html`'s copy-through (via Vite's `publicDir`, still pointed at `public/`) untouched at `dist/index.html` instead of colliding with it.
+The Vite entry is named `app.html` (not `index.html`) specifically so it builds to `dist/app.html`, matching the real app's URL (`shop.panhandle.app/app.html`) and leaving `public/index.html`'s copy-through (via Vite's `publicDir`, still pointed at `public/`) untouched at `dist/index.html` instead of colliding with it.
 
 ## Migration-by-migration history
 

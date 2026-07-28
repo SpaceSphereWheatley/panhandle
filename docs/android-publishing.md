@@ -13,14 +13,21 @@ account, a private signing key, and store-listing content (screenshots, a
 privacy policy) all require you personally, in your own browser/accounts.
 This doc is the checklist for what's left.
 
-## 0. Domain: panhandle.app — cutover checklist
+## 0. Domain: panhandle.app / shop.panhandle.app — cutover checklist
 
-**Decided.** `panhandle.app` is bought and already filled in throughout
-`android/` (`twa-manifest.json`, `strings.xml`) — no more `YOUR_APP_DOMAIN`
-placeholders in that directory. It isn't live yet, though: nothing below is
-done automatically, and each step is a manual dashboard action (no MCP tool
-here can touch Cloudflare zones/DNS, Resend, Google Cloud Console, or
-Turnstile). Do these **in order** — later steps depend on earlier ones:
+**Decided, and evolved once already.** `panhandle.app` is bought and was the
+first replacement for the personal `shopping.mohibb.com` domain. It's since
+been further decoupled: the **app** now lives on the `shop.panhandle.app`
+subdomain (a niche verb/noun subdomain reads better than a bare `/app.html`
+path — the Play Store listing and the TWA's asset-link check make this
+domain public, hence caring about it), while `panhandle.app` itself keeps
+the marketing landing page and 301-redirects its old `/app.html` path to
+the subdomain. `android/twa-manifest.json` is already filled in with
+`shop.panhandle.app` (host, icon URLs, web manifest URL) — no more
+`YOUR_APP_DOMAIN` placeholders in that directory. Each step below is a
+manual dashboard action (no MCP tool here can touch Cloudflare zones/DNS,
+Resend, Google Cloud Console, or Turnstile). Do these **in order** — later
+steps depend on earlier ones:
 
 1. ✅ **Add `panhandle.app` to Cloudflare as a zone** — done (bought through
    Cloudflare Registrar, so it was on Cloudflare nameservers from the start).
@@ -37,20 +44,33 @@ Turnstile). Do these **in order** — later steps depend on earlier ones:
    `mohibb.com` entry was removed from Resend first (Resend-only action —
    doesn't touch the actual `mohibb.com` DNS zone or anything else hosted
    there), then `panhandle.app` was added and verified.
-5. ✅ **Flip `wrangler.toml`'s vars and push** — done: both
-   `APP_ORIGIN = "https://panhandle.app"` and
+5. ✅ **Flip `wrangler.toml`'s vars and push** — done (superseded by step 9
+   below): originally `APP_ORIGIN = "https://panhandle.app"` and
    `EMAIL_FROM_ADDRESS = "Panhandle <noreply@panhandle.app>"`.
 6. **Remove the old custom domain** (`shopping.mohibb.com`, Worker →
-   Settings → Domains & Routes) once `panhandle.app` has been live and
-   working for a while — no rush, and easy to leave both attached
+   Settings → Domains & Routes) once `shop.panhandle.app` has been live and
+   working for a while — no rush, and easy to leave all three attached
    indefinitely if you'd rather.
-7. **Re-register on the new domain in each dashboard that currently
+7. **Re-register on `shop.panhandle.app` in each dashboard that currently
    allow-lists `shopping.mohibb.com`:** Google Cloud Console ("Sign in with
    Google" OAuth client's authorized origins/redirect URIs —
    `src/lib/google.js`) and the Cloudflare Turnstile dashboard (CAPTCHA
    widget domain — `src/lib/turnstile.js`). Both are one-time dashboard
    edits; do them before removing the old domain in step 6, so existing
-   sessions/logins don't break mid-transition.
+   sessions/logins don't break mid-transition. **Still pending** — not yet
+   done as of the `shop.panhandle.app` move.
+8. **Add `shop` as a DNS record under the `panhandle.app` zone** (Cloudflare
+   dashboard → `panhandle.app` → DNS) and **attach `shop.panhandle.app` to
+   the Worker as an additional Custom Domain** (Worker → Settings → Domains
+   & Routes) — neither step can be done via an MCP tool in this repo's
+   Claude Code sessions (only D1/KV/R2/Hyperdrive and read-only Worker info
+   are exposed here, no zone/DNS/custom-domain tool). **Still pending.**
+9. ✅ **Flip `wrangler.toml`'s `APP_ORIGIN` to `https://shop.panhandle.app`
+   and push** — done. `EMAIL_FROM_ADDRESS` deliberately stays on the apex
+   `panhandle.app` (already verified in Resend; no need to re-verify a
+   subdomain just for sending). The Worker also 301-redirects
+   `panhandle.app/app.html` → `shop.panhandle.app/app.html` so existing
+   bookmarks and already-sent emails keep working.
 
 ## 1. Generate a signing key
 
@@ -73,9 +93,10 @@ keytool -list -v -keystore panhandle-release.keystore -alias panhandle
 Copy the `SHA256:` value (colons and all, or without — either form works)
 into `public/.well-known/assetlinks.json`'s `sha256_cert_fingerprints`,
 replacing the placeholder. Push that change so the file is live at
-`https://panhandle.app/.well-known/assetlinks.json` before you try to
-launch the app — Chrome checks it at launch, and a mismatch means the app
-opens as an ordinary browser tab (URL bar visible) instead of full-screen.
+`https://shop.panhandle.app/.well-known/assetlinks.json` (the TWA's
+configured host, per `android/twa-manifest.json`) before you try to launch
+the app — Chrome checks it at launch, and a mismatch means the app opens as
+an ordinary browser tab (URL bar visible) instead of full-screen.
 
 Never commit `panhandle-release.keystore` or its passwords. `android/.gitignore`
 already excludes `*.keystore`/`*.jks`/`key.properties`.
@@ -93,7 +114,7 @@ keyPassword=...
 
 The cleanest path is [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap),
 Google's CLI for exactly this. `android/twa-manifest.json` is already filled
-in with `panhandle.app` — Bubblewrap reads it directly:
+in with `shop.panhandle.app` — Bubblewrap reads it directly:
 
 ```sh
 cd android
@@ -151,7 +172,7 @@ the right domain).
   web app itself keeps deploying independently on every push to `main`
   (see `CLAUDE.md`'s Deployment section) — most day-to-day changes need no
   Android rebuild at all, since the TWA just displays whatever's live at
-  `panhandle.app`. A rebuild is only needed for things that live in the
+  `shop.panhandle.app`. A rebuild is only needed for things that live in the
   native shell: the app icon/name, theme colors, or `twa-manifest.json`
   itself.
 - Losing the keystore means you can never update the Play Store listing

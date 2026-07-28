@@ -400,7 +400,7 @@ export const en = {
   "auth.credentials.copy": "Copy invitation",
   "auth.credentials.copied": "Invitation copied",
   "auth.credentials.copyFailed": "Couldn't copy – select and copy the text manually",
-  "auth.credentials.invite": "You've been added to Panhandle! Sign in at https://shopping.mohibb.com\nEmail (username): {username}\nPassword: {password}\n(Change your password once you've signed in.)",
+  "auth.credentials.invite": "You've been added to Panhandle! Sign in at https://shop.panhandle.app\nEmail (username): {username}\nPassword: {password}\n(Change your password once you've signed in.)",
 
   "common.undo": "Undo",
   "common.confirm.defaultTitle": "Are you sure?",
