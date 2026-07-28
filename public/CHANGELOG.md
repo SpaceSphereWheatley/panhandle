@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.51.2] — 2026-07-28
+
+### Fixed
+- The marketing landing page (`/`) now registers the service worker too,
+  not just the app itself (`/app.html`) — PWABuilder's install-readiness
+  check was scanning the root domain and reporting no service worker found,
+  even though one has existed and worked from inside the app all along.
+
 ## [1.51.1] — 2026-07-28
 
 ### Fixed
