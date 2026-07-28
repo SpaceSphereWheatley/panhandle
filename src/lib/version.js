@@ -2,13 +2,13 @@
 // from the Worker's VERSION (worker/index.js) on a release — see CHANGELOG.md.
 export { VERSION as APP_VERSION } from "../../shared/version.js";
 
-// Determines whether the change from `prev` to `next` is release-worthy
-// (MAJOR or MINOR changed — a new capability/phase per CLAUDE.md's
-// versioning convention) vs. a quiet PATCH-only bump. Drives
-// useDeployVersionCheck's choice between auto-opening the changelog and
-// just showing a dismissible toast.
-export function isFeatureVersionBump(prev, next) {
-  const [prevMajor, prevMinor] = prev.split(".").map(Number);
-  const [nextMajor, nextMinor] = next.split(".").map(Number);
-  return prevMajor !== nextMajor || prevMinor !== nextMinor;
+// Determines whether the change from `prev` to `next` is a MAJOR bump —
+// a breaking change per CLAUDE.md's versioning convention — vs. a
+// MINOR/PATCH bump. Drives useDeployVersionCheck's choice between
+// auto-opening the changelog (MAJOR only) and just showing a dismissible
+// toast (everything else).
+export function isMajorVersionBump(prev, next) {
+  const prevMajor = Number(prev.split(".")[0]);
+  const nextMajor = Number(next.split(".")[0]);
+  return prevMajor !== nextMajor;
 }
