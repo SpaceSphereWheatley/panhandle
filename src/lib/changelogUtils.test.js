@@ -73,4 +73,15 @@ describe("parseChangelog", () => {
       'Adding an item with a size (e.g. "500g") keeps the whole name intact.',
     ]);
   });
+
+  it("stops at a sentence that ends inside a closing quote", () => {
+    const md = `## [1.0.0] — 2026-01-01
+
+- Renamed the button to "Notify the household." The old label was unclear.
+`;
+    const entries = parseChangelog(md);
+    expect(entries[0].titles).toEqual([
+      'Renamed the button to "Notify the household."',
+    ]);
+  });
 });

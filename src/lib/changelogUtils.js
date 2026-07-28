@@ -1,13 +1,18 @@
 const VERSION_RE = /^## \[(.+?)\]\s*(?:—|-)\s*(.+?)\s*$/;
 const BULLET_RE = /^- (.+)$/;
-const SENTENCE_END_RE = /(?<![eE]\.[gG])(?<![iI]\.[eE])\.\s+(?=[A-ZÆØÅ`"'(])/;
+// The optional captured group tolerates a closing quote landing between the
+// period and the following whitespace (a sentence ending inside quotes, e.g.
+// `to "Notify the household." The old label...`) — without it, that shape
+// never matched and the whole bullet fell through to the length-based
+// ellipsis truncation instead of stopping cleanly after the real sentence end.
+const SENTENCE_END_RE = /(?<![eE]\.[gG])(?<![iI]\.[eE])\.(["'”]{0,2})\s+(?=[A-ZÆØÅ`"'(])/;
 const MAX_TITLE_LENGTH = 160;
 
 function extractTitle(text) {
   const joined = text.replace(/\s+/g, " ").trim();
   const stripped = joined.replace(/\*\*/g, "");
   const match = SENTENCE_END_RE.exec(stripped);
-  let title = match ? stripped.slice(0, match.index + 1) : stripped;
+  let title = match ? stripped.slice(0, match.index + 1 + match[1].length) : stripped;
   if (title.length > MAX_TITLE_LENGTH) {
     title = `${title.slice(0, MAX_TITLE_LENGTH).trimEnd()}…`;
   }
