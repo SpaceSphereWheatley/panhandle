@@ -1427,7 +1427,15 @@ export default {
       if (url.hostname === "shop.panhandle.app" && url.pathname === "/") {
         pagesUrl.pathname = "/app.html";
       }
-      return fetch(new Request(pagesUrl.toString(), request));
+      // Cloudflare Pages auto-redirects a request for "*.html" to the
+      // extension-less canonical path (e.g. /app.html -> /app). The incoming
+      // request's redirect mode defaults to "manual", so without forcing
+      // "follow" here that upstream redirect passed straight through to the
+      // browser — whose relative Location then resolved against this
+      // Worker's own hostname, landing users on an unwanted .../app.
+      // Following it here keeps that Pages implementation detail invisible:
+      // the client only ever sees the URL it actually requested.
+      return fetch(new Request(pagesUrl.toString(), request), { redirect: "follow" });
     }
 
     const path = url.pathname.replace(/^\/api/, "");
