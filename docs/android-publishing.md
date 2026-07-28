@@ -32,16 +32,14 @@ Turnstile). Do these **in order** — later steps depend on earlier ones:
    `ERR_CERT_AUTHORITY_INVALID` seen briefly beforehand was local DNS/router
    caching, not a real Cloudflare config problem, and cleared after a DNS
    flush / on a different network).
-4. **Verify `panhandle.app` for email sending in Resend** (dashboard:
-   resend.com → Domains → Add Domain → `panhandle.app`), then add the
-   SPF/DKIM/DMARC records Resend gives you to the `panhandle.app` zone in
-   Cloudflare DNS. Verification can take a few minutes. Needed only if you
-   want password-reset emails to come from `@panhandle.app` too — optional,
-   see the caveat below.
-5. ✅ **Flip `wrangler.toml`'s `APP_ORIGIN` and push** — done:
-   `APP_ORIGIN = "https://panhandle.app"`. `EMAIL_FROM_ADDRESS` is still on
-   `shopping.mohibb.com` pending step 4 — tell me once that's verified in
-   Resend and I'll flip it too.
+4. ✅ **Verify `panhandle.app` for email sending in Resend** — done. Since
+   Resend's free plan only allows one verified domain, the old
+   `mohibb.com` entry was removed from Resend first (Resend-only action —
+   doesn't touch the actual `mohibb.com` DNS zone or anything else hosted
+   there), then `panhandle.app` was added and verified.
+5. ✅ **Flip `wrangler.toml`'s vars and push** — done: both
+   `APP_ORIGIN = "https://panhandle.app"` and
+   `EMAIL_FROM_ADDRESS = "Panhandle <noreply@panhandle.app>"`.
 6. **Remove the old custom domain** (`shopping.mohibb.com`, Worker →
    Settings → Domains & Routes) once `panhandle.app` has been live and
    working for a while — no rush, and easy to leave both attached
@@ -53,12 +51,6 @@ Turnstile). Do these **in order** — later steps depend on earlier ones:
    widget domain — `src/lib/turnstile.js`). Both are one-time dashboard
    edits; do them before removing the old domain in step 6, so existing
    sessions/logins don't break mid-transition.
-
-**Caveat — step 4 (email) is optional and separable.** If you'd rather not
-deal with Resend DNS verification right now, `EMAIL_FROM_ADDRESS` can stay
-pointed at `shopping.mohibb.com` independently of `APP_ORIGIN` — it's only
-visible in the "From" header of a password-reset email, not in the app or
-Play Store listing, so it doesn't block anything below.
 
 ## 1. Generate a signing key
 

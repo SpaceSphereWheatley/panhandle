@@ -46,13 +46,12 @@ workers_dev = true
 
 # Non-secret config, safe to version-control. APP_ORIGIN is used to build
 # links in emails (e.g. the password-reset URL). EMAIL_FROM_ADDRESS is
-# separate and still on shopping.mohibb.com because Resend needs its own
-# DNS-verified sending domain, which doesn't have to be the same domain
-# users see in the browser — flip it to noreply@panhandle.app once that
-# domain is verified in Resend (docs/android-publishing.md step 4).
+# separate since Resend needs its own DNS-verified sending domain, which
+# doesn't have to be the same domain users see in the browser — both are
+# now on panhandle.app, verified in Resend.
 [vars]
 APP_ORIGIN = "https://panhandle.app"
-EMAIL_FROM_ADDRESS = "Panhandle <noreply@shopping.mohibb.com>"
+EMAIL_FROM_ADDRESS = "Panhandle <noreply@panhandle.app>"
 
 # Secrets (set under Worker -> Settings -> Variables and Secrets):
 #   JWT_SECRET            - long random string, signs login tokens
