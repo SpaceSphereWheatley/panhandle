@@ -22,33 +22,26 @@ done automatically, and each step is a manual dashboard action (no MCP tool
 here can touch Cloudflare zones/DNS, Resend, Google Cloud Console, or
 Turnstile). Do these **in order** — later steps depend on earlier ones:
 
-1. **Add `panhandle.app` to Cloudflare as a zone** (dashboard: Websites →
-   Add a domain), if it isn't already. If you bought it through a different
-   registrar, point its nameservers at the two Cloudflare gives you — the
-   zone shows "Pending" until that propagates (can take a few minutes to a
-   few hours).
-2. **Attach it to the Worker as a Custom Domain**, once the zone is active:
-   Workers & Pages → `panhandle` → Settings → Domains & Routes → Add →
-   Custom Domain → `panhandle.app`. Leave the existing `shopping.mohibb.com`
-   custom domain in place for now — don't remove it until step 5 confirms
-   the new one fully works.
-3. **Verify it actually serves the app** before touching any code: visit
-   `https://panhandle.app/app.html` (should load the frontend) and
-   `https://panhandle.app/api/version` (should return JSON with the current
-   `VERSION`) — both go through the same Worker as `shopping.mohibb.com`
-   today, so they should behave identically.
+1. ✅ **Add `panhandle.app` to Cloudflare as a zone** — done (bought through
+   Cloudflare Registrar, so it was on Cloudflare nameservers from the start).
+2. ✅ **Attach it to the Worker as a Custom Domain** — done, alongside the
+   existing `shopping.mohibb.com` custom domain, which stays in place for
+   now — don't remove it until step 6 confirms the new one fully works.
+3. ✅ **Verify it actually serves the app** — confirmed: `panhandle.app/app.html`
+   and `/api/version` both work correctly (verified over mobile data; the
+   `ERR_CERT_AUTHORITY_INVALID` seen briefly beforehand was local DNS/router
+   caching, not a real Cloudflare config problem, and cleared after a DNS
+   flush / on a different network).
 4. **Verify `panhandle.app` for email sending in Resend** (dashboard:
    resend.com → Domains → Add Domain → `panhandle.app`), then add the
    SPF/DKIM/DMARC records Resend gives you to the `panhandle.app` zone in
-   Cloudflare DNS (step 1's zone). Verification can take a few minutes.
-   Needed only if you want password-reset emails to come from
-   `@panhandle.app` too — see the caveat below if you'd rather defer this.
-5. **Flip `wrangler.toml`'s vars and push** — tell me once steps 2-4 are
-   confirmed working and I'll update `APP_ORIGIN` to
-   `https://panhandle.app` and (if step 4 is done) `EMAIL_FROM_ADDRESS` to
-   `Panhandle <noreply@panhandle.app>`, then push (Cloudflare auto-deploys).
-   This is deliberately not done until you've confirmed 2-4, since it's a
-   live production config change.
+   Cloudflare DNS. Verification can take a few minutes. Needed only if you
+   want password-reset emails to come from `@panhandle.app` too — optional,
+   see the caveat below.
+5. ✅ **Flip `wrangler.toml`'s `APP_ORIGIN` and push** — done:
+   `APP_ORIGIN = "https://panhandle.app"`. `EMAIL_FROM_ADDRESS` is still on
+   `shopping.mohibb.com` pending step 4 — tell me once that's verified in
+   Resend and I'll flip it too.
 6. **Remove the old custom domain** (`shopping.mohibb.com`, Worker →
    Settings → Domains & Routes) once `panhandle.app` has been live and
    working for a while — no rush, and easy to leave both attached
