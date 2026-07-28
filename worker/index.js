@@ -1620,7 +1620,7 @@ export default {
         "INSERT INTO password_resets (username, token_hash, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
       ).bind(row.username, tokenHash, now, now + 30 * 60 * 1000).run();
 
-      const resetUrl = `${env.APP_ORIGIN || "https://shop.panhandle.app"}/app.html?reset_token=${rawToken}`;
+      const resetUrl = `${env.APP_ORIGIN || "https://shop.panhandle.app"}/?reset_token=${rawToken}`;
       await sendEmail(env, {
         to: cleanEmail,
         subject: "Tilbakestill passordet ditt - Panhandle",
