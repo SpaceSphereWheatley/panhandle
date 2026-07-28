@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#C1592A">
-<meta name="description" content="Panhandle: delt handleliste og måltidsplanlegger for husstanden.">
+<meta name="description" content="Panhandle: shared shopping list and meal planner for your household.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
-<title>Panhandle — Måltidsplanlegging og handleliste, sammen</title>
+<title>Panhandle — Meal planning and shopping list, together</title>
 <style>
   :root {
     /* Manually mirrored from src/design-system/tokens/*.css — public/ has no build
@@ -288,69 +288,69 @@
       </svg>
       <span class="word">panhandle</span>
     </div>
-    <a class="btn btn-outline" href="/app.html">Logg inn</a>
+    <a class="btn btn-outline" href="/app.html">Sign in</a>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
-    <span class="eyebrow">for husstanden</span>
-    <h1>Planlegg middager.<br>Hold handlelisten <span>i synk.</span></h1>
+    <span class="eyebrow">for your household</span>
+    <h1>Plan meals.<br>Keep your shopping list <span>in sync.</span></h1>
     <p class="lead">
-      Panhandle kobler ukeplanen for middager til en delt handleliste —
-      legg en middag inn i kalenderen, skriv inn ingrediensene, og de dukker opp
-      på listen til husstanden. Alle ser samme liste i sanntid, fra hver sin telefon.
+      Panhandle connects your weekly meal plan to a shared shopping list —
+      add a meal to the calendar, write in the ingredients, and they appear
+      on your household's list. Everyone sees the same list in real time, from their own phone.
     </p>
     <div class="cta-row">
-      <a class="btn btn-primary lg" href="/app.html?signup=1">Registrer deg</a>
-      <a class="btn btn-outline lg" href="/app.html">Logg inn</a>
+      <a class="btn btn-primary lg" href="/app.html?signup=1">Sign up</a>
+      <a class="btn btn-outline lg" href="/app.html">Sign in</a>
     </div>
-    <div class="secondary-note">Fungerer på mobil og desktop.</div>
+    <div class="secondary-note">Works on mobile and desktop.</div>
   </div>
 </section>
 
 <section class="showcase">
   <div class="wrap">
-    <h2>Sett sammen for hvordan dere faktisk handler</h2>
-    <p class="sub">Måltidskalenderen og handlelisten henger sammen — slik ser det ut.</p>
+    <h2>Designed for how you actually shop</h2>
+    <p class="sub">The meal calendar and shopping list work together — here's how it looks.</p>
 
     <div class="mock-grid">
       <div class="mock-card">
         <div class="mock-screen">
-          <div class="mock-head">Måltider</div>
+          <div class="mock-head">Meals</div>
           <div class="mock-body">
             <div class="mock-week-nav">
-              <span class="navbtn">‹ Forrige</span><span>9. – 15. jun</span><span class="navbtn">Neste ›</span>
+              <span class="navbtn">‹ Prev</span><span>Jun 9 – 15</span><span class="navbtn">Next ›</span>
             </div>
             <div class="mock-day today">
-              <div class="d">I dag <span class="edit">Endre</span></div>
-              <div class="meal">Laks i form</div>
-              <div class="who"><span class="avatar">K</span><span class="name">Kristin</span></div>
+              <div class="d">Today <span class="edit">Edit</span></div>
+              <div class="meal">Salmon in pastry</div>
+              <div class="who"><span class="avatar">K</span><span class="name">Kim</span></div>
             </div>
             <div class="mock-day">
-              <div class="d">Torsdag 12. jun <span class="edit">Legg til</span></div>
-              <div class="meal empty">Ingen måltid planlagt</div>
+              <div class="d">Thursday, Jun 12 <span class="edit">Add</span></div>
+              <div class="meal empty">No meal planned</div>
             </div>
             <div class="mock-day">
-              <div class="d">Fredag 13. jun <span class="edit">Endre</span></div>
-              <div class="meal">Taco</div>
-              <div class="who"><span class="avatar">A</span><span class="name">Anders</span></div>
+              <div class="d">Friday, Jun 13 <span class="edit">Edit</span></div>
+              <div class="meal">Tacos</div>
+              <div class="who"><span class="avatar">A</span><span class="name">Alex</span></div>
             </div>
           </div>
         </div>
       </div>
       <div class="mock-card">
         <div class="mock-screen">
-          <div class="mock-head">Handleliste</div>
+          <div class="mock-head">Shopping</div>
           <div class="mock-body">
-            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Add item...</span><span class="plus">+</span></div>
             <div class="mock-view-toggle"><span class="active"><i class="ph ph-list-bullets"></i></span><span><i class="ph ph-squares-four"></i></span></div>
 
-            <div class="mock-row"><span class="badge">L</span><span>Laksefilet</span></div>
-            <div class="mock-row"><span class="badge">K</span><span>Kremost</span></div>
-            <div class="mock-row"><span class="badge">T</span><span>Tacolefse</span></div>
+            <div class="mock-row"><span class="badge">S</span><span>Salmon fillet</span></div>
+            <div class="mock-row"><span class="badge">C</span><span>Cream cheese</span></div>
+            <div class="mock-row"><span class="badge">T</span><span>Tortillas</span></div>
 
-            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Nylig kjøpt</div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Recently bought</div>
             <div class="mock-row bought"><span class="badge">P</span><span>Pasta</span></div>
             <div class="mock-row bought"><span class="badge">P</span><span>Parmesan</span></div>
           </div>
@@ -358,18 +358,18 @@
       </div>
       <div class="mock-card">
         <div class="mock-screen">
-          <div class="mock-head">Handleliste</div>
+          <div class="mock-head">Shopping</div>
           <div class="mock-body">
-            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Legg til vare...</span><span class="plus">+</span></div>
+            <div class="mock-addbar"><span class="field"><i class="ph ph-carrot"></i>Add item...</span><span class="plus">+</span></div>
             <div class="mock-view-toggle"><span><i class="ph ph-list-bullets"></i></span><span class="active"><i class="ph ph-squares-four"></i></span></div>
 
             <div class="mock-grid-tiles">
-              <div class="mock-tile"><span class="badge">L</span><span class="name">Laksefilet</span></div>
-              <div class="mock-tile"><span class="badge">K</span><span class="name">Kremost</span></div>
-              <div class="mock-tile"><span class="badge">S</span><span class="name">Salat</span></div>
+              <div class="mock-tile"><span class="badge">S</span><span class="name">Salmon fillet</span></div>
+              <div class="mock-tile"><span class="badge">C</span><span class="name">Cream cheese</span></div>
+              <div class="mock-tile"><span class="badge">S</span><span class="name">Salad</span></div>
             </div>
 
-            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Nylig kjøpt</div>
+            <div class="mock-cat-label"><i class="ph-fill ph-caret-down"></i>Recently bought</div>
             <div class="mock-grid-tiles">
               <div class="mock-tile bought"><span class="badge">P</span><span class="name">Pasta</span></div>
               <div class="mock-tile bought"><span class="badge">P</span><span class="name">Parmesan</span></div>
@@ -382,26 +382,39 @@
     <div class="features">
       <div class="feature">
         <span class="ico terracotta"><i class="ph ph-cooking-pot"></i></span>
-        <h3>Ukeplan for middager</h3>
-        <p>Sett opp hvem som lager hva og når, sammen med resten av husstanden — ingen flere meldinger om middag.</p>
+        <h3>Weekly meal plan</h3>
+        <p>Coordinate who's cooking what and when with the rest of your household — no more text messages about dinner.</p>
       </div>
       <div class="feature">
         <span class="ico sage"><i class="ph ph-shopping-cart-simple"></i></span>
-        <h3>Delt handleliste, live</h3>
-        <p>Alle ser samme liste i sanntid, sortert i kategorier, og kan krysse av varer fra hver sin telefon.</p>
+        <h3>Shared shopping list, live</h3>
+        <p>Everyone sees the same list in real time, organized by category, and can check off items from their own phone.</p>
       </div>
       <div class="feature">
         <span class="ico terracotta"><i class="ph ph-magic-wand"></i></span>
-        <h3>Gjenkjenner varer</h3>
-        <p>Listen kommer med en stor katalog av vanlige varer, og lærer kategorien selv etter første gang.</p>
+        <h3>Recognizes items</h3>
+        <p>The list comes with a large catalog of common items, and learns the category automatically after the first use.</p>
       </div>
     </div>
   </div>
 </section>
 
 <footer class="site">
-  <div class="wrap">© Panhandle · <a href="/changelog.html">Endringslogg</a></div>
+  <div class="wrap">© Panhandle · <a href="/changelog.html">Changelog</a> · <a href="/privacy.html">Privacy</a></div>
 </footer>
+
+<script>
+  // Same registration as src/main.jsx's, duplicated here because this page
+  // has no build step and isn't part of the Vite bundle — without it, a
+  // visitor landing here (or an audit tool like PWABuilder scanning the
+  // root domain) never sees a service worker registered, even though
+  // app.html registers one once you're signed in.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    })
+  }
+</script>
 
 </body>
 </html>

@@ -145,10 +145,10 @@ the right domain).
    (one-time $25 registration fee) — this is entirely a browser/account step,
    nothing here does it for you.
 2. Create a new app. You'll need, before it can go to review:
-   - **A privacy policy URL.** Required even for a household app that
-     collects an email/password. A single static page is enough — host it
-     as another static file under `public/` (e.g. `public/privacy.html`) and
-     link it here, or anywhere else you control.
+   - ✅ **A privacy policy URL** — done: `https://panhandle.app/privacy.html`
+     (also linked from the marketing page and changelog page's footers).
+     Enter that URL in the Play Console listing's Privacy Policy field and
+     the Data Safety section.
    - **Store listing assets**: short/full description, at least 2
      screenshots (phone size), a 512×512 app icon (already have one:
      `public/icon-512.png`), and a 1024×500 feature graphic (doesn't exist

@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.50.5] — 2026-07-28
+## [1.51.3] — 2026-07-28
 
 ### Changed
 - The app now lives at `shop.panhandle.app` instead of `panhandle.app/app.html`
@@ -8,6 +8,28 @@
   `panhandle.app` keeps serving the marketing landing page, and old links to
   `panhandle.app/app.html` (bookmarks, password-reset emails already sent,
   etc.) redirect automatically to the new address. No other behavior changes.
+
+## [1.51.2] — 2026-07-28
+
+### Fixed
+- The marketing landing page (`/`) now registers the service worker too,
+  not just the app itself (`/app.html`) — PWABuilder's install-readiness
+  check was scanning the root domain and reporting no service worker found,
+  even though one has existed and worked from inside the app all along.
+
+## [1.51.1] — 2026-07-28
+
+### Fixed
+- Filled in several missing fields in the PWA manifest (`id`, `scope`,
+  `lang`, `dir`, `orientation`, `categories`) flagged by PWABuilder's
+  install-readiness check — improves the Play Store packaging score, no
+  visible change to the app itself.
+
+## [1.51.0] — 2026-07-28
+
+### Added
+- A privacy policy page (`/privacy.html`), linked from the marketing page's
+  and changelog page's footers — needed ahead of a Play Store listing.
 
 ## [1.50.4] — 2026-07-28
 
