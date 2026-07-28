@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.4] — 2026-07-28
+
+### Changed
+- Password-reset emails now send from `noreply@panhandle.app` instead of
+  the old personal domain, now that it's verified for sending. No other
+  behavior changes.
+
 ## [1.50.3] — 2026-07-28
 
 ### Changed
