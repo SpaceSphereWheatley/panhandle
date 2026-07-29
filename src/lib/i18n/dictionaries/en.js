@@ -357,6 +357,7 @@ export const en = {
   "settings.installHelp.note": 'Only seeing "Add to Home screen"? Chrome decides for itself when the app counts as installable, and may need a bit more use of the site before it offers a full install.',
   "settings.about.whatsNew": "What's new?",
   "settings.about.feedback": "Send feedback",
+  "settings.about.replayOnboarding": "Show welcome tour",
 
   "auth.email": "Email",
   "auth.password": "Password",
