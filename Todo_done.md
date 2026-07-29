@@ -7,6 +7,18 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+112. Replaced the "Clear bought" end-of-trip sweep with "Mark all as bought."
+     The old button (next to "Recently bought", `DELETE /list/bought`) deleted
+     every bought `list_items` row outright, which meant a recently-bought
+     item vanished along with the rest instead of staying visible. The new
+     `POST /list/mark-all-bought` flips every still-unbought item to bought
+     in one batched update instead, applying the same bought/bought_at/
+     important transition and catalogue-stats bump as toggling each item
+     individually — nothing is deleted. Moved from a section-local button to
+     a FAB action (only offered while something's still unbought), since it
+     acts on the whole list rather than just the "Recently bought" section.
+     (1.53.0)
+
 111. (94) Fixed the unbounded service-worker asset cache. `sw.js`'s
      `CACHE_NAME` was a fixed literal (`panhandle-shell-v1`), so every
      deploy's old content-hashed JS/CSS accumulated in Cache Storage forever

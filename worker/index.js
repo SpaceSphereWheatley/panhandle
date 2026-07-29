@@ -2513,16 +2513,26 @@ export default {
       return authedJson({ ok: true, qty: addQty, id: inserted.meta.last_row_id });
     }
 
-    // End-of-trip sweep (TODO #100): drop every bought line at once instead of
-    // clearing them one at a time from the "Recently bought" palette. Only touches
-    // list_items — the item_catalogue rows (and their durable purchase stats)
-    // stay, so suggestions and re-adding are unaffected. Placed before the
-    // /list/:id regex handlers below, though "bought" wouldn't match \d+ anyway.
-    if (path === "/list/bought" && method === "DELETE") {
-      const res = await env.DB.prepare(
-        "DELETE FROM list_items WHERE list_id = ?1 AND bought = 1"
-      ).bind(user.list_id).run();
-      return authedJson({ ok: true, cleared: res.meta?.changes ?? 0 });
+    // Mark-all-bought: flips every still-unbought line to bought in one shot,
+    // the same bought/bought_at/important transition and times_bought/
+    // first_bought/last_bought bump as toggling each one individually (see the
+    // /toggle handler below), just batched. The catalogue bump has to read
+    // "currently unbought" before the list_items UPDATE below flips it.
+    // Placed before the /list/:id regex handlers, though "bought" wouldn't
+    // match \d+ anyway.
+    if (path === "/list/mark-all-bought" && method === "POST") {
+      await env.DB.prepare(`
+        UPDATE item_catalogue SET
+          times_bought = times_bought + 1,
+          first_bought = COALESCE(first_bought, datetime('now')),
+          last_bought = datetime('now')
+        WHERE id IN (SELECT catalogue_id FROM list_items WHERE list_id = ?1 AND bought = 0)
+      `).bind(user.list_id).run();
+      const res = await env.DB.prepare(`
+        UPDATE list_items SET bought = 1, bought_at = datetime('now'), important = 0
+        WHERE list_id = ?1 AND bought = 0
+      `).bind(user.list_id).run();
+      return authedJson({ ok: true, marked: res.meta?.changes ?? 0 });
     }
 
     const patchMatch = path.match(/^\/list\/(\d+)$/);

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.53.0] — 2026-07-29
+
+### Changed
+- **The "Clear bought" button is now "Mark all as bought."** The old button on the "Recently bought" section deleted every already-bought item from the list, which also meant losing items someone had just bought minutes ago. It's replaced by a "Mark all as bought" action in the add (+) menu that instead flips every still-unbought item to bought, the same as tapping each one — nothing is deleted, and recently-bought items stay visible. (`POST /list/mark-all-bought` replaces `DELETE /list/bought`.)
+
 ## [1.52.1] — 2026-07-29
 
 ### Fixed
