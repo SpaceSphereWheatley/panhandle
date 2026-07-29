@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.53.3] — 2026-07-29
+
+### Fixed
+- **Re-buying the same item no longer piles up duplicates in "Recently bought."** Adding an item that was already bought (e.g. adding "Milk" again a few days after last buying it) used to create a brand-new line, so buying the same staple repeatedly left several identical entries sitting in "Recently bought" instead of the one entry just moving back to the top. Adding it now reopens that same line (`POST /list` reuses the existing bought row instead of inserting a new one), so it re-sorts to the top the next time it's bought rather than duplicating.
+
 ## [1.53.2] — 2026-07-29
 
 ### Added
