@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useDesignIntensity } from "./useDesignIntensity.js";
 
+// jsdom implements neither matchMedia nor a meaningful innerWidth, and
+// src/test/setup.js adds no shim — so guard rather than crash, same pattern
+// as src/lib/layoutMode.js's canMatchMedia(). Falling back to "not reduced"
+// leaves intensity as the sole animation control in that case.
+function canMatchMedia() {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function";
+}
+
 function reducedMotionQuery() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)");
+  return canMatchMedia() ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 }
 
 // Drives the Framer Motion grid-reflow/mount-unmount animations (item cards,
@@ -14,10 +22,11 @@ function reducedMotionQuery() {
 // than just no-op'ing the visual, which matters for PWA perf.
 export function useMotionConfig() {
   const intensity = useDesignIntensity();
-  const [reduced, setReduced] = useState(() => reducedMotionQuery().matches);
+  const [reduced, setReduced] = useState(() => reducedMotionQuery()?.matches ?? false);
 
   useEffect(() => {
     const mq = reducedMotionQuery();
+    if (!mq) return undefined;
     const onChange = () => setReduced(mq.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);

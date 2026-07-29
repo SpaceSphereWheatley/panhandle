@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.55.1] — 2026-07-29
+
+### Fixed
+- **Modals can now be dismissed by dragging the handle down, and tapping outside a floating-action-button menu now closes it too.** The little pill at the top of a modal looked draggable but wasn't wired up before; it now drags down to close, snapping back if you don't drag far enough. Tapping outside an open FAB menu (the "+" button's action list on the Shopping List and Meals tabs) previously only closed it via Escape — an outside tap did nothing and could accidentally trigger whatever was underneath. (`Sheet.jsx` gained a framer-motion drag gesture on its content container, started only from the pill via `useDragControls`, so the sheet's own scrollable content is unaffected; `FabMenu.jsx`'s focus-trap was missing the same `allowOutsideClick: true` fix `Sheet.jsx` already had for the same underlying bug.)
+
 ## [1.55.0] — 2026-07-29
 
 ### Added

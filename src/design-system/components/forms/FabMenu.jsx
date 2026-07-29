@@ -29,6 +29,7 @@ const FAB_RIGHT = 'var(--fab-right)';
  */
 export function FabMenu({ icon = 'plus', label, badge = null, actions = [], haptic }) {
   const [open, setOpen] = React.useState(false);
+  const wrapperRef = React.useRef(null);
 
   const close = React.useCallback(() => setOpen(false), []);
 
@@ -80,9 +81,17 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [], hapt
           the FAB on close — same primitive Sheet.jsx uses, in place of two
           separate hand-rolled implementations. Escape stays handled by our
           own listener above, which needs to fire regardless of where focus
-          currently is. */}
-      <FocusTrap active={open} focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false }}>
-        <div>
+          currently is. `allowOutsideClick: true` is required too: by default
+          focus-trap preventDefault+stops propagation on any click outside the
+          trapped element, which silently ate the scrim's own onClick above
+          before it ever fired — same bug (and fix) as Sheet.jsx.
+          `fallbackFocus` guards the same crash Sheet.jsx documents: with no
+          fallback, activating the trap on a FabMenu with zero actions (only
+          the FAB itself, which the trap sees as not yet tabbable at the
+          instant it activates) throws and takes down the whole app, since
+          there's no error boundary. */}
+      <FocusTrap active={open} focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false, allowOutsideClick: true, fallbackFocus: () => wrapperRef.current }}>
+        <div ref={wrapperRef} tabIndex={-1}>
           {/* Action stack — above the FAB, right-aligned, nearest action lowest. */}
           <div
             role="menu"
