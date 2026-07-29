@@ -149,47 +149,104 @@ export function ShareIllustration() {
   );
 }
 
-// Slide 2 — meal planning: a week strip with "today" picked out.
+// Slide 2 — meal planning: the real MealsTab is a vertical agenda list, one
+// row per day (day-abbr/date column, meal name, an accent-highlighted "today"
+// row with a caption underneath, a dashed "+ Add meal" row for an unplanned
+// day) — not a horizontal week strip. Mirrors that row shape at small scale
+// rather than inventing a calendar-grid look the app doesn't have.
+const MEALS_ROWS = [
+  { abbr: "MON", date: 12, meal: null },
+  { abbr: "TUE", date: 13, meal: "Pasta" },
+  { abbr: "WED", date: 14, meal: "Tacos", today: true },
+];
+const ROW_X = 36;
+const ROW_W = 96;
+const ROW_H = 28;
+const ROW_GAP = 6;
+const ROWS_TOP = 40;
+
 export function MealsIllustration() {
-  const days = ["M", "T", "W", "T", "F"];
-  // Evenly spaced within the frame's straight inner edges (30..138) with
-  // enough margin that a 16px-wide column never crosses into the rounded
-  // corners the clipPath cuts around.
-  const xs = [40, 62, 84, 106, 128];
-  const todayIndex = 2;
   return (
     <Frame>
       <PhoneFrame clipId="clip-meals" headerFill="var(--accent-secondary)" headerLabel="This week" activeTab={1}>
-        {xs.map((x, i) => (
-          <motion.g key={x} variants={pop}>
-            <text
-              x={x}
-              y={58}
-              textAnchor="middle"
-              style={{ font: "600 8px var(--font-sans)", fill: "var(--text-secondary)" }}
-            >
-              {days[i]}
-            </text>
-            <rect
-              x={x - 8}
-              y={66}
-              width={16}
-              height={22}
-              rx={6}
-              fill={i === todayIndex ? "var(--accent-tertiary)" : "var(--surface-sunken)"}
-            />
-            {i === todayIndex && (
+        {MEALS_ROWS.map((row, i) => {
+          const y = ROWS_TOP + i * (ROW_H + ROW_GAP);
+          return (
+            <motion.g key={row.abbr} variants={pop}>
+              <rect
+                x={ROW_X}
+                y={y}
+                width={ROW_W}
+                height={ROW_H}
+                rx={8}
+                fill={row.today ? "var(--accent-primary-subtle)" : row.meal ? "var(--surface-card)" : "none"}
+                stroke={row.meal || row.today ? "none" : "var(--border-default)"}
+                strokeWidth="1.5"
+                strokeDasharray={row.meal || row.today ? undefined : "3 2"}
+              />
+              {row.today && <rect x={ROW_X} y={y} width={3} height={ROW_H} rx={1.5} fill="var(--accent-primary)" />}
               <text
-                x={x}
-                y={80}
+                x={ROW_X + 16}
+                y={y + 11}
                 textAnchor="middle"
-                style={{ font: "700 6.5px var(--font-sans)", fill: "var(--md-on-tertiary)" }}
+                style={{
+                  font: "700 5px var(--font-sans)",
+                  letterSpacing: "0.04em",
+                  fill: row.today ? "var(--accent-primary)" : "var(--text-tertiary)",
+                }}
               >
-                Taco
+                {row.abbr}
               </text>
-            )}
-          </motion.g>
-        ))}
+              <text
+                x={ROW_X + 16}
+                y={y + 23}
+                textAnchor="middle"
+                style={{
+                  font: "700 11px var(--font-sans)",
+                  fill: row.today ? "var(--accent-primary)" : "var(--text-primary)",
+                }}
+              >
+                {row.date}
+              </text>
+              {row.meal ? (
+                <>
+                  <text
+                    x={ROW_X + 30}
+                    y={y + (row.today ? 14 : 17)}
+                    style={{
+                      font: "700 8.5px var(--font-sans)",
+                      fill: row.today ? "var(--accent-primary)" : "var(--text-primary)",
+                    }}
+                  >
+                    {row.meal}
+                  </text>
+                  {row.today && (
+                    <text
+                      x={ROW_X + 30}
+                      y={y + 24}
+                      style={{ font: "600 6px var(--font-sans)", letterSpacing: "0.03em", fill: "var(--text-tertiary)" }}
+                    >
+                      TODAY
+                    </text>
+                  )}
+                </>
+              ) : (
+                <>
+                  <circle cx={ROW_X + 34} cy={y + 14} r={5} fill="var(--surface-sunken)" />
+                  <path
+                    d={`M${ROW_X + 32} ${y + 14}h4M${ROW_X + 34} ${y + 12}v4`}
+                    stroke="var(--text-tertiary)"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <text x={ROW_X + 44} y={y + 17} style={{ font: "600 8px var(--font-sans)", fill: "var(--text-secondary)" }}>
+                    Add meal
+                  </text>
+                </>
+              )}
+            </motion.g>
+          );
+        })}
       </PhoneFrame>
     </Frame>
   );
@@ -249,7 +306,7 @@ export function NotifyIllustration() {
         </PhoneFrame>
       </g>
       <motion.g variants={pop}>
-        <rect x={22} y={26} width={124} height={34} rx={12} fill="var(--surface-page)" stroke="var(--border-strong)" strokeWidth="2" />
+        <rect x={19} y={26} width={130} height={34} rx={12} fill="var(--surface-page)" stroke="var(--border-strong)" strokeWidth="2" />
         <circle cx={40} cy={43} r={9} fill="var(--accent-primary-subtle)" />
         <path
           d="M40 37c-4 0-6 3-6 7v3l-2 3h16l-2-3v-3c0-4-2-7-6-7z"
@@ -262,7 +319,7 @@ export function NotifyIllustration() {
           Panhandle
         </text>
         <text x={54} y={51} style={{ font: "500 7px var(--font-sans)", fill: "var(--text-secondary)" }}>
-          Reminder: plan tomorrow's dinner
+          Plan tomorrow's meal
         </text>
       </motion.g>
     </Frame>
