@@ -411,6 +411,7 @@ export const nb = {
   "settings.installHelp.note": "Ser du bare «Legg til på startskjerm»? Chrome bestemmer selv når appen regnes som installerbar, og kan trenge litt mer bruk av siden før den tilbyr full installasjon.",
   "settings.about.whatsNew": "Hva er nytt?",
   "settings.about.feedback": "Send tilbakemelding",
+  "settings.about.replayOnboarding": "Vis velkomstomvisning",
 
   "auth.email": "E-post",
   "auth.password": "Passord",
