@@ -6,11 +6,12 @@ import { ONBOARDING_SLIDES } from "./onboardingSlides.js";
 import { containerVariants } from "./illustrations.jsx";
 
 // A swipeable, one-time intro shown before a first-time user lands on an
-// empty shopping list. Self-contained: the only contract with the rest of the
-// app is the `onDone` callback (fired on "Skip" or the final "Get started"),
-// so wiring this in for real is just deciding *when* to render it and where
-// to persist "seen" — nothing here needs to change. See onboardingSlides.js
-// for the slide content and illustrations.jsx for the per-slide artwork.
+// empty shopping list. Self-contained: the only contract with the rest of
+// the app is the `onDone` callback (fired on "Skip" or the final "Get
+// started"). Wired in by App.jsx's Root(), gated on a per-device
+// localStorage flag (src/lib/onboarding.js) — see there for why per-device
+// rather than per-account. See onboardingSlides.js for the slide content and
+// illustrations.jsx for the per-slide artwork.
 //
 // Deliberately not run through useTranslation()/t(): every string here is
 // plain English, same as the illustrations' in-frame UI text (see the
