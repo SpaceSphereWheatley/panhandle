@@ -97,6 +97,12 @@ export const ERROR_MESSAGES_EN = {
   MESSAGE_TOO_LONG: "The message is too long",
   FEEDBACK_NOT_CONFIGURED: "Feedback isn't set up yet",
   FEEDBACK_SEND_FAILED: "Couldn't send the feedback. Try again later.",
+
+  // Recipe import
+  INVALID_RECIPE_URL: "Enter a valid recipe link",
+  RECIPE_FETCH_FAILED: "Couldn't fetch that page. Check the link and try again.",
+  RECIPE_PARSE_FAILED: "Couldn't find a recipe on that page",
+  TOO_MANY_RECIPE_IMPORTS: "Too many imports. Try again later.",
 };
 
 export const ERROR_CODES = Object.keys(ERROR_MESSAGES_EN);

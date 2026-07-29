@@ -25,6 +25,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
   // so the note re-renders in the new language on a switch instead of being
   // frozen in whichever language was active when it was last typed.
   const [similarNote, setSimilarNote] = useState({ kind: null, names: [] });
+  const [recipeUrl, setRecipeUrl] = useState("");
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -63,6 +65,28 @@ export function MealEditModal({ id, onClose, onSaved }) {
         ? { kind: "similar", names: similar.slice(0, 3).map((m) => m.name) }
         : { kind: null, names: [] }
     );
+  }
+
+  // Prefills name/ingredients from a pasted recipe URL's schema.org Recipe
+  // JSON-LD (see POST /recipe-import) — the user still reviews/edits both
+  // fields and saves via the normal flow below, same as typing them by hand.
+  async function importFromUrl() {
+    const url = recipeUrl.trim();
+    if (!url || importing) return;
+    setImporting(true);
+    try {
+      const res = await api("/recipe-import", { method: "POST", body: JSON.stringify({ url }) });
+      if (res.error) {
+        toast(apiErrorMessage(res, t), { error: true });
+        return;
+      }
+      setName(res.name);
+      checkSimilar(res.name);
+      setIngredients(res.ingredients);
+      setRecipeUrl("");
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function save() {
@@ -106,6 +130,19 @@ export function MealEditModal({ id, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose} title={t(id ? "meals.edit.title" : "meals.edit.newTitle")}>
+      <label htmlFor="meal-edit-recipe-url">{t("meals.edit.importUrlLabel")}</label>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Input
+          id="meal-edit-recipe-url"
+          value={recipeUrl}
+          onChange={(e) => setRecipeUrl(e.target.value)}
+          placeholder={t("meals.edit.importUrlPlaceholder")}
+          style={{ flex: 1 }}
+        />
+        <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
+          {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
+        </Button>
+      </div>
       <label htmlFor="meal-edit-name">{t("meals.edit.nameLabel")}</label>
       <Input
         id="meal-edit-name"

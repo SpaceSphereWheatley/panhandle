@@ -77,6 +77,11 @@ export const nb = {
   "error.FEEDBACK_NOT_CONFIGURED": "Tilbakemelding er ikke satt opp ennå",
   "error.FEEDBACK_SEND_FAILED": "Kunne ikke sende tilbakemelding. Prøv igjen senere.",
 
+  "error.INVALID_RECIPE_URL": "Skriv inn en gyldig oppskriftslenke",
+  "error.RECIPE_FETCH_FAILED": "Kunne ikke hente siden. Sjekk lenken og prøv igjen.",
+  "error.RECIPE_PARSE_FAILED": "Fant ingen oppskrift på den siden",
+  "error.TOO_MANY_RECIPE_IMPORTS": "For mange importer. Prøv igjen senere.",
+
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
   "shoppingList.pendingWrites.tooltip": "Endringer lagret på enheten – sendes når du er tilkoblet igjen",
@@ -200,6 +205,10 @@ export const nb = {
 
   "meals.edit.title": "Rediger måltid",
   "meals.edit.newTitle": "Nytt måltid",
+  "meals.edit.importUrlLabel": "Importer fra en oppskriftslenke",
+  "meals.edit.importUrlPlaceholder": "Lim inn en oppskriftslenke…",
+  "meals.edit.importButton": "Importer",
+  "meals.edit.importingButton": "Importerer…",
   "meals.edit.nameLabel": "Navn",
   "meals.edit.labelsLabel": "Etiketter",
   "meals.edit.labelsPlaceholder": "F.eks. Middag, Vegetar",

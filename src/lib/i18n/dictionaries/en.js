@@ -145,6 +145,10 @@ export const en = {
 
   "meals.edit.title": "Edit meal",
   "meals.edit.newTitle": "New meal",
+  "meals.edit.importUrlLabel": "Import from a recipe link",
+  "meals.edit.importUrlPlaceholder": "Paste a recipe URL…",
+  "meals.edit.importButton": "Import",
+  "meals.edit.importingButton": "Importing…",
   "meals.edit.nameLabel": "Name",
   "meals.edit.labelsLabel": "Labels",
   "meals.edit.labelsPlaceholder": "E.g. Dinner, Vegetarian",

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.55.0] — 2026-07-29
+
+### Added
+- **You can now paste a recipe link when adding a meal, and Panhandle fills in its name and ingredients for you.** Paste a URL from a recipe site into the new field at the top of the meal editor and hit Import — the name and ingredient list are read from the page and dropped into the existing fields, ready to review and save just like a hand-typed meal. (New `POST /recipe-import` endpoint reads the page's schema.org `Recipe` JSON-LD via a new pure `parseRecipeFromHtml` helper; ingredients flow onto the shopping list afterward through the existing meal-planning UI, unchanged.)
+
 ## [1.54.1] — 2026-07-29
 
 ### Fixed

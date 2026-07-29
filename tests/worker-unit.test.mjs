@@ -10,7 +10,7 @@ import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
-  isSuperAdmin, escapeHtml, COMMON_ITEMS,
+  isSuperAdmin, escapeHtml, COMMON_ITEMS, parseRecipeFromHtml,
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed,
 } from "../worker/index.js";
@@ -256,6 +256,109 @@ describe("sanitizeLabels", () => {
 
   test("capitalizes each label like capitalizeName", () => {
     assert.deepEqual(sanitizeLabels(["quick", "budget-friendly"]), ["Quick", "Budget-friendly"]);
+  });
+});
+
+describe("parseRecipeFromHtml", () => {
+  function ldJsonPage(...jsonObjects) {
+    const scripts = jsonObjects
+      .map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`)
+      .join("\n");
+    return `<html><head>${scripts}</head><body></body></html>`;
+  }
+
+  test("extracts name + ingredients from a plain top-level Recipe object", () => {
+    const html = ldJsonPage({
+      "@context": "https://schema.org",
+      "@type": "Recipe",
+      name: "Tomato Soup",
+      recipeIngredient: ["2 cups tomatoes", "1 onion", "1 tbsp olive oil"],
+    });
+    assert.deepEqual(parseRecipeFromHtml(html), {
+      name: "Tomato Soup",
+      ingredients: ["2 cups tomatoes", "1 onion", "1 tbsp olive oil"],
+    });
+  });
+
+  test("finds the Recipe node inside an @graph-wrapped array", () => {
+    const html = ldJsonPage({
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "WebPage", name: "Some Page" },
+        { "@type": "Recipe", name: "Chicken Curry", recipeIngredient: ["500g chicken", "1 can coconut milk"] },
+      ],
+    });
+    assert.deepEqual(parseRecipeFromHtml(html), {
+      name: "Chicken Curry",
+      ingredients: ["500g chicken", "1 can coconut milk"],
+    });
+  });
+
+  test("finds a Recipe script among multiple separate ld+json scripts, regardless of order", () => {
+    const html = ldJsonPage(
+      { "@type": "Organization", name: "Some Site" },
+      { "@type": "Recipe", name: "Pancakes", recipeIngredient: ["flour", "milk", "eggs"] },
+      { "@type": "BreadcrumbList" },
+    );
+    assert.deepEqual(parseRecipeFromHtml(html), {
+      name: "Pancakes",
+      ingredients: ["flour", "milk", "eggs"],
+    });
+  });
+
+  test("matches when @type is an array containing Recipe", () => {
+    const html = ldJsonPage({
+      "@type": ["Recipe", "NewsArticle"],
+      name: "Banana Bread",
+      recipeIngredient: ["3 bananas", "2 cups flour"],
+    });
+    assert.deepEqual(parseRecipeFromHtml(html), {
+      name: "Banana Bread",
+      ingredients: ["3 bananas", "2 cups flour"],
+    });
+  });
+
+  test("skips malformed JSON in one script and still finds a valid Recipe in another", () => {
+    const malformed = `<script type="application/ld+json">{ "@type": "Recipe", name: oops, }</script>`;
+    const valid = `<script type="application/ld+json">${JSON.stringify({
+      "@type": "Recipe",
+      name: "Lentil Stew",
+      recipeIngredient: ["lentils", "carrots"],
+    })}</script>`;
+    const html = `<html><head>${malformed}${valid}</head></html>`;
+    assert.deepEqual(parseRecipeFromHtml(html), {
+      name: "Lentil Stew",
+      ingredients: ["lentils", "carrots"],
+    });
+  });
+
+  test("returns null when no ld+json script is present", () => {
+    assert.equal(parseRecipeFromHtml("<html><head></head><body>No recipe here</body></html>"), null);
+  });
+
+  test("returns null when a Recipe node has no ingredients", () => {
+    const html = ldJsonPage({ "@type": "Recipe", name: "Mystery Dish" });
+    assert.equal(parseRecipeFromHtml(html), null);
+  });
+
+  test("falls back to an 'ingredients' key when recipeIngredient is absent", () => {
+    const html = ldJsonPage({ "@type": "Recipe", name: "Fallback Stew", ingredients: ["water", "salt"] });
+    assert.deepEqual(parseRecipeFromHtml(html), { name: "Fallback Stew", ingredients: ["water", "salt"] });
+  });
+
+  test("uses the first element when name is given as an array", () => {
+    const html = ldJsonPage({ "@type": "Recipe", name: ["Primary Name", "Alt Name"], recipeIngredient: ["salt"] });
+    assert.deepEqual(parseRecipeFromHtml(html), { name: "Primary Name", ingredients: ["salt"] });
+  });
+
+  test("caps ingredient count and per-ingredient string length", () => {
+    const manyIngredients = Array.from({ length: 200 }, (_, i) => `ingredient ${i}`);
+    manyIngredients[0] = "x".repeat(500);
+    const html = ldJsonPage({ "@type": "Recipe", name: "Huge Recipe", recipeIngredient: manyIngredients });
+    const result = parseRecipeFromHtml(html);
+    assert.ok(result);
+    assert.equal(result.ingredients.length, 60);
+    assert.equal(result.ingredients[0].length, 200);
   });
 });
 

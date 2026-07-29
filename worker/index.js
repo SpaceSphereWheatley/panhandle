@@ -940,6 +940,75 @@ export function sanitizeLabels(labels) {
   return out;
 }
 
+// ---------- recipe import (paste a URL -> meal name + ingredients) ----------
+const MAX_RECIPE_INGREDIENTS = 60;
+const MAX_RECIPE_INGREDIENT_LEN = 200;
+const MAX_RECIPE_NAME_LEN = 200;
+const RECIPE_FETCH_CAP_BYTES = 3_000_000; // ~3MB; Content-Length can't be trusted alone
+
+// Reads a ReadableStream up to `capBytes`, decoding as UTF-8 text. Recipe
+// JSON-LD is almost always in <head>/early <body>, well before any multi-MB
+// page would be cut off, so a truncated read still reaches the parser intact.
+async function readCapped(stream, capBytes) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let total = 0, text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    text += decoder.decode(value, { stream: true });
+    if (total >= capBytes) { reader.cancel(); break; }
+  }
+  return text;
+}
+
+function findRecipeNode(node) {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findRecipeNode(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!node || typeof node !== "object") return null;
+  const types = Array.isArray(node["@type"]) ? node["@type"] : [node["@type"]];
+  if (types.some((t) => typeof t === "string" && t.toLowerCase() === "recipe")) return node;
+  if (node["@graph"]) return findRecipeNode(node["@graph"]);
+  return null;
+}
+
+function cleanRecipeNode(node) {
+  const rawName = Array.isArray(node.name) ? node.name[0] : node.name;
+  const name = typeof rawName === "string" ? rawName.trim().slice(0, MAX_RECIPE_NAME_LEN) : "";
+  const rawIngredients = Array.isArray(node.recipeIngredient)
+    ? node.recipeIngredient
+    : Array.isArray(node.ingredients) ? node.ingredients : [];
+  const ingredients = rawIngredients
+    .filter((i) => typeof i === "string" && i.trim())
+    .map((i) => i.trim().slice(0, MAX_RECIPE_INGREDIENT_LEN))
+    .slice(0, MAX_RECIPE_INGREDIENTS);
+  if (!name || !ingredients.length) return null;
+  return { name, ingredients };
+}
+
+// Extracts { name, ingredients } from a page's schema.org Recipe JSON-LD, or
+// null if none found/usable. Deliberately shallow: a top-level array of
+// <script> blocks plus one level of @graph unwrapping covers the large
+// majority of real recipe sites without a general JSON-LD graph walker.
+export function parseRecipeFromHtml(html) {
+  const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const [, raw] of scripts) {
+    let data;
+    try { data = JSON.parse(raw.trim()); } catch { continue; }
+    const node = findRecipeNode(data);
+    if (!node) continue;
+    const cleaned = cleanRecipeNode(node);
+    if (cleaned) return cleaned;
+  }
+  return null;
+}
+
 // ---------- push notification helpers (TODO #7 phases 1-2) ----------
 // HH:mm, minutes restricted to 15-minute increments to match the cron's
 // check granularity (see runReminderPass below) — any other value would
@@ -1098,6 +1167,7 @@ const RATE_LIMITS = {
   forgot_password: { windowMs: 60 * 60 * 1000, max: 5 }, // 5/hour/IP
   feedback: { windowMs: 60 * 60 * 1000, max: 5 },        // 5/hour/IP
   invite_redeem: { windowMs: 60 * 60 * 1000, max: 8 },   // 8/hour/IP
+  recipe_import: { windowMs: 60 * 60 * 1000, max: 20 },  // 20/hour/IP
 };
 async function checkRateLimit(env, ip, kind) {
   const { windowMs, max } = RATE_LIMITS[kind];
@@ -2868,6 +2938,44 @@ export default {
       });
       await env.DB.batch(stmts);
       return authedJson({ ok: true, order });
+    }
+
+    // ===== RECIPE IMPORT =====
+    // Fetches a user-supplied recipe URL and extracts name + ingredients from
+    // its schema.org Recipe JSON-LD, so MealEditModal can prefill its fields
+    // instead of the user retyping them. Saving still goes through the
+    // existing POST/PATCH /meals unchanged — this never touches meal_catalogue.
+    if (path === "/recipe-import" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "recipe_import"))) {
+        return authedErr("TOO_MANY_RECIPE_IMPORTS", 429);
+      }
+      const body = await readJson(request);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
+      // Recorded before validation, same as /feedback's recordAttempt placement.
+      await recordAttempt(env, ip, "recipe_import");
+
+      let parsedUrl;
+      try { parsedUrl = new URL((body.url || "").trim()); } catch { parsedUrl = null; }
+      if (!parsedUrl || !["http:", "https:"].includes(parsedUrl.protocol)) {
+        return authedErr("INVALID_RECIPE_URL", 400);
+      }
+
+      let html;
+      try {
+        const res = await fetch(parsedUrl.toString(), {
+          signal: AbortSignal.timeout(8000),
+          headers: { "Accept": "text/html", "User-Agent": "PanhandleRecipeImport/1.0 (+https://panhandle.app)" },
+        });
+        if (!res.ok) return authedErr("RECIPE_FETCH_FAILED", 502);
+        html = await readCapped(res.body, RECIPE_FETCH_CAP_BYTES);
+      } catch {
+        return authedErr("RECIPE_FETCH_FAILED", 502);
+      }
+
+      const recipe = parseRecipeFromHtml(html);
+      if (!recipe) return authedErr("RECIPE_PARSE_FAILED", 422);
+      return authedJson({ ok: true, name: recipe.name, ingredients: recipe.ingredients });
     }
 
     // ===== MEALS =====
