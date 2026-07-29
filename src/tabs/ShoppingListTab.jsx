@@ -7,7 +7,6 @@ import { cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/s
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
-import { avatarColorFor } from "../lib/avatarColor.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
@@ -152,7 +151,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const intensity = useDesignIntensity();
   const isDesktop = useIsDesktop();
   const { shouldAnimate } = useMotionConfig();
-  const { nameFor } = useListUsers();
+  const { nameFor, colorFor } = useListUsers();
   const { order: categoryOrder } = useCategoryOrder();
   const confirm = useConfirm();
   const { user: currentUser } = useAuth();
@@ -909,7 +908,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             >
               {presentUsers.map((u, i) => (
                 <div key={u} style={{ marginLeft: i === 0 ? 0 : -8, border: "2px solid var(--surface-page)", borderRadius: "50%" }}>
-                  <Avatar name={nameFor(u)} color={avatarColorFor(u)} size={20} />
+                  <Avatar name={nameFor(u)} color={colorFor(u)} size={20} />
                 </div>
               ))}
             </div>

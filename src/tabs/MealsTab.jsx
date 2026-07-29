@@ -6,7 +6,6 @@ import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
 import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
-import { avatarColorFor } from "../lib/avatarColor.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
@@ -96,8 +95,8 @@ function agendaListStyle(density) {
 // muted, with a small "usual" badge instead of a differently-placed text
 // hint. `Avatar` has no style/border prop, so the muted state is hand-built
 // rather than extending the shared component for this one Meals-specific case.
-function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
-  if (!muted) return <Avatar name={nameFor(name)} color={avatarColorFor(name)} size={size} />;
+function ResponsibleAvatar({ name, nameFor, colorFor, size, muted, t }) {
+  if (!muted) return <Avatar name={nameFor(name)} color={colorFor(name)} size={size} />;
   const initial = (nameFor(name) || name)[0]?.toUpperCase();
   // Badge scales with the avatar itself so it stays proportional across the
   // two call sites' very different sizes, instead of one fixed pixel size.
@@ -149,7 +148,7 @@ function ResponsibleAvatar({ name, nameFor, size, muted, t }) {
 // (currently selected) week's rows are tappable — the ones peeking in from
 // either side during a drag are a preview, not live controls, until you
 // actually swipe to them.
-function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, density, paneWidth }) {
+function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, density, paneWidth }) {
   const t = useTranslation();
   const { lang } = useLanguage();
   const days = weekDays(monday);
@@ -317,7 +316,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                       )}
                       {cozy && responsible && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                          <ResponsibleAvatar name={responsible} nameFor={nameFor} size={32} muted={muted} t={t} />
+                          <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={32} muted={muted} t={t} />
                           <span
                             style={{
                               fontFamily: "var(--font-sans)",
@@ -349,7 +348,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, shouldAn
                         {t("meals.today")}
                       </span>
                     )}
-                    {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} size={40} muted={muted} t={t} />}
+                    {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={40} muted={muted} t={t} />}
                     <i className="ph ph-caret-right" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", flexShrink: 0 }} aria-hidden="true" />
                   </div>
                 </CardComponent>
@@ -365,7 +364,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const t = useTranslation();
   const { lang } = useLanguage();
   const { schedule, ensureLoaded } = useRecurring();
-  const { nameFor } = useListUsers();
+  const { nameFor, colorFor } = useListUsers();
   const isDesktop = useIsDesktop();
   const { shouldAnimate, transition } = useMotionConfig();
   // Kompakt (one line/day) vs Behagelig (adds a second line spelling out
@@ -710,6 +709,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                 today={today}
                 schedule={schedule}
                 nameFor={nameFor}
+                colorFor={colorFor}
                 shouldAnimate={shouldAnimate}
                 transition={transition}
                 active={active}

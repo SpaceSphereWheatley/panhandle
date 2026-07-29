@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.54.1] — 2026-07-29
+
+### Fixed
+- **Every person on the meal plan now gets their own distinct color.** Two household members' avatars could previously land on the same color by coincidence, making it harder to tell at a glance whose turn it is; colors are now assigned so no two current list members share one (up to the 10-person household cap). Also applies to the "also here" avatars on the shopping list. (`avatarColorForIndex` in `src/lib/avatarColor.js`, keyed by each person's position in `GET /list-users`' member list via a new `colorFor` in `ListUsersContext`.)
+
 ## [1.54.0] — 2026-07-29
 
 ### Added
