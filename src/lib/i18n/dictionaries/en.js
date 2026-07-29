@@ -54,6 +54,8 @@ export const en = {
   "shoppingList.toast.markAllBoughtFailed": "Couldn't mark items bought – check your connection",
   "shoppingList.summary.itemsLeft": { one: "{count} item left", other: "{count} items left" },
   "shoppingList.summary.allBought": "All done",
+  "shoppingList.allBought.title": "Nothing left to buy",
+  "shoppingList.allBought.description": "Nice work — everything's checked off.",
 
   "itemCard.markImportant": "Mark as important",
   "itemCard.unmarkImportant": "Remove as important",

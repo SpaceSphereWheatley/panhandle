@@ -105,6 +105,8 @@ export const nb = {
   "shoppingList.toast.markAllBoughtFailed": "Kunne ikke merke varer som handlet – sjekk nettforbindelsen",
   "shoppingList.summary.itemsLeft": { one: "{count} vare igjen", other: "{count} varer igjen" },
   "shoppingList.summary.allBought": "Alt er handlet",
+  "shoppingList.allBought.title": "Ingenting mer å handle",
+  "shoppingList.allBought.description": "Godt jobbet — alt er krysset av.",
 
   "itemCard.markImportant": "Merk som viktig",
   "itemCard.unmarkImportant": "Fjern som viktig",

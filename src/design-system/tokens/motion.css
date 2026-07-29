@@ -68,6 +68,20 @@
   50% { opacity: 1; }
 }
 
+/* Shopping list "all bought" pill/marker entrance (ShoppingListTab.jsx).
+   Plays once, the moment the last item's own resolve animation finishes —
+   never on a plain re-render of an already-done list (a poll tick, a
+   reopen, another device's write), which only ever renders the rest state
+   these keyframes end on. */
+@keyframes ph-allbought-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes ph-allbought-tick {
+  from { stroke-dashoffset: 14; }
+  to   { stroke-dashoffset: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
