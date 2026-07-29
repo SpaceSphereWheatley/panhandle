@@ -493,27 +493,27 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     });
   }
 
-  // End-of-trip sweep (TODO #100): clear every bought line at once instead of
-  // removing them one at a time from "Recently bought". Confirmed first since it's
-  // a bulk delete; online-only (not part of the offline write queue, which is
-  // scoped to add/toggle/important). The catalogue rows stay, so anything
-  // cleared can be re-added and its purchase stats/suggestions are untouched.
-  async function clearBought() {
+  // End-of-trip sweep: marks every still-unbought item bought in one shot
+  // instead of one at a time. Confirmed first since it's a bulk mutation
+  // visible to the whole household; online-only (not part of the offline
+  // write queue, which is scoped to add/toggle/important).
+  async function markAllBought() {
     if (
-      !(await confirm(t("shoppingList.confirm.clearBought.body"), {
-        title: t("shoppingList.confirm.clearBought.title"),
-        confirmLabel: t("shoppingList.confirm.clearBought.confirmLabel"),
+      !(await confirm(t("shoppingList.confirm.markAllBought.body"), {
+        title: t("shoppingList.confirm.markAllBought.title"),
+        confirmLabel: t("shoppingList.confirm.markAllBought.confirmLabel"),
       }))
     )
       return;
     const snapshot = items;
     haptic();
-    setItems((prev) => prev.filter((it) => !it.bought));
+    const boughtAt = new Date().toISOString();
+    setItems((prev) => prev.map((it) => (it.bought ? it : { ...it, bought: 1, bought_at: boughtAt, important: 0 })));
     try {
-      await api("/list/bought", { method: "DELETE" });
+      await api("/list/mark-all-bought", { method: "POST" });
     } catch {
       setItems(snapshot);
-      toast(t("shoppingList.toast.clearFailed"), { error: true });
+      toast(t("shoppingList.toast.markAllBoughtFailed"), { error: true });
       return;
     }
     loadList();
@@ -838,67 +838,35 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <div
+              <button
+                onClick={toggleBoughtCollapsed}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
+                  gap: 6,
+                  background: "none",
+                  border: "none",
+                  fontFamily: "var(--font-sans)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-2xs)",
+                  fontWeight: 700,
+                  color: clusterFor("Recently bought").on,
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                  padding: 0,
                   marginBottom: boughtCollapsed ? 0 : 8,
                 }}
               >
-                <button
-                  onClick={toggleBoughtCollapsed}
+                <span>{t("shoppingList.section.recentlyBought")}</span>
+                <UiIcon
+                  name="chevronDown"
+                  size={14}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "none",
-                    border: "none",
-                    fontFamily: "var(--font-sans)",
-                    cursor: "pointer",
-                    fontSize: "var(--text-2xs)",
-                    fontWeight: 700,
-                    color: clusterFor("Recently bought").on,
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--tracking-wide)",
-                    padding: 0,
+                    transition: "transform var(--duration-fast) var(--ease-out)",
+                    transform: boughtCollapsed ? "rotate(-90deg)" : "none",
                   }}
-                >
-                  <span>{t("shoppingList.section.recentlyBought")}</span>
-                  <UiIcon
-                    name="chevronDown"
-                    size={14}
-                    style={{
-                      transition: "transform var(--duration-fast) var(--ease-out)",
-                      transform: boughtCollapsed ? "rotate(-90deg)" : "none",
-                    }}
-                  />
-                </button>
-                {/* End-of-trip sweep (TODO #100) — clears every bought line at
-                    once. Sits next to the section it acts on rather than in the
-                    FAB, so it reads as "clear this list", not a global action. */}
-                <button
-                  onClick={clearBought}
-                  title={t("shoppingList.clearBought.tooltip")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "none",
-                    border: "none",
-                    fontFamily: "var(--font-sans)",
-                    cursor: "pointer",
-                    fontSize: "var(--text-2xs)",
-                    fontWeight: "var(--weight-semibold)",
-                    color: "var(--text-tertiary)",
-                    padding: 0,
-                  }}
-                >
-                  <UiIcon name="broom" size={13} />
-                  {t("shoppingList.clearBought.label")}
-                </button>
-              </div>
+                />
+              </button>
               {/* No onToggleImportant here: a bought item's important flag is
                   always cleared server-side (see toggleItem/worker's /toggle
                   handler), so marking one important here would have nothing
@@ -930,6 +898,17 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             label: t("shoppingList.fab.notifyHousehold"),
             onClick: pingHousehold,
           },
+          // Only offered while there's something left to mark — an
+          // all-bought list has nothing for this action to do.
+          ...(unbought.length > 0
+            ? [
+                {
+                  icon: "checks",
+                  label: t("shoppingList.fab.markAllBought"),
+                  onClick: markAllBought,
+                },
+              ]
+            : []),
         ]}
         badge={
           suggestedItems.length > 0 ? (
