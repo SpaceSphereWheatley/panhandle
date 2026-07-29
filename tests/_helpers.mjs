@@ -139,3 +139,18 @@ export async function seedAndLogin(base, username, password) {
   const { token } = await res.json();
   return { token, auth: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } };
 }
+
+// Runs arbitrary SQL against the same isolated local-D1 state the currently
+// running worker uses (see persistPath above) — for tests that need to
+// manipulate rows no HTTP endpoint exposes, e.g. backdating an expiry
+// timestamp. Same `wrangler d1 execute --local` mechanism as bootstrapAccount.
+export async function runSql(sql) {
+  const sqlFile = path.join(ROOT, `.test-sql-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
+  writeFileSync(sqlFile, sql);
+  try {
+    const persistArgs = persistPath ? ["--persist-to", persistPath] : [];
+    await run("npx", ["wrangler", "d1", "execute", "panhandle", "--local", "--file", sqlFile, ...persistArgs]);
+  } finally {
+    unlinkSync(sqlFile);
+  }
+}

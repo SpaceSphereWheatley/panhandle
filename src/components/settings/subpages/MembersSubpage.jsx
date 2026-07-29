@@ -1,59 +1,73 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../../lib/api.js";
-import { Badge, Button, Card, Input } from "../../../design-system/index.js";
+import { Badge, Button, Card } from "../../../design-system/index.js";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { useListUsers } from "../../../context/ListUsersContext.jsx";
-import { CredentialsModal } from "../../CredentialsModal.jsx";
+import { InviteLinkModal } from "../../InviteLinkModal.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
-import { FieldLabel } from "../FieldLabel.jsx";
 import { ManagementRow } from "../ManagementRow.jsx";
 import { useConfirm } from "../../../context/ConfirmContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
-import { useTranslation } from "../../../context/LanguageContext.jsx";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { dateLocale } from "../../../lib/i18n/dateLocale.js";
 import { useMotionConfig } from "../../../hooks/useMotionConfig.js";
 import { apiErrorMessage } from "../../../lib/apiError.js";
 
 const MotionRow = motion(ManagementRow);
 
-// "Husstandsmedlemmer" subpage: who's on the list, plus add/remove. Owners
-// only — the nav row into it is owner-gated in SettingsRoot, and the isOwner
-// check below is the backstop for a stale history entry restoring this path
-// for someone who has since lost owner. Used to be half of "Vårt hjem",
-// sharing a page with the (everyone-can-use) dinner schedule.
+// "Husstandsmedlemmer" subpage: who's on the list, plus invite/remove.
+// Owners only — the nav row into it is owner-gated in SettingsRoot, and the
+// isOwner check below is the backstop for a stale history entry restoring
+// this path for someone who has since lost owner. Used to be half of "Vårt
+// hjem", sharing a page with the (everyone-can-use) dinner schedule.
 export function MembersSubpage() {
   const { user: currentUser, isOwner } = useAuth();
   const { listUsers, refresh } = useListUsers();
   const confirm = useConfirm();
   const toast = useToast();
-  const t = useTranslation();
+  const { lang, t } = useLanguage();
   const { shouldAnimate, transition } = useMotionConfig();
-  const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [creds, setCreds] = useState(null);
+  const [invite, setInvite] = useState(null);
+  const [newLink, setNewLink] = useState(null);
 
-  const full = listUsers.length >= 10;
+  useEffect(() => {
+    api("/list-invites").then((res) => {
+      if (!res.error) setInvite(res);
+    });
+  }, []);
 
-  async function addMember() {
-    const name = newName.trim();
-    const email = newEmail.trim();
-    if (!name) {
-      toast(t("settings.admin.toast.enterName"), { error: true });
-      return;
+  async function generateInvite() {
+    if (invite?.active) {
+      const ok = await confirm(t("settings.household.members.invite.confirmRegenerate.body"), {
+        title: t("settings.household.members.invite.confirmRegenerate.title"),
+        confirmLabel: t("settings.household.members.invite.confirmRegenerate.confirmLabel"),
+      });
+      if (!ok) return;
     }
-    if (!email) {
-      toast(t("settings.admin.toast.enterEmail"), { error: true });
-      return;
-    }
-    const res = await api("/list-users", { method: "POST", body: JSON.stringify({ name, email }) });
+    const res = await api("/list-invites", { method: "POST" });
     if (res.error) {
       toast(apiErrorMessage(res, t), { error: true });
       return;
     }
-    setNewName("");
-    setNewEmail("");
-    await refresh();
-    setCreds({ username: res.username, password: res.password });
+    setInvite({ active: true, expires_at: res.expires_at });
+    setNewLink(res.token);
+  }
+
+  async function revokeInvite() {
+    if (
+      !(await confirm(t("settings.household.members.invite.confirmRevoke.body"), {
+        title: t("settings.household.members.invite.confirmRevoke.title"),
+        confirmLabel: t("settings.household.members.invite.confirmRevoke.confirmLabel"),
+      }))
+    )
+      return;
+    const res = await api("/list-invites", { method: "DELETE" });
+    if (res.error) {
+      toast(apiErrorMessage(res, t), { error: true });
+      return;
+    }
+    setInvite({ active: false, expires_at: null });
   }
 
   async function removeMember(username) {
@@ -105,32 +119,33 @@ export function MembersSubpage() {
         </AnimatePresence>
       </SubpageSection>
 
-      <SubpageSection label={t("settings.household.members.add.label")}>
-        <FieldLabel htmlFor="members-new-name" visuallyHidden>{t("settings.household.members.add.nameField")}</FieldLabel>
-        <Input
-          id="members-new-name"
-          placeholder={t("settings.account.name.label")}
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          style={{ marginBottom: 8 }}
-        />
-        <FieldLabel htmlFor="members-new-email" visuallyHidden>{t("settings.household.members.add.emailField")}</FieldLabel>
-        <Input
-          id="members-new-email"
-          type="email"
-          placeholder={t("settings.account.email.label")}
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          style={{ marginBottom: 10 }}
-        />
-        <Button variant="primary" icon="plus" onClick={addMember} disabled={full}>
-          {t("settings.household.members.add.submit")}
+      <SubpageSection label={t("settings.household.members.invite.label")}>
+        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 10 }}>
+          {t("settings.household.members.invite.explain")}
+        </div>
+        {invite?.active && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-primary)" }}>
+                {t("settings.household.members.invite.active")}
+              </div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
+                {t("settings.household.members.invite.expiresOn", {
+                  date: new Date(invite.expires_at).toLocaleDateString(dateLocale(lang)),
+                })}
+              </div>
+            </div>
+            <Button variant="danger" size="sm" onClick={revokeInvite}>
+              {t("settings.household.members.invite.revoke")}
+            </Button>
+          </div>
+        )}
+        <Button variant="primary" icon="plus" onClick={generateInvite} disabled={listUsers.length >= 10}>
+          {t(invite?.active ? "settings.household.members.invite.regenerate" : "settings.household.members.invite.generate")}
         </Button>
       </SubpageSection>
 
-      {creds && (
-        <CredentialsModal username={creds.username} password={creds.password} onClose={() => setCreds(null)} />
-      )}
+      {newLink && <InviteLinkModal token={newLink} onClose={() => setNewLink(null)} />}
     </Card>
   );
 }

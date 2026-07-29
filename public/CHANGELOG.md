@@ -4,6 +4,18 @@
 
 ### Added
 - **New users now see a short, swipeable welcome tour the first time they open the app.** After signing up, or logging in on a new device for the first time, a four-slide intro walks through the shared shopping list, meal planning, offline support, and notifications before showing the empty list — skippable at any point. It's shown once per device rather than tied to the account (a second device, e.g. another household member's phone, still gets it), tracked by a small `ph_onboarding_seen_v1` flag (`src/lib/onboarding.js`). The slides (`OnboardingFlow.jsx`/`illustrations.jsx`) reuse the app's existing design tokens and motion settings — including respecting reduced-motion and the "classic" density preference — and are always in English regardless of device language, the same as meal names are never translated. It can also be replayed any time via Settings → About → "Show welcome tour", next to "What's new?" and "Send feedback" (`AboutFooter.jsx`) — this doesn't touch the first-login flag, it just re-shows the same tour as a full-screen overlay.
+- **Adding someone to your household is now a shareable invite link instead
+  of a generated password you have to hand over yourself.** Settings →
+  Members now has a "Generate invite link" button instead of a name/email
+  form — send the link to whoever you want to add, and they pick their own
+  name, email, and password (or sign in with Google) when they open it. The
+  old flow created an account with a random password up front, before the
+  person had even agreed to join; the new one only creates an account once
+  the invite is actually redeemed (`list_invites` table, single-use,
+  SHA-256-hashed token, 7-day expiry — same pattern as password-reset
+  links). Only one invite link is active per household at a time;
+  generating a new one or revoking it invalidates whatever link was out
+  there before.
 
 ## [1.51.7] — 2026-07-28
 
