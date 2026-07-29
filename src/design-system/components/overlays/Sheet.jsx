@@ -73,10 +73,15 @@ export function Sheet({ open = true, onClose, title, children, className, placem
           focusable) — without it, focus-trap throws whenever a sheet mounts
           with no tabbable content yet, e.g. a modal showing only a loading
           spinner before its data arrives, taking down the whole app since
-          there's no error boundary. */}
+          there's no error boundary. `allowOutsideClick: true` is required
+          too: by default focus-trap preventDefault+stops propagation on any
+          click outside the trapped element (to keep focus from "escaping"),
+          which silently ate the backdrop's own onClick below before it ever
+          fired — clicking outside a modal did nothing on desktop even though
+          Escape worked, since Escape bypasses the trap entirely. */}
       <FocusTrap
         active={open}
-        focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false, fallbackFocus: () => containerRef.current }}
+        focusTrapOptions={{ escapeDeactivates: false, clickOutsideDeactivates: false, allowOutsideClick: true, fallbackFocus: () => containerRef.current }}
       >
         <div
           ref={containerRef}
