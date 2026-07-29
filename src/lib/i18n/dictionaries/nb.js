@@ -53,6 +53,8 @@ export const nb = {
 
   "error.INVALID_OR_EXPIRED_INVITE": "Denne invitasjonslenken er ugyldig eller har utløpt",
 
+  "error.CALENDAR_TOKEN_NOT_FOUND": "Fant ikke kalenderfeeden",
+
   "error.EMPTY_NAME": "Tomt navn",
   "error.ENTER_NAME": "Skriv inn et navn",
   "error.ITEM_NOT_FOUND": "Fant ikke vare",
@@ -242,6 +244,7 @@ export const nb = {
   "settings.nav.store": "Butikkoppsett",
   "settings.nav.admin": "Administrasjon",
   "settings.nav.stats": "Statistikk",
+  "settings.nav.calendarSync": "Kalendersynk",
   "settings.root.group.me": "Meg",
   "settings.root.group.household": "Husstanden",
   "settings.root.appearance.supporting": "Tema, design og vibrasjon",
@@ -251,6 +254,7 @@ export const nb = {
   "settings.root.dinnerDuty.supporting": "Hvem lager middag hvilke dager",
   "settings.root.store.supporting": "Varegrupper og gamle varer",
   "settings.root.admin.supporting": "Brukere, lister og statistikk",
+  "settings.root.calendarSync.supporting": "Synk middagsplanen til kalenderen din",
 
   "settings.appearance.intensity.label": "Designintensitet",
   "settings.appearance.intensity.description": "Hvor uttrykksfullt appen ser ut — farger, dybde og animasjon. Gjelder bare denne enheten.",
@@ -318,6 +322,28 @@ export const nb = {
   "settings.store.stale.days": "Antall dager",
   "settings.store.stale.decrease": "Reduser antall dager",
   "settings.store.stale.increase": "Øk antall dager",
+
+  "settings.calendarSync.label": "Abonner fra kalenderappen din",
+  "settings.calendarSync.explain": "Generer en personlig lenke og legg den til i Google Kalender, Apple Kalender eller Outlook som et \"abonner via URL\"-abonnement. Nye og endrede planlagte middager dukker opp automatisk — kalenderapper oppdaterer seg som regel hver time, ikke øyeblikkelig.",
+  "settings.calendarSync.scope.label": "Hva som vises",
+  "settings.calendarSync.scope.all": "Alles planlagte middager",
+  "settings.calendarSync.scope.mine": "Bare mine dager",
+  "settings.calendarSync.scope.description": "Du kan endre dette når som helst uten at lenken du allerede har lagt til i kalenderappen slutter å virke.",
+  "settings.calendarSync.active": "Kalenderlenke aktiv",
+  "settings.calendarSync.generate": "Generer kalenderlenke",
+  "settings.calendarSync.regenerate": "Generer ny lenke",
+  "settings.calendarSync.revoke": "Opphev",
+  "settings.calendarSync.confirmRevoke.title": "Opphev kalenderlenken?",
+  "settings.calendarSync.confirmRevoke.body": "Kalenderappen din vil slutte å motta oppdateringer fra dette abonnementet.",
+  "settings.calendarSync.confirmRevoke.confirmLabel": "Opphev",
+  "settings.calendarSync.confirmRegenerate.title": "Generere en ny lenke?",
+  "settings.calendarSync.confirmRegenerate.body": "Den nåværende kalenderlenken slutter å virke så snart du genererer en ny — du må abonnere på nytt i kalenderappen din.",
+  "settings.calendarSync.confirmRegenerate.confirmLabel": "Generer ny lenke",
+  "settings.calendarSync.linkModalTitle": "Kalenderlenke opprettet",
+  "settings.calendarSync.linkModalNote": "Legg til denne lenken i kalenderappen din som et URL-abonnement — Google Kalender: «Andre kalendere → Fra URL»; Apple Kalender: «Arkiv → Nytt kalenderabonnement»; Outlook: «Legg til kalender → Abonner fra nettet».",
+  "settings.calendarSync.copyLink": "Kopier lenke",
+  "settings.calendarSync.copied": "Lenke kopiert",
+  "settings.calendarSync.copyFailed": "Kunne ikke kopiere – merk og kopier lenken manuelt",
 
   "settings.household.members.count": "{count} / 10 brukere",
   "settings.household.members.label": "Medlemmer",

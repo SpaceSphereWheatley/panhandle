@@ -1160,6 +1160,91 @@ async function sha256Hex(str) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// ---------- ICS calendar feed (GET /calendar/{token}.ics) ----------
+// RFC 5545 (iCalendar) helpers, kept as small pure functions independent of
+// the DB/request so they're directly unit-testable (tests/worker-unit.test.mjs).
+
+// RFC 5545 §3.3.11 TEXT escaping. Backslash must be escaped first, or the
+// backslashes these replacements insert would themselves get re-escaped.
+export function escapeIcsText(str) {
+  return String(str)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+// RFC 5545 §3.1 line folding: a content line over 75 octets must be
+// soft-wrapped as CRLF + a single leading space, or some calendar clients
+// (Outlook in particular) silently truncate the unfolded remainder.
+export function foldIcsLine(line) {
+  const bytes = new TextEncoder().encode(line);
+  if (bytes.length <= 75) return line;
+  let result = "";
+  let i = 0;
+  let first = true;
+  while (i < bytes.length) {
+    const limit = first ? 75 : 74; // continuation lines lose 1 octet to the leading space
+    let end = Math.min(i + limit, bytes.length);
+    while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--; // don't split a UTF-8 sequence
+    result += (first ? "" : "\r\n ") + new TextDecoder().decode(bytes.slice(i, end));
+    i = end;
+    first = false;
+  }
+  return result;
+}
+
+// Scopes+annotates raw meal_plan/meal_catalogue rows for the feed.
+// scope="mine" keeps only the requesting user's own days; "all" keeps every
+// row. `responsible` isn't always a real username — the meal planner lets it
+// be free text (e.g. the "Other" fallback) — so display-name resolution
+// falls back to the raw string when no list member matches.
+export function scopeFilterRows(rows, { scope, username, nameByUsername }) {
+  const lowerUsername = (username || "").toLowerCase();
+  return rows
+    .filter((r) => scope !== "mine" || (r.responsible || "").toLowerCase() === lowerUsername)
+    .map((r) => ({
+      plan_date: r.plan_date,
+      meal_name: r.meal_name || null,
+      responsible_display: nameByUsername.get((r.responsible || "").toLowerCase()) || r.responsible || null,
+    }));
+}
+
+// Pure serializer: scope-filtered rows -> full VCALENDAR text. One all-day
+// VEVENT per row that has a meal name; a planned day with no meal chosen yet
+// (meal_name null) is skipped rather than emitting an empty event. UID is
+// keyed on plan_date (unique per list, per meal_plan's own UNIQUE(list_id,
+// plan_date)) so a client that caches by UID sees an edited day update in
+// place instead of duplicating.
+export function buildIcsFeed(rows, { showResponsible = false, calendarName = "Panhandle meal plan" } = {}) {
+  const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Panhandle//Meal Plan//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
+  ];
+  for (const row of rows) {
+    if (!row.meal_name) continue;
+    const summary = showResponsible && row.responsible_display
+      ? `${row.meal_name} – ${row.responsible_display}`
+      : row.meal_name;
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:plan-${row.plan_date}@panhandle.app`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${row.plan_date.replace(/-/g, "")}`,
+      `DTEND;VALUE=DATE:${addDaysIso(row.plan_date, 1).replace(/-/g, "")}`,
+      `SUMMARY:${escapeIcsText(summary)}`,
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.map(foldIcsLine).join("\r\n") + "\r\n";
+}
+
 // ---------- "Sign in with Google" ID token verification ----------
 // Public by nature (shipped in frontend JS), so it's hardcoded like other
 // public config (API_BASE, pagesUrl.hostname) rather than routed through env.
@@ -1807,6 +1892,50 @@ export default {
       return json(await authResponse(row, env));
     }
 
+    // ===== CALENDAR FEED (public) =====
+    // Subscribable ICS feed of a user's meal plan, for "subscribe by URL" in
+    // Google/Apple/Outlook Calendar. Same hash-and-lookup as the invite
+    // preview above, but non-consuming and with no expiry — this is a
+    // standing subscription a calendar client polls indefinitely, not a
+    // one-time redemption. Deliberately skips /plan's opportunistic
+    // stale-row cleanup: this route is a hot public path hit repeatedly by
+    // polling calendar clients, and the authenticated /plan endpoint already
+    // sweeps rows older than 14 days on every use, so nothing here goes
+    // unswept for long. Not rate-limited, matching the invite-preview
+    // precedent above (32 random bytes of token entropy).
+    const calendarFeedMatch = path.match(/^\/calendar\/([^/]+)\.ics$/);
+    if (calendarFeedMatch && method === "GET") {
+      const tokenHash = await sha256Hex(decodeURIComponent(calendarFeedMatch[1]));
+      const owner = await env.DB.prepare(
+        "SELECT username, list_id, ics_scope FROM users WHERE ics_token_hash = ?1"
+      ).bind(tokenHash).first();
+      if (!owner) return err("CALENDAR_TOKEN_NOT_FOUND", 404);
+
+      const scoped = owner.ics_scope === "mine";
+      let q = `SELECT p.plan_date, p.responsible, m.name AS meal_name
+        FROM meal_plan p LEFT JOIN meal_catalogue m ON m.id = p.meal_id
+        WHERE p.list_id = ?1`;
+      const binds = [owner.list_id];
+      if (scoped) { q += " AND p.responsible = ?2 COLLATE NOCASE"; binds.push(owner.username); }
+      q += " ORDER BY p.plan_date ASC";
+      const { results } = await env.DB.prepare(q).bind(...binds).all();
+
+      const { results: listUsers } = await env.DB.prepare(
+        "SELECT username, name FROM users WHERE list_id = ?1"
+      ).bind(owner.list_id).all();
+      const nameByUsername = new Map(listUsers.map((u) => [u.username.toLowerCase(), u.name || u.username]));
+      const rows = scopeFilterRows(results, { scope: owner.ics_scope, username: owner.username, nameByUsername });
+
+      const list = await env.DB.prepare("SELECT name FROM lists WHERE id = ?1").bind(owner.list_id).first();
+      const ics = buildIcsFeed(rows, {
+        showResponsible: !scoped,
+        calendarName: list?.name ? `${list.name} meal plan` : "Panhandle meal plan",
+      });
+      return new Response(ics, {
+        headers: { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "max-age=1800" },
+      });
+    }
+
     // ===== AUTH REQUIRED BELOW =====
     const user = await requireAuth(request, env);
     if (!user) return err("UNAUTHORIZED", 401);
@@ -2419,6 +2548,47 @@ export default {
     if (path === "/list-invites" && method === "DELETE") {
       if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
       await env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(user.list_id).run();
+      return authedJson({ ok: true });
+    }
+
+    // ===== CALENDAR FEED settings =====
+    // Personal, not household — any list member manages their own feed, no
+    // owner/admin gate (like /push/reminder-settings). Token and scope are
+    // updated independently on purpose: changing scope must not rotate the
+    // token, or every calendar app already subscribed to it (which cache/poll
+    // slowly, on the order of hours) would silently start 404ing until the
+    // user re-subscribes. GET never returns the token itself, same contract
+    // as /list-invites.
+    if (path === "/calendar-feed" && method === "GET") {
+      const row = await env.DB.prepare(
+        "SELECT ics_token_hash, ics_scope FROM users WHERE username = ?1"
+      ).bind(user.username).first();
+      return authedJson({ active: !!row.ics_token_hash, scope: row.ics_scope });
+    }
+
+    if (path === "/calendar-feed" && method === "POST") {
+      const body = await readJson(request);
+      if (!body || (body.scope !== "all" && body.scope !== "mine")) {
+        return authedErr("INVALID_REQUEST", 400);
+      }
+      await env.DB.prepare("UPDATE users SET ics_scope = ?1 WHERE username = ?2")
+        .bind(body.scope, user.username).run();
+      return authedJson({ scope: body.scope });
+    }
+
+    if (path === "/calendar-feed/token" && method === "POST") {
+      const rawToken = b64url(crypto.getRandomValues(new Uint8Array(32)).buffer);
+      const tokenHash = await sha256Hex(rawToken);
+      await env.DB.prepare("UPDATE users SET ics_token_hash = ?1 WHERE username = ?2")
+        .bind(tokenHash, user.username).run();
+      return authedJson({ token: rawToken });
+    }
+
+    if (path === "/calendar-feed/token" && method === "DELETE") {
+      // Leaves ics_scope untouched — a later regenerate keeps the user's
+      // last-chosen scope rather than resetting to the 'all' default.
+      await env.DB.prepare("UPDATE users SET ics_token_hash = NULL WHERE username = ?1")
+        .bind(user.username).run();
       return authedJson({ ok: true });
     }
 
