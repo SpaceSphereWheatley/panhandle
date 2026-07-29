@@ -26,6 +26,11 @@ The Vite entry is named `app.html` (not `index.html`) specifically so it builds 
 - `0016_important_item_marker.sql` adds `list_items.important` — the per-line, this-trip importance flag toggled from the item card.
 - `0017_category_order.sql` adds the `category_order` table (one row per `list_id`+`category`, with a `position`) — the per-list custom aisle order (TODO #105). Additive/expand-only; a list with no rows falls back to the canonical `CATEGORIES` order via `normalizeCategoryOrder` (see Categories and people in `CLAUDE.md`).
 - `0018_catalogue_sync_state.sql` adds `catalogue_sync_state`, a single-row table backing the cron-driven `checkCatalogueSync` (see Catalogue sync in `CLAUDE.md`), which replaced `0002`/`0003`'s pattern of a hand-written one-off migration every time a common item was added — new items now only need adding to `COMMON_ITEMS` and a deploy.
+- `0019_device_only_reminders.sql` moves the meal/weekly reminder preferences off `notification_settings` and onto `push_subscriptions` (per-device, not per-list) and adds `notification_device_log` for per-device dedup (see Push notifications in `CLAUDE.md`).
+- `0020_fix_category_order_types.sql` rebuilds `category_order.list_id` as `INTEGER REFERENCES lists(id)` — it was originally `TEXT` with no FK, which silently stored D1-bound JS numbers as e.g. `"1.0"` (see Categories and people in `CLAUDE.md`).
+- `0021_drop_dead_notification_columns.sql` drops `notification_settings`'s old reminder columns (superseded by `0019`) and the unused `notification_log` table, once no deployed code referenced either.
+- `0022_english_category_keys.sql`/`0023_english_item_catalogue.sql` rewrite the stored canonical `CATEGORIES`/`item_catalogue.name` values from Norwegian to English as part of the English-first source-language restructure (see Language support in `CLAUDE.md`) — unlike every other migration here, these rewrite values live code matches on literally rather than being purely additive, so they were applied immediately before the merge rather than ahead of it.
+- `0024_list_invites.sql` adds `list_invites` (`UNIQUE(list_id)`, SHA-256-hashed single-use tokens, 7-day expiry — same store-hash pattern as `password_resets`), backing the shareable invite-link flow that replaced the owner-typed name/email add-member form (see Multi-tenant model in `CLAUDE.md`).
 
 ## Auth: extra detail
 

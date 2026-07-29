@@ -7,10 +7,10 @@ them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-21):
-1. **Bugs** — 5 low-priority latent/edge issues remain from the two QA/audit
-   passes (2026-07-18, 2026-07-20): #87, #88, #89, #92, #94. Everything else
-   from both passes, plus #114, is fixed — see `Todo_done.md`.
+**Group priority** (highest to lowest, reassessed 2026-07-29):
+1. **Bugs** — 4 low-priority latent/edge issues remain from the two QA/audit
+   passes (2026-07-18, 2026-07-20): #87, #88, #89, #92. Everything else
+   from both passes, plus #94 and #114, is fixed — see `Todo_done.md`.
 2. **Small UI/polish items — low value, low risk, good filler:**
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
@@ -22,10 +22,10 @@ Completed items live in `Todo_done.md`, not below.
 
 ## Bugs
 
-5 low-priority latent/edge bugs remain, found across two QA/audit passes
+4 low-priority latent/edge bugs remain, found across two QA/audit passes
 (2026-07-18 and 2026-07-20; file:line refs below are from those passes —
-verify before fixing). Everything else from both passes, plus #114, is
-fixed — see `Todo_done.md`.
+verify before fixing). Everything else from both passes, plus #94 and #114,
+is fixed — see `Todo_done.md`.
 
 ### P2 — Low (latent / edge)
 
@@ -54,14 +54,6 @@ fixed — see `Todo_done.md`.
     by-value copy" invariant. Add it to the batch, or leave an explicit
     "ephemeral, intentionally skipped" comment.
     _Value: Low · Importance: Low · Type: Bug / Data consistency_
-
-94. Service-worker asset cache grows unbounded. `sw.js` (~L56) caches
-    content-hashed JS/CSS cache-first and never prunes; `CACHE_NAME` is fixed
-    at `panhandle-shell-v1`, so every deploy's old hashed assets accumulate
-    forever. Not a correctness bug (the shell is correctly network-first), but
-    unbounded storage over many deploys. Prune stale entries, or bump a
-    versioned cache name on release.
-    _Value: Low · Importance: Low · Type: Bug / Offline / Caching_
 
 ## Data model / Account lifecycle
 

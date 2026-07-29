@@ -8,7 +8,7 @@ A shared shopping list and meal planner PWA for a household (works solo, or shar
 
 - **Shopping list** with categories, autocomplete, and one-click checkout
 - **Meal planning** with a Monday–Sunday week view (navigate to any week) and assigned responsibility
-- **Multi-tenant** — isolated per-household lists with independent owner/admin roles: admins create new lists, owners add/remove members (see `docs/multi-tenant-setup.md` for the original cutover history)
+- **Multi-tenant** — isolated per-household lists with independent owner/admin roles: owners add members via a shareable invite link and remove them, admins manage users within their own household (see `docs/multi-tenant-setup.md` for the original cutover history)
 - **Self-service accounts** — sign up directly or with Google, recover a forgotten password by email, no admin required
 - **Real-time sync** between devices (polling every 7 seconds)
 - **In-app password change** that logs out other devices
@@ -62,8 +62,7 @@ Both halves deploy automatically on push to `main`:
 
 ## Future Ideas
 
-- Add ingredients per meal, auto-push to list
-- Custom categories (editable in-app)
+- Let a user belong to multiple lists instead of exactly one
 - Expense tracking or note-taking
 
 ## License

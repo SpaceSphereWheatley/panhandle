@@ -6,6 +6,8 @@ can be picked up across separate sessions: each item has a stable ID (`T#`), a
 priority, and the phase it belongs to. Check items off as they ship.
 
 > **Note:** the working constraints below predate the Vite + React rewrite — the frontend now has a build step and a Vitest test suite; see `CLAUDE.md` for current architecture. Left as originally written since most `T#` items themselves are still accurate/shipped.
+>
+> **Effectively complete (2026-07-29).** Every `T#` item below is checked off except `T10` (decided against) and `T15` (explicitly skipped) — both closed decisions, not open work. Kept as a record of the original backlog/rationale rather than deleted, same as the "Historical" multi-tenant docs; there is no remaining actionable item here.
 
 Working constraints (as of writing, see `CLAUDE.md`): no build step, no test suite. Frontend
 changes live in `public/app.html` / `public/index.html`; backend in
