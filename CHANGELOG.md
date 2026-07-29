@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.53.4] — 2026-07-29
+
+### Fixed
+- **Clicking outside a modal (like the suggestions popup) now closes it again on desktop.** It used to only respond to the Escape key — clicking the dimmed background around it did nothing, which was confusing since that's the normal way to dismiss a dialog. This affected every modal in the app, not just suggestions, since they all share the same underlying dialog component (`Sheet.jsx`'s focus-trap configuration was silently swallowing outside clicks before they could reach its own backdrop-click handler).
+
 ## [1.53.3] — 2026-07-29
 
 ### Fixed
