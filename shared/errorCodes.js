@@ -68,6 +68,9 @@ export const ERROR_MESSAGES_EN = {
   // Invites
   INVALID_OR_EXPIRED_INVITE: "This invite link is invalid or has expired",
 
+  // Calendar feed
+  CALENDAR_TOKEN_NOT_FOUND: "Calendar feed not found",
+
   // Shopping list + catalogue
   EMPTY_NAME: "Empty name",
   ENTER_NAME: "Enter a name",

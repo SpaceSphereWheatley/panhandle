@@ -28,6 +28,7 @@ const PATHS = {
   dinnerDuty: ["dinner-duty"],
   store: ["store"],
   admin: ["admin"],
+  calendarSync: ["calendar-sync"],
 };
 
 export function SettingsRoot({ onNavigate }) {
@@ -61,6 +62,12 @@ export function SettingsRoot({ onNavigate }) {
           // row is to be recognisable to someone who can't read the current UI.
           supportingText={lang === "en" ? "English" : "Norsk"}
           onClick={() => onNavigate(PATHS.language)}
+        />
+        <SettingsRow
+          icon="calendar-plus"
+          label={t(settingsTitleKey(PATHS.calendarSync))}
+          supportingText={t("settings.root.calendarSync.supporting")}
+          onClick={() => onNavigate(PATHS.calendarSync)}
         />
       </SettingsGroup>
 

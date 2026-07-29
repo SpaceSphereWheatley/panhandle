@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.54.0] — 2026-07-29
+
+### Added
+- **You can now subscribe to the household meal plan from Google, Apple, or Outlook Calendar.** Generate a personal link in Settings → Calendar sync and add it to your calendar app as a "subscribe by URL" feed — new and changed planned meals show up automatically without needing to open Panhandle (calendar apps typically refresh every few hours, not instantly). Each person chooses whether their feed shows everyone's planned meals or just the days they're responsible for, and that choice can be changed anytime without breaking the link already added to your calendar app. (New public `GET /api/calendar/{token}.ics` feed endpoint backed by a hand-rolled RFC 5545 iCalendar serializer, per-user `ics_token_hash`/`ics_scope` columns on `users`, `migrations/0025_calendar_feed.sql`.)
+
 ## [1.53.4] — 2026-07-29
 
 ### Fixed

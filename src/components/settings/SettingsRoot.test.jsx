@@ -46,6 +46,7 @@ describe("SettingsRoot", () => {
       "Appearance",
       "Account",
       "Language",
+      "Calendar sync",
       "Notifications",
       "Household members",
       "Dinner duty",

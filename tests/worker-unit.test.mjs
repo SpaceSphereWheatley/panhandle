@@ -12,6 +12,7 @@ import {
   sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
   isSuperAdmin, escapeHtml, COMMON_ITEMS,
   osloLocalDateParts, isReminderDue, addDaysIso,
+  escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -356,6 +357,126 @@ describe("addDaysIso", () => {
 
   test("rolls across a year boundary", () => {
     assert.equal(addDaysIso("2026-12-28", 6), "2027-01-03");
+  });
+});
+
+describe("escapeIcsText", () => {
+  test("escapes backslash, semicolon, comma and newline per RFC 5545", () => {
+    assert.equal(escapeIcsText("Taco; Bean, Cheese\\Sauce\nExtra"), "Taco\\; Bean\\, Cheese\\\\Sauce\\nExtra");
+  });
+
+  test("escapes a leading backslash first so later escapes don't double-escape it", () => {
+    assert.equal(escapeIcsText("a\\,b"), "a\\\\\\,b");
+  });
+
+  test("leaves plain text untouched", () => {
+    assert.equal(escapeIcsText("Taco Tuesday"), "Taco Tuesday");
+  });
+});
+
+describe("foldIcsLine", () => {
+  test("leaves a short line untouched", () => {
+    assert.equal(foldIcsLine("SUMMARY:Taco"), "SUMMARY:Taco");
+  });
+
+  test("does not fold a line at exactly 75 octets", () => {
+    const line = "SUMMARY:" + "a".repeat(67); // 8 + 67 = 75
+    assert.equal(new TextEncoder().encode(line).length, 75);
+    assert.equal(foldIcsLine(line), line);
+  });
+
+  test("folds a line over 75 octets with CRLF + a leading space continuation", () => {
+    const line = "SUMMARY:" + "a".repeat(80);
+    const folded = foldIcsLine(line);
+    assert.ok(folded.includes("\r\n "));
+    const segments = folded.split("\r\n");
+    for (const seg of segments) {
+      assert.ok(new TextEncoder().encode(seg).length <= 75);
+    }
+    // Unfolding (strip CRLF + one leading space per continuation) recovers the original.
+    const unfolded = segments.map((s, i) => (i === 0 ? s : s.slice(1))).join("");
+    assert.equal(unfolded, line);
+  });
+
+  test("does not split a multi-byte UTF-8 character across a fold boundary", () => {
+    const line = "SUMMARY:" + "æ".repeat(80); // æ is 2 bytes in UTF-8
+    const folded = foldIcsLine(line);
+    for (const seg of folded.split("\r\n")) {
+      // A split multi-byte char would produce an unpaired continuation byte,
+      // which TextDecoder (fatal: false, default) replaces with U+FFFD.
+      assert.ok(!seg.includes("�"));
+    }
+  });
+});
+
+describe("scopeFilterRows", () => {
+  const rows = [
+    { plan_date: "2026-07-27", responsible: "ola@example.com", meal_name: "Taco" },
+    { plan_date: "2026-07-28", responsible: "Kari", meal_name: "Soup" },
+    { plan_date: "2026-07-29", responsible: "Other", meal_name: null },
+  ];
+  const nameByUsername = new Map([["ola@example.com", "Ola"], ["kari@example.com", "Kari"]]);
+
+  test("scope=all keeps every row and resolves display names by username", () => {
+    const result = scopeFilterRows(rows, { scope: "all", username: "ola@example.com", nameByUsername });
+    assert.equal(result.length, 3);
+    assert.equal(result[0].responsible_display, "Ola");
+  });
+
+  test("scope=all falls back to the raw responsible string when it isn't a known username", () => {
+    const result = scopeFilterRows(rows, { scope: "all", username: "ola@example.com", nameByUsername });
+    // "Kari" (free text, not the username "kari@example.com") and "Other" both pass through verbatim.
+    assert.equal(result[1].responsible_display, "Kari");
+    assert.equal(result[2].responsible_display, "Other");
+  });
+
+  test("scope=mine keeps only rows matching the requesting user's own username, case-insensitively", () => {
+    const result = scopeFilterRows(rows, { scope: "mine", username: "OLA@example.com", nameByUsername });
+    assert.deepEqual(result.map((r) => r.plan_date), ["2026-07-27"]);
+  });
+
+  test("scope=mine never matches a free-text responsible value", () => {
+    const result = scopeFilterRows(rows, { scope: "mine", username: "kari@example.com", nameByUsername });
+    assert.deepEqual(result, []);
+  });
+});
+
+describe("buildIcsFeed", () => {
+  test("produces a valid empty VCALENDAR for no rows", () => {
+    const ics = buildIcsFeed([]);
+    assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
+    assert.match(ics, /END:VCALENDAR\r\n$/);
+    assert.ok(!ics.includes("BEGIN:VEVENT"));
+  });
+
+  test("skips a row with no meal name", () => {
+    const rows = [{ plan_date: "2026-07-27", meal_name: null, responsible_display: "Ola" }];
+    assert.ok(!buildIcsFeed(rows).includes("BEGIN:VEVENT"));
+  });
+
+  test("emits an all-day VEVENT with DTEND one day after DTSTART", () => {
+    const rows = [{ plan_date: "2026-07-27", meal_name: "Taco", responsible_display: "Ola" }];
+    const ics = buildIcsFeed(rows);
+    assert.match(ics, /DTSTART;VALUE=DATE:20260727/);
+    assert.match(ics, /DTEND;VALUE=DATE:20260728/);
+  });
+
+  test("includes the responsible person in SUMMARY only when showResponsible is true", () => {
+    const rows = [{ plan_date: "2026-07-27", meal_name: "Taco", responsible_display: "Ola" }];
+    assert.match(buildIcsFeed(rows, { showResponsible: true }), /SUMMARY:Taco – Ola/);
+    assert.match(buildIcsFeed(rows, { showResponsible: false }), /SUMMARY:Taco\r\n/);
+  });
+
+  test("escapes special characters in the meal name and responsible person", () => {
+    const rows = [{ plan_date: "2026-07-27", meal_name: "Taco, Bean", responsible_display: "Ola; Kari" }];
+    const ics = buildIcsFeed(rows, { showResponsible: true });
+    assert.match(ics, /SUMMARY:Taco\\, Bean – Ola\\; Kari/);
+  });
+
+  test("uses CRLF line endings throughout", () => {
+    const rows = [{ plan_date: "2026-07-27", meal_name: "Taco", responsible_display: "Ola" }];
+    const ics = buildIcsFeed(rows);
+    assert.ok(!ics.replace(/\r\n/g, "").includes("\n"));
   });
 });
 
