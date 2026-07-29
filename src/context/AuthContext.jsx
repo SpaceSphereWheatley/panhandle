@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef, useState } from "react";
-import { configureApi, rawLogin, rawRegister, rawGoogleAuth } from "../lib/api.js";
+import { configureApi, rawLogin, rawRegister, rawGoogleAuth, rawAcceptInvite, rawAcceptInviteGoogle } from "../lib/api.js";
 import { clearCache } from "../lib/localCache.js";
 import { clearQueue } from "../lib/writeQueue.js";
 
@@ -129,9 +129,36 @@ export function AuthProvider({ children }) {
     return { error: null };
   }
 
+  async function acceptInvite(token, fields) {
+    setExpiredReason(null);
+    const { ok, data } = await rawAcceptInvite(token, fields);
+    if (!ok) return { error: data.error || null, code: data.code || null };
+    completeAuth(data);
+    return { error: null };
+  }
+
+  async function acceptInviteGoogle(token, credential) {
+    setExpiredReason(null);
+    const { ok, data } = await rawAcceptInviteGoogle(token, credential);
+    if (!ok) return { error: data.error || null, code: data.code || null };
+    completeAuth(data);
+    return { error: null };
+  }
+
   return (
     <AuthContext.Provider
-      value={{ ...auth, login, register, loginWithGoogle, completeAuth, updateIdentity, logout, expiredReason }}
+      value={{
+        ...auth,
+        login,
+        register,
+        loginWithGoogle,
+        acceptInvite,
+        acceptInviteGoogle,
+        completeAuth,
+        updateIdentity,
+        logout,
+        expiredReason,
+      }}
     >
       {children}
     </AuthContext.Provider>

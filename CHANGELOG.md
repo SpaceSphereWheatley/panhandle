@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.53.0] — 2026-07-29
+
+### Added
+- **Adding someone to your household is now a shareable invite link instead
+  of a generated password you have to hand over yourself.** Settings →
+  Members now has a "Generate invite link" button instead of a name/email
+  form — send the link to whoever you want to add, and they pick their own
+  name, email, and password (or sign in with Google) when they open it. The
+  old flow created an account with a random password up front, before the
+  person had even agreed to join; the new one only creates an account once
+  the invite is actually redeemed (`list_invites` table, single-use,
+  SHA-256-hashed token, 7-day expiry — same pattern as password-reset
+  links). Only one invite link is active per household at a time;
+  generating a new one or revoking it invalidates whatever link was out
+  there before.
+
 ## [1.52.0] — 2026-07-29
 
 ### Added

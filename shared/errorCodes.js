@@ -65,6 +65,9 @@ export const ERROR_MESSAGES_EN = {
   LAST_OWNER_REMOVE: "The list's only owner can't be removed",
   WOULD_LOSE_ONLY_OWNER: "The list would lose its only owner",
 
+  // Invites
+  INVALID_OR_EXPIRED_INVITE: "This invite link is invalid or has expired",
+
   // Shopping list + catalogue
   EMPTY_NAME: "Empty name",
   ENTER_NAME: "Enter a name",

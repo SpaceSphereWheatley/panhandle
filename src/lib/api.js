@@ -66,6 +66,14 @@ async function rawPost(path, body) {
   return { ok: res.ok, data };
 }
 
+// Unauthenticated GET helper, sibling to rawPost — used by the invite
+// preview, which has no body to send.
+async function rawGet(path) {
+  const res = await fetch(API_BASE + path);
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
 export function rawRegister(fields) {
   return rawPost("/register", fields);
 }
@@ -80,4 +88,16 @@ export function rawForgotPassword(email, turnstileToken) {
 
 export function rawResetPassword(token, newPassword) {
   return rawPost("/reset-password", { token, new_password: newPassword });
+}
+
+export function rawGetInvitePreview(token) {
+  return rawGet(`/list-invites/${encodeURIComponent(token)}`);
+}
+
+export function rawAcceptInvite(token, { name, email, password }) {
+  return rawPost("/invite-signup", { token, name, email, password });
+}
+
+export function rawAcceptInviteGoogle(token, credential) {
+  return rawPost("/invite-google", { token, credential });
 }

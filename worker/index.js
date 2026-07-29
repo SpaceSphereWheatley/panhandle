@@ -1097,6 +1097,7 @@ const RATE_LIMITS = {
   register: { windowMs: 60 * 60 * 1000, max: 8 },        // 8/hour/IP
   forgot_password: { windowMs: 60 * 60 * 1000, max: 5 }, // 5/hour/IP
   feedback: { windowMs: 60 * 60 * 1000, max: 5 },        // 5/hour/IP
+  invite_redeem: { windowMs: 60 * 60 * 1000, max: 8 },   // 8/hour/IP
 };
 async function checkRateLimit(env, ip, kind) {
   const { windowMs, max } = RATE_LIMITS[kind];
@@ -1672,6 +1673,126 @@ export default {
       return json(await authResponse({ ...userRow, token_version: newVersion }, env));
     }
 
+    // ===== INVITE PREVIEW (public) =====
+    // Unauthenticated lookup so the invite-accept screen can show who/what
+    // the invite is for before the invitee picks a signup path. Same
+    // hash-and-lookup as /reset-password, read-only — doesn't consume it.
+    const invitePreviewMatch = path.match(/^\/list-invites\/([^/]+)$/);
+    if (invitePreviewMatch && method === "GET") {
+      const tokenHash = await sha256Hex(decodeURIComponent(invitePreviewMatch[1]));
+      const invite = await env.DB.prepare(
+        "SELECT list_id FROM list_invites WHERE token_hash = ?1 AND expires_at > ?2"
+      ).bind(tokenHash, Date.now()).first();
+      if (!invite) return err("INVALID_OR_EXPIRED_INVITE", 400);
+      const list = await env.DB.prepare("SELECT name FROM lists WHERE id = ?1").bind(invite.list_id).first();
+      // Any current owner's display name — the invite is a property of the
+      // list, not of whichever owner happened to generate it.
+      const owner = await env.DB.prepare(
+        "SELECT name, username FROM users WHERE list_id = ?1 AND is_owner = 1 ORDER BY username LIMIT 1"
+      ).bind(invite.list_id).first();
+      return json({ list_name: list?.name || null, inviter_name: owner?.name || owner?.username || null });
+    }
+
+    // ===== INVITE REDEMPTION, password path (public) =====
+    // Mirrors POST /list-users's validation/cap-check/insert shape, but binds
+    // to the invite's list_id instead of a caller's, and mirrors
+    // /reset-password's token hash-and-delete for single-use.
+    if (path === "/invite-signup" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "invite_redeem"))) {
+        return err("TOO_MANY_SIGNUP_ATTEMPTS", 429);
+      }
+      const body = await readJson(request);
+      if (!body) return err("INVALID_REQUEST", 400);
+      await recordAttempt(env, ip, "invite_redeem");
+
+      if (!body.token) return err("INVALID_OR_EXPIRED_INVITE", 400);
+      const cleanName = sanitizeDisplayName(body.name);
+      if (!cleanName) return err("ENTER_NAME", 400);
+      if (!body.password || body.password.length < 8) return err("PASSWORD_TOO_SHORT", 400);
+      const cleanEmail = (body.email || "").trim().toLowerCase();
+      if (!isValidEmail(cleanEmail)) return err("INVALID_EMAIL", 400);
+
+      const tokenHash = await sha256Hex(body.token);
+      const invite = await env.DB.prepare(
+        "SELECT list_id FROM list_invites WHERE token_hash = ?1 AND expires_at > ?2"
+      ).bind(tokenHash, Date.now()).first();
+      if (!invite) return err("INVALID_OR_EXPIRED_INVITE", 400);
+
+      // Re-checked here, not just at generation time — membership can change
+      // between generate and redeem.
+      const cap = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM users WHERE list_id = ?1"
+      ).bind(invite.list_id).first();
+      if (cap.n >= 10) return err("LIST_FULL", 400);
+
+      const existingEmail = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE username = ?1 COLLATE NOCASE OR email = ?1 COLLATE NOCASE"
+      ).bind(cleanEmail).first();
+      if (existingEmail) return err("EMAIL_IN_USE", 409);
+
+      const hash = await hashPassword(body.password);
+      // is_admin/is_owner hardcoded 0 — never taken from the request body,
+      // same rule as POST /list-users.
+      await env.DB.prepare(
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, name) VALUES (?1, ?2, 1, 0, 0, ?3, 'invite', ?4, ?5)"
+      ).bind(cleanEmail, hash, invite.list_id, cleanEmail, cleanName).run();
+      await env.DB.prepare("DELETE FROM list_invites WHERE token_hash = ?1").bind(tokenHash).run();
+
+      const row = { username: cleanEmail, name: cleanName, token_version: 1, is_admin: 0, is_owner: 0, list_id: invite.list_id };
+      return json(await authResponse(row, env));
+    }
+
+    // ===== INVITE REDEMPTION, Google path (public) =====
+    // Separate endpoint mirroring the existing /register vs /auth/google
+    // split for the two signup mechanisms, rather than a discriminated body
+    // on one route.
+    if (path === "/invite-google" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!(await checkRateLimit(env, ip, "invite_redeem"))) {
+        return err("TOO_MANY_SIGNUP_ATTEMPTS", 429);
+      }
+      const body = await readJson(request);
+      if (!body) return err("INVALID_REQUEST", 400);
+      await recordAttempt(env, ip, "invite_redeem");
+      if (!body.token) return err("INVALID_OR_EXPIRED_INVITE", 400);
+
+      const payload = await verifyGoogleIdToken(body.credential);
+      if (!payload) return err("GOOGLE_SIGNIN_FAILED", 401);
+      const email = payload.email.toLowerCase();
+
+      const tokenHash = await sha256Hex(body.token);
+      const invite = await env.DB.prepare(
+        "SELECT list_id FROM list_invites WHERE token_hash = ?1 AND expires_at > ?2"
+      ).bind(tokenHash, Date.now()).first();
+      if (!invite) return err("INVALID_OR_EXPIRED_INVITE", 400);
+
+      const cap = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM users WHERE list_id = ?1"
+      ).bind(invite.list_id).first();
+      if (cap.n >= 10) return err("LIST_FULL", 400);
+
+      // Unlike /auth/google, a match here is rejected outright, not logged
+      // in — a user belongs to exactly one list, and there's no merge/move
+      // flow to transplant an existing account into this one.
+      const existing = await env.DB.prepare(
+        "SELECT 1 FROM users WHERE google_sub = ?1 OR email = ?2 COLLATE NOCASE"
+      ).bind(payload.sub, email).first();
+      if (existing) return err("EMAIL_IN_USE", 409);
+
+      const displayName = sanitizeDisplayName(payload.name) || email.split("@")[0];
+      // Same "unusable password" trick /auth/google's new-account branch
+      // uses — /login always fails for this account.
+      const hash = await hashPassword(crypto.randomUUID() + crypto.randomUUID());
+      await env.DB.prepare(
+        "INSERT INTO users (username, pass_hash, token_version, is_admin, is_owner, list_id, created_by, email, google_sub, name) VALUES (?1, ?2, 1, 0, 0, ?3, 'invite-google', ?4, ?5, ?6)"
+      ).bind(email, hash, invite.list_id, email, payload.sub, displayName).run();
+      await env.DB.prepare("DELETE FROM list_invites WHERE token_hash = ?1").bind(tokenHash).run();
+
+      const row = { username: email, name: displayName, token_version: 1, is_admin: 0, is_owner: 0, list_id: invite.list_id };
+      return json(await authResponse(row, env));
+    }
+
     // ===== AUTH REQUIRED BELOW =====
     const user = await requireAuth(request, env);
     if (!user) return err("UNAUTHORIZED", 401);
@@ -1856,6 +1977,7 @@ export default {
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(user.list_id),
             // list_presence references lists(id) without ON DELETE CASCADE, so
             // it must be cleared before the DELETE FROM lists below or that
             // final statement hits a FK violation and aborts the whole batch
@@ -2094,6 +2216,7 @@ export default {
             env.DB.prepare("DELETE FROM notification_settings WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
             // aborts on a FK violation.
@@ -2246,6 +2369,42 @@ export default {
       // user's next request → 401 → re-login, so no token_version bump needed.
       await env.DB.prepare("DELETE FROM users WHERE username = ?1 COLLATE NOCASE")
         .bind(row.username).run();
+      return authedJson({ ok: true });
+    }
+
+    // ===== LIST INVITES (owner only) =====
+    // One active invite link per list (UNIQUE(list_id) on list_invites).
+    // Only the SHA-256 hash is ever stored — the raw token is returned once,
+    // from POST, and can't be recovered afterward (same as password_resets),
+    // so GET only ever reports whether an invite is active + its expiry,
+    // never the link itself.
+    if (path === "/list-invites" && method === "GET") {
+      if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
+      const invite = await env.DB.prepare(
+        "SELECT expires_at FROM list_invites WHERE list_id = ?1 AND expires_at > ?2"
+      ).bind(user.list_id, Date.now()).first();
+      return authedJson({ active: !!invite, expires_at: invite?.expires_at || null });
+    }
+
+    if (path === "/list-invites" && method === "POST") {
+      if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
+      const rawToken = b64url(crypto.getRandomValues(new Uint8Array(32)).buffer);
+      const tokenHash = await sha256Hex(rawToken);
+      const now = Date.now();
+      const expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+      // Upsert: generating again replaces/invalidates whatever invite
+      // already existed for this list — UNIQUE(list_id) makes this a DB
+      // guarantee, not an app-level check-then-write.
+      await env.DB.prepare(`
+        INSERT INTO list_invites (list_id, token_hash, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)
+        ON CONFLICT(list_id) DO UPDATE SET token_hash = excluded.token_hash, created_at = excluded.created_at, expires_at = excluded.expires_at
+      `).bind(user.list_id, tokenHash, now, expiresAt).run();
+      return authedJson({ token: rawToken, expires_at: expiresAt });
+    }
+
+    if (path === "/list-invites" && method === "DELETE") {
+      if (!user.is_owner) return authedErr("REQUIRES_OWNER", 403);
+      await env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(user.list_id).run();
       return authedJson({ ok: true });
     }
 
