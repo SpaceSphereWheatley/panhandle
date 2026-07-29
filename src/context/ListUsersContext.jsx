@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { useAuth } from "./AuthContext.jsx";
+import { avatarColorFor, avatarColorForIndex } from "../lib/avatarColor.js";
 
 const ListUsersContext = createContext(null);
 
@@ -43,8 +44,24 @@ export function ListUsersProvider({ children }) {
     [listUsers]
   );
 
+  // Distinct color per list member (see avatarColorFor's index variant) —
+  // keyed by their position in `listUsers`, which GET /list-users already
+  // returns ordered by username, so two members of the same list never land
+  // on the same color. Falls back to the hash-based color for anything that
+  // isn't a current member (a free-typed meal "Other" responsible person, or
+  // a since-removed member), matching nameFor's same case-insensitive match
+  // and same-value fallback shape.
+  const colorFor = useCallback(
+    (username) => {
+      const key = (username || "").toLowerCase();
+      const index = listUsers.findIndex((u) => (u.username || "").toLowerCase() === key);
+      return index >= 0 ? avatarColorForIndex(index) : avatarColorFor(username || "");
+    },
+    [listUsers]
+  );
+
   return (
-    <ListUsersContext.Provider value={{ listUsers, people, nameFor, refresh }}>
+    <ListUsersContext.Provider value={{ listUsers, people, nameFor, colorFor, refresh }}>
       {children}
     </ListUsersContext.Provider>
   );
