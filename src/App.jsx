@@ -11,6 +11,7 @@ import { InstallPromptProvider } from "./context/InstallPromptContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { AuthScreens } from "./components/AuthScreens.jsx";
 import { AppShell } from "./components/AppShell.jsx";
+import { OnboardingFlow } from "./components/onboarding/OnboardingFlow.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
 import { applyIntensity, currentIntensity } from "./lib/designIntensity.js";
 
@@ -31,6 +32,14 @@ function SketchyFilterDefs() {
 
 function Root() {
   const { token } = useAuth();
+  // TEMP mockup preview hook — ?preview=onboarding renders the new-user intro
+  // regardless of auth state, so it can be reviewed on a deploy preview
+  // without wiring it into the real first-login gate yet. Remove this block
+  // (and decide the real trigger/persistence — e.g. a localStorage flag
+  // checked here) once the onboarding flow itself is approved.
+  if (new URLSearchParams(window.location.search).get("preview") === "onboarding") {
+    return <OnboardingFlow onDone={() => window.history.replaceState(null, "", window.location.pathname)} />;
+  }
   if (!token) return <AuthScreens />;
   return (
     <ListUsersProvider>
