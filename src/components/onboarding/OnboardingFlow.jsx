@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "../../context/LanguageContext.jsx";
 import { useMotionConfig } from "../../hooks/useMotionConfig.js";
 import { Button } from "../../design-system/index.js";
 import { ONBOARDING_SLIDES } from "./onboardingSlides.js";
@@ -12,6 +11,11 @@ import { containerVariants } from "./illustrations.jsx";
 // so wiring this in for real is just deciding *when* to render it and where
 // to persist "seen" — nothing here needs to change. See onboardingSlides.js
 // for the slide content and illustrations.jsx for the per-slide artwork.
+//
+// Deliberately not run through useTranslation()/t(): every string here is
+// plain English, same as the illustrations' in-frame UI text (see the
+// comment atop illustrations.jsx) rather than switching with the device's
+// UI language.
 //
 // Motion goes through the same useMotionConfig() hook as MealsTab/ItemCard —
 // prefers-reduced-motion and the "classic" design-intensity setting both
@@ -27,7 +31,6 @@ const slideVariants = {
 };
 
 export function OnboardingFlow({ onDone }) {
-  const t = useTranslation();
   const { shouldAnimate, transition } = useMotionConfig();
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -63,7 +66,7 @@ export function OnboardingFlow({ onDone }) {
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 20px", minHeight: 44 }}>
         {!isLast && (
           <button type="button" onClick={onDone} style={textButtonStyle}>
-            {t("onboarding.skip")}
+            Skip
           </button>
         )}
       </div>
@@ -119,7 +122,7 @@ export function OnboardingFlow({ onDone }) {
                 margin: 0,
               }}
             >
-              {t(slide.titleKey)}
+              {slide.title}
             </h2>
             <p
               style={{
@@ -130,7 +133,7 @@ export function OnboardingFlow({ onDone }) {
                 margin: 0,
               }}
             >
-              {t(slide.bodyKey)}
+              {slide.body}
             </p>
           </motion.div>
         </AnimatePresence>
@@ -141,7 +144,7 @@ export function OnboardingFlow({ onDone }) {
           <button
             key={s.id}
             type="button"
-            aria-label={t("onboarding.goToSlide", { number: i + 1 })}
+            aria-label={`Go to slide ${i + 1}`}
             aria-current={i === index}
             onClick={() => goTo(i)}
             style={{
@@ -171,12 +174,12 @@ export function OnboardingFlow({ onDone }) {
         <div style={{ minWidth: 72 }}>
           {index > 0 && (
             <button type="button" onClick={() => goTo(index - 1)} style={textButtonStyle}>
-              {t("onboarding.back")}
+              Back
             </button>
           )}
         </div>
         <Button variant="primary" size="lg" onClick={() => (isLast ? onDone() : goTo(index + 1))}>
-          {t(isLast ? "onboarding.getStarted" : "onboarding.next")}
+          {isLast ? "Get started" : "Next"}
         </Button>
       </div>
     </div>
