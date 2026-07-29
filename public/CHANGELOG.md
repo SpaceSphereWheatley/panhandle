@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.52.1] — 2026-07-29
+
+### Fixed
+- **Opening the app from an old bookmark or shortcut no longer leaves a stray `/app` in the address bar.** `shop.panhandle.app` has served the app from its clean bare root for a while, but hitting `/app.html` or `/app` directly — e.g. a saved bookmark, a PWA shortcut, or browser autocomplete from before that change — just served the app in place without ever redirecting back to the clean URL. The Worker now 301-redirects `shop.panhandle.app/app.html`/`/app` to `shop.panhandle.app/`, matching the same clean-URL behavior everyone else already gets.
+
 ## [1.52.0] — 2026-07-29
 
 ### Added

@@ -1421,6 +1421,20 @@ export default {
       return Response.redirect(target.toString(), 301);
     }
 
+    // shop.panhandle.app's bare root already serves the app with a clean URL
+    // (see the proxy branch below), but nothing previously sent a visitor
+    // landing directly on /app.html or /app (an old bookmark, a saved PWA
+    // shortcut, browser autocomplete from before the root started serving
+    // the app) back to that clean root — the proxy below just served the
+    // content in place, leaving the path visible forever. Gated strictly on
+    // this exact hostname so a Cloudflare branch/commit preview's own
+    // hostname keeps using /app.html for click-testing (see CLAUDE.md's
+    // testing conventions).
+    if (url.hostname === "shop.panhandle.app" && (normalizedPath === "/app.html" || normalizedPath === "/app")) {
+      const target = new URL("/" + url.search, url.origin);
+      return Response.redirect(target.toString(), 301);
+    }
+
     const isApi = url.pathname.startsWith("/api");
     if (!isApi) {
       const pagesUrl = new URL(request.url);
