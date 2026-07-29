@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.53.1] — 2026-07-29
+
+### Changed
+- **The empty shopping list now shows a small illustration instead of a plain icon.** Opening the shopping list tab with nothing on it yet used to show a generic cart icon and a line of text; it now shows a little basket drawing with a couple of items about to drop in, matching the style of the app's other illustrations (`EmptyState`'s new `illustration` slot, `EmptyListIllustration` in `ShoppingListTab.jsx`) so the empty list feels a bit more finished on a new household's first open.
+
 ## [1.53.0] — 2026-07-29
 
 ### Changed

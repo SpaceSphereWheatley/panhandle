@@ -85,6 +85,36 @@ function ShoppingListSkeleton({ viewMode, containerStyle }) {
   );
 }
 
+// Empty-list illustration — a basket with a couple of items about to drop
+// in, drawn in the same line-weight/rounded-stroke/category-dot language as
+// onboarding/illustrations.jsx (inline SVG on design tokens, so it needs no
+// dark-mode variant and stays cheap to redraw if the UI changes).
+function EmptyListIllustration() {
+  return (
+    <svg width="140" height="112" viewBox="0 0 140 112" fill="none" aria-hidden="true">
+      <path
+        d="M38 46h64l-7 46a8 8 0 0 1-8 7H53a8 8 0 0 1-8-7l-7-46z"
+        fill="var(--surface-sunken)"
+        stroke="var(--border-strong)"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M52 46c0-12 8-20 18-20s18 8 18 20"
+        stroke="var(--border-strong)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M45 60h50M48 74h44" stroke="var(--border-default)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="27" cy="24" r="7" fill="var(--accent-primary-subtle)" stroke="var(--accent-primary)" strokeWidth="2" />
+      <circle cx="107" cy="18" r="6" fill="var(--accent-tertiary-subtle)" stroke="var(--accent-tertiary)" strokeWidth="2" />
+      <circle cx="112" cy="40" r="4.5" fill="var(--accent-secondary)" />
+      <path d="M23 24h8M27 20v8" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
@@ -811,7 +841,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         <ShoppingListSkeleton viewMode={effectiveViewMode} containerStyle={containerStyle} />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="shopping-cart-simple"
+          illustration={<EmptyListIllustration />}
           title={t("shoppingList.empty.title")}
           description={t("shoppingList.empty.description")}
         />
