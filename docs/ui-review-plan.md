@@ -8,6 +8,8 @@ rough edges that remain. Each item has a stable ID (`U#`), a priority, and a
 phase, so it can be picked up across sessions. Check items off as they ship.
 
 > **Note:** the working constraints below predate the Vite + React rewrite — the frontend now has a build step and a Vitest test suite; see `CLAUDE.md` for current architecture. Left as originally written since most `U#` items themselves are still accurate/open.
+>
+> **2026-07-29 re-audit:** checked every still-open item against the current codebase. Eight had already shipped (some had drifted out of sync for a while — most notably `U24`, a whole documented feature) and are now struck below with a shipped note. The remaining open items were spot-checked but not exhaustively re-verified line-by-line; treat an unchecked item as "probably still open, worth a quick look before starting," not as gospel.
 
 Working constraints (as of writing, see `CLAUDE.md`): **no build step, no framework, no test
 suite.** Frontend lives in `public/app.html` (single file, inline `<style>` +
@@ -38,26 +40,32 @@ suite.** Frontend lives in `public/app.html` (single file, inline `<style>` +
   `--accent` `#556B2F`, which carries white text fine) or switch card text to a
   dark ink, then re-check every fg/bg pair. Touches `.card`, `.grid-card`, and
   their `.bought` variants.
-- [ ] **U2** — **Error text rendered in brand green.** `#loginErr` uses
+- [x] **U2** — **Error text rendered in brand green.** `#loginErr` uses
   `--accent-text` (olive), and `memberMsg`/`ownerMsg` use `--accent`, so failed
   logins and validation errors read as success. Route all error text through
-  `--danger`.
+  `--danger`. *Already fixed in the React rewrite: `LoginScreen.jsx`'s error
+  text uses `--status-danger`.*
 - [ ] **U3** — **No focus-visible states anywhere.** `-webkit-tap-highlight-color`
   is disabled globally and no `:focus-visible` outline is defined, so keyboard /
   switch users get no focus indication. Add a shared `:focus-visible` ring to
   all interactive elements (buttons, inputs, clickable rows).
-- [ ] **U4** — **`prefers-reduced-motion` ignored.** The modal `slideup` and the
+- [x] **U4** — **`prefers-reduced-motion` ignored.** The modal `slideup` and the
   toggle shrink/fade (`.resolving`) always animate. Gate the non-essential
   animations behind `@media (prefers-reduced-motion: no-preference)`.
+  *Already fixed: `src/hooks/useMotionConfig.js` gates the app's Framer
+  Motion animations on reduced-motion (and the design-intensity setting),
+  used app-wide including `AppShell`/`OnboardingFlow`.*
 
 ### P1 — Button system & danger semantics
 *Root cause across these: "the green" currently means brand, primary action, AND
 destructive action, and several controls have no button chrome or press state.*
-- [ ] **U5** — **Add a real `.btn-danger`; stop skinning deletes as `.cancel`.**
+- [x] **U5** — **Add a real `.btn-danger`; stop skinning deletes as `.cancel`.**
   "Slett vare fra katalog", "Slett måltid fra katalog", and the meal modal's
   per-day "Slett" all reuse the grey `.cancel` class with only a red *text*
   override — so in the meal modal two identical grey buttons sit side by side,
   one of which deletes. Give destructive actions a dedicated danger style.
+  *Already fixed: `design-system/components/forms/Button.jsx` and
+  `IconButton.jsx` both have a real `danger` variant with dedicated tokens.*
 - [ ] **U6** — **Give bare icon buttons real button chrome + ≥44px hit area.**
   `.card .more` / `.card .del`, `.meal-name-arrow`, and the install-banner
   `.dismiss` are `background:none;border:none` floating icons (`padding:4px 8px`)
@@ -72,20 +80,25 @@ destructive action, and several controls have no button chrome or press state.*
   small green text floated into the card corner (`.day .edit`,
   `background:none`). Make it a proper button, or make the whole day card the
   tap target.
-- [ ] **U9** — **Real semantics for clickable `<div>`s.** The shopping item
+- [x] **U9** — **Real semantics for clickable `<div>`s.** The shopping item
   `.card` and the `.suggestions` autocomplete rows are `div`s with `onclick` —
   not keyboard-focusable, no role. Convert to `<button>` (as the settings
   nav-rows and `.meal-browse-row` already correctly are) or add
-  `role="button"` + `tabindex` + key handlers.
+  `role="button"` + `tabindex` + key handlers. *Already fixed: `ItemCard.jsx`
+  uses `role="button" tabIndex={0}` with key handlers (`Todo_done.md` #39).*
 - [ ] **U10** — **Normalize button radii/padding.** Radii drift across
   8/10/12/14px with assorted paddings. Factor a shared button base so variants
   differ only by color/size.
 
 ### P2 — Replace native dialogs
-- [ ] **U11** — **Replace the 7 `confirm()` / `alert()` calls** (remove member,
+- [x] **U11** — **Replace the 7 `confirm()` / `alert()` calls** (remove member,
   delete catalogue item, delete meal, reset password, and error paths) with the
   app's own `.modal` + `showToast` components. Native OS dialogs are unstyled,
   unthemed (jarring in dark mode), and out of place in an installed PWA.
+  *Already fixed: `ConfirmContext`/`useConfirm` (a promise-based, app-styled
+  replacement for native `confirm()`) now backs every destructive/sensitive
+  action app-wide (`Todo_done.md` #52); no `window.confirm`/`window.alert`
+  calls remain in `src/`.*
 
 ### P3 — Reliability / PWA (bigger, test carefully)
 - [x] **U12** — **App-shell service worker.** Shipped (1.15.0, per `CHANGELOG.md`):
@@ -93,8 +106,12 @@ destructive action, and several controls have no button chrome or press state.*
   `/api/*` and `/seed`), registered from `src/main.jsx`. The `TODO.md #1` this
   once matched has since been renumbered to a different (still-open) item —
   see `TODO.md`'s own numbering note.
-- [ ] **U13** — **Offline write queue.** Let add/toggle/delete happen offline and
+- [x] **U13** — **Offline write queue.** Let add/toggle/delete happen offline and
   reconcile on reconnect, instead of hard-failing with a toast. Depends on U12.
+  *Shipped 1.39.0 (`Todo_done.md` #88, `TODO.md` #113): `src/lib/writeQueue.js`
+  persists add/toggle/important writes made offline and replays them in order
+  on reconnect — see CLAUDE.md's "Offline write durability" for the full
+  scope (edit/delete-from-catalogue deliberately stay online-only).*
 - [ ] **U14** — **Self-host / bundle Roboto.** The app render-blocks on
   `fonts.googleapis.com`; self-hosting removes a third-party dependency, speeds
   first paint, and helps the offline story (U12). Fallback stack already exists.
@@ -104,9 +121,11 @@ destructive action, and several controls have no button chrome or press state.*
   long-press-to-edit, and the tap-to-re-add "Nylig kjøpt" palette are all
   invisible today. Show a one-time hint. *(Also addresses the overlapping/
   undiscoverable gesture model: tap and swipe both mark bought.)*
-- [ ] **U16** — **Loading skeletons on first fetch.** On boot with a saved token
+- [x] **U16** — **Loading skeletons on first fetch.** On boot with a saved token
   the app reveals empty containers before data arrives. Add skeletons/spinners
-  for `listContainer` / `planContainer`.
+  for `listContainer` / `planContainer`. *Shipped (`Todo_done.md` #50): a
+  shared `LoadingState`/`Spinner` now covers `ShoppingListTab`/`MealsTab`'s
+  initial fetch.*
 - [ ] **U17** — **Make sync status legible.** "Oppdatert HH:MM" is 11px muted in
   the header; for two people editing live, currency matters. Give it more weight
   and an explicit "Synkroniserer…" state.
@@ -135,12 +154,16 @@ destructive action, and several controls have no button chrome or press state.*
   text mentions it; show a one-time in-app banner until it's changed.
 
 ### P6 — Larger net-new (each its own effort)
-- [ ] **U24** — **Responsive desktop layout.** The app is hard-capped at
+- [x] **U24** — **Responsive desktop layout.** The app is hard-capped at
   `max-width:480px` and centered, so desktop is a narrow phone column in empty
   space with a bottom tab bar — despite the landing page's "mobil og desktop"
   claim. Add a real ≥768px layout (e.g. two-column list + meals, sidebar nav).
   *Note the current cap was a deliberate earlier decision (`TODO.md` Done) —
   this revisits it, so confirm before building.*
+  *Shipped 1.49.0 (`Todo_done.md` #110): a full desktop layout (≥1024px) —
+  232px left nav rail, 960px content column, centered dialogs instead of
+  bottom sheets, wider shopping grid — see CLAUDE.md's "Responsive layout"
+  section for the full mechanism.*
 - [ ] **U25** — **"Shopping mode."** Hide bought items, large high-contrast
   text, keep-screen-awake — a mode tuned for actually walking the store.
 - [x] **U26** — **Cook-again / repeat a past meal** — one-tap re-plan of a

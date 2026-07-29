@@ -7,6 +7,19 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+111. (94) Fixed the unbounded service-worker asset cache. `sw.js`'s
+     `CACHE_NAME` was a fixed literal (`panhandle-shell-v1`), so every
+     deploy's old content-hashed JS/CSS accumulated in Cache Storage forever
+     instead of being cleaned up by the `activate` handler's own
+     old-cache-name deletion. `CACHE_NAME` now ships with a literal
+     `__SW_CACHE_VERSION__` placeholder, stamped with the real `VERSION` in
+     `dist/sw.js` by `scripts/stamp-sw-cache.mjs` (wired into `postbuild`),
+     so a new cache name each deploy makes the existing cleanup logic
+     actually delete the previous deploy's orphaned assets. Docs-only entry
+     here — this shipped some time ago but was never struck off `TODO.md`.
+     (no version bump for this doc correction; the fix itself already
+     shipped)
+
 110. (6) Proper desktop layout, reversing done-item 9's "cap the width instead
      of a separate desktop layout" decision. At >= 1024px the bottom tab bar
      becomes a full-height left rail (labeled, 232px, with the product mark),
