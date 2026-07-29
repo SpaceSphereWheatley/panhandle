@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.53.2] — 2026-07-29
+
+### Added
+- **Checking off the last item on your shopping list now gets a small celebratory moment.** The summary line at the top used to just quietly reword itself from "3 items left" to "All done" — now it becomes a small green checkmark pill, and the space above "Recently bought" shows a "Nothing left to buy" note. This only plays its little pop-in animation the moment you actually finish the list; reopening the app or coming back later to a list that was already fully bought just shows the same pill and note immediately, with no animation, so it doesn't feel like it's replaying every time you glance at an already-finished list (`ShoppingListTab.jsx`'s `celebrate` state, gated on the specific item-toggle event rather than on the list simply being fully bought). The same celebration also plays for the "Mark all as bought" bulk action.
+
 ## [1.53.1] — 2026-07-29
 
 ### Changed

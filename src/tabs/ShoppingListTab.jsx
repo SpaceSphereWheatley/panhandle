@@ -115,6 +115,38 @@ function EmptyListIllustration() {
   );
 }
 
+// How long the "just finished" window stays open after the last item's own
+// resolve animation completes — long enough for ph-allbought-pop/-tick (see
+// motion.css) to finish, after which `celebrate` resets so a later trip's
+// last item gets its own fresh play instead of this one lingering "on".
+const CELEBRATE_MS = 500;
+
+// Small checkmark-in-circle mark, reused by both the summary pill and the
+// compact "nothing left to buy" block below. `animate` gates the checkmark's
+// draw-in; the container it sits in (see both call sites) separately gates
+// its own pop entrance with the same flag, so the two play together. Only
+// true for the specific render where the last item's resolve just finished
+// — every other render (mount, poll tick, another device's write) renders
+// the same rest state with no animation attribute at all, so it can't
+// replay on its own. See CELEBRATE_MS / the `celebrate` state below.
+function AllBoughtMark({ size, animate }) {
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" aria-hidden="true">
+      <circle cx={size / 2} cy={size / 2} r={size / 2 - 1} fill="var(--accent-secondary-subtle)" />
+      <path
+        d={`M${size * 0.31} ${size * 0.52}l${size * 0.19} ${size * 0.19} ${size * 0.38}-${size * 0.42}`}
+        stroke="var(--status-success)"
+        strokeWidth={Math.max(1.6, size * 0.05)}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray={size}
+        strokeDashoffset={0}
+        style={animate ? { animation: `ph-allbought-tick var(--duration-base) var(--ease-out) 120ms both` } : undefined}
+      />
+    </svg>
+  );
+}
+
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
   const intensity = useDesignIntensity();
@@ -167,10 +199,24 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // with no signal reads as saved-and-pending, not lost. Seeded from any
   // queue that survived an app close.
   const [pendingWrites, setPendingWrites] = useState(() => queueLength());
+  // True only for the render right after the last unbought item's own
+  // resolve animation finishes — gates the "all bought" pop/tick animation
+  // (see AllBoughtMark/CELEBRATE_MS above) so it plays once per genuine
+  // "just finished shopping" transition, never on a render that simply
+  // finds the list already fully bought (mount, the 7s poll, another
+  // device's write, reopening the tab).
+  const [celebrate, setCelebrate] = useState(false);
 
   const resolveTimers = useRef(new Map());
   const addInputRef = useRef(null);
   const suggestionRefs = useRef([]);
+  // Id of the item whose resolve completion should trigger `celebrate` —
+  // set by toggleItem only when that item was the last unbought one, read
+  // by the resolvingIds effect below once that id actually finishes
+  // resolving (not before: the pop should follow the row leaving, not
+  // precede it).
+  const pendingCelebrateId = useRef(null);
+  const celebrateTimer = useRef(null);
 
   async function loadCatalogue() {
     setCatalogue(await api("/catalogue"));
@@ -218,6 +264,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     return () => {
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
+      clearTimeout(celebrateTimer.current);
     };
   }, []);
 
@@ -410,6 +457,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     haptic();
     const wasBought = it.bought;
     const wasImportant = it.important;
+    // Checking off the last unbought item on the list — flag it so the
+    // celebration effect above plays once this item's own resolve finishes
+    // (not immediately: see that effect's comment).
+    if (!wasBought && items.every((x) => x.id === id || x.bought)) {
+      pendingCelebrateId.current = id;
+    }
     // Important is scoped to this trip, so checking an item off also clears
     // it (mirrored server-side in the /toggle handler) — undoing the bought
     // mark doesn't bring it back, same as the server.
@@ -537,12 +590,24 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       return;
     const snapshot = items;
     haptic();
+    // Unlike toggleItem's last-item case, there's no per-item resolve delay
+    // to wait for here — every item flips at once, so the celebration can
+    // fire immediately rather than through the pendingCelebrateId/resolvingIds
+    // dance above (that machinery exists specifically to survive the
+    // strike-through/fade window a single toggle holds a row in).
+    if (items.some((it) => !it.bought)) {
+      setCelebrate(true);
+      clearTimeout(celebrateTimer.current);
+      celebrateTimer.current = setTimeout(() => setCelebrate(false), CELEBRATE_MS);
+    }
     const boughtAt = new Date().toISOString();
     setItems((prev) => prev.map((it) => (it.bought ? it : { ...it, bought: 1, bought_at: boughtAt, important: 0 })));
     try {
       await api("/list/mark-all-bought", { method: "POST" });
     } catch {
       setItems(snapshot);
+      setCelebrate(false);
+      clearTimeout(celebrateTimer.current);
       toast(t("shoppingList.toast.markAllBoughtFailed"), { error: true });
       return;
     }
@@ -565,6 +630,22 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   useEffect(() => {
     if (pinImportant && importantUnbought.length === 0) setPinImportant(false);
   }, [pinImportant, importantUnbought.length]);
+
+  // Fires the celebration once the row toggleItem flagged as "the last one"
+  // has actually finished resolving (left resolvingIds) — so the pop follows
+  // the row leaving instead of racing ahead of it. Re-checks the list is
+  // genuinely all bought before celebrating: a reverted/failed toggle also
+  // clears resolvingIds, and that shouldn't play the animation.
+  useEffect(() => {
+    const id = pendingCelebrateId.current;
+    if (id == null || resolvingIds.has(id)) return;
+    pendingCelebrateId.current = null;
+    if (items.length > 0 && items.every((it) => it.bought)) {
+      setCelebrate(true);
+      clearTimeout(celebrateTimer.current);
+      celebrateTimer.current = setTimeout(() => setCelebrate(false), CELEBRATE_MS);
+    }
+  }, [resolvingIds, items]);
   const pinnedIds = pinImportant ? new Set(importantUnbought.map((it) => it.id)) : null;
   const groups = {};
   for (const it of unbought) {
@@ -610,6 +691,25 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     : items.length
       ? t("shoppingList.summary.allBought")
       : "";
+  // Distinct from a truly empty list (items.length === 0, handled by
+  // EmptyState below) — this is "had items, all of them are bought now",
+  // which "Recently bought" being collapsed-not-gone means can sit around
+  // indefinitely until either a new item's added or bought items are
+  // cleared. See AllBoughtMark/celebrate above for the animated vs. static
+  // distinction.
+  const allBought = remaining === 0 && items.length > 0;
+  // remaining flips to 0 the instant the last item's optimistically marked
+  // bought — before its own strike-through/fade finishes (it stays in
+  // `unbought`/`displayItems` via resolvingIds until then). Showing the
+  // celebratory pill/marker that early, unanimated, then having them jump
+  // to an animated state a few hundred ms later when `celebrate` actually
+  // fires would flash. So the upgraded (pill + marker) UI waits for
+  // pendingCelebrateId to clear — during a genuine toggle that's exactly
+  // when the row finishes resolving; on every other render (mount, poll,
+  // another device's write) pendingCelebrateId was never set, so this is
+  // true immediately. Until then, the summary falls back to the plain-text
+  // "All done" it always showed, unchanged.
+  const allBoughtSettled = allBought && pendingCelebrateId.current == null;
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
   const importantChipLabel = t(
     pinImportant ? "shoppingList.importantChip.showAll" : "shoppingList.importantChip.showImportantFirst"
@@ -723,7 +823,29 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 16 }}>
-          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
+          {allBoughtSettled ? (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: "var(--text-xs)",
+                fontWeight: 700,
+                color: "var(--status-success)",
+                background: "var(--accent-secondary-subtle)",
+                borderRadius: "var(--radius-pill)",
+                padding: "4px 10px 4px 8px",
+                ...(celebrate && shouldAnimate
+                  ? { animation: "ph-allbought-pop var(--spring-duration-soft) var(--ease-spring-soft)" }
+                  : null),
+              }}
+            >
+              <AllBoughtMark size={14} animate={celebrate && shouldAnimate} />
+              {summary}
+            </span>
+          ) : (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>{summary}</span>
+          )}
           {pendingWrites > 0 && (
             <span
               title={t("shoppingList.pendingWrites.tooltip")}
@@ -865,6 +987,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             </div>
           )}
           {renderItems(displayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+
+          {allBoughtSettled && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 4px 16px",
+                ...(celebrate && shouldAnimate
+                  ? { animation: "ph-allbought-pop var(--spring-duration-soft) var(--ease-spring-soft)" }
+                  : null),
+              }}
+            >
+              <AllBoughtMark size={32} animate={celebrate && shouldAnimate} />
+              <div>
+                <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-secondary)" }}>
+                  {t("shoppingList.allBought.title")}
+                </div>
+                <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>
+                  {t("shoppingList.allBought.description")}
+                </div>
+              </div>
+            </div>
+          )}
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
