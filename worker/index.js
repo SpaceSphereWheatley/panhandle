@@ -2507,6 +2507,23 @@ export default {
         // merge target's existing id.
         return authedJson({ ok: true, duplicate: true, qty: updated.qty, id: existing.id });
       }
+      // No unbought line to merge into — but if this same item/notes combo is
+      // sitting bought (e.g. milk bought yesterday, added again today), reopen
+      // that line instead of inserting a fresh one. Otherwise every re-buy of
+      // a staple piles up its own row, and "Recently bought" (sorted by
+      // bought_at) shows the same item repeated instead of it just re-sorting
+      // to the top the next time it's bought.
+      const existingBought = await env.DB.prepare(
+        "SELECT id FROM list_items WHERE catalogue_id = ?1 AND bought = 1 AND list_id = ?2 AND IFNULL(notes, '') = IFNULL(?3, '')"
+      ).bind(cat.id, user.list_id, noteVal).first();
+      if (existingBought) {
+        await env.DB.prepare(`
+          UPDATE list_items SET bought = 0, bought_at = NULL, important = 0,
+              qty = ?2, added_by = ?3, added_at = datetime('now')
+          WHERE id = ?1
+        `).bind(existingBought.id, addQty, user.username).run();
+        return authedJson({ ok: true, qty: addQty, id: existingBought.id });
+      }
       const inserted = await env.DB.prepare(
         "INSERT INTO list_items (catalogue_id, added_by, notes, qty, list_id) VALUES (?1, ?2, ?3, ?4, ?5)"
       ).bind(cat.id, user.username, noteVal, addQty, user.list_id).run();
