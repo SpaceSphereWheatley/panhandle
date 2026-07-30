@@ -114,10 +114,11 @@ function EmptyListIllustration() {
   );
 }
 
-// How long the "just finished" window stays open after the last item's own
-// resolve animation completes — long enough for ph-allbought-pop/-tick (see
-// motion.css) to finish, after which `celebrate` resets so a later trip's
-// last item gets its own fresh play instead of this one lingering "on".
+// How long the "just finished" window stays open after the last item's card
+// has actually finished leaving the screen (see handleListExitComplete) —
+// long enough for ph-allbought-pop/-tick (see motion.css) to finish, after
+// which `celebrate` resets so a later trip's last item gets its own fresh
+// play instead of this one lingering "on".
 const CELEBRATE_MS = 500;
 
 // Small checkmark-in-circle mark, reused by both the summary pill and the
@@ -198,11 +199,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // with no signal reads as saved-and-pending, not lost. Seeded from any
   // queue that survived an app close.
   const [pendingWrites, setPendingWrites] = useState(() => queueLength());
-  // True only for the render right after the last unbought item's own
-  // resolve animation finishes — gates the "all bought" pop/tick animation
-  // (see AllBoughtMark/CELEBRATE_MS above) so it plays once per genuine
-  // "just finished shopping" transition, never on a render that simply
-  // finds the list already fully bought (mount, the 7s poll, another
+  // True only for the render right after the last unbought item's card has
+  // actually finished leaving the screen — gates the "all bought" pop/tick
+  // animation (see AllBoughtMark/CELEBRATE_MS above) so it plays once per
+  // genuine "just finished shopping" transition, never on a render that
+  // simply finds the list already fully bought (mount, the 7s poll, another
   // device's write, reopening the tab).
   const [celebrate, setCelebrate] = useState(false);
 
@@ -216,6 +217,23 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // precede it).
   const pendingCelebrateId = useRef(null);
   const celebrateTimer = useRef(null);
+  // Set once the resolvingIds effect confirms a genuine "just finished
+  // shopping" transition, but — unlike the old direct setCelebrate(true) —
+  // not acted on yet: the departing card has only just left React state at
+  // that point, which is when its Framer `exit` animation *starts*, not
+  // when it's actually gone from the screen. Firing the pop/EmptyState here
+  // would show them overlapping the still-fading card, then jump up once it
+  // really leaves. handleListExitComplete (passed to the list's
+  // AnimatePresence as onExitComplete) is the actual trigger, so the
+  // celebration only appears once the card has visually finished leaving.
+  // markAllBought also sets this directly (see its own comment) since it has
+  // no per-item resolvingIds hold to wait through first.
+  const awaitingExitRef = useRef(false);
+  // Mirrors `items` for handleListExitComplete, which fires from a Framer
+  // callback and needs the latest list, not whatever was in scope when the
+  // AnimatePresence render that's completing was produced.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   async function loadCatalogue() {
     setCatalogue(await api("/catalogue"));
@@ -590,14 +608,13 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     const snapshot = items;
     haptic();
     // Unlike toggleItem's last-item case, there's no per-item resolve delay
-    // to wait for here — every item flips at once, so the celebration can
-    // fire immediately rather than through the pendingCelebrateId/resolvingIds
-    // dance above (that machinery exists specifically to survive the
-    // strike-through/fade window a single toggle holds a row in).
+    // to wait for here — every item flips at once, so there's no
+    // pendingCelebrateId/resolvingIds dance to go through first. But the
+    // departing cards still need their own Framer exit animation to finish
+    // before the celebration appears (see handleListExitComplete/
+    // awaitingExitRef above), same as the single-toggle path.
     if (items.some((it) => !it.bought)) {
-      setCelebrate(true);
-      clearTimeout(celebrateTimer.current);
-      celebrateTimer.current = setTimeout(() => setCelebrate(false), CELEBRATE_MS);
+      awaitingExitRef.current = true;
     }
     const boughtAt = new Date().toISOString();
     setItems((prev) => prev.map((it) => (it.bought ? it : { ...it, bought: 1, bought_at: boughtAt, important: 0 })));
@@ -605,6 +622,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       await api("/list/mark-all-bought", { method: "POST" });
     } catch {
       setItems(snapshot);
+      awaitingExitRef.current = false;
       setCelebrate(false);
       clearTimeout(celebrateTimer.current);
       toast(t("shoppingList.toast.markAllBoughtFailed"), { error: true });
@@ -630,21 +648,35 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     if (pinImportant && importantUnbought.length === 0) setPinImportant(false);
   }, [pinImportant, importantUnbought.length]);
 
-  // Fires the celebration once the row toggleItem flagged as "the last one"
-  // has actually finished resolving (left resolvingIds) — so the pop follows
-  // the row leaving instead of racing ahead of it. Re-checks the list is
-  // genuinely all bought before celebrating: a reverted/failed toggle also
-  // clears resolvingIds, and that shouldn't play the animation.
+  // Flags the row toggleItem marked as "the last one" once it's actually
+  // finished resolving (left resolvingIds) — that's when it drops out of
+  // displayItems and starts its Framer exit animation, so this only arms
+  // awaitingExitRef rather than celebrating yet (see that ref's comment).
+  // Re-checks the list is genuinely all bought first: a reverted/failed
+  // toggle also clears resolvingIds, and that shouldn't arm the celebration.
   useEffect(() => {
     const id = pendingCelebrateId.current;
     if (id == null || resolvingIds.has(id)) return;
     pendingCelebrateId.current = null;
     if (items.length > 0 && items.every((it) => it.bought)) {
+      awaitingExitRef.current = true;
+    }
+  }, [resolvingIds, items]);
+
+  // The actual celebration trigger — passed to the unbought list's
+  // AnimatePresence as onExitComplete, so it fires once the departing card(s)
+  // have visually finished leaving, not merely left React state (see
+  // awaitingExitRef above). Re-checks all-bought again since more time has
+  // passed since awaitingExitRef was armed.
+  function handleListExitComplete() {
+    if (!awaitingExitRef.current) return;
+    awaitingExitRef.current = false;
+    if (itemsRef.current.length > 0 && itemsRef.current.every((it) => it.bought)) {
       setCelebrate(true);
       clearTimeout(celebrateTimer.current);
       celebrateTimer.current = setTimeout(() => setCelebrate(false), CELEBRATE_MS);
     }
-  }, [resolvingIds, items]);
+  }
   const pinnedIds = pinImportant ? new Set(importantUnbought.map((it) => it.id)) : null;
   const groups = {};
   for (const it of unbought) {
@@ -699,16 +731,19 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const allBought = remaining === 0 && items.length > 0;
   // remaining flips to 0 the instant the last item's optimistically marked
   // bought — before its own strike-through/fade finishes (it stays in
-  // `unbought`/`displayItems` via resolvingIds until then). Showing the
-  // celebratory pill/marker that early, unanimated, then having them jump
-  // to an animated state a few hundred ms later when `celebrate` actually
-  // fires would flash. So the upgraded (pill + marker) UI waits for
-  // pendingCelebrateId to clear — during a genuine toggle that's exactly
-  // when the row finishes resolving; on every other render (mount, poll,
-  // another device's write) pendingCelebrateId was never set, so this is
-  // true immediately. Until then, the summary falls back to the plain-text
-  // "All done" it always showed, unchanged.
-  const allBoughtSettled = allBought && pendingCelebrateId.current == null;
+  // `unbought`/`displayItems` via resolvingIds until then), and even once
+  // that's done, the card still needs its own Framer exit animation to
+  // finish leaving the screen. Showing the celebratory pill/marker/block
+  // before either of those has actually settled would overlap the still-
+  // departing card and then jump as it left. So the upgraded UI waits for
+  // both pendingCelebrateId to clear (the strike-through/fade is done) and
+  // awaitingExitRef to clear (the card has visually left, via
+  // handleListExitComplete) — during a genuine toggle/markAllBought that's
+  // exactly when both have happened; on every other render (mount, poll,
+  // another device's write) neither was ever set, so this is true
+  // immediately. Until then, the summary falls back to the plain-text "All
+  // done" it always showed, unchanged.
+  const allBoughtSettled = allBought && pendingCelebrateId.current == null && !awaitingExitRef.current;
   const editingItem = editingId != null ? items.find((it) => it.id === editingId) : null;
   const importantChipLabel = t(
     pinImportant ? "shoppingList.importantChip.showAll" : "shoppingList.importantChip.showImportantFirst"
@@ -982,10 +1017,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               >
                 {t("shoppingList.section.important")}
               </div>
-              {renderItems(importantDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+              {renderItems(importantDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays, handleListExitComplete)}
             </div>
           )}
-          {renderItems(displayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays)}
+          {renderItems(displayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, toggleImportant, setEditingId, renderGeneration, clearResolving, staleItemDays, handleListExitComplete)}
 
           {allBoughtSettled && (
             <div
@@ -1152,10 +1187,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays) {
+function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays, onExitComplete) {
   return (
     <div key={renderGeneration} style={containerStyle}>
-      <AnimatePresence initial={false} mode="popLayout">
+      <AnimatePresence initial={false} mode="popLayout" onExitComplete={onExitComplete}>
         {displayItems.map(({ item, clusterKey }, index) => {
           const { bg, on } = clusterFor(clusterKey);
           return (

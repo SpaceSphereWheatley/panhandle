@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.1] — 2026-07-30
+
+### Fixed
+- **Checking off the last item on your shopping list no longer shows the "Nothing left to buy" message popping in underneath the item before it's fully gone, then jumping up into place.** The celebration now waits until the checked-off item has actually finished leaving the screen. (`ShoppingListTab.jsx`'s `celebrate`/`allBoughtSettled` trigger moved from firing as soon as the departing card left React state — which is when its Framer exit animation *starts*, not finishes — to firing off `AnimatePresence`'s `onExitComplete`, via a new `awaitingExitRef`; `markAllBought` was updated the same way.)
+
 ## [1.57.0] — 2026-07-30
 
 ### Added
