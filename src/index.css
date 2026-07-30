@@ -208,8 +208,12 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
 .ing-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 4px;
   border-bottom: 1px solid var(--border-default); cursor: pointer; font-size: var(--text-md);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 .ing-row:last-child { border-bottom: none; }
+/* Marks a row picked to be added to the list — the checkbox alone (24px) is
+   too easy to miss at a glance, so the whole row picks up a tint too. */
+.ing-row--selected { background: var(--accent-secondary-subtle); }
 
 /* Modal internals (Sheet's content wrapper carries className="modal" — see
    src/components/Modal.jsx — so these keep matching without every modal's

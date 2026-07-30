@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.56.1] — 2026-07-30
+
+### Fixed
+- **Checkmarks are back in checkboxes across the app, and picking which ingredients to add from a meal now makes it obvious which ones you've selected.** Every checkbox — including the shopping list's "got it" toggle — was silently missing its checkmark glyph. Separately, the ingredient picker reused that same "got it" look for its checked state, so a selected ingredient appeared crossed out and greyed like a *finished* item rather than one that would be added — the opposite of what checking it meant. (`Checkbox.jsx`'s icon class was `ph-check-bold`, which isn't a real Phosphor icon — weight variants need their own stylesheet import and a `ph-{weight}` class prefix, not a suffixed icon name; fixed to `ph-check`, the regular weight actually loaded by the app. `Checkbox` also gained a `variant="select"` mode — used by `IngredientChecklist.jsx` — that skips the strikethrough/muted styling and instead tints the whole row via a new `.ing-row--selected` background in `index.css`.)
+
 ## [1.56.0] — 2026-07-30
 
 ### Added
