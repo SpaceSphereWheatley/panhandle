@@ -10,9 +10,38 @@ export function cap(s) {
 }
 
 // Recognized quantity units, fused or spaced with a number ("2L", "500g",
-// "2 kg", "3 stk"). Order doesn't matter for correctness here since no two
-// alternatives share a starting letter at the same anchored match position.
-const UNIT_ALT = "stk|kg|ml|g|l";
+// "2 kg", "3 stk"), split into two semantic groups since they behave
+// differently (Norwegian: Antall vs Mengde). Order doesn't matter for
+// correctness here since the trailing \b in each match forces the regex
+// engine to backtrack onto a longer alternative (e.g. "lb" over "l") when a
+// shorter one leaves it mid-word. English/Norwegian synonyms sit in the same
+// list rather than being switched by device `lang`, same as
+// extractGF/matchCatalogue below — the shared list can be typed into by any
+// household member's device regardless of that device's own language, plus a
+// set of imperial units since not every household is metric.
+const ANTALL_ALT = "stk|pakke|pk|boks|pose|flaske|dusin|knippe|par|pack|pkg|can|bag|bottle|dozen|bunch|pair";
+const MENGDE_ALT = "kg|mg|g|ml|l|dl|cl|lbs|lb|oz|tbsp|tsp|cup|gal|qt|pt";
+const UNIT_ALT = `${MENGDE_ALT}|${ANTALL_ALT}`;
+const MENGDE_SET = new Set(MENGDE_ALT.split("|"));
+
+// A number paired with a unit may carry a decimal part — comma or dot, either
+// accepted regardless of device language, same reasoning as the unit words
+// above ("1,5 kg" and "1.5 kg" both parse). A bare number with no unit (the
+// last two branches below) stays integer-only.
+const QTY_ALT = "\\d+(?:[.,]\\d+)?";
+
+// A Mengde match ("50 g", "1,5 kg", "0.33 l") is one amount, not a count of
+// discrete things, so `qty` is pinned to 1 and the number stays fused to its
+// unit in a single display string — otherwise it renders as an N-item count
+// badge plus a stray unit tag ("×50 [g]") instead of one "50 g" amount. An
+// Antall match ("3 stk", "2 boks") is a genuine count, so it keeps the
+// number as `qty` as before.
+function classifyUnit(rawNumber, rawUnit) {
+  if (MENGDE_SET.has(rawUnit.toLowerCase())) {
+    return { qty: 1, unit: `${rawNumber} ${rawUnit}`, unitType: "mengde" };
+  }
+  return { qty: Math.round(parseFloat(rawNumber.replace(",", "."))), unit: rawUnit, unitType: "antall" };
+}
 
 // If the typed text is already a known catalogue item, don't strip a leading
 // or trailing integer thinking it's a quantity (e.g. a "7 Up" typed with a
@@ -25,25 +54,25 @@ const UNIT_ALT = "stk|kg|ml|g|l";
 export function parseItemInput(raw, catalogue) {
   const text = raw.trim();
   if (catalogue.some((c) => c.name.toLowerCase() === text.toLowerCase())) {
-    return { name: text, qty: 1, unit: null };
+    return { name: text, qty: 1, unit: null, unitType: null };
   }
-  const leadingUnit = text.match(new RegExp(`^(\\d+)\\s?(${UNIT_ALT})\\b\\s+(.+)$`, "i"));
+  const leadingUnit = text.match(new RegExp(`^(${QTY_ALT})\\s?(${UNIT_ALT})\\b\\s+(.+)$`, "i"));
   if (leadingUnit) {
-    return { name: leadingUnit[3].trim(), qty: parseInt(leadingUnit[1], 10), unit: leadingUnit[2] };
+    return { name: leadingUnit[3].trim(), ...classifyUnit(leadingUnit[1], leadingUnit[2]) };
   }
-  const trailingUnit = text.match(new RegExp(`^(.+?)\\s+(\\d+)\\s?(${UNIT_ALT})\\b$`, "i"));
+  const trailingUnit = text.match(new RegExp(`^(.+?)\\s+(${QTY_ALT})\\s?(${UNIT_ALT})\\b$`, "i"));
   if (trailingUnit) {
-    return { name: trailingUnit[1].trim(), qty: parseInt(trailingUnit[2], 10), unit: trailingUnit[3] };
+    return { name: trailingUnit[1].trim(), ...classifyUnit(trailingUnit[2], trailingUnit[3]) };
   }
   const leading = text.match(/^(\d+)\s+(.+)$/);
   if (leading && Number(leading[1]) < 20) {
-    return { name: leading[2].trim(), qty: parseInt(leading[1], 10), unit: null };
+    return { name: leading[2].trim(), qty: parseInt(leading[1], 10), unit: null, unitType: null };
   }
   const trailing = text.match(/^(.+)\s+(\d+)$/);
   if (trailing && Number(trailing[2]) < 20) {
-    return { name: trailing[1].trim(), qty: parseInt(trailing[2], 10), unit: null };
+    return { name: trailing[1].trim(), qty: parseInt(trailing[2], 10), unit: null, unitType: null };
   }
-  return { name: text, qty: 1, unit: null };
+  return { name: text, qty: 1, unit: null, unitType: null };
 }
 
 // Pulls a gluten-free marker (GF / gf / glutenfri / glutenfritt / "gluten

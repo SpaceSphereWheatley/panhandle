@@ -22,7 +22,17 @@ export function IngredientChecklist({ rows, onToggle }) {
         <div className="ing-row" key={r.name} onClick={() => onToggle(i)}>
           <Checkbox
             checked={r.checked}
-            label={`${r.qty > 1 || r.unit ? `${r.qty}${r.unit ? ` ${r.unit}` : ""} ` : ""}${cap(translateItemName(r.name, lang))}`}
+            label={`${
+              // A Mengde row ("50 g", "1,5 kg") is one amount, not a count —
+              // qty is always 1 there, so showing it as a "1 50 g" prefix
+              // would just duplicate the amount. Antall/no-unit rows keep the
+              // qty-prefixed format.
+              r.unitType === "mengde"
+                ? `${r.unit} `
+                : r.qty > 1 || r.unit
+                  ? `${r.qty}${r.unit ? ` ${r.unit}` : ""} `
+                  : ""
+            }${cap(translateItemName(r.name, lang))}`}
           />
           {r.already && <Tag tone="neutral">{t("meals.alreadyOnList")}</Tag>}
         </div>

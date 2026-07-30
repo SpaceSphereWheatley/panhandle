@@ -21,52 +21,88 @@ describe("parseItemInput", () => {
   const catalogue = [{ name: "7 Up", category: "Drinks" }];
 
   it("parses a leading '<qty> <name>' as a quantity", () => {
-    expect(parseItemInput("2 melk", [])).toEqual({ name: "melk", qty: 2, unit: null });
+    expect(parseItemInput("2 melk", [])).toEqual({ name: "melk", qty: 2, unit: null, unitType: null });
   });
 
   it("does not treat a catalogue name starting with a digit as a quantity", () => {
-    expect(parseItemInput("7 Up", catalogue)).toEqual({ name: "7 Up", qty: 1, unit: null });
+    expect(parseItemInput("7 Up", catalogue)).toEqual({ name: "7 Up", qty: 1, unit: null, unitType: null });
   });
 
   it("parses a trailing '<name> <qty>' below 20 as a quantity", () => {
-    expect(parseItemInput("Melk 2", [])).toEqual({ name: "Melk", qty: 2, unit: null });
+    expect(parseItemInput("Melk 2", [])).toEqual({ name: "Melk", qty: 2, unit: null, unitType: null });
   });
 
   it("does not treat a large trailing number as a quantity", () => {
-    expect(parseItemInput("Yoghurt 500", [])).toEqual({ name: "Yoghurt 500", qty: 1, unit: null });
+    expect(parseItemInput("Yoghurt 500", [])).toEqual({ name: "Yoghurt 500", qty: 1, unit: null, unitType: null });
   });
 
   it("does not treat a large leading number as a quantity", () => {
-    expect(parseItemInput("500 Yoghurt", [])).toEqual({ name: "500 Yoghurt", qty: 1, unit: null });
+    expect(parseItemInput("500 Yoghurt", [])).toEqual({ name: "500 Yoghurt", qty: 1, unit: null, unitType: null });
   });
 
   it("defaults to qty 1 for plain text", () => {
-    expect(parseItemInput("Egg", [])).toEqual({ name: "Egg", qty: 1, unit: null });
+    expect(parseItemInput("Egg", [])).toEqual({ name: "Egg", qty: 1, unit: null, unitType: null });
   });
 
-  it("parses a fused leading '<qty><unit>' as quantity + unit", () => {
-    expect(parseItemInput("2L melk", [])).toEqual({ name: "melk", qty: 2, unit: "L" });
+  // Mengde (amount) units: "N g/kg/l" is one amount, not a count, so qty is
+  // pinned to 1 and the number stays fused to the unit in a single string.
+  it("parses a fused leading Mengde '<qty><unit>' as one amount, qty pinned to 1", () => {
+    expect(parseItemInput("2L melk", [])).toEqual({ name: "melk", qty: 1, unit: "2 L", unitType: "mengde" });
   });
 
-  it("parses a fused leading '<qty><unit>' with no space before the name", () => {
-    expect(parseItemInput("500g ost", [])).toEqual({ name: "ost", qty: 500, unit: "g" });
+  it("parses a fused leading Mengde '<qty><unit>' with no space before the name", () => {
+    expect(parseItemInput("500g ost", [])).toEqual({ name: "ost", qty: 1, unit: "500 g", unitType: "mengde" });
   });
 
-  it("parses a spaced leading '<qty> <unit> <name>'", () => {
-    expect(parseItemInput("2 kg poteter", [])).toEqual({ name: "poteter", qty: 2, unit: "kg" });
+  it("parses a spaced leading Mengde '<qty> <unit> <name>'", () => {
+    expect(parseItemInput("2 kg poteter", [])).toEqual({ name: "poteter", qty: 1, unit: "2 kg", unitType: "mengde" });
   });
 
-  it("parses 'stk' as a unit", () => {
-    expect(parseItemInput("3 stk egg", [])).toEqual({ name: "egg", qty: 3, unit: "stk" });
+  it("parses a trailing Mengde '<name> <qty><unit>'", () => {
+    expect(parseItemInput("Ost 500g", [])).toEqual({ name: "Ost", qty: 1, unit: "500 g", unitType: "mengde" });
   });
 
-  it("parses a trailing '<name> <qty><unit>'", () => {
-    expect(parseItemInput("Ost 500g", [])).toEqual({ name: "Ost", qty: 500, unit: "g" });
+  it("does not cap quantity at 20 for a Mengde amount", () => {
+    expect(parseItemInput("500 g ost", [])).toEqual({ name: "ost", qty: 1, unit: "500 g", unitType: "mengde" });
   });
 
-  it("does not cap quantity at 20 when a unit is present", () => {
-    expect(parseItemInput("500 g ost", [])).toEqual({ name: "ost", qty: 500, unit: "g" });
+  it("accepts a comma-decimal Mengde amount", () => {
+    expect(parseItemInput("1,5 kg poteter", [])).toEqual({ name: "poteter", qty: 1, unit: "1,5 kg", unitType: "mengde" });
   });
+
+  it("accepts a dot-decimal Mengde amount", () => {
+    expect(parseItemInput("0.5 l fløte", [])).toEqual({ name: "fløte", qty: 1, unit: "0.5 l", unitType: "mengde" });
+  });
+
+  it.each(["dl", "cl", "mg"])("recognizes '%s' as a Mengde unit", (unit) => {
+    expect(parseItemInput(`2 ${unit} sukker`, [])).toEqual({ name: "sukker", qty: 1, unit: `2 ${unit}`, unitType: "mengde" });
+  });
+
+  it.each(["oz", "lb", "lbs", "cup", "tbsp", "tsp", "pt", "qt", "gal"])(
+    "recognizes the imperial unit '%s' as Mengde",
+    (unit) => {
+      expect(parseItemInput(`2 ${unit} flour`, [])).toEqual({ name: "flour", qty: 1, unit: `2 ${unit}`, unitType: "mengde" });
+    }
+  );
+
+  // Antall (count) units: the number stays a genuine count in `qty`.
+  it("parses 'stk' as an Antall unit", () => {
+    expect(parseItemInput("3 stk egg", [])).toEqual({ name: "egg", qty: 3, unit: "stk", unitType: "antall" });
+  });
+
+  it.each(["pakke", "pk", "boks", "pose", "flaske", "dusin", "knippe", "par"])(
+    "recognizes '%s' as an Antall unit",
+    (unit) => {
+      expect(parseItemInput(`2 ${unit} tomater`, [])).toEqual({ name: "tomater", qty: 2, unit, unitType: "antall" });
+    }
+  );
+
+  it.each(["pack", "pkg", "can", "bag", "bottle", "dozen", "bunch", "pair"])(
+    "recognizes the English Antall unit '%s'",
+    (unit) => {
+      expect(parseItemInput(`2 ${unit} tomatoes`, [])).toEqual({ name: "tomatoes", qty: 2, unit, unitType: "antall" });
+    }
+  );
 });
 
 describe("extractGF", () => {
