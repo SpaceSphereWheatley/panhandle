@@ -1,9 +1,14 @@
 # Changelog
 
-## [1.55.2] — 2026-07-30
+## [1.55.3] — 2026-07-30
 
 ### Changed
 - **Adding a new meal now leads with typing its name, with the recipe-link import tucked behind a secondary "Import from a recipe link" button instead of sitting at the top of the screen.** Typing a meal name by hand is the common case, so it's now the first thing you see when adding a meal; tap the smaller import link if you'd rather paste a recipe URL, and the same URL field and Import button appear below. (`MealEditModal.jsx`'s recipe-URL row is now gated behind a `showImport` toggle, reordered below the name field.)
+
+## [1.55.2] — 2026-07-30
+
+### Fixed
+- **Ingredients added from the meal planner (or a recipe import) now get their quantities read correctly, the same as typing them into the shopping list by hand.** An ingredient like "2 kg poteter" previously landed on the shopping list as one unmatched item literally named "2 kg poteter" with a quantity of 1, instead of a quantity-2 "Poteter" line under the right category. The picklist shown before adding also now displays each ingredient's quantity/unit. (`buildIngredientRows` in `src/lib/mealUtils.js` now runs each raw ingredient through the same `parseItemInput` qty/unit stripping the manual add field uses before matching it against the catalogue; `addRowsToList` posts that parsed qty/unit instead of a hardcoded `qty: 1`.)
 
 ## [1.55.1] — 2026-07-29
 
