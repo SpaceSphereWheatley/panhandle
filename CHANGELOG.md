@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.56.0] — 2026-07-30
+
+### Added
+- **Typing an amount like "50 g smør" now shows up as a single "50 g" amount instead of a confusing "×50" count next to a stray "g" tag.** Panhandle now tells apart a count ("3 stk", "2 boxes") from an amount ("50 g", "1,5 kg", "0.33 l") when parsing a typed quantity. Amounts also now accept decimals (comma or dot) and recognize more units — Norwegian "dl"/"cl"/"pakke"/"boks"/"pose"/"flaske"/"dusin"/"knippe", and imperial oz/lb/cup/tbsp/tsp/pt/qt/gal for households that don't use metric. Applies everywhere a quantity gets parsed: manual shopping-list entry and importing ingredients from a meal or recipe. (`parseItemInput` in `src/lib/shoppingUtils.js` now classifies each recognized unit as Antall — a count, `qty` stays a number — or Mengde — an amount, `qty` pinned to 1 with the number fused to its unit in one string — and accepts a comma/dot decimal on Mengde amounts; `buildIngredientRows`/`IngredientChecklist.jsx` updated to match.)
+
 ## [1.55.3] — 2026-07-30
 
 ### Changed

@@ -18,13 +18,13 @@ export function buildIngredientRows(rawIngredients, catalogue, onListNames) {
   const seen = new Set();
   const rows = [];
   for (const raw of rawIngredients) {
-    const { name: parsedName, qty, unit } = parseItemInput(raw, catalogue);
+    const { name: parsedName, qty, unit, unitType } = parseItemInput(raw, catalogue);
     const match = matchCatalogue(parsedName, catalogue)[0];
     const name = match ? match.name : parsedName;
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push({ name, category: match ? match.category : "Other", qty, unit, already: onListNames.has(key) });
+    rows.push({ name, category: match ? match.category : "Other", qty, unit, unitType, already: onListNames.has(key) });
   }
   return rows;
 }

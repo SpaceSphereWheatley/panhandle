@@ -103,24 +103,29 @@ describe("buildIngredientRows", () => {
     expect(rows.find((r) => r.name === "Egg").already).toBe(false);
   });
 
-  it("parses a leading qty+unit off a raw ingredient, same as manual entry", () => {
+  it("parses a leading Mengde qty+unit off a raw ingredient as one amount, same as manual entry", () => {
     const rows = buildIngredientRows(["2 kg Melk"], catalogue, new Set());
-    expect(rows[0]).toMatchObject({ name: "Melk", qty: 2, unit: "kg", category: "Dairy" });
+    expect(rows[0]).toMatchObject({ name: "Melk", qty: 1, unit: "2 kg", unitType: "mengde", category: "Dairy" });
+  });
+
+  it("parses a leading Antall qty+unit as a genuine count", () => {
+    const rows = buildIngredientRows(["2 boks Melk"], catalogue, new Set());
+    expect(rows[0]).toMatchObject({ name: "Melk", qty: 2, unit: "boks", unitType: "antall", category: "Dairy" });
   });
 
   it("parses a bare leading qty with no unit", () => {
     const rows = buildIngredientRows(["3 Egg"], catalogue, new Set());
-    expect(rows[0]).toMatchObject({ name: "Egg", qty: 3, unit: null, category: "Dairy" });
+    expect(rows[0]).toMatchObject({ name: "Egg", qty: 3, unit: null, unitType: null, category: "Dairy" });
   });
 
   it("defaults to qty 1 with no unit for a plain ingredient", () => {
     const rows = buildIngredientRows(["Melk"], catalogue, new Set());
-    expect(rows[0]).toMatchObject({ qty: 1, unit: null });
+    expect(rows[0]).toMatchObject({ qty: 1, unit: null, unitType: null });
   });
 
   it("still falls back to 'Other' when the parsed name has no catalogue match", () => {
     const rows = buildIngredientRows(["500g Trylledrikk"], catalogue, new Set());
-    expect(rows[0]).toMatchObject({ name: "Trylledrikk", qty: 500, unit: "g", category: "Other" });
+    expect(rows[0]).toMatchObject({ name: "Trylledrikk", qty: 1, unit: "500 g", unitType: "mengde", category: "Other" });
   });
 });
 
