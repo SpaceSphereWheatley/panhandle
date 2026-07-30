@@ -205,7 +205,8 @@ export const nb = {
 
   "meals.edit.title": "Rediger måltid",
   "meals.edit.newTitle": "Nytt måltid",
-  "meals.edit.importUrlLabel": "Importer fra en oppskriftslenke",
+  "meals.edit.importToggle": "Importer fra en oppskriftslenke i stedet",
+  "meals.edit.importUrlLabel": "Oppskriftslenke",
   "meals.edit.importUrlPlaceholder": "Lim inn en oppskriftslenke…",
   "meals.edit.importButton": "Importer",
   "meals.edit.importingButton": "Importerer…",

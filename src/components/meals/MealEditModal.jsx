@@ -27,6 +27,7 @@ export function MealEditModal({ id, onClose, onSaved }) {
   const [similarNote, setSimilarNote] = useState({ kind: null, names: [] });
   const [recipeUrl, setRecipeUrl] = useState("");
   const [importing, setImporting] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -130,19 +131,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose} title={t(id ? "meals.edit.title" : "meals.edit.newTitle")}>
-      <label htmlFor="meal-edit-recipe-url">{t("meals.edit.importUrlLabel")}</label>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Input
-          id="meal-edit-recipe-url"
-          value={recipeUrl}
-          onChange={(e) => setRecipeUrl(e.target.value)}
-          placeholder={t("meals.edit.importUrlPlaceholder")}
-          style={{ flex: 1 }}
-        />
-        <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
-          {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
-        </Button>
-      </div>
       <label htmlFor="meal-edit-name">{t("meals.edit.nameLabel")}</label>
       <Input
         id="meal-edit-name"
@@ -156,6 +144,27 @@ export function MealEditModal({ id, onClose, onSaved }) {
       <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: isDuplicate ? "var(--status-danger)" : "var(--text-tertiary)" }}>
         {similarText}
       </div>
+      {showImport ? (
+        <>
+          <label htmlFor="meal-edit-recipe-url">{t("meals.edit.importUrlLabel")}</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Input
+              id="meal-edit-recipe-url"
+              value={recipeUrl}
+              onChange={(e) => setRecipeUrl(e.target.value)}
+              placeholder={t("meals.edit.importUrlPlaceholder")}
+              style={{ flex: 1 }}
+            />
+            <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
+              {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <Button variant="ghost" size="sm" icon="link" onClick={() => setShowImport(true)} style={{ marginTop: 4, padding: "8px 4px" }}>
+          {t("meals.edit.importToggle")}
+        </Button>
+      )}
       <label htmlFor="meal-edit-ingredients">{t("meals.ingredientsLabel")}</label>
       {/* Canonical (untranslated) suggestions on purpose — see MealPlanModal. */}
       <TokenInput
