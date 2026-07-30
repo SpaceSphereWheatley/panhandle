@@ -20,7 +20,10 @@ export function IngredientChecklist({ rows, onToggle }) {
         // localize; a free-typed ingredient has no entry and passes through
         // as typed. Display only — `r.name` is what actually gets POSTed.
         <div className="ing-row" key={r.name} onClick={() => onToggle(i)}>
-          <Checkbox checked={r.checked} label={cap(translateItemName(r.name, lang))} />
+          <Checkbox
+            checked={r.checked}
+            label={`${r.qty > 1 || r.unit ? `${r.qty}${r.unit ? ` ${r.unit}` : ""} ` : ""}${cap(translateItemName(r.name, lang))}`}
+          />
           {r.already && <Tag tone="neutral">{t("meals.alreadyOnList")}</Tag>}
         </div>
       ))}

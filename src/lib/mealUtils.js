@@ -1,4 +1,4 @@
-import { matchCatalogue } from "./shoppingUtils.js";
+import { matchCatalogue, parseItemInput } from "./shoppingUtils.js";
 import { api } from "./api.js";
 
 // (WEEKDAYS_NO used to live here. Its only consumer, DinnerDutySubpage, now
@@ -8,17 +8,23 @@ import { api } from "./api.js";
 // Turns a flat list of raw ingredient strings (as typed into meal_catalogue)
 // into deduped, catalogue-matched rows ready for a checkable "add to
 // shopping list" UI. `onListNames` is a Set of lowercased names already
-// unbought on the shopping list, used to set the `already` flag.
+// unbought on the shopping list, used to set the `already` flag. Runs each
+// raw ingredient through parseItemInput first — the same qty/unit stripping
+// the manual shopping-list input does — so a meal ingredient typed as e.g.
+// "2 kg poteter" imports as qty 2/unit kg against a matched "Poteter" line,
+// instead of failing to match the catalogue on the untouched string and
+// landing as a qty-1 "Other" item literally named "2 kg poteter".
 export function buildIngredientRows(rawIngredients, catalogue, onListNames) {
   const seen = new Set();
   const rows = [];
   for (const raw of rawIngredients) {
-    const match = matchCatalogue(raw, catalogue)[0];
-    const name = match ? match.name : raw;
+    const { name: parsedName, qty, unit } = parseItemInput(raw, catalogue);
+    const match = matchCatalogue(parsedName, catalogue)[0];
+    const name = match ? match.name : parsedName;
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push({ name, category: match ? match.category : "Other", already: onListNames.has(key) });
+    rows.push({ name, category: match ? match.category : "Other", qty, unit, already: onListNames.has(key) });
   }
   return rows;
 }
@@ -108,14 +114,19 @@ export function findSimilarMeals(catalogue, name) {
 // tallying outcomes so the caller can toast a single summary instead of one
 // per item. A `{ duplicate: true }` response means the qty was bumped on a
 // line already on the list rather than a genuinely new item, so it's counted
-// separately from `added`.
+// separately from `added`. `r.qty`/`r.unit` come from buildIngredientRows'
+// parseItemInput pass; unit (if any) rides along as a note, matching how the
+// manual shopping-list input records it.
 export async function addRowsToList(rows) {
   let added = 0,
     merged = 0,
     failed = 0;
   for (const r of rows) {
     try {
-      const res = await api("/list", { method: "POST", body: JSON.stringify({ name: r.name, qty: 1, category: r.category }) });
+      const res = await api("/list", {
+        method: "POST",
+        body: JSON.stringify({ name: r.name, qty: r.qty || 1, category: r.category, notes: r.unit || undefined }),
+      });
       if (res?.duplicate) merged++;
       else added++;
     } catch {

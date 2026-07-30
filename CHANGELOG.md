@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.55.2] — 2026-07-30
+
+### Fixed
+- **Ingredients added from the meal planner (or a recipe import) now get their quantities read correctly, the same as typing them into the shopping list by hand.** An ingredient like "2 kg poteter" previously landed on the shopping list as one unmatched item literally named "2 kg poteter" with a quantity of 1, instead of a quantity-2 "Poteter" line under the right category. The picklist shown before adding also now displays each ingredient's quantity/unit. (`buildIngredientRows` in `src/lib/mealUtils.js` now runs each raw ingredient through the same `parseItemInput` qty/unit stripping the manual add field uses before matching it against the catalogue; `addRowsToList` posts that parsed qty/unit instead of a hardcoded `qty: 1`.)
+
 ## [1.55.1] — 2026-07-29
 
 ### Fixed

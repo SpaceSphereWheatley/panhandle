@@ -102,6 +102,26 @@ describe("buildIngredientRows", () => {
     expect(rows.find((r) => r.name === "Melk").already).toBe(true);
     expect(rows.find((r) => r.name === "Egg").already).toBe(false);
   });
+
+  it("parses a leading qty+unit off a raw ingredient, same as manual entry", () => {
+    const rows = buildIngredientRows(["2 kg Melk"], catalogue, new Set());
+    expect(rows[0]).toMatchObject({ name: "Melk", qty: 2, unit: "kg", category: "Dairy" });
+  });
+
+  it("parses a bare leading qty with no unit", () => {
+    const rows = buildIngredientRows(["3 Egg"], catalogue, new Set());
+    expect(rows[0]).toMatchObject({ name: "Egg", qty: 3, unit: null, category: "Dairy" });
+  });
+
+  it("defaults to qty 1 with no unit for a plain ingredient", () => {
+    const rows = buildIngredientRows(["Melk"], catalogue, new Set());
+    expect(rows[0]).toMatchObject({ qty: 1, unit: null });
+  });
+
+  it("still falls back to 'Other' when the parsed name has no catalogue match", () => {
+    const rows = buildIngredientRows(["500g Trylledrikk"], catalogue, new Set());
+    expect(rows[0]).toMatchObject({ name: "Trylledrikk", qty: 500, unit: "g", category: "Other" });
+  });
 });
 
 describe("dayOfWeekMonFirst", () => {
@@ -203,5 +223,25 @@ describe("addRowsToList", () => {
     mockApi.mockClear();
     expect(await addRowsToList([])).toEqual({ added: 0, merged: 0, failed: 0 });
     expect(mockApi).not.toHaveBeenCalled();
+  });
+
+  it("posts the row's parsed qty and unit instead of a hardcoded qty of 1", async () => {
+    mockApi.mockClear();
+    mockApi.mockResolvedValueOnce({ id: 1 });
+    await addRowsToList([{ name: "Poteter", category: "Produce", qty: 2, unit: "kg" }]);
+    expect(mockApi).toHaveBeenCalledWith(
+      "/list",
+      expect.objectContaining({ body: JSON.stringify({ name: "Poteter", qty: 2, category: "Produce", notes: "kg" }) })
+    );
+  });
+
+  it("falls back to qty 1 and no notes when a row has no parsed qty/unit", async () => {
+    mockApi.mockClear();
+    mockApi.mockResolvedValueOnce({ id: 1 });
+    await addRowsToList([{ name: "Egg", category: "Dairy" }]);
+    expect(mockApi).toHaveBeenCalledWith(
+      "/list",
+      expect.objectContaining({ body: JSON.stringify({ name: "Egg", qty: 1, category: "Dairy" }) })
+    );
   });
 });
