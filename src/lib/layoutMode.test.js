@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { DESKTOP_MIN_WIDTH, DESKTOP_QUERY, layoutModeForWidth } from "./layoutMode.js";
 
 describe("layoutMode", () => {
@@ -21,5 +21,54 @@ describe("layoutMode", () => {
   it("falls back to compact without matchMedia", async () => {
     const { currentLayoutMode } = await import("./layoutMode.js");
     expect(currentLayoutMode()).toBe("compact");
+  });
+});
+
+// jsdom does implement matchMedia here (unlike the suite above, which relies
+// on the environment omitting it entirely) so these can drive it directly.
+describe("layoutMode override", () => {
+  const originalMatchMedia = window.matchMedia;
+
+  function stubMatchMedia(matches) {
+    window.matchMedia = (query) => ({
+      matches,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    });
+  }
+
+  beforeEach(() => {
+    localStorage.removeItem("ph_layout_override");
+  });
+
+  afterEach(() => {
+    localStorage.removeItem("ph_layout_override");
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it("viewportLayoutMode ignores the override; currentLayoutMode honors it", async () => {
+    stubMatchMedia(true); // viewport is desktop-width
+    const { currentLayoutMode, viewportLayoutMode, setLayoutOverride } = await import("./layoutMode.js");
+
+    expect(viewportLayoutMode()).toBe("desktop");
+    expect(currentLayoutMode()).toBe("desktop");
+
+    setLayoutOverride("compact");
+    expect(viewportLayoutMode()).toBe("desktop");
+    expect(currentLayoutMode()).toBe("compact");
+
+    setLayoutOverride(null);
+    expect(currentLayoutMode()).toBe("desktop");
+  });
+
+  it("persists the override across reads", async () => {
+    stubMatchMedia(true);
+    const { layoutOverride, setLayoutOverride } = await import("./layoutMode.js");
+
+    expect(layoutOverride()).toBe(null);
+    setLayoutOverride("compact");
+    expect(layoutOverride()).toBe("compact");
+    expect(localStorage.getItem("ph_layout_override")).toBe("compact");
   });
 });
