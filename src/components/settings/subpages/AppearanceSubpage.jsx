@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Card, SegmentedControl, Switch } from "../../../design-system/index.js";
 import { currentTheme, setTheme } from "../../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../../lib/designIntensity.js";
+import { layoutOverride, setLayoutOverride } from "../../../lib/layoutMode.js";
+import { useIsDesktopViewport } from "../../../hooks/useIsDesktop.js";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 
@@ -31,6 +33,8 @@ export function AppearanceSubpage() {
   const [theme, setThemeState] = useState(currentTheme());
   const [intensity, setIntensityState] = useState(currentIntensity());
   const [haptics, setHapticsState] = useState(hapticsEnabled());
+  const [preferPhoneUi, setPreferPhoneUiState] = useState(layoutOverride() === "compact");
+  const isDesktopViewport = useIsDesktopViewport();
 
   function onSetTheme(t) {
     setTheme(t);
@@ -44,6 +48,10 @@ export function AppearanceSubpage() {
     localStorage.setItem("ph_haptics", on ? "1" : "0");
     setHapticsState(on);
     if (on && navigator.vibrate) navigator.vibrate(10);
+  }
+  function onSetPreferPhoneUi(on) {
+    setLayoutOverride(on ? "compact" : null);
+    setPreferPhoneUiState(on);
   }
 
   return (
@@ -68,6 +76,15 @@ export function AppearanceSubpage() {
       >
         <Switch checked={haptics} onChange={onSetHaptics} />
       </SubpageSection>
+
+      {isDesktopViewport && (
+        <SubpageSection
+          label={t("settings.appearance.preferPhoneUi.label")}
+          description={t("settings.appearance.preferPhoneUi.description")}
+        >
+          <Switch checked={preferPhoneUi} onChange={onSetPreferPhoneUi} />
+        </SubpageSection>
+      )}
     </Card>
   );
 }

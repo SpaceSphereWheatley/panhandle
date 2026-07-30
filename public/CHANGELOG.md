@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.0] — 2026-07-30
+
+### Added
+- **On a wide screen, Settings → Appearance now has a "Use phone layout" toggle to switch back to the phone-style layout if you prefer it.** Only shows up on desktop-width screens, and only affects this device. (Adds a per-device layout override — `ph_layout_override` in `localStorage`, read by `src/lib/layoutMode.js`'s `currentLayoutMode()` — that takes precedence over the automatic viewport-width detection; the toggle's own visibility is driven by a separate viewport-only check, `useIsDesktopViewport`, so turning the override on can't hide the control needed to turn it back off.)
+
 ## [1.56.1] — 2026-07-30
 
 ### Fixed

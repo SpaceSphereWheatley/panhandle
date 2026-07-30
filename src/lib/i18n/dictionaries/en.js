@@ -218,6 +218,8 @@ export const en = {
   "settings.appearance.theme.system": "Follow the system",
   "settings.appearance.haptics.label": "Vibrate on action",
   "settings.appearance.haptics.description": "A short vibration when you tick off or add items. Applies to this device only.",
+  "settings.appearance.preferPhoneUi.label": "Use phone layout",
+  "settings.appearance.preferPhoneUi.description": "Show the phone-style layout even on this wide screen. Applies to this device only.",
 
   "settings.language.label": "Language",
   "settings.language.description": "The language the app is shown in. Applies to this device only.",

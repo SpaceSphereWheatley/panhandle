@@ -18,6 +18,17 @@ export const DESKTOP_QUERY = `(min-width: ${DESKTOP_MIN_WIDTH}px)`;
 
 const EVENT = "ph:layout-change";
 
+// A per-device override letting someone on a desktop-width viewport opt back
+// into the phone layout (Settings → Appearance). Only "compact" is a valid
+// stored value — there's no "force desktop on a phone" case — so any other
+// value (including absence) means "follow the viewport." Kept as a separate
+// key rather than folded into layoutModeForWidth's result so
+// viewportLayoutMode() below can stay override-blind: the Settings toggle
+// that reverts this must stay visible even while the override is active,
+// which means its own visibility can't depend on the effective (overridden)
+// mode.
+const OVERRIDE_KEY = "ph_layout_override";
+
 // Pure, so it's unit-testable without a DOM.
 export function layoutModeForWidth(width) {
   return width >= DESKTOP_MIN_WIDTH ? "desktop" : "compact";
@@ -31,15 +42,40 @@ function canMatchMedia() {
   return typeof window !== "undefined" && typeof window.matchMedia === "function";
 }
 
-export function currentLayoutMode() {
+// The layout the viewport's own width calls for, ignoring any stored
+// override. This is what drives whether the "prefer phone layout" toggle
+// itself is shown — see the OVERRIDE_KEY comment above for why it can't use
+// currentLayoutMode() instead.
+export function viewportLayoutMode() {
   if (!canMatchMedia()) return "compact";
   return window.matchMedia(DESKTOP_QUERY).matches ? "desktop" : "compact";
+}
+
+export function layoutOverride() {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(OVERRIDE_KEY) === "compact" ? "compact" : null;
+}
+
+// The mode actually applied to the app: the override when set, else whatever
+// the viewport calls for.
+export function currentLayoutMode() {
+  return layoutOverride() || viewportLayoutMode();
 }
 
 export function applyLayoutMode(mode) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.layout = mode;
   window.dispatchEvent(new CustomEvent(EVENT, { detail: mode }));
+}
+
+// mode: "compact" to force the phone layout regardless of viewport width, or
+// null to clear the override and go back to following the viewport.
+export function setLayoutOverride(mode) {
+  if (typeof localStorage !== "undefined") {
+    if (mode === "compact") localStorage.setItem(OVERRIDE_KEY, "compact");
+    else localStorage.removeItem(OVERRIDE_KEY);
+  }
+  applyLayoutMode(currentLayoutMode());
 }
 
 export function subscribeLayoutMode(cb) {
@@ -52,6 +88,6 @@ export function subscribeLayoutMode(cb) {
 // Stamp the initial value and keep it in sync as the window is resized.
 if (canMatchMedia()) {
   const mql = window.matchMedia(DESKTOP_QUERY);
-  applyLayoutMode(mql.matches ? "desktop" : "compact");
-  mql.addEventListener("change", (e) => applyLayoutMode(e.matches ? "desktop" : "compact"));
+  applyLayoutMode(currentLayoutMode());
+  mql.addEventListener("change", () => applyLayoutMode(currentLayoutMode()));
 }

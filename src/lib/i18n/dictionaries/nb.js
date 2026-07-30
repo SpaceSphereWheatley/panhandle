@@ -278,6 +278,8 @@ export const nb = {
   "settings.appearance.theme.system": "Følg systemet",
   "settings.appearance.haptics.label": "Vibrasjon ved handling",
   "settings.appearance.haptics.description": "Kort vibrasjon når du krysser av eller legger til varer. Gjelder bare denne enheten.",
+  "settings.appearance.preferPhoneUi.label": "Bruk mobilvisning",
+  "settings.appearance.preferPhoneUi.description": "Vis mobilvisningen selv på denne brede skjermen. Gjelder bare denne enheten.",
 
   "settings.language.label": "Språk",
   "settings.language.description": "Språket appen vises på. Gjelder bare denne enheten.",
