@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.55.3] — 2026-07-30
+
+### Changed
+- **Adding a new meal now leads with typing its name, with the recipe-link import tucked behind a secondary "Import from a recipe link" button instead of sitting at the top of the screen.** Typing a meal name by hand is the common case, so it's now the first thing you see when adding a meal; tap the smaller import link if you'd rather paste a recipe URL, and the same URL field and Import button appear below. (`MealEditModal.jsx`'s recipe-URL row is now gated behind a `showImport` toggle, reordered below the name field.)
+
 ## [1.55.2] — 2026-07-30
 
 ### Fixed
