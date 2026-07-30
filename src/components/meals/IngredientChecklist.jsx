@@ -19,9 +19,10 @@ export function IngredientChecklist({ rows, onToggle }) {
         // the ingredient matched one (buildIngredientRows), so common items
         // localize; a free-typed ingredient has no entry and passes through
         // as typed. Display only — `r.name` is what actually gets POSTed.
-        <div className="ing-row" key={r.name} onClick={() => onToggle(i)}>
+        <div className={`ing-row${r.checked ? " ing-row--selected" : ""}`} key={r.name} onClick={() => onToggle(i)}>
           <Checkbox
             checked={r.checked}
+            variant="select"
             label={`${
               // A Mengde row ("50 g", "1,5 kg") is one amount, not a count —
               // qty is always 1 there, so showing it as a "1 50 g" prefix
