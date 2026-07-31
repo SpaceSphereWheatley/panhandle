@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.2] — 2026-07-31
+
+### Fixed
+- **Removing an item from your shopping list now asks you to confirm first, and the item editor's two delete options are now sized to match how serious they actually are.** "Remove from list" — the everyday one-tap action, since the item stays remembered for next time — used to delete instantly with zero confirmation and, confusingly, looked like the scarier of the two options. "Forget item and purchase history entirely" — which also erases past "Recently bought" entries — was a barely-visible 12px text link. Removing now shows a lightweight confirm step with a calm button style; forgetting is now a proper (if still deliberately smaller) button, so it reads as the more serious action it is. (`ItemEditModal.jsx`'s `removeFromList` gains the same `useConfirm()` gate `deleteFromCatalogue` already had, via new `itemEdit.confirmRemove.*` i18n keys with `danger: false` so its confirm dialog stays calm too; `removeFromList`'s button switched from `variant="danger"` to `variant="outline"`, and `deleteFromCatalogue`'s plain text link became `Button variant="danger" size="sm"`.)
+
 ## [1.57.1] — 2026-07-30
 
 ### Fixed
