@@ -30,11 +30,22 @@ Completed items live in `Todo_done.md`, not below.
    open items (U1, U6-U10, U15, U17, U19, U20) are either already shipped by
    the rewrite or superseded by it and can be treated as closed even though
    still unchecked in that file.
-4. **Small UI/polish items — low value, low risk, good filler:**
+4. **Code quality / architecture review (2026-07-31, Principal-Engineer
+   pass)** — a full-repo pass over `worker/index.js` and the React frontend
+   for architecture, performance, and error-handling gaps (see `## Code
+   quality` below). Nothing urgent: the concrete gaps are #136-#140, plus
+   an explicitly optional/long-term idea (#141). Two worth calling out —
+   **#139** (four separate hand-rolled copies of the same rate-limit
+   check, `/login`/`/change-password`/`/change-email`/`DELETE /account`,
+   instead of the shared helper every other rate-limited endpoint uses)
+   and **#140** (the frontend's `api()` helper can throw uncaught on a
+   malformed response, with at least one confirmed call site — catalogue
+   load — that has no try/catch around it).
+5. **Small UI/polish items — low value, low risk, good filler:**
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
    - **#124** Minor icon/component consistency nits (see below)
-5. **Multi-list data model (#1)** — high ceiling if this app ever needs
+6. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
@@ -258,6 +269,79 @@ were triaged).
      `docs/ui-review-plan.md` U23.
      _Value: Low · Importance: Low · Type: UX / Security hygiene_
 
+## Code quality
+
+From a Principal-Engineer-style code quality/architecture review (2026-07-31)
+of `worker/index.js` and the React frontend, covering separation of concerns,
+performance/re-render behavior, and error handling. No urgent bugs — the
+gaps below are cost-of-change/robustness risks confirmed directly against
+the current code (not the older commit the review started from — line refs
+were re-verified after `main` moved).
+
+### P2 — Correctness / robustness
+
+136. Two more `login_attempts` rate-limit copies than the review first found:
+     it's not just `/login` and `/change-password` (~L1627-1651,
+     ~L2025-2047) hand-rolling the same inline
+     `SELECT COUNT(*) FROM login_attempts WHERE ip=? AND created_at>=?` +
+     manual prune — `/change-email` (~L2085-2106) and `DELETE /account`
+     (~L2139-2155) do too, all four independently, instead of calling the
+     shared `checkRateLimit`/`recordAttempt` helpers (`rate_limit_attempts`
+     table) that `/register`, `/forgot-password`, `/feedback`, and invite
+     redemption already use. Four copies with no test guarding they stay in
+     sync (unlike `shared/errorCodes.js`'s equivalent contract) is a real
+     drift risk. Migrate all four onto `checkRateLimit`/`recordAttempt`
+     (kinds `"login"`, `"change_password"`, `"change_email"`,
+     `"delete_account"`), then drop the `login_attempts` table in a
+     follow-up contract migration.
+     _Value: Medium · Importance: Low · Type: Bug / Maintainability_
+
+137. `src/lib/api.js`'s `api()` helper has no handling for a non-JSON or
+     unexpected-status response — for any status other than 401 it
+     unconditionally does `return res.json()`, which throws uncaught for a
+     malformed body (e.g. an origin 500 HTML error page). Confirmed live
+     gap: `loadCatalogue()` in `ShoppingListTab.jsx` (~L238-240, called via
+     `loadCatalogue().then(loadList).finally(...)` at ~L309) has no
+     `try/catch`, so a bad `/catalogue` response silently leaves the
+     catalogue stale/empty for the rest of the session with no user-visible
+     error. Make `api()` defensively parse JSON and throw a clear,
+     catchable error; audit call sites missing a catch.
+     _Value: Medium · Importance: Medium · Type: Bug / Frontend_
+
+### P3 — Performance (no measured user impact yet, but easy to get right)
+
+138. No `React.memo` anywhere in the frontend (repo-wide grep confirms
+     zero uses). `ItemCard.jsx` (framer-motion-driven, several
+     `useMotionValue`/`useTransform` hooks) re-renders on every item in the
+     list on every 7s poll tick, since `loadList()`'s `setItems(fetched)`
+     (`ShoppingListTab.jsx` ~L264) always swaps in a fresh array reference
+     regardless of whether the data changed, and `renderItems()` (~L1190)
+     passes `onToggle`/`onToggleImportant`/`onEdit` as bare,
+     non-`useCallback`'d functions. Wrap `ItemCard` in `React.memo`,
+     stabilize those callback props with `useCallback`, and skip
+     `setItems` when the fetched payload is unchanged.
+     _Value: Medium · Importance: Low · Type: Performance / Frontend_
+
+139. Every context Provider (`AuthContext`, `ListUsersContext`,
+     `CategoryOrderContext`, `RecurringContext`, `PushContext`,
+     `ToastContext`, `InstallPromptContext`; `LanguageContext` partially —
+     it memoizes `t` but not the provider's own value object) passes a
+     fresh inline `value={{...}}` on every render. `AuthContext` wraps the
+     whole app and re-renders on nearly every request (the sliding-expiry
+     token refresh calls `setAuth`), cascading re-renders through every
+     consumer below it. Memoize each provider's value (and the callbacks it
+     hands out).
+     _Value: Medium · Importance: Low · Type: Performance / Frontend_
+
+140. `mintToken` (`worker/index.js` ~L2010-2012) signs a brand-new JWT on
+     *every* authenticated request, including plain GETs, despite a 90-day
+     token lifetime (~L1112) — unconditional HMAC signing plus an
+     `X-Refresh-Token` write and a client-side `localStorage` write, on
+     every 7s poll tick from every open tab. Only mint a refresh token when
+     the current one is within some fraction of its expiry (e.g. <50% TTL
+     remaining) instead of unconditionally.
+     _Value: Low · Importance: Low · Type: Performance / Backend_
+
 ## Data model / Account lifecycle
 
 1. Let a user exist without a list, and let anyone create lists, be members
@@ -336,6 +420,18 @@ _Carried over from `docs/ui-review-plan.md` (2026-07-31 UI/UX audit):_
      one-week strip (`weekOffset` is still clamped `[WEEK_MIN, WEEK_MAX]` =
      `[-1, 4]`). Carried over from `docs/ui-review-plan.md` U27.
      _Value: Low · Importance: Low · Type: Idea / Meals_
+
+141. Replace `worker/index.js`'s ~50+ sequential
+     `if (path === X && method === Y)` route checks (from the 2026-07-31
+     code quality review — see `## Code quality`) with a plain object
+     dispatch table (`{ "GET /list": handler, ... }`) — same handler
+     bodies, no new dependency/framework, just an object lookup instead of
+     a linear scan. Explicitly optional/long-term: the current shape is a
+     deliberate, documented trade for a solo dev without a framework (see
+     CLAUDE.md), and the existing extract-pure-logic-and-unit-test pattern
+     already mitigates its worst downside (untestable handlers). Only
+     worth doing if route count keeps growing.
+     _Value: Low · Importance: Low · Type: Idea / Refactor_
 
 ## Done
 
