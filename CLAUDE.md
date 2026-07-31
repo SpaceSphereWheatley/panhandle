@@ -148,6 +148,8 @@ When the user says "finish up" (or similar) on a branch with work ready to ship:
 
 If changes related to anything in CLAUDE.md are made, the change should also be reflected in this file.
 
+**Never write a bare `#123` when referencing a `TODO.md`/`Todo_done.md` item ID anywhere GitHub renders as issue/PR discussion** — commit messages, PR titles/bodies/comments, issue comments. GitHub autolinks any `#<digits>` token in those contexts to that repo's issue or PR of the same number (a space before the digits doesn't prevent it — `TODO #123` still autolinks), which is almost never the actual TODO item. Write `TODO-123` instead (no space, no `#`) in that context. Bare numbers/`#123` prose inside `TODO.md`/`Todo_done.md` themselves is fine, since GitHub doesn't autolink plain repo file views.
+
 ### Testing conventions
 
 New pure-logic functions (worker helpers, `src/lib/*`) and new auth/permission-sensitive endpoints should get a unit or integration test added in the same PR — written after the behavior is working and validated on a deploy preview, not TDD-style. UI/component changes don't require tests; keep validating those via deploy-preview click-through. Run `npm test` (frontend unit tests), `node --test tests/worker-unit.test.mjs` (backend pure-function unit tests), and — for auth/permissions/admin-owner changes specifically — the relevant `tests/*.test.mjs` integration test (e.g. `node tests/auth.test.mjs`, `node tests/admin-owner.test.mjs`, `node tests/signup-recovery.test.mjs`, `node tests/admin-delete-user.test.mjs`, `node tests/self-delete-account.test.mjs`, `node tests/feedback.test.mjs`, `node tests/push-notifications.test.mjs`, `node tests/calendar-feed.test.mjs`) before merging.
