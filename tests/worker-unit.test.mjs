@@ -693,3 +693,86 @@ describe("error codes", () => {
     assert.deepEqual(raw, []);
   });
 });
+
+// Every route check written before the "AUTH REQUIRED BELOW" marker in
+// worker/index.js runs with no auth gate at all — the marker is a purely
+// textual convention (the two-line requireAuth() choke point immediately
+// after it is what actually enforces auth for everything below). Nothing in
+// the language stops a new route from landing above the marker and silently
+// shipping unauthenticated (TODO-130). These tests pin the exact whitelist
+// of public routes so any addition/removal/reorder above the marker is a
+// loud test failure instead of a silent gap.
+describe("auth boundary", () => {
+  const workerSrc = readFileSync(new URL("../worker/index.js", import.meta.url), "utf8");
+
+  const pathDeclIdx = workerSrc.indexOf('const path = url.pathname.replace(/^\\/api/, "");');
+  const markerIdx = workerSrc.indexOf("// ===== AUTH REQUIRED BELOW =====");
+
+  test("both anchors are found, in the expected order", () => {
+    // If either anchor gets renamed/reworded, indexOf silently returns -1 and
+    // .slice() below would scan an empty (or wrong) region, making every
+    // other assertion in this block vacuously pass. Fail loudly instead.
+    assert.ok(pathDeclIdx > -1, "could not find the `path` declaration");
+    assert.ok(markerIdx > -1, 'could not find the "AUTH REQUIRED BELOW" marker');
+    assert.ok(markerIdx > pathDeclIdx, "marker appears before the path declaration");
+  });
+
+  const region = workerSrc.slice(pathDeclIdx, markerIdx);
+
+  const EXPECTED_LITERAL_ROUTES = [
+    "GET /version",
+    "POST /login",
+    "POST /register",
+    "POST /auth/google",
+    "POST /forgot-password",
+    "POST /reset-password",
+    "POST /invite-signup",
+    "POST /invite-google",
+  ];
+
+  test("the only literal-path public routes are the known whitelist", () => {
+    const found = [...region.matchAll(/if \(path === "([^"]+)" && method === "([A-Z]+)"\)/g)]
+      .map((m) => `${m[2]} ${m[1]}`);
+    assert.deepEqual(found.sort(), [...EXPECTED_LITERAL_ROUTES].sort());
+  });
+
+  test("no other `if (path...)`-shaped check hides above the marker", () => {
+    // A future public route added in some other shape (e.g. a hypothetical
+    // `if (path.startsWith("/foo") && method === "GET")`) wouldn't match the
+    // strict regex above, but still starts with `if (path` — this is a
+    // broader net that doesn't care about the exact shape of the condition.
+    const broadCount = [...region.matchAll(/if \(path\b/g)].length;
+    assert.equal(broadCount, EXPECTED_LITERAL_ROUTES.length);
+  });
+
+  const EXPECTED_DYNAMIC_VARS = ["calendarFeedMatch", "invitePreviewMatch"];
+
+  test("the only dynamic (regex-matched) public routes are the known whitelist", () => {
+    const found = [...region.matchAll(/const (\w+) = path\.match\(/g)].map((m) => m[1]);
+    assert.deepEqual(found.sort(), [...EXPECTED_DYNAMIC_VARS].sort());
+    for (const name of EXPECTED_DYNAMIC_VARS) {
+      const guardRe = new RegExp(`if \\(${name} && method === "GET"\\)`);
+      assert.ok(guardRe.test(region), `expected a GET-only guard for ${name}`);
+    }
+  });
+
+  test("many authenticated routes exist below the marker (sanity check)", () => {
+    // Guards the anchors/regexes above against silently matching nothing — if
+    // this collapses, the region became scannable-but-wrong rather than the
+    // whitelist actually shrinking. (Real count today is 53: 42 literal +
+    // 11 dynamic; threshold kept well below that for headroom.)
+    const afterMarker = workerSrc.slice(markerIdx);
+    const authedCount = [...afterMarker.matchAll(/if \(path\b/g)].length
+      + [...afterMarker.matchAll(/path\.match\(/g)].length;
+    assert.ok(authedCount > 30, `expected many authenticated routes, found ${authedCount}`);
+  });
+
+  test("the auth gate immediately follows the marker", () => {
+    // Guards the shared choke point itself, not just the whitelist above it —
+    // someone could satisfy every test above and still remove or relocate
+    // this and leave every "authenticated" route open.
+    const gate = workerSrc.slice(markerIdx, markerIdx + 300);
+    assert.ok(gate.includes("const user = await requireAuth(request, env);"));
+    assert.ok(gate.includes('if (!user) return err("UNAUTHORIZED", 401);'));
+  });
+});
