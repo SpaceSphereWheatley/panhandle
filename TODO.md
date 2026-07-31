@@ -11,7 +11,15 @@ Completed items live in `Todo_done.md`, not below.
 1. **Bugs** — 4 low-priority latent/edge issues remain from the two QA/audit
    passes (2026-07-18, 2026-07-20): #87, #88, #89, #92. Everything else
    from both passes, plus #94 and #114, is fixed — see `Todo_done.md`.
-2. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
+2. **Backend/API design review (2026-07-31)** — a Senior-Backend-Architect
+   pass over `worker/index.js`'s REST conventions, schema/query integrity,
+   security/validation, reliability, and documentation (see `## Backend /
+   API` below). Tenant isolation, auth, and error-code discipline all held
+   up well; the concrete gaps are #130-#135, all low-urgency (an
+   auth-boundary convention with no test guarding it, a check-then-act race
+   on a purchase counter, a non-atomic multi-field PATCH, a missing index,
+   an unbounded admin query, and no machine-readable API contract).
+3. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
    accessibility pass over every screen (see `## UI/UX` below). One real gap
    worth prioritizing above the rest: **#116** (removing a shopping-list item
    has no confirm and no undo — the app's single most common delete action,
@@ -22,11 +30,11 @@ Completed items live in `Todo_done.md`, not below.
    open items (U1, U6-U10, U15, U17, U19, U20) are either already shipped by
    the rewrite or superseded by it and can be treated as closed even though
    still unchecked in that file.
-3. **Small UI/polish items — low value, low risk, good filler:**
+4. **Small UI/polish items — low value, low risk, good filler:**
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
    - **#124** Minor icon/component consistency nits (see below)
-4. **Multi-list data model (#1)** — high ceiling if this app ever needs
+5. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
@@ -66,6 +74,74 @@ is fixed — see `Todo_done.md`.
     by-value copy" invariant. Add it to the batch, or leave an explicit
     "ephemeral, intentionally skipped" comment.
     _Value: Low · Importance: Low · Type: Bug / Data consistency_
+
+## Backend / API
+
+From a Senior-Backend-Architect-style review (2026-07-31) of `worker/index.js`
+against REST conventions, schema/query integrity, security/validation,
+reliability/edge cases, and documentation. Tenant isolation (every mutating
+query scoped `WHERE id = ? AND list_id = ?`), the JWT/`token_version`
+revocation model, and the code-driven error-code contract all held up well —
+these are the concrete gaps found.
+
+### P2 — Reliability / data integrity
+
+130. **Auth boundary is enforced only by file position, not code.** Every
+     route below the `// ===== AUTH REQUIRED BELOW =====` marker
+     (`worker/index.js` ~L2009) is authenticated purely by being written
+     after that comment — nothing stops a new route from accidentally
+     landing above it and shipping unauthenticated. Add a regression test
+     asserting the fixed whitelist of public routes (`/version`, `/login`,
+     `/register`, `/auth/google`, `/forgot-password`, `/reset-password`,
+     `/invite-signup`, `/invite-google`, `GET /list-invites/:token`,
+     `GET /calendar/:token.ics`) are the only route checks appearing before
+     that marker's line number — same drift-guard pattern as
+     `dictionaries.test.js`.
+     _Value: Medium · Importance: Low · Type: Bug / Security hardening_
+
+131. **`POST /list/:id/toggle` has a check-then-act race on
+     `item_catalogue.times_bought`.** It reads `bought` in a `SELECT`, then
+     bumps the purchase counter in a separate statement based on that stale
+     read (~L2848-2874). Two concurrent toggles of the same item (two
+     housemates tapping "bought" within the same poll window) can both
+     observe `bought = 0` and both increment the counter for one real
+     transition, corrupting the average-purchase-interval stat
+     `GET /catalogue/suggestions` depends on. Fix: drive the counter bump off
+     the flip `UPDATE`'s own `RETURNING` result instead of the pre-read.
+     _Value: Low · Importance: Low · Type: Bug / Data consistency_
+
+132. **`PATCH /list/:id` isn't atomic.** Up to 5 sequential `UPDATE`
+     statements for one logical edit (~L2795-2831), no `env.DB.batch()`. A
+     dropped connection between statements leaves the item half-updated with
+     no way for the client to tell which fields actually landed.
+     _Value: Low · Importance: Low · Type: Reliability / API_
+
+### P3 — Scale / documentation
+
+133. **Missing index on `users.email`.** `username` is the PK, but
+     login-by-email, `/forgot-password`, `/auth/google`, and every
+     duplicate-email check filter on `email = ?1` directly with no index on
+     that column (unlike `google_sub`, which got a unique partial index in
+     `0010_signup_and_recovery.sql`) — a full table scan on every one of
+     those requests. Cheap, additive migration:
+     `CREATE INDEX idx_users_email ON users(email COLLATE NOCASE)`.
+     _Value: Medium · Importance: Low · Type: Performance / Schema_
+
+134. **`GET /admin/metrics`'s `per_list` query is unbounded.** Three
+     correlated subqueries per row, over every list in the DB, no
+     pagination — the one query in the app whose cost scales with total
+     tenants rather than one household's data. Fine at current scale; worth
+     a `LIMIT`/cursor before Play Store publishing drives real growth.
+     _Value: Low · Importance: Low · Type: Performance / Scalability_
+
+135. **No machine-readable API contract.** ~70 routes, and the entire
+     contract lives in prose (`CLAUDE.md`) and inline comments — fine for
+     the sole maintainer today, a landmine for any future integration beyond
+     the read-only ICS feed. A `docs/api-reference.md` table
+     (method/path/auth level/notes), diffed in CI against the route list the
+     way `dictionaries.test.js` guards i18n drift, would get most of the
+     value without a new hand-maintained source of truth.
+     _Value: Low · Importance: Low · Type: Documentation_
 
 ## UI/UX
 
