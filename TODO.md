@@ -7,14 +7,26 @@ them and move to `Todo_done.md`; re-pack (renumber) only when the open list
 gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
-**Group priority** (highest to lowest, reassessed 2026-07-29):
+**Group priority** (highest to lowest, reassessed 2026-07-31):
 1. **Bugs** — 4 low-priority latent/edge issues remain from the two QA/audit
    passes (2026-07-18, 2026-07-20): #87, #88, #89, #92. Everything else
    from both passes, plus #94 and #114, is fixed — see `Todo_done.md`.
-2. **Small UI/polish items — low value, low risk, good filler:**
+2. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
+   accessibility pass over every screen (see `## UI/UX` below). One real gap
+   worth prioritizing above the rest: **#116** (removing a shopping-list item
+   has no confirm and no undo — the app's single most common delete action,
+   and the only one with no cancel path at all). #117-#124 are consistency/
+   accessibility/polish. This pass also triaged `docs/ui-review-plan.md`,
+   which predates the design-system rewrite and is now stale: its still-valid
+   open items were carried over here (**#125, #126, #127**); the rest of its
+   open items (U1, U6-U10, U15, U17, U19, U20) are either already shipped by
+   the rewrite or superseded by it and can be treated as closed even though
+   still unchecked in that file.
+3. **Small UI/polish items — low value, low risk, good filler:**
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
-3. **Multi-list data model (#1)** — high ceiling if this app ever needs
+   - **#124** Minor icon/component consistency nits (see below)
+4. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
    one. Correctly deferred; revisit only if a concrete second-list need
@@ -54,6 +66,121 @@ is fixed — see `Todo_done.md`.
     by-value copy" invariant. Add it to the batch, or leave an explicit
     "ephemeral, intentionally skipped" comment.
     _Value: Low · Importance: Low · Type: Bug / Data consistency_
+
+## UI/UX
+
+From a full UI/UX audit (2026-07-31) covering the design system, both tabs,
+every Settings subpage, auth screens, and ~15 modals — cross-checked against
+`docs/ui-review-plan.md`, which predates the Vite/design-system rewrite and is
+now stale (see the group-priority note above for how its still-open items
+were triaged).
+
+### P1 — Correctness / trust
+
+116. **No confirm or undo when removing an item from the list.**
+     `ItemEditModal.jsx`'s `removeFromList` (the full-width red "remove from
+     list" button) deletes immediately — no `confirm()`, no undo toast. It's
+     the only single-item delete in the app that isn't gated: `deleteFromCatalogue`
+     two lines below it, meal/plan-day delete, member removal, admin user
+     delete, and invite/calendar-feed revoke all go through `useConfirm()`
+     first. Add a confirm dialog, or an undo toast (matching the "plan again"
+     pattern already used in `MealsTab.jsx`'s `planAgain`).
+     _Value: High · Importance: High · Type: Bug / UX / Data safety_
+
+117. **No `:focus-visible` styling anywhere in the app.** A full-repo grep
+     turns up zero `:focus`/`:focus-visible` rules in any CSS or inline style.
+     Every interactive element is a React inline-style component, so a
+     keyboard/switch-control user gets no visual focus indication anywhere.
+     Needs a shared focus ring that the design-system components (and the
+     one-off buttons in #118) can all opt into — inline `style` objects can't
+     express the pseudo-class directly, so this likely means a shared CSS
+     class in `base.css` plus each component applying it. Supersedes
+     `docs/ui-review-plan.md` U3 (never actually fixed, despite predating the
+     rewrite).
+     _Value: High · Importance: High · Type: Bug / Accessibility_
+
+### P2 — Consistency & accessibility polish
+
+118. **Two button systems.** `Button`/`IconButton`/`Fab` implement careful
+     hover/press/ripple state layers, but a large share of real controls
+     bypass them with raw, hand-styled `<button>` elements that get none:
+     `MealsTab.jsx`'s week-nav arrows/"this week"/"Alle måltider ›"/density
+     toggle, `ShoppingListTab.jsx`'s view toggle/important-chip/"Recently
+     bought" collapse, `StoreSubpage.jsx`'s reorder up/down buttons,
+     `Header.jsx`'s back arrow. None of these give any visual feedback on tap.
+     Factor a shared low-level button base (radius/padding/press-state) that
+     both the design-system components and these one-off controls go through.
+     Supersedes `docs/ui-review-plan.md` U6/U7/U10.
+     _Value: Medium · Importance: Medium · Type: UI consistency_
+
+119. **Hardcoded Norwegian text in a fully-i18n'd app.** `Spinner.jsx`'s
+     `aria-label="Laster"` and `LoadingState`'s default `label = 'Laster...'`
+     never go through `t()`. Four modals (`MealPlanModal`, `IngredientPickerModal`,
+     `WeekIngredientsModal`, `MealCatalogueBrowseModal`) call `<LoadingState />`
+     with no override, so an English-language device briefly shows
+     "Laster..." during every one of those loads.
+     _Value: Low · Importance: Medium · Type: Bug / i18n_
+
+120. **Swipe-to-mark-important and long-press-to-edit are entirely
+     undiscoverable.** Both gestures are implemented (`ItemCard.jsx`) and
+     explained in `ImportantInfoModal` — but only once a user finds the small
+     legend trigger next to the header. The onboarding tour
+     (`onboardingSlides.js`) never mentions either gesture. Add a one-time
+     coach-mark, or fold a slide into onboarding. Supersedes
+     `docs/ui-review-plan.md` U15.
+     _Value: Medium · Importance: Low · Type: UX / Discoverability_
+
+121. **Severity ordering is inverted in `ItemEditModal`.** "Remove from list"
+     (reversible — the catalogue entry survives) is a bold full-width danger
+     `Button`; "Forget completely" (irreversible — cascades and deletes
+     purchase history) is a 12px muted underlined text link below it. Swap
+     the visual weight so the more destructive action reads as more serious,
+     not less.
+     _Value: Low · Importance: Low · Type: UI consistency_
+
+122. **`SuggestionsModal` has no neutral close button.** Its only footer
+     action is "add something else," which closes the modal *and* focuses
+     the add-item input — there's no plain "Close," unlike every sibling
+     browse/info modal (`ChangelogModal`, `ImportantInfoModal`,
+     `MealCatalogueBrowseModal`).
+     _Value: Low · Importance: Low · Type: UI consistency_
+
+123. **No confirm-password field on change-password.** `AccountSubpage.jsx`
+     still takes only a single ≥8-char new-password field — a typo locks the
+     user out until an admin resets it. Add a confirm field (optionally a
+     strength hint). Carried over from `docs/ui-review-plan.md` U19.
+     _Value: Medium · Importance: Low · Type: UX / Forms_
+
+124. **Minor consistency nits — bundle as filler.** Two icon call conventions
+     coexist (`<UiIcon name="x">` vs. raw `<i className="ph ph-x">` inline
+     elsewhere); `Checkbox`/`Switch`/`Tag` each hand-roll their own radius/
+     press treatment rather than sharing one base. Cosmetic; fold into
+     whichever pass picks up #118.
+     _Value: Low · Importance: Low · Type: UI polish_
+
+### P3 — Carried over from `docs/ui-review-plan.md` (still valid)
+
+125. **Fonts still load render-blocking from Google Fonts.** `app.html` and
+     every `public/*.html` page `<link>` to `fonts.googleapis.com` for
+     Instrument Sans + Caveat. Self-hosting removes a third-party dependency,
+     speeds first paint, and helps the offline story (the service worker
+     can't cache a cross-origin stylesheet it doesn't control). Carried over
+     from `docs/ui-review-plan.md` U14 (originally written about Roboto —
+     the typeface changed since, the gap didn't).
+     _Value: Low · Importance: Low · Type: Performance_
+
+126. **Admin "Alle brukere" groups by raw list id, not a human label.**
+     `AdminSubpage.jsx` still renders `t("settings.admin.allUsers.group", {
+     listId, count })` → "List {listId} · N users" — no owner name or
+     nickname. Carried over from `docs/ui-review-plan.md` U22.
+     _Value: Low · Importance: Low · Type: UI polish / Admin_
+
+127. **Nudge admin-created/reset accounts to change their seeded password.**
+     `createOwner`/`resetPassword` in `AdminSubpage.jsx` hand back a
+     plaintext password via `CredentialsModal`, but nothing afterward prompts
+     that account to actually change it. Carried over from
+     `docs/ui-review-plan.md` U23.
+     _Value: Low · Importance: Low · Type: UX / Security hygiene_
 
 ## Data model / Account lifecycle
 
@@ -121,6 +248,18 @@ _Exploratory / higher ceiling:_
      `worker/index.js` and migrations 0002/0003 — kills a documented drift
      hazard. Refactor, not a user-facing feature.
      _Value: Low · Importance: Low · Type: Idea / Refactor_
+
+_Carried over from `docs/ui-review-plan.md` (2026-07-31 UI/UX audit):_
+
+128. "Shopping mode" — hide bought items, large high-contrast text, keep-
+     screen-awake, tuned for actually walking the store. Carried over from
+     `docs/ui-review-plan.md` U25.
+     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
+
+129. Multi-week / month meal-plan overview, for planning past the current
+     one-week strip (`weekOffset` is still clamped `[WEEK_MIN, WEEK_MAX]` =
+     `[-1, 4]`). Carried over from `docs/ui-review-plan.md` U27.
+     _Value: Low · Importance: Low · Type: Idea / Meals_
 
 ## Done
 
