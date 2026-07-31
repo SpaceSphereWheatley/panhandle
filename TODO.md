@@ -51,6 +51,34 @@ Completed items live in `Todo_done.md`, not below.
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
 
+**Execution order** (cross-cutting sequencing pass, 2026-07-31 — bundles
+items across the groups above by shared file/dependency rather than by
+review-pass, to minimize context-switching. Group priority above still
+governs anything not listed here):
+
+1. **#116 + #121** — same file (`ItemEditModal.jsx`), ship together.
+2. **#130** — pure test file, zero deploy risk, do anytime.
+3. **#133** — trivial expand-only migration, no code change to adopt it.
+4. **#87 + #88 + #89 + #92** — bug sweep, one PR.
+5. **#131 + #132** — backend data-integrity batch, same file region as
+   the bug sweep.
+6. **#137** — real live bug (uncaught exception), ranks above the
+   performance items in Code quality despite both being P2.
+7. **#117 → #118 → #124** — strictly in this order: the shared button
+   base (#118) must be built on top of the focus ring (#117), not
+   retrofitted; #124 folds into the same pass.
+8. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+   version-bump/changelog overhead.
+9. **#136 phase 1**, then — only after a full deploy cycle confirms all
+   four endpoints are writing `rate_limit_attempts` correctly — **#136
+   phase 2** (the `login_attempts` drop). Don't compress the two phases
+   into one sprint.
+
+Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
+#115, #1, #5, and the `## Ideas` section) is deliberately not in this
+sequence — see each item's own note for why, or the group priority
+rationale above.
+
 ## Bugs
 
 4 low-priority latent/edge bugs remain, found across two QA/audit passes
@@ -119,6 +147,9 @@ these are the concrete gaps found.
      transition, corrupting the average-purchase-interval stat
      `GET /catalogue/suggestions` depends on. Fix: drive the counter bump off
      the flip `UPDATE`'s own `RETURNING` result instead of the pre-read.
+     Needs a test alongside the fix — nothing currently guards this: a unit
+     test asserting two concurrent toggles of the same item only bump the
+     counter once.
      _Value: Low · Importance: Low · Type: Bug / Data consistency_
 
 132. **`PATCH /list/:id` isn't atomic.** Up to 5 sequential `UPDATE`
@@ -197,7 +228,13 @@ were triaged).
      `Header.jsx`'s back arrow. None of these give any visual feedback on tap.
      Factor a shared low-level button base (radius/padding/press-state) that
      both the design-system components and these one-off controls go through.
-     Supersedes `docs/ui-review-plan.md` U6/U7/U10.
+     Do in this order (must land after #117 — the base should be built with
+     the focus ring, not retrofitted): (a) decide the primitive's prop shape
+     (variant/size/press-state) before any call site is migrated, so the four
+     migrations below don't each improvise a different shape; (b) migrate
+     `MealsTab.jsx`'s controls; (c) migrate `ShoppingListTab.jsx`'s controls;
+     (d) migrate `StoreSubpage.jsx`'s reorder buttons + `Header.jsx`'s back
+     arrow. Supersedes `docs/ui-review-plan.md` U6/U7/U10.
      _Value: Medium · Importance: Medium · Type: UI consistency_
 
 119. **Hardcoded Norwegian text in a fully-i18n'd app.** `Spinner.jsx`'s
@@ -213,7 +250,11 @@ were triaged).
      explained in `ImportantInfoModal` — but only once a user finds the small
      legend trigger next to the header. The onboarding tour
      (`onboardingSlides.js`) never mentions either gesture. Add a one-time
-     coach-mark, or fold a slide into onboarding. Supersedes
+     coach-mark, or fold a slide into onboarding. **Needs a decision before
+     scheduling** — the two options aren't equivalent effort (a coach-mark is
+     a new one-off component; a slide reuses `OnboardingFlow`'s existing
+     mechanism but only reaches first-run devices, not existing users) — pick
+     one before pulling this into a build wave. Supersedes
      `docs/ui-review-plan.md` U15.
      _Value: Medium · Importance: Low · Type: UX / Discoverability_
 
@@ -292,8 +333,13 @@ were re-verified after `main` moved).
      sync (unlike `shared/errorCodes.js`'s equivalent contract) is a real
      drift risk. Migrate all four onto `checkRateLimit`/`recordAttempt`
      (kinds `"login"`, `"change_password"`, `"change_email"`,
-     `"delete_account"`), then drop the `login_attempts` table in a
-     follow-up contract migration.
+     `"delete_account"` — check these don't collide with the existing
+     `"register"`/`"forgot_password"`/`"feedback"`/`"invite_redeem"` kinds
+     before shipping), then drop the `login_attempts` table in a follow-up
+     contract migration. Two-phase, don't compress: ship the migration onto
+     the shared helper first, confirm all four endpoints are writing
+     `rate_limit_attempts` correctly through one full deploy cycle, *then*
+     drop the old table.
      _Value: Medium · Importance: Low · Type: Bug / Maintainability_
 
 137. `src/lib/api.js`'s `api()` helper has no handling for a non-JSON or
