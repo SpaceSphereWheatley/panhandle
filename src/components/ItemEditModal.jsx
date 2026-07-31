@@ -47,8 +47,17 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   // Removes just this line from the shopping list. The catalogue entry
   // (name/category/purchase-history stats) is untouched, so the item is
   // still remembered and auto-suggested next time — this is the common
-  // "I don't want this on my list anymore" action.
+  // "I don't want this on my list anymore" action. Confirmed but
+  // deliberately not alarming (danger: false) since it's easily reversible.
   async function removeFromList() {
+    if (
+      !(await confirm(t("itemEdit.confirmRemove.body", { name: displayName }), {
+        title: t("itemEdit.confirmRemove.title"),
+        confirmLabel: t("itemEdit.confirmRemove.confirmLabel"),
+        danger: false,
+      }))
+    )
+      return;
     await api(`/list/${item.id}`, { method: "DELETE" });
     onSaved();
   }
@@ -98,26 +107,14 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
         <Button variant="outline" onClick={onClose}>{t("itemEdit.cancel")}</Button>
         <Button variant="primary" onClick={save}>{t("itemEdit.save")}</Button>
       </div>
-      <Button variant="danger" icon="trash" onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
+      <Button variant="outline" icon="trash" onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
         {t("itemEdit.removeFromList")}
       </Button>
-      <button
-        type="button"
-        onClick={deleteFromCatalogue}
-        style={{
-          width: "100%",
-          marginTop: 8,
-          padding: "4px 0",
-          background: "none",
-          border: "none",
-          color: "var(--text-tertiary)",
-          fontSize: 12,
-          textDecoration: "underline",
-          cursor: "pointer",
-        }}
-      >
-        {t("itemEdit.forgetCompletely")}
-      </button>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+        <Button variant="danger" size="sm" onClick={deleteFromCatalogue}>
+          {t("itemEdit.forgetCompletely")}
+        </Button>
+      </div>
     </Modal>
   );
 }
