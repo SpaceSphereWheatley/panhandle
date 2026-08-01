@@ -129,7 +129,9 @@ one set up (several hundred MB — expect it to take a few minutes). This
 regenerates the Gradle project (icons at every density, the Gradle wrapper,
 `AndroidManifest.xml`) from `twa-manifest.json`, so it will refresh the
 hand-authored files already in `android/` — that's expected, not a
-conflict. Output is `android/app-release-signed.aab` (upload build) and
+conflict, including the hand-authored adaptive/themed-icon vector drawables
+(`android/README.md`'s Icons section) built from `monochromeIconUrl`.
+Output is `android/app-release-signed.aab` (upload build) and
 `android/app-release-signed.apk` (for sideload testing on a device first).
 
 Alternatively, open `android/` directly in Android Studio (Open →
