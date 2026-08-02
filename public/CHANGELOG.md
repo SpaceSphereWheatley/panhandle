@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.3] — 2026-08-02
+
+### Fixed
+- **A handful of small, low-impact backend/data bugs from an earlier audit are now fixed.** Removing or checking off a shopping-list item that had already vanished (e.g. deleted from another device moments earlier) used to silently report success instead of telling you nothing happened. Assigning meal responsibility to a name that happens to match a real account on someone else's household is now rejected, closing off a rare case where that entry could later get silently rewritten if that other account renamed itself — a made-up name (like "Babysitter") still works exactly as before. On a device set to a timezone west of UTC, the meal planner's pre-filled "who's responsible" suggestion could be off by a day; it now always matches the correct day regardless of timezone. (`worker/index.js`'s `/list/:id/toggle` and `DELETE /list/:id` now return 404 `ITEM_NOT_FOUND` instead of `200 ok` for a nonexistent or other-list id; `/plan` and `/recurring` validate `responsible` via a new `validateResponsible` helper and `RESPONSIBLE_ACCOUNT_MISMATCH` error code; `src/lib/mealUtils.js`'s `dayOfWeekMonFirst` parses a `"YYYY-MM-DD"` string's calendar fields directly into a local `Date` instead of round-tripping through `Date`'s UTC parsing + a local `getDay()` read.)
+
 ## [1.57.2] — 2026-07-31
 
 ### Fixed

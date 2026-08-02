@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import { api } from "../lib/api.js";
+import { apiErrorMessage } from "../lib/apiError.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
@@ -429,10 +430,15 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
       [offset]: { ...(c[offset] || {}), [planIso]: { ...(prevEntry || {}), plan_date: planIso, meal_name, responsible } },
     }));
     try {
-      await api("/plan", {
+      const res = await api("/plan", {
         method: "POST",
         body: JSON.stringify({ plan_date: planIso, meal_name, responsible, ingredients }),
       });
+      if (res.error) {
+        setPlanCache((c) => ({ ...c, [offset]: { ...(c[offset] || {}), [planIso]: prevEntry } }));
+        toast(apiErrorMessage(res, t), { error: true });
+        return;
+      }
       loadPlan(offset);
     } catch {
       setPlanCache((c) => ({ ...c, [offset]: { ...(c[offset] || {}), [planIso]: prevEntry } }));

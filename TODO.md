@@ -8,9 +8,10 @@ gets sparse. Full "fixed in" details live in `CHANGELOG.md`, not here.
 Completed items live in `Todo_done.md`, not below.
 
 **Group priority** (highest to lowest, reassessed 2026-07-31):
-1. **Bugs** — 4 low-priority latent/edge issues remain from the two QA/audit
-   passes (2026-07-18, 2026-07-20): #87, #88, #89, #92. Everything else
-   from both passes, plus #94 and #114, is fixed — see `Todo_done.md`.
+1. **Bugs** — the two QA/audit passes (2026-07-18, 2026-07-20) are now fully
+   closed out: #87, #88, #89, #92 (the last low-priority latent/edge issues)
+   plus everything else from both passes, plus #94 and #114, are all fixed —
+   see `Todo_done.md`.
 2. **Backend/API design review (2026-07-31)** — a Senior-Backend-Architect
    pass over `worker/index.js`'s REST conventions, schema/query integrity,
    security/validation, reliability, and documentation (see `## Backend /
@@ -59,19 +60,18 @@ items across the groups above by shared file/dependency rather than by
 review-pass, to minimize context-switching. Group priority above still
 governs anything not listed here. Steps 1-2 of the original pass — #116 +
 #121 and #130 — shipped in #265; step 3, #133, turned out to already be
-fixed (see `Todo_done.md`); renumbered below):
+fixed; step 4 (formerly #87 + #88 + #89 + #92) shipped as the bug sweep
+(see `Todo_done.md`); renumbered below):
 
-1. **#87 + #88 + #89 + #92** — bug sweep, one PR.
-2. **#131 + #132** — backend data-integrity batch, same file region as
-   the bug sweep.
-3. **#137** — real live bug (uncaught exception), ranks above the
+1. **#131 + #132** — backend data-integrity batch.
+2. **#137** — real live bug (uncaught exception), ranks above the
    performance items in Code quality despite both being P2.
-4. **#117 → #118 → #124** — strictly in this order: the shared button
+3. **#117 → #118 → #124** — strictly in this order: the shared button
    base (#118) must be built on top of the focus ring (#117), not
    retrofitted; #124 folds into the same pass.
-5. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+4. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
-6. **#136 phase 1**, then — only after a full deploy cycle confirms all
+5. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
    into one sprint.
@@ -80,41 +80,6 @@ Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
 #115, #1, #5, and the `## Ideas` section) is deliberately not in this
 sequence — see each item's own note for why, or the group priority
 rationale above.
-
-## Bugs
-
-4 low-priority latent/edge bugs remain, found across two QA/audit passes
-(2026-07-18 and 2026-07-20; file:line refs below are from those passes —
-verify before fixing). Everything else from both passes, plus #94 and #114,
-is fixed — see `Todo_done.md`.
-
-### P2 — Low (latent / edge)
-
-87. Toggle/delete list-item endpoints return `200 ok` for non-existent or
-    other-list IDs (`/list/:id/toggle` ~L2204, `DELETE /list/:id` ~L2228) —
-    the UPDATE/DELETE matches nothing and still reports success (no 404).
-    Harmless (scoped by `list_id`) but masks client bugs.
-    _Value: Low · Importance: Low · Type: Bug / API_
-
-88. `responsible` is never validated against list membership — `/plan`
-    (~L2423) and `/recurring` (~L2465) accept any string. Partly by design
-    (free-text "Annet"), but a client could store an arbitrary username.
-    _Value: Low · Importance: Low · Type: Bug / Meals_
-
-89. Recurring-default weekday uses a local `getDay()` on a UTC-parsed date.
-    `MealPlanModal.jsx` (~L57) does `new Date(iso).getDay()` — `iso` parses as
-    UTC midnight but the weekday is read locally, so the prefilled recurring
-    responsible is off-by-one for users west of UTC. Non-issue for a
-    Norway-only app; latent correctness bug.
-    _Value: Low · Importance: Low · Type: Bug / Date handling_
-
-92. `renameUsername` (`worker/index.js` ~L1039) cascades a username rename
-    across 6 tables but not `list_presence.username` (a by-value username copy,
-    ~L2101). Harmless because presence rows age out in ~20s and a fresh row is
-    written on the next poll, but it breaks the function's "update every
-    by-value copy" invariant. Add it to the batch, or leave an explicit
-    "ephemeral, intentionally skipped" comment.
-    _Value: Low · Importance: Low · Type: Bug / Data consistency_
 
 ## Backend / API
 

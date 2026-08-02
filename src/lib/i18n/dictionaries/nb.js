@@ -65,6 +65,7 @@ export const nb = {
   "error.MISSING_MEAL_OR_RESPONSIBLE": "Mangler måltid eller ansvarlig",
   "error.INVALID_DATE": "Ugyldig dato",
   "error.INVALID_DAY": "Ugyldig dag",
+  "error.RESPONSIBLE_ACCOUNT_MISMATCH": "Dette navnet tilhører en konto på en annen liste",
 
   "error.INVALID_TIME": "Ugyldig tidspunkt",
   "error.INVALID_DAY_COUNT": "Ugyldig antall dager",

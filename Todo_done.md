@@ -7,6 +7,34 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+120. (87) `POST /list/:id/toggle` and `DELETE /list/:id` now return a 404
+     `ITEM_NOT_FOUND` instead of a silent `200 ok` when the id matches
+     nothing — either it doesn't exist, or it belongs to a different list.
+     (1.57.3)
+
+119. (88) `/plan` and `/recurring` now reject a `responsible` value that
+     happens to equal a real username belonging to a *different* list — the
+     one genuinely unsafe case, since `renameUsername`'s by-value cascade
+     (unscoped by `list_id`) would otherwise silently rewrite it if that
+     other account ever renamed. Free text and a same-list member's own
+     username are unaffected — the planner's "Other..." fallback still
+     works exactly as before. New `RESPONSIBLE_ACCOUNT_MISMATCH` error
+     code. (1.57.3)
+
+118. (89) Fixed the recurring-default weekday being off-by-one for devices
+     west of UTC. `dayOfWeekMonFirst` used to hand a "YYYY-MM-DD" string to
+     the `Date` constructor (parses as UTC midnight) and read the weekday
+     back with the local `getDay()` — now a string's calendar fields are
+     parsed directly into a local `Date` instead, so the result no longer
+     depends on the device's timezone. (1.57.3)
+
+117. (92) Documented, in code, why `renameUsername`'s by-value cascade
+     deliberately skips `list_presence.username`: a presence row is a ~20s
+     heartbeat, not durable data, so a stale one under the old username
+     ages out and gets rewritten fresh on that device's next poll
+     regardless — cascading into it would just be extra work for a
+     self-healing table. No behavior change. (1.57.3)
+
 116. (133) Investigated the backend/API review's suspected missing index on
      `users.email` — turned out to be a false alarm, not a real gap.
      `idx_users_email` has existed since `0010_signup_and_recovery.sql`

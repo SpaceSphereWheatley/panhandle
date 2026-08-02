@@ -1123,6 +1123,11 @@ async function mintToken(u, env) {
 // itself, in one batch so they can't drift apart. Callers must mint a fresh
 // token afterward — the caller's existing JWT's `sub` now points at a row
 // that no longer exists.
+// Updates every by-value username copy except list_presence.username
+// (TODO-92, deliberate): a presence row is a ~20s heartbeat, not durable
+// data — a stale one under the old username ages out and gets rewritten
+// fresh on that device's next poll regardless, so cascading into it here
+// would just be extra work for a self-healing table.
 async function renameUsername(env, oldUsername, newUsername) {
   await env.DB.batch([
     env.DB.prepare("UPDATE list_items SET added_by = ?1 WHERE added_by = ?2").bind(newUsername, oldUsername),
@@ -1133,6 +1138,23 @@ async function renameUsername(env, oldUsername, newUsername) {
     env.DB.prepare("UPDATE push_subscriptions SET username = ?1 WHERE username = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE users SET username = ?1, email = ?1 WHERE username = ?2 COLLATE NOCASE").bind(newUsername, oldUsername),
   ]);
+}
+
+// meal_plan.responsible/recurring_schedule.responsible are deliberately free
+// text (a household member not on this list yet, e.g. "Grandma", or the
+// planner's "Other..." fallback) — so this can't require a list-member match.
+// It only rejects the one genuinely unsafe case: text that happens to equal a
+// *real* username belonging to a different list. Left alone, that value would
+// sit there looking like a real assignment, and renameUsername's by-value
+// cascade (unscoped by list_id) would silently rewrite it if that other
+// account ever renamed — a cross-tenant leak. A same-list member's username is
+// always fine, matching the free-text case is always fine.
+async function validateResponsible(env, list_id, responsible) {
+  if (!responsible) return true;
+  const match = await env.DB.prepare(
+    "SELECT list_id FROM users WHERE username = ?1 COLLATE NOCASE"
+  ).bind(responsible).first();
+  return !match || match.list_id === list_id;
 }
 
 // Site-wide metrics (across every list) are gated beyond ordinary is_admin
@@ -2850,6 +2872,7 @@ export default {
       const item = await env.DB.prepare(
         "SELECT bought, catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(toggleMatch[1], user.list_id).first();
+      if (!item) return authedErr("ITEM_NOT_FOUND", 404);
       // Important is scoped to "this trip" — marking an item bought clears it
       // (but undoing a bought mark doesn't restore it; that transition only
       // clears, matching the times_bought counting below which only fires on
@@ -2862,7 +2885,7 @@ export default {
       `).bind(toggleMatch[1], user.list_id).run();
       // Only count it as a purchase on the 0->1 transition, not on undo —
       // these lifetime stats power GET /catalogue/suggestions below.
-      if (item && item.bought === 0) {
+      if (item.bought === 0) {
         await env.DB.prepare(`
           UPDATE item_catalogue SET
             times_bought = times_bought + 1,
@@ -2876,8 +2899,9 @@ export default {
 
     const delMatch = path.match(/^\/list\/(\d+)$/);
     if (delMatch && method === "DELETE") {
-      await env.DB.prepare("DELETE FROM list_items WHERE id = ?1 AND list_id = ?2")
+      const { meta } = await env.DB.prepare("DELETE FROM list_items WHERE id = ?1 AND list_id = ?2")
         .bind(delMatch[1], user.list_id).run();
+      if (meta.changes === 0) return authedErr("ITEM_NOT_FOUND", 404);
       return authedJson({ ok: true });
     }
 
@@ -3097,6 +3121,9 @@ export default {
       }
       // Require at least one of meal_name or responsible to be set.
       if (!meal_name && !responsible) return authedErr("MISSING_MEAL_OR_RESPONSIBLE", 400);
+      if (!(await validateResponsible(env, user.list_id, responsible))) {
+        return authedErr("RESPONSIBLE_ACCOUNT_MISMATCH", 400);
+      }
 
       // Also used to bump usage stats only when the meal is actually new/changed
       // (below), and now to preserve whichever field the caller omits: `meal_name`
@@ -3181,6 +3208,9 @@ export default {
       const { day_of_week, responsible } = body;
       if (typeof day_of_week !== "number" || day_of_week < 0 || day_of_week > 6)
         return authedErr("INVALID_DAY", 400);
+      if (!(await validateResponsible(env, user.list_id, responsible))) {
+        return authedErr("RESPONSIBLE_ACCOUNT_MISMATCH", 400);
+      }
       try {
         if (!responsible) {
           await env.DB.prepare(

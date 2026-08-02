@@ -138,6 +138,20 @@ describe("dayOfWeekMonFirst", () => {
   it("accepts an ISO date string", () => {
     expect(dayOfWeekMonFirst("2024-01-03")).toBe(2); // Wednesday
   });
+
+  it("gives the same weekday for an ISO date string regardless of the local timezone (TODO-89)", () => {
+    // Regression guard: an ISO date string used to be handed to the Date
+    // constructor (parses as UTC midnight), then read back with the local
+    // getDay() — off by one for any timezone west of UTC, where UTC
+    // midnight of a date falls on the *previous* local calendar day.
+    const original = process.env.TZ;
+    try {
+      process.env.TZ = "Pacific/Honolulu"; // UTC-10, no DST, always west of UTC
+      expect(dayOfWeekMonFirst("2024-01-03")).toBe(2); // still Wednesday
+    } finally {
+      process.env.TZ = original;
+    }
+  });
 });
 
 describe("sortMealsByUsage", () => {

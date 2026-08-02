@@ -38,9 +38,14 @@ function getList(base, auth) {
   return fetch(`${base}/list`, { headers: auth }).then((r) => r.json());
 }
 
+function deleteItem(base, auth, id) {
+  return fetch(`${base}/list/${id}`, { method: "DELETE", headers: auth });
+}
+
 async function runTests(BASE) {
   await testReaddAfterBoughtReopensRow(BASE);
   await testReaddWhileUnboughtStillMergesQty(BASE);
+  await testToggleAndDeleteOnMissingOrOtherListItemReturn404(BASE);
 }
 
 async function testReaddAfterBoughtReopensRow(BASE) {
@@ -89,6 +94,37 @@ async function testReaddWhileUnboughtStillMergesQty(BASE) {
   assert.equal(body2.qty, 3);
 
   console.log("  - adding the same still-unbought item keeps bumping qty on the existing row (unchanged behavior)");
+}
+
+// TODO-87: toggle/delete used to report 200 ok for an id that matched
+// nothing (nonexistent, or scoped to a different list), masking the fact
+// that nothing actually happened. Both now 404.
+async function testToggleAndDeleteOnMissingOrOtherListItemReturn404(BASE) {
+  const { auth } = await seedAndLogin(BASE, `sl_404_${RUN_ID}`, PASS);
+  const { auth: otherAuth } = await seedAndLogin(BASE, `sl_404_other_${RUN_ID}`, PASS);
+
+  const toggleMissing = await toggleItem(BASE, auth, 999999999);
+  assert.equal(toggleMissing.status, 404);
+  assert.equal((await toggleMissing.json()).code, "ITEM_NOT_FOUND");
+
+  const deleteMissing = await deleteItem(BASE, auth, 999999999);
+  assert.equal(deleteMissing.status, 404);
+  assert.equal((await deleteMissing.json()).code, "ITEM_NOT_FOUND");
+
+  const add = await addItem(BASE, otherAuth, { name: "Eggs", qty: 1, category: "Dairy" });
+  const { id: otherListItemId } = await add.json();
+
+  const toggleOtherList = await toggleItem(BASE, auth, otherListItemId);
+  assert.equal(toggleOtherList.status, 404, "toggling another list's item id must not silently succeed");
+
+  const deleteOtherList = await deleteItem(BASE, auth, otherListItemId);
+  assert.equal(deleteOtherList.status, 404, "deleting another list's item id must not silently succeed");
+
+  // The other list's item is untouched by the failed cross-tenant attempts.
+  const otherList = await getList(BASE, otherAuth);
+  assert.equal(otherList.some((it) => it.id === otherListItemId), true);
+
+  console.log("  - toggling/deleting a nonexistent or other-list item id returns 404 instead of a silent 200");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });
