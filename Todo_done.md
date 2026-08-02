@@ -7,6 +7,14 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+114. (133) Struck as an incorrect finding, not a fix. The 2026-07-31
+     backend/API review flagged `users.email` as unindexed, but
+     `idx_users_email` (a unique partial index, `WHERE email IS NOT NULL`)
+     was already added in `0010_signup_and_recovery.sql` alongside
+     `idx_users_google_sub` — confirmed present on the live production D1.
+     The review missed that migration. No code/schema change made.
+     (no version bump; nothing shipped)
+
 113. (116, 121, 130) `ItemEditModal.jsx`'s "Remove from list" now confirms
      before deleting, matching every other single-item delete in the app
      (it had been the only one with no cancel path). Swapped the two delete

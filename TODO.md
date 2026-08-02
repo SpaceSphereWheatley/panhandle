@@ -15,10 +15,9 @@ Completed items live in `Todo_done.md`, not below.
    pass over `worker/index.js`'s REST conventions, schema/query integrity,
    security/validation, reliability, and documentation (see `## Backend /
    API` below). Tenant isolation, auth, and error-code discipline all held
-   up well; the concrete gaps are #131-#135, all low-urgency (a
-   check-then-act race on a purchase counter, a non-atomic multi-field
-   PATCH, a missing index, an unbounded admin query, and no machine-readable
-   API contract).
+   up well; the concrete gaps are #131-#132 and #134-#135, all low-urgency
+   (a check-then-act race on a purchase counter, a non-atomic multi-field
+   PATCH, an unbounded admin query, and no machine-readable API contract).
 3. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
    accessibility pass over every screen (see `## UI/UX` below). The standout
    remaining gap is **#117** (no `:focus-visible` styling anywhere in the
@@ -56,18 +55,17 @@ items across the groups above by shared file/dependency rather than by
 review-pass, to minimize context-switching. Group priority above still
 governs anything not listed here):
 
-1. **#133** — trivial expand-only migration, no code change to adopt it.
-2. **#87 + #88 + #89 + #92** — bug sweep, one PR.
-3. **#131 + #132** — backend data-integrity batch, same file region as
+1. **#87 + #88 + #89 + #92** — bug sweep, one PR.
+2. **#131 + #132** — backend data-integrity batch, same file region as
    the bug sweep.
-4. **#137** — real live bug (uncaught exception), ranks above the
+3. **#137** — real live bug (uncaught exception), ranks above the
    performance items in Code quality despite both being P2.
-5. **#117 → #118 → #124** — strictly in this order: the shared button
+4. **#117 → #118 → #124** — strictly in this order: the shared button
    base (#118) must be built on top of the focus ring (#117), not
    retrofitted; #124 folds into the same pass.
-6. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+5. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
-7. **#136 phase 1**, then — only after a full deploy cycle confirms all
+6. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
    into one sprint.
@@ -144,15 +142,6 @@ these are the concrete gaps found.
      _Value: Low · Importance: Low · Type: Reliability / API_
 
 ### P3 — Scale / documentation
-
-133. **Missing index on `users.email`.** `username` is the PK, but
-     login-by-email, `/forgot-password`, `/auth/google`, and every
-     duplicate-email check filter on `email = ?1` directly with no index on
-     that column (unlike `google_sub`, which got a unique partial index in
-     `0010_signup_and_recovery.sql`) — a full table scan on every one of
-     those requests. Cheap, additive migration:
-     `CREATE INDEX idx_users_email ON users(email COLLATE NOCASE)`.
-     _Value: Medium · Importance: Low · Type: Performance / Schema_
 
 134. **`GET /admin/metrics`'s `per_list` query is unbounded.** Three
      correlated subqueries per row, over every list in the DB, no
