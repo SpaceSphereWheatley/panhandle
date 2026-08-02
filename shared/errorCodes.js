@@ -83,6 +83,7 @@ export const ERROR_MESSAGES_EN = {
   MISSING_MEAL_OR_RESPONSIBLE: "Missing a meal or someone responsible",
   INVALID_DATE: "Invalid date",
   INVALID_DAY: "Invalid day",
+  RESPONSIBLE_ACCOUNT_MISMATCH: "That name belongs to an account on a different list",
 
   // Settings
   INVALID_TIME: "Invalid time",

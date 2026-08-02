@@ -59,10 +59,18 @@ export function mondayOf(date) {
 }
 
 // Monday-first day-of-week (0 = Monday .. 6 = Sunday), matching
-// recurring_schedule.day_of_week's convention. `date` may be a Date or
-// anything the Date constructor accepts (e.g. an ISO string).
+// recurring_schedule.day_of_week's convention. `date` is either a Date
+// (read directly, already anchored to local time) or a "YYYY-MM-DD" string
+// (its calendar fields are parsed directly into a *local* Date rather than
+// handed to the Date constructor, which parses a date-only string as UTC
+// midnight — reading .getDay() back in local time then shifts the weekday
+// by one for any timezone west of UTC).
 export function dayOfWeekMonFirst(date) {
-  return (new Date(date).getDay() + 6) % 7;
+  if (typeof date === "string") {
+    const [y, m, d] = date.split("-").map(Number);
+    return (new Date(y, m - 1, d).getDay() + 6) % 7;
+  }
+  return (date.getDay() + 6) % 7;
 }
 
 // Navigable range: one week back (recent history) through several weeks
