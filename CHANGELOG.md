@@ -1,10 +1,5 @@
 # Changelog
 
-## [1.57.3] — 2026-08-01
-
-### Added
-- **Groundwork for the Android app's icon to match your phone's color theme.** No visible change to the live web app — this adds a themed-icon layer to the in-progress Google Play Store packaging, so once that app is published, Android 13+ devices with icon theming turned on can re-tint the Panhandle launcher icon to match the rest of your home screen instead of always showing its fixed orange color. (`android/twa-manifest.json` gains `monochromeIconUrl`, pointing at a new single-color silhouette of the mark, `public/icon-monochrome-512.png`, rasterized from a new `src/design-system/assets/logo/panhandle-icon-monochrome.svg`. Also hand-authors the adaptive-icon resources Android needs to use it — `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`/`ic_launcher_round.xml` plus two new vector drawables — since the checked-in Android scaffold previously had no adaptive icon at all, only a flat pre-API-26 fallback PNG.)
-
 ## [1.57.2] — 2026-07-31
 
 ### Fixed
