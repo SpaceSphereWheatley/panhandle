@@ -17,3 +17,22 @@ will actually launch full-screen instead of as an ordinary browser tab.
 
 See `docs/android-publishing.md` for the full walkthrough (domain decision,
 keystore generation, building, and the Play Console listing steps).
+
+**Icons:** `twa-manifest.json`'s `iconUrl`/`maskableIconUrl`/`monochromeIconUrl`
+point at hosted PNGs (`public/icon-512.png`, `public/icon-maskable-512.png`,
+`public/icon-monochrome-512.png`) that a real `npx @bubblewrap/cli build`
+downloads and turns into per-density launcher resources — `monochromeIconUrl`
+is what wires up Android 13+'s "themed icon" (Material You) support, where
+the OS re-tints the launcher icon with the device's wallpaper-derived
+palette. Since no build has actually been run yet, `app/src/main/res/`
+carries hand-authored resources that model the same three layers a real
+build would produce: `mipmap-anydpi-v26/ic_launcher.xml`/`ic_launcher_round.xml`
+declare the adaptive icon (`@color/colorPrimary` background, plus foreground
+and monochrome vector drawables — `drawable/ic_launcher_foreground.xml`,
+`drawable/ic_launcher_monochrome.xml` — both hand-traced from
+`src/design-system/assets/logo/panhandle-icon-monochrome.svg`'s ring+handle
+mark, scaled to fit Android's adaptive-icon safe zone); `mipmap-xxxhdpi/ic_launcher.png`/`ic_launcher_round.png`
+stay as the flat pre-API-26 fallback. A real `bubblewrap build` regenerating
+this directory from `twa-manifest.json` is expected to replace the vector
+drawables with its own rasterized per-density PNGs — that's fine, not a
+conflict, same as the rest of this hand-authored scaffold.
