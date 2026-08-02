@@ -361,15 +361,6 @@ _High value, low effort:_
      "need 2, not 1" adjustment doesn't require opening the edit modal.
      _Value: Medium · Importance: Low · Type: Idea / Shopping list_
 
-109. Wire up the bottom-sheet drag-grabber to actually dismiss on drag. The
-     grabber pill (`Sheet.jsx`) is currently a static visual affordance with no
-     touch/drag handler behind it — swiping down on it does nothing, which
-     misleads users familiar with the iOS/Android bottom-sheet convention.
-     `framer-motion`'s `drag="y"` with a dismiss threshold (already a
-     dependency, used elsewhere for `Reorder`/swipe gestures) would wire it up;
-     desktop's `dialog` placement has no grabber and needs no change.
-     _Value: Medium · Importance: Low · Type: Idea / UI polish_
-
 _Exploratory / higher ceiling:_
 
 107. Pantry / "have at home" state to suppress suggestions for staples you keep
