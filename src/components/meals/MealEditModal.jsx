@@ -90,38 +90,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
     }
   }
 
-  async function save() {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      toast(t("meals.toast.emptyName"), { error: true });
-      return;
-    }
-    const res = id
-      ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
-      : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
-    if (res.error) {
-      toast(apiErrorMessage(res, t), { error: true });
-      return;
-    }
-    onSaved();
-  }
-
-  // Removes the meal from the catalogue entirely — cascades to meal_plan, so
-  // any day currently assigned this meal reverts to unplanned.
-  async function deleteEntry() {
-    const meal = catalogue.find((m) => m.id === id);
-    if (!meal) return;
-    if (
-      !(await confirm(t("meals.confirm.deleteMeal.body", { name: meal.name }), {
-        title: t("meals.confirm.deleteMeal.title"),
-        confirmLabel: t("meals.confirm.deleteMeal.confirmLabel"),
-      }))
-    )
-      return;
-    await api(`/meals/${id}`, { method: "DELETE" });
-    onSaved();
-  }
-
   const isDuplicate = similarNote.kind === "duplicate";
   const similarText = !similarNote.kind
     ? ""
@@ -131,66 +99,104 @@ export function MealEditModal({ id, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose} title={t(id ? "meals.edit.title" : "meals.edit.newTitle")}>
-      <label htmlFor="meal-edit-name">{t("meals.edit.nameLabel")}</label>
-      <Input
-        id="meal-edit-name"
-        value={name}
-        onChange={(e) => {
-          setName(e.target.value);
-          checkSimilar(e.target.value);
-        }}
-        placeholder={t("meals.mealNamePlaceholder")}
-      />
-      <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: isDuplicate ? "var(--status-danger)" : "var(--text-tertiary)" }}>
-        {similarText}
-      </div>
-      {showImport ? (
-        <>
-          <label htmlFor="meal-edit-recipe-url">{t("meals.edit.importUrlLabel")}</label>
-          <div style={{ display: "flex", gap: 8 }}>
+      {(requestClose) => {
+        async function save() {
+          const trimmed = name.trim();
+          if (!trimmed) {
+            toast(t("meals.toast.emptyName"), { error: true });
+            return;
+          }
+          const res = id
+            ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
+            : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
+          if (res.error) {
+            toast(apiErrorMessage(res, t), { error: true });
+            return;
+          }
+          requestClose(onSaved);
+        }
+
+        // Removes the meal from the catalogue entirely — cascades to meal_plan, so
+        // any day currently assigned this meal reverts to unplanned.
+        async function deleteEntry() {
+          const meal = catalogue.find((m) => m.id === id);
+          if (!meal) return;
+          if (
+            !(await confirm(t("meals.confirm.deleteMeal.body", { name: meal.name }), {
+              title: t("meals.confirm.deleteMeal.title"),
+              confirmLabel: t("meals.confirm.deleteMeal.confirmLabel"),
+            }))
+          )
+            return;
+          await api(`/meals/${id}`, { method: "DELETE" });
+          requestClose(onSaved);
+        }
+
+        return (
+          <>
+            <label htmlFor="meal-edit-name">{t("meals.edit.nameLabel")}</label>
             <Input
-              id="meal-edit-recipe-url"
-              value={recipeUrl}
-              onChange={(e) => setRecipeUrl(e.target.value)}
-              placeholder={t("meals.edit.importUrlPlaceholder")}
-              style={{ flex: 1 }}
+              id="meal-edit-name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                checkSimilar(e.target.value);
+              }}
+              placeholder={t("meals.mealNamePlaceholder")}
             />
-            <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
-              {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <Button variant="ghost" size="sm" icon="link" onClick={() => setShowImport(true)} style={{ marginTop: 4, padding: "8px 4px" }}>
-          {t("meals.edit.importToggle")}
-        </Button>
-      )}
-      <label htmlFor="meal-edit-ingredients">{t("meals.ingredientsLabel")}</label>
-      {/* Canonical (untranslated) suggestions on purpose — see MealPlanModal. */}
-      <TokenInput
-        id="meal-edit-ingredients"
-        value={ingredients}
-        onChange={setIngredients}
-        suggestions={itemNames}
-        placeholder={t("meals.ingredientsPlaceholder")}
-      />
-      <label htmlFor="meal-edit-labels">{t("meals.edit.labelsLabel")}</label>
-      <TokenInput
-        id="meal-edit-labels"
-        value={labels}
-        onChange={setLabels}
-        suggestions={knownLabels}
-        placeholder={t("meals.edit.labelsPlaceholder")}
-      />
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" onClick={save}>{t("common.save")}</Button>
-      </div>
-      {id && (
-        <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
-          {t("meals.edit.deleteFromCatalogue")}
-        </Button>
-      )}
+            <div style={{ fontSize: 12, marginTop: 4, minHeight: 14, color: isDuplicate ? "var(--status-danger)" : "var(--text-tertiary)" }}>
+              {similarText}
+            </div>
+            {showImport ? (
+              <>
+                <label htmlFor="meal-edit-recipe-url">{t("meals.edit.importUrlLabel")}</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Input
+                    id="meal-edit-recipe-url"
+                    value={recipeUrl}
+                    onChange={(e) => setRecipeUrl(e.target.value)}
+                    placeholder={t("meals.edit.importUrlPlaceholder")}
+                    style={{ flex: 1 }}
+                  />
+                  <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
+                    {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" icon="link" onClick={() => setShowImport(true)} style={{ marginTop: 4, padding: "8px 4px" }}>
+                {t("meals.edit.importToggle")}
+              </Button>
+            )}
+            <label htmlFor="meal-edit-ingredients">{t("meals.ingredientsLabel")}</label>
+            {/* Canonical (untranslated) suggestions on purpose — see MealPlanModal. */}
+            <TokenInput
+              id="meal-edit-ingredients"
+              value={ingredients}
+              onChange={setIngredients}
+              suggestions={itemNames}
+              placeholder={t("meals.ingredientsPlaceholder")}
+            />
+            <label htmlFor="meal-edit-labels">{t("meals.edit.labelsLabel")}</label>
+            <TokenInput
+              id="meal-edit-labels"
+              value={labels}
+              onChange={setLabels}
+              suggestions={knownLabels}
+              placeholder={t("meals.edit.labelsPlaceholder")}
+            />
+            <div className="actions">
+              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" onClick={save}>{t("common.save")}</Button>
+            </div>
+            {id && (
+              <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
+                {t("meals.edit.deleteFromCatalogue")}
+              </Button>
+            )}
+          </>
+        );
+      }}
     </Modal>
   );
 }

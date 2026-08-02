@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.5] — 2026-08-02
+
+### Fixed
+- **Every modal in the app (the item editor, meal planner, confirmation dialogs, and more) now visibly animates back down when you dismiss it, instead of vanishing instantly.** Only the opening animation was ever wired up — tapping Cancel, Save, Confirm, or outside the dialog all made it disappear in a single frame. Every dismissal route (Cancel/Confirm/Save buttons, tapping the background, Escape, dragging the sheet down, and the browser's back button) now plays the same spring-out motion the sheet already used to open with, and a drag-dismiss continues the live throw instead of snapping back to a fixed starting point first. (`Sheet.jsx` no longer unmounts synchronously when `open` goes false; it keeps rendering through a new `ph-sheet-out`/`ph-dialog-out`/`ph-scrim-out` CSS exit — or, for a committed drag, an imperative `animate()` continuing the current `y` offset/velocity — and only calls a new `onExited` callback once that's actually finished. `Modal.jsx` now owns a `requestClose(finalCallback)`, handed to modal content as a render-prop (`children(requestClose)`), so a Cancel/Confirm/Save action requests the animated close instead of calling its own `onClose`/`onSaved`-style prop directly and cutting the animation short mid-flight; every modal-content component — `ItemEditModal`, `MealEditModal`, `MealPlanModal`, `ConfirmContext`'s confirm dialog, and the rest — was updated to route through it.)
+
 ## [1.57.4] — 2026-08-02
 
 ### Fixed

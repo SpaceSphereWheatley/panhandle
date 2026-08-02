@@ -197,13 +197,17 @@ export function ImportantInfoModal({ onClose }) {
   const [itemName] = useState(() => DEMO_ITEMS[Math.floor(Math.random() * DEMO_ITEMS.length)]);
   return (
     <Modal onClose={onClose} title={t("importantInfo.title")}>
-      <SwipeDemo shouldAnimate={shouldAnimate} isGrid={isGrid} itemName={itemName} />
-      <p style={textStyle}>{t("importantInfo.swipe")}</p>
-      <TapDemo isGrid={isGrid} itemName={itemName} />
-      <p style={{ ...textStyle, margin: 0 }}>{t("importantInfo.tap")}</p>
-      <div className="actions">
-        <Button variant="primary" onClick={onClose}>{t("common.close")}</Button>
-      </div>
+      {(requestClose) => (
+        <>
+          <SwipeDemo shouldAnimate={shouldAnimate} isGrid={isGrid} itemName={itemName} />
+          <p style={textStyle}>{t("importantInfo.swipe")}</p>
+          <TapDemo isGrid={isGrid} itemName={itemName} />
+          <p style={{ ...textStyle, margin: 0 }}>{t("importantInfo.tap")}</p>
+          <div className="actions">
+            <Button variant="primary" onClick={() => requestClose()}>{t("common.close")}</Button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

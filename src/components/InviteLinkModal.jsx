@@ -25,12 +25,16 @@ export function InviteLinkModal({ token, onClose }) {
 
   return (
     <Modal onClose={onClose} title={t("settings.household.members.invite.linkModalTitle")}>
-      <p className="cred-note">{t("settings.household.members.invite.linkModalNote")}</p>
-      <div className="cred-box">{link}</div>
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.close")}</Button>
-        <Button variant="primary" onClick={copyLink}>{t("settings.household.members.invite.copyLink")}</Button>
-      </div>
+      {(requestClose) => (
+        <>
+          <p className="cred-note">{t("settings.household.members.invite.linkModalNote")}</p>
+          <div className="cred-box">{link}</div>
+          <div className="actions">
+            <Button variant="outline" onClick={() => requestClose()}>{t("common.close")}</Button>
+            <Button variant="primary" onClick={copyLink}>{t("settings.household.members.invite.copyLink")}</Button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

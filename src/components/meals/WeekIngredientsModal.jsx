@@ -52,38 +52,44 @@ export function WeekIngredientsModal({ onClose, onAdded }) {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, checked: !r.checked } : r)));
   }
 
-  async function confirmAdd() {
-    const checked = (rows || []).filter((r) => r.checked);
-    if (!checked.length) {
-      onClose();
-      return;
-    }
-    const { added, merged, failed } = await addRowsToList(checked);
-    await onAdded?.();
-    onClose();
-    if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
-    else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
-    else toast(t("meals.toast.ingredientsAdded", { count: added }));
-  }
-
   const weekLabel = t(nextWeek ? "meals.week.next" : "meals.week.this");
   const fmt = { day: "numeric", month: "short" };
   const dateRange = `${monday.toLocaleDateString(dateLocale(lang), fmt)} – ${sunday.toLocaleDateString(dateLocale(lang), fmt)}`;
 
   return (
     <Modal onClose={onClose} title={t("meals.weekIngredients.title")}>
-      <p className="cred-note">{t("meals.weekIngredients.intro", { week: weekLabel, range: dateRange })}</p>
-      {rows === null ? (
-        <LoadingState />
-      ) : rows.length === 0 ? (
-        <EmptyState description={t("meals.weekIngredients.empty")} />
-      ) : (
-        <IngredientChecklist rows={rows} onToggle={toggleRow} />
-      )}
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
-      </div>
+      {(requestClose) => {
+        async function confirmAdd() {
+          const checked = (rows || []).filter((r) => r.checked);
+          if (!checked.length) {
+            requestClose();
+            return;
+          }
+          const { added, merged, failed } = await addRowsToList(checked);
+          await onAdded?.();
+          requestClose();
+          if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
+          else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
+          else toast(t("meals.toast.ingredientsAdded", { count: added }));
+        }
+
+        return (
+          <>
+            <p className="cred-note">{t("meals.weekIngredients.intro", { week: weekLabel, range: dateRange })}</p>
+            {rows === null ? (
+              <LoadingState />
+            ) : rows.length === 0 ? (
+              <EmptyState description={t("meals.weekIngredients.empty")} />
+            ) : (
+              <IngredientChecklist rows={rows} onToggle={toggleRow} />
+            )}
+            <div className="actions">
+              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
+            </div>
+          </>
+        );
+      }}
     </Modal>
   );
 }

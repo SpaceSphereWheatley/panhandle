@@ -39,60 +39,64 @@ export function MealCatalogueBrowseModal({ onClose, onOpenEdit, onPlanAgain }) {
 
   return (
     <Modal onClose={onClose} title={t("meals.allMeals")}>
-      <button className="meal-browse-add" onClick={() => onOpenEdit(null)}>+ {t("meals.fab.newMeal")}</button>
-      <input placeholder={t("meals.browse.searchPlaceholder")} value={filter} onChange={(e) => setFilter(e.target.value)} />
-      {labels.length > 0 && (
-        <select value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)} id="mealBrowseLabelSelect">
-          <option value="">{t("meals.browse.allLabels")}</option>
-          {labels.map((l) => (
-            <option value={l} key={l}>{l}</option>
-          ))}
-        </select>
-      )}
-      <div style={{ marginTop: 10, maxHeight: "50vh", overflowY: "auto" }}>
-        {meals === null ? (
-          <LoadingState />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            description={t(filter.trim() || labelFilter ? "meals.browse.emptyFiltered" : "meals.browse.empty")}
-          />
-        ) : (
-          rows.map((m) => {
-            const count = parseIngredients(m.ingredients).length;
-            const labels = parseIngredients(m.labels);
-            const last = m.last_planned
-              ? new Date(m.last_planned).toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short", year: "numeric" })
-              : t("meals.browse.never");
-            return (
-              <div className="meal-browse-row" key={m.id}>
-                <button type="button" className="meal-browse-row-main" onClick={() => onOpenEdit(m.id)}>
-                  <span className="info">
-                    <span className="name">{m.name}</span>
-                    <span className="stats">{t("meals.browse.stats", { planned: m.times_planned, last, ingredients: count })}</span>
-                    {labels.length > 0 && (
-                      <span className="labels">
-                        {labels.map((l) => (
-                          <span className="label-chip" key={l}>{l}</span>
-                        ))}
+      {(requestClose) => (
+        <>
+          <button className="meal-browse-add" onClick={() => onOpenEdit(null)}>+ {t("meals.fab.newMeal")}</button>
+          <input placeholder={t("meals.browse.searchPlaceholder")} value={filter} onChange={(e) => setFilter(e.target.value)} />
+          {labels.length > 0 && (
+            <select value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)} id="mealBrowseLabelSelect">
+              <option value="">{t("meals.browse.allLabels")}</option>
+              {labels.map((l) => (
+                <option value={l} key={l}>{l}</option>
+              ))}
+            </select>
+          )}
+          <div style={{ marginTop: 10, maxHeight: "50vh", overflowY: "auto" }}>
+            {meals === null ? (
+              <LoadingState />
+            ) : rows.length === 0 ? (
+              <EmptyState
+                description={t(filter.trim() || labelFilter ? "meals.browse.emptyFiltered" : "meals.browse.empty")}
+              />
+            ) : (
+              rows.map((m) => {
+                const count = parseIngredients(m.ingredients).length;
+                const labels = parseIngredients(m.labels);
+                const last = m.last_planned
+                  ? new Date(m.last_planned).toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short", year: "numeric" })
+                  : t("meals.browse.never");
+                return (
+                  <div className="meal-browse-row" key={m.id}>
+                    <button type="button" className="meal-browse-row-main" onClick={() => onOpenEdit(m.id)}>
+                      <span className="info">
+                        <span className="name">{m.name}</span>
+                        <span className="stats">{t("meals.browse.stats", { planned: m.times_planned, last, ingredients: count })}</span>
+                        {labels.length > 0 && (
+                          <span className="labels">
+                            {labels.map((l) => (
+                              <span className="label-chip" key={l}>{l}</span>
+                            ))}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                </button>
-                <IconButton
-                  icon="calendar-plus"
-                  size="md"
-                  variant="subtle"
-                  label={t("meals.browse.planAgain", { name: m.name })}
-                  onClick={() => onPlanAgain(m)}
-                />
-              </div>
-            );
-          })
-        )}
-      </div>
-      <div className="actions">
-        <Button variant="primary" onClick={onClose}>{t("common.close")}</Button>
-      </div>
+                    </button>
+                    <IconButton
+                      icon="calendar-plus"
+                      size="md"
+                      variant="subtle"
+                      label={t("meals.browse.planAgain", { name: m.name })}
+                      onClick={() => onPlanAgain(m)}
+                    />
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="actions">
+            <Button variant="primary" onClick={() => requestClose()}>{t("common.close")}</Button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }
