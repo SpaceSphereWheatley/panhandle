@@ -7,6 +7,40 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+116. (133) Investigated the backend/API review's suspected missing index on
+     `users.email` — turned out to be a false alarm, not a real gap.
+     `idx_users_email` has existed since `0010_signup_and_recovery.sql`
+     (a unique partial index, added alongside `email`/`google_sub` but
+     apparently missed by the later review), and `EXPLAIN QUERY PLAN`
+     against production confirms SQLite already uses it (`SEARCH users
+     USING INDEX idx_users_email`) for the app's `email = ?1 COLLATE
+     NOCASE` queries — no table scan. No schema/code change needed; a
+     drafted `CREATE INDEX ... COLLATE NOCASE` migration was applied,
+     confirmed as a no-op (`changes: 0`, since `IF NOT EXISTS` matched the
+     existing index name), then rolled back rather than kept as a
+     do-nothing migration. (no version bump; nothing shipped)
+
+115. (116) Added a confirm step before removing an item from the shopping
+     list. `ItemEditModal.jsx`'s "Remove from list" button used to delete
+     immediately with no `confirm()` and no undo toast — the only
+     single-item delete in the app that wasn't gated, unlike
+     `deleteFromCatalogue`, meal/plan-day delete, member removal, admin user
+     delete, and invite/calendar-feed revoke, which all go through
+     `useConfirm()` first. (1.57.2)
+
+114. (121) Fixed inverted delete-button severity in `ItemEditModal`. "Remove
+     from list" (reversible — the catalogue entry survives) was a bold
+     full-width danger `Button`, while "Forget item and purchase history
+     entirely" (irreversible) was a barely-visible 12px muted text link —
+     the opposite of how serious each action actually is. Swapped their
+     visual weight to match. (1.57.2)
+
+113. (130) Added a regression test guarding `worker/index.js`'s
+     `// ===== AUTH REQUIRED BELOW =====` auth-boundary marker, so a new
+     route can no longer silently ship unauthenticated by accidentally
+     landing above it — same drift-guard pattern as `dictionaries.test.js`.
+     (1.57.2)
+
 112. Replaced the "Clear bought" end-of-trip sweep with "Mark all as bought."
      The old button (next to "Recently bought", `DELETE /list/bought`) deleted
      every bought `list_items` row outright, which meant a recently-bought
