@@ -7,6 +7,18 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+113. (116, 121, 130) `ItemEditModal.jsx`'s "Remove from list" now confirms
+     before deleting, matching every other single-item delete in the app
+     (it had been the only one with no cancel path). Swapped the two delete
+     buttons' visual weight so "Forget item and purchase history entirely"
+     (irreversible) reads as more serious than "Remove from list"
+     (reversible) — previously inverted. Added a regression test guarding
+     `worker/index.js`'s auth-boundary marker so a route can't silently ship
+     unauthenticated above it. Docs-only entry here — this shipped in
+     06dcf33 (PR #265, 1.57.2) but `TODO.md` was never struck to match.
+     (no version bump for this doc correction; the fix itself already
+     shipped)
+
 112. Replaced the "Clear bought" end-of-trip sweep with "Mark all as bought."
      The old button (next to "Recently bought", `DELETE /list/bought`) deleted
      every bought `list_items` row outright, which meant a recently-bought
