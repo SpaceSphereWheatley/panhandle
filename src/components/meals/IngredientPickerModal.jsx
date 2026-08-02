@@ -34,27 +34,33 @@ export function IngredientPickerModal({ ingredients, onClose }) {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, checked: !r.checked } : r)));
   }
 
-  async function confirmAdd() {
-    const checked = (rows || []).filter((r) => r.checked);
-    if (!checked.length) {
-      onClose();
-      return;
-    }
-    const { added, merged, failed } = await addRowsToList(checked);
-    onClose();
-    if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
-    else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
-    else toast(t("meals.toast.ingredientsAdded", { count: added }));
-  }
-
   return (
     <Modal onClose={onClose} title={t("meals.ingredientPicker.title")}>
-      <p className="cred-note">{t("meals.ingredientPicker.intro")}</p>
-      {rows === null ? <LoadingState /> : <IngredientChecklist rows={rows} onToggle={toggleRow} />}
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
-      </div>
+      {(requestClose) => {
+        async function confirmAdd() {
+          const checked = (rows || []).filter((r) => r.checked);
+          if (!checked.length) {
+            requestClose();
+            return;
+          }
+          const { added, merged, failed } = await addRowsToList(checked);
+          requestClose();
+          if (failed) toast(t("meals.toast.addPartial", { added, failed }), { error: true });
+          else if (added === 0 && merged > 0) toast(t("meals.toast.allAlreadyOnList"));
+          else toast(t("meals.toast.ingredientsAdded", { count: added }));
+        }
+
+        return (
+          <>
+            <p className="cred-note">{t("meals.ingredientPicker.intro")}</p>
+            {rows === null ? <LoadingState /> : <IngredientChecklist rows={rows} onToggle={toggleRow} />}
+            <div className="actions">
+              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" onClick={confirmAdd}>{t("meals.addSelected")}</Button>
+            </div>
+          </>
+        );
+      }}
     </Modal>
   );
 }

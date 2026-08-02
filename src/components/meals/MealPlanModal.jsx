@@ -33,6 +33,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   const [respSelect, setRespSelect] = useState("");
   const [respOther, setRespOther] = useState("");
   const fieldRef = useRef(null);
+  // savePlan/deletePlanDay/the load-failure effect below all need to trigger
+  // Sheet's dismissal animation, but they're defined outside <Modal>'s
+  // render-prop closure (one of them runs from an effect, before the
+  // "loaded" JSX below even renders) — so requestClose is captured here on
+  // every render instead, via each of the two <Modal> bodies below.
+  const requestCloseRef = useRef(() => onClose());
 
   useEffect(() => {
     (async () => {
@@ -47,7 +53,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
         ]);
       } catch {
         toast(t("meals.toast.loadFailed"), { error: true });
-        onClose();
+        requestCloseRef.current();
         return;
       }
       setMealCatalogue(meals);
@@ -96,11 +102,11 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
     const name = mealName.trim();
     const responsible = getResp();
     if (!name && !responsible) {
-      onClose();
+      requestCloseRef.current();
       return;
     }
-    onClose();
     onSavePlan(iso, { meal_name: name || null, responsible, ingredients });
+    requestCloseRef.current();
   }
 
   async function deletePlanDay() {
@@ -111,12 +117,15 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       }))
     )
       return;
-    onClose();
     onDeletePlanDay(iso);
+    requestCloseRef.current();
   }
 
   // Persist the meal first so typed ingredients are remembered, then swap to
-  // the ingredient picker.
+  // the ingredient picker. This swaps <MealPlanModal> straight for
+  // <IngredientPickerModal> (MealsTab's single `modal` state), same as
+  // MealCatalogueBrowseModal's row-click-to-edit — a navigate-forward, not a
+  // dismissal, so it deliberately doesn't animate through requestClose.
   async function pickIngredients() {
     const name = mealName.trim();
     if (!ingredients.length) {
@@ -140,7 +149,10 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   if (loading) {
     return (
       <Modal onClose={onClose} title={t("meals.plan.title")}>
-        <LoadingState />
+        {(requestClose) => {
+          requestCloseRef.current = requestClose;
+          return <LoadingState />;
+        }}
       </Modal>
     );
   }
@@ -149,100 +161,107 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
 
   return (
     <Modal onClose={onClose} title={t("meals.plan.title")}>
-      {suggestions.length > 0 && (
-        <>
-          <label>{t("meals.plan.suggestionsLabel")}</label>
-          <div className="meal-suggestions">
-            {suggestions.map((m) => (
-              <button
-                type="button"
-                className="meal-chip"
-                key={m.id}
-                onClick={() => pickMeal(m)}
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-      <label htmlFor="meal-plan-name">{t("meals.plan.mealLabel")}</label>
-      <div className="meal-name-field" ref={fieldRef}>
-        <input
-          id="meal-plan-name"
-          autoComplete="off"
-          value={mealName}
-          onChange={(e) => onMealNameChange(e.target.value)}
-          onFocus={() => setShowDropdown(true)}
-          placeholder={t("meals.mealNamePlaceholder")}
-        />
-        <IconButton
-          icon="caret-down"
-          size="md"
-          variant="ghost"
-          onClick={() => setShowDropdown((v) => !v)}
-          label={t("meals.plan.showSaved")}
-          style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
-        />
-        <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
-          {dropdownMatches.length ? (
-            dropdownMatches.map((m) => (
-              <div className="meal-name-option" key={m.id} onClick={() => pickMeal(m)}>
-                {m.name}
+      {(requestClose) => {
+        requestCloseRef.current = requestClose;
+        return (
+          <>
+            {suggestions.length > 0 && (
+              <>
+                <label>{t("meals.plan.suggestionsLabel")}</label>
+                <div className="meal-suggestions">
+                  {suggestions.map((m) => (
+                    <button
+                      type="button"
+                      className="meal-chip"
+                      key={m.id}
+                      onClick={() => pickMeal(m)}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <label htmlFor="meal-plan-name">{t("meals.plan.mealLabel")}</label>
+            <div className="meal-name-field" ref={fieldRef}>
+              <input
+                id="meal-plan-name"
+                autoComplete="off"
+                value={mealName}
+                onChange={(e) => onMealNameChange(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                placeholder={t("meals.mealNamePlaceholder")}
+              />
+              <IconButton
+                icon="caret-down"
+                size="md"
+                variant="ghost"
+                onClick={() => setShowDropdown((v) => !v)}
+                label={t("meals.plan.showSaved")}
+                style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
+              />
+              <div className={`meal-name-dropdown${showDropdown ? "" : " hidden"}`}>
+                {dropdownMatches.length ? (
+                  dropdownMatches.map((m) => (
+                    <div className="meal-name-option" key={m.id} onClick={() => pickMeal(m)}>
+                      {m.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="meal-name-option meal-name-empty">
+                    {t(mealName.trim() ? "meals.plan.noSavedMealsMatching" : "meals.plan.noSavedMeals")}
+                  </div>
+                )}
               </div>
-            ))
-          ) : (
-            <div className="meal-name-option meal-name-empty">
-              {t(mealName.trim() ? "meals.plan.noSavedMealsMatching" : "meals.plan.noSavedMeals")}
             </div>
-          )}
-        </div>
-      </div>
-      <label htmlFor="meal-plan-ingredients">{t("meals.ingredientsLabel")}</label>
-      {/* `suggestions` stay canonical (untranslated) on purpose: a committed
-          token is *stored* in meal_catalogue.ingredients and later matched
-          back against item_catalogue by name (buildIngredientRows), so
-          offering an English name here would persist one. */}
-      <TokenInput
-        id="meal-plan-ingredients"
-        value={ingredients}
-        onChange={setIngredients}
-        suggestions={itemNames}
-        placeholder={t("meals.ingredientsPlaceholder")}
-      />
-      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
-        {t("meals.plan.ingredientsHint")}
-      </div>
-      <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
-        {t("meals.plan.addIngredientsToList")}
-      </Button>
-      <label htmlFor="meal-plan-resp">{t("meals.responsibleLabel")}</label>
-      <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
-        <option value="">{t("meals.responsible.none")}</option>
-        {people.map((p) => (
-          <option value={p} key={p}>{nameFor(p)}</option>
-        ))}
-        <option value="__other__">{t("meals.responsible.other")}</option>
-      </select>
-      {respSelect === "__other__" && (
-        <Input
-          type="text"
-          aria-label={t("meals.responsible.describeAria")}
-          placeholder={t("meals.responsible.describePlaceholder")}
-          style={{ marginTop: 8 }}
-          value={respOther}
-          onChange={(e) => setRespOther(e.target.value)}
-        />
-      )}
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" onClick={savePlan}>{t("common.save")}</Button>
-      </div>
-      {(current.meal_name || current.responsible) && (
-        <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
-          {t("meals.plan.removeDay")}
-        </Button>
-      )}
+            <label htmlFor="meal-plan-ingredients">{t("meals.ingredientsLabel")}</label>
+            {/* `suggestions` stay canonical (untranslated) on purpose: a committed
+                token is *stored* in meal_catalogue.ingredients and later matched
+                back against item_catalogue by name (buildIngredientRows), so
+                offering an English name here would persist one. */}
+            <TokenInput
+              id="meal-plan-ingredients"
+              value={ingredients}
+              onChange={setIngredients}
+              suggestions={itemNames}
+              placeholder={t("meals.ingredientsPlaceholder")}
+            />
+            <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
+              {t("meals.plan.ingredientsHint")}
+            </div>
+            <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
+              {t("meals.plan.addIngredientsToList")}
+            </Button>
+            <label htmlFor="meal-plan-resp">{t("meals.responsibleLabel")}</label>
+            <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
+              <option value="">{t("meals.responsible.none")}</option>
+              {people.map((p) => (
+                <option value={p} key={p}>{nameFor(p)}</option>
+              ))}
+              <option value="__other__">{t("meals.responsible.other")}</option>
+            </select>
+            {respSelect === "__other__" && (
+              <Input
+                type="text"
+                aria-label={t("meals.responsible.describeAria")}
+                placeholder={t("meals.responsible.describePlaceholder")}
+                style={{ marginTop: 8 }}
+                value={respOther}
+                onChange={(e) => setRespOther(e.target.value)}
+              />
+            )}
+            <div className="actions">
+              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" onClick={savePlan}>{t("common.save")}</Button>
+            </div>
+            {(current.meal_name || current.responsible) && (
+              <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
+                {t("meals.plan.removeDay")}
+              </Button>
+            )}
+          </>
+        );
+      }}
     </Modal>
   );
 }

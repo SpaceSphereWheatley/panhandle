@@ -37,15 +37,27 @@ export function ConfirmProvider({ children }) {
       {children}
       {state && (
         <Modal onClose={() => settle(false)} title={state.title || t("common.confirm.defaultTitle")}>
-          <p style={{ color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.5, margin: 0 }}>
-            {state.message}
-          </p>
-          <div className="actions">
-            <Button variant="outline" onClick={() => settle(false)}>{t("common.cancel")}</Button>
-            <Button variant={state.danger ? "danger" : "primary"} onClick={() => settle(true)}>
-              {state.confirmLabel || t("common.confirm.defaultLabel")}
-            </Button>
-          </div>
+          {(requestClose) => (
+            <>
+              <p style={{ color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.5, margin: 0 }}>
+                {state.message}
+              </p>
+              <div className="actions">
+                {/* Cancel and Confirm settle different outcomes, so each passes
+                    its own finalCallback rather than relying on requestClose's
+                    default (Modal's onClose prop, wired above to settle(false)
+                    — the right fallback for backdrop/Escape/drag/back, but
+                    Confirm needs settle(true) instead). Calling settle()
+                    immediately (without requestClose) would null out `state`
+                    right away, unmounting <Modal> before the exit animation
+                    ever played. */}
+                <Button variant="outline" onClick={() => requestClose(() => settle(false))}>{t("common.cancel")}</Button>
+                <Button variant={state.danger ? "danger" : "primary"} onClick={() => requestClose(() => settle(true))}>
+                  {state.confirmLabel || t("common.confirm.defaultLabel")}
+                </Button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
     </ConfirmContext.Provider>

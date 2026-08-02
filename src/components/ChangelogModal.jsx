@@ -36,36 +36,40 @@ export function ChangelogModal({ onClose }) {
 
   return (
     <Modal onClose={onClose} title={t("changelog.title")}>
-      {/* The rendered CHANGELOG.md content below is never translated — it's
-          the release history, not app chrome. */}
-      <div className="changelog-box">
-        {failed && <p className="cred-note">{t("changelog.loadFailed")}</p>}
-        {!failed && !entries && <p className="cred-note">{t("common.loading")}</p>}
-        {entries?.slice(0, RECENT_VERSIONS_COUNT).map((entry) => (
-          <section key={entry.version} className="changelog-entry">
-            <h4>
-              {entry.version} <span className="meta">— {entry.date}</span>
-            </h4>
-            <ul>
-              {entry.titles.map((title, i) => (
-                <li key={i}>{title}</li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <div style={{ textAlign: "center", marginTop: 10 }}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => window.open(FULL_CHANGELOG_URL, "_blank", "noopener,noreferrer")}
-        >
-          {t("changelog.seeFull")}
-        </Button>
-      </div>
-      <div className="actions">
-        <Button variant="primary" onClick={onClose}>{t("common.close")}</Button>
-      </div>
+      {(requestClose) => (
+        <>
+          {/* The rendered CHANGELOG.md content below is never translated — it's
+              the release history, not app chrome. */}
+          <div className="changelog-box">
+            {failed && <p className="cred-note">{t("changelog.loadFailed")}</p>}
+            {!failed && !entries && <p className="cred-note">{t("common.loading")}</p>}
+            {entries?.slice(0, RECENT_VERSIONS_COUNT).map((entry) => (
+              <section key={entry.version} className="changelog-entry">
+                <h4>
+                  {entry.version} <span className="meta">— {entry.date}</span>
+                </h4>
+                <ul>
+                  {entry.titles.map((title, i) => (
+                    <li key={i}>{title}</li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(FULL_CHANGELOG_URL, "_blank", "noopener,noreferrer")}
+            >
+              {t("changelog.seeFull")}
+            </Button>
+          </div>
+          <div className="actions">
+            <Button variant="primary" onClick={() => requestClose()}>{t("common.close")}</Button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

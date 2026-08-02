@@ -12,25 +12,31 @@ export function CredentialsModal({ username, password, onClose }) {
   // sending it, and the invitee has no language preference stored yet.
   const invite = t("auth.credentials.invite", { username, password });
 
-  async function copyInvite() {
-    try {
-      await navigator.clipboard.writeText(invite);
-    } catch {
-      toast(t("auth.credentials.copyFailed"), { error: true });
-      return;
-    }
-    toast(t("auth.credentials.copied"));
-    onClose();
-  }
-
   return (
     <Modal onClose={onClose} title={t("auth.credentials.title")}>
-      <p className="cred-note">{t("auth.credentials.note")}</p>
-      <div className="cred-box">{invite}</div>
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.close")}</Button>
-        <Button variant="primary" onClick={copyInvite}>{t("auth.credentials.copy")}</Button>
-      </div>
+      {(requestClose) => {
+        async function copyInvite() {
+          try {
+            await navigator.clipboard.writeText(invite);
+          } catch {
+            toast(t("auth.credentials.copyFailed"), { error: true });
+            return;
+          }
+          toast(t("auth.credentials.copied"));
+          requestClose();
+        }
+
+        return (
+          <>
+            <p className="cred-note">{t("auth.credentials.note")}</p>
+            <div className="cred-box">{invite}</div>
+            <div className="actions">
+              <Button variant="outline" onClick={() => requestClose()}>{t("common.close")}</Button>
+              <Button variant="primary" onClick={copyInvite}>{t("auth.credentials.copy")}</Button>
+            </div>
+          </>
+        );
+      }}
     </Modal>
   );
 }

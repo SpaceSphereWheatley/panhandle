@@ -25,12 +25,16 @@ export function CalendarFeedLinkModal({ token, onClose }) {
 
   return (
     <Modal onClose={onClose} title={t("settings.calendarSync.linkModalTitle")}>
-      <p className="cred-note">{t("settings.calendarSync.linkModalNote")}</p>
-      <div className="cred-box">{link}</div>
-      <div className="actions">
-        <Button variant="outline" onClick={onClose}>{t("common.close")}</Button>
-        <Button variant="primary" onClick={copyLink}>{t("settings.calendarSync.copyLink")}</Button>
-      </div>
+      {(requestClose) => (
+        <>
+          <p className="cred-note">{t("settings.calendarSync.linkModalNote")}</p>
+          <div className="cred-box">{link}</div>
+          <div className="actions">
+            <Button variant="outline" onClick={() => requestClose()}>{t("common.close")}</Button>
+            <Button variant="primary" onClick={copyLink}>{t("settings.calendarSync.copyLink")}</Button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }
