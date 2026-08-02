@@ -15,15 +15,18 @@ Completed items live in `Todo_done.md`, not below.
    pass over `worker/index.js`'s REST conventions, schema/query integrity,
    security/validation, reliability, and documentation (see `## Backend /
    API` below). Tenant isolation, auth, and error-code discipline all held
-   up well; the concrete gaps are #130-#135, all low-urgency (an
-   auth-boundary convention with no test guarding it, a check-then-act race
-   on a purchase counter, a non-atomic multi-field PATCH, a missing index,
-   an unbounded admin query, and no machine-readable API contract).
+   up well; the concrete gaps are #131, #132, #134, #135, all low-urgency
+   (a check-then-act race on a purchase counter, a non-atomic multi-field
+   PATCH, an unbounded admin query, and no machine-readable API contract).
+   #130 (the auth-boundary drift guard) is fixed, and #133 (a suspected
+   missing index on `users.email`) turned out to already be indexed and
+   in use — see `Todo_done.md`.
 3. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
-   accessibility pass over every screen (see `## UI/UX` below). One real gap
-   worth prioritizing above the rest: **#116** (removing a shopping-list item
-   has no confirm and no undo — the app's single most common delete action,
-   and the only one with no cancel path at all). #117-#124 are consistency/
+   accessibility pass over every screen (see `## UI/UX` below). #116
+   (removing a shopping-list item had no confirm and no undo) is fixed —
+   see `Todo_done.md`. The remaining P1 gap is **#117** (no
+   `:focus-visible` styling anywhere in the app — a full keyboard/
+   switch-control accessibility gap). #118-#124 are consistency/
    accessibility/polish. This pass also triaged `docs/ui-review-plan.md`,
    which predates the design-system rewrite and is now stale: its still-valid
    open items were carried over here (**#125, #126, #127**); the rest of its
@@ -54,22 +57,21 @@ Completed items live in `Todo_done.md`, not below.
 **Execution order** (cross-cutting sequencing pass, 2026-07-31 — bundles
 items across the groups above by shared file/dependency rather than by
 review-pass, to minimize context-switching. Group priority above still
-governs anything not listed here):
+governs anything not listed here. Steps 1-2 of the original pass — #116 +
+#121 and #130 — shipped in #265; step 3, #133, turned out to already be
+fixed (see `Todo_done.md`); renumbered below):
 
-1. **#116 + #121** — same file (`ItemEditModal.jsx`), ship together.
-2. **#130** — pure test file, zero deploy risk, do anytime.
-3. **#133** — trivial expand-only migration, no code change to adopt it.
-4. **#87 + #88 + #89 + #92** — bug sweep, one PR.
-5. **#131 + #132** — backend data-integrity batch, same file region as
+1. **#87 + #88 + #89 + #92** — bug sweep, one PR.
+2. **#131 + #132** — backend data-integrity batch, same file region as
    the bug sweep.
-6. **#137** — real live bug (uncaught exception), ranks above the
+3. **#137** — real live bug (uncaught exception), ranks above the
    performance items in Code quality despite both being P2.
-7. **#117 → #118 → #124** — strictly in this order: the shared button
+4. **#117 → #118 → #124** — strictly in this order: the shared button
    base (#118) must be built on top of the focus ring (#117), not
    retrofitted; #124 folds into the same pass.
-8. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+5. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
-9. **#136 phase 1**, then — only after a full deploy cycle confirms all
+6. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
    into one sprint.
@@ -125,19 +127,6 @@ these are the concrete gaps found.
 
 ### P2 — Reliability / data integrity
 
-130. **Auth boundary is enforced only by file position, not code.** Every
-     route below the `// ===== AUTH REQUIRED BELOW =====` marker
-     (`worker/index.js` ~L2009) is authenticated purely by being written
-     after that comment — nothing stops a new route from accidentally
-     landing above it and shipping unauthenticated. Add a regression test
-     asserting the fixed whitelist of public routes (`/version`, `/login`,
-     `/register`, `/auth/google`, `/forgot-password`, `/reset-password`,
-     `/invite-signup`, `/invite-google`, `GET /list-invites/:token`,
-     `GET /calendar/:token.ics`) are the only route checks appearing before
-     that marker's line number — same drift-guard pattern as
-     `dictionaries.test.js`.
-     _Value: Medium · Importance: Low · Type: Bug / Security hardening_
-
 131. **`POST /list/:id/toggle` has a check-then-act race on
      `item_catalogue.times_bought`.** It reads `bought` in a `SELECT`, then
      bumps the purchase counter in a separate statement based on that stale
@@ -159,15 +148,6 @@ these are the concrete gaps found.
      _Value: Low · Importance: Low · Type: Reliability / API_
 
 ### P3 — Scale / documentation
-
-133. **Missing index on `users.email`.** `username` is the PK, but
-     login-by-email, `/forgot-password`, `/auth/google`, and every
-     duplicate-email check filter on `email = ?1` directly with no index on
-     that column (unlike `google_sub`, which got a unique partial index in
-     `0010_signup_and_recovery.sql`) — a full table scan on every one of
-     those requests. Cheap, additive migration:
-     `CREATE INDEX idx_users_email ON users(email COLLATE NOCASE)`.
-     _Value: Medium · Importance: Low · Type: Performance / Schema_
 
 134. **`GET /admin/metrics`'s `per_list` query is unbounded.** Three
      correlated subqueries per row, over every list in the DB, no
@@ -194,16 +174,6 @@ now stale (see the group-priority note above for how its still-open items
 were triaged).
 
 ### P1 — Correctness / trust
-
-116. **No confirm or undo when removing an item from the list.**
-     `ItemEditModal.jsx`'s `removeFromList` (the full-width red "remove from
-     list" button) deletes immediately — no `confirm()`, no undo toast. It's
-     the only single-item delete in the app that isn't gated: `deleteFromCatalogue`
-     two lines below it, meal/plan-day delete, member removal, admin user
-     delete, and invite/calendar-feed revoke all go through `useConfirm()`
-     first. Add a confirm dialog, or an undo toast (matching the "plan again"
-     pattern already used in `MealsTab.jsx`'s `planAgain`).
-     _Value: High · Importance: High · Type: Bug / UX / Data safety_
 
 117. **No `:focus-visible` styling anywhere in the app.** A full-repo grep
      turns up zero `:focus`/`:focus-visible` rules in any CSS or inline style.
@@ -257,14 +227,6 @@ were triaged).
      one before pulling this into a build wave. Supersedes
      `docs/ui-review-plan.md` U15.
      _Value: Medium · Importance: Low · Type: UX / Discoverability_
-
-121. **Severity ordering is inverted in `ItemEditModal`.** "Remove from list"
-     (reversible — the catalogue entry survives) is a bold full-width danger
-     `Button`; "Forget completely" (irreversible — cascades and deletes
-     purchase history) is a 12px muted underlined text link below it. Swap
-     the visual weight so the more destructive action reads as more serious,
-     not less.
-     _Value: Low · Importance: Low · Type: UI consistency_
 
 122. **`SuggestionsModal` has no neutral close button.** Its only footer
      action is "add something else," which closes the modal *and* focuses
