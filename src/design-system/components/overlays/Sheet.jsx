@@ -174,13 +174,22 @@ export function Sheet({ open = true, onClose, title, children, className, placem
               gesture itself (dragListener={false} on the container above
               means Framer only watches for a pointerdown here, not anywhere
               in the scrollable content below) — touchAction: 'none' stops
-              the browser's own scroll gesture from competing with it. */}
+              the browser's own scroll gesture from competing with it. The
+              hit target is a separate, larger wrapper around the visible
+              4px-tall pill: on a high-density phone screen (reported on a
+              Samsung device) the pill alone was too small to reliably land a
+              touch on, even though the drag gesture behind it worked fine
+              once actually triggered — the wrapper matches the ~44px
+              platform-standard minimum touch target without changing the
+              pill's visual size. */}
           {isDialog ? null : (
             <div
               aria-hidden="true"
               onPointerDown={(e) => dragControls.start(e)}
-              style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2, margin: '4px auto 16px', touchAction: 'none' }}
-            />
+              style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: 44, margin: '0 auto 4px', touchAction: 'none' }}
+            >
+              <div style={{ width: 40, height: 4, background: 'var(--warm-300)', borderRadius: 2 }} />
+            </div>
           )}
           {title ? (
             <h2 id={titleId} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 14px', color: 'var(--text-primary)' }}>{title}</h2>

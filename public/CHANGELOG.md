@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.4] — 2026-08-02
+
+### Fixed
+- **The drag handle at the top of a modal (the little pill you swipe down to close it) is now much easier to grab on a phone.** It was reported hard to hit reliably on a Samsung phone — the drag itself worked once you actually caught it, but the visible pill was only 4px tall, smaller than the touch target size any touchscreen UI convention recommends. The pill still looks the same; the tappable/draggable area around it is now much bigger. (`Sheet.jsx`'s grabber wraps the 40×4px visible pill in a separate 44px-tall hit-target `div` that now carries the `onPointerDown`/`touchAction: 'none'` drag-start handlers, matching the platform-standard minimum touch target.)
+
 ## [1.57.3] — 2026-08-02
 
 ### Fixed
