@@ -7,6 +7,16 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+121. (109) The bottom-sheet drag-grabber pill turned out to already dismiss
+     on drag — that shipped back in #257 (1.55.0-era), before the
+     2026-07-31 UI/UX audit stale-listed it as unwired in `TODO.md`'s
+     Ideas section. What was still true: the 40×4px pill was too small to
+     reliably grab on a phone touchscreen. Fixed by enlarging the
+     touch target, not by wiring up drag (already worked): `Sheet.jsx`'s
+     grabber now wraps the visible pill in a 44px-tall hit-target `div`
+     that owns the `onPointerDown`/`touchAction: 'none'` drag-start
+     handlers. (1.57.4)
+
 120. (87) `POST /list/:id/toggle` and `DELETE /list/:id` now return a 404
      `ITEM_NOT_FOUND` instead of a silent `200 ok` when the id matches
      nothing — either it doesn't exist, or it belongs to a different list.
