@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.58.0] — 2026-08-03
+
+### Added
+- **Opening an item now shows who last touched it, and when.** The item detail sheet has a small line at the bottom saying who added it or, if it's since been edited, who made that edit and when — just the most recent of the two, so it's always the freshest answer to "who put this here?" (New `list_items.edited_by`/`edited_at` columns, migration `0026_item_action_metadata.sql`, stamped by `PATCH /list/:id` only for an actual name/category/qty/notes edit — not the important-star toggle. `ItemEditModal.jsx` picks whichever of add/edit is more recent and formats the timestamp in the active UI language.)
+
 ## [1.57.8] — 2026-08-03
 
 ### Fixed

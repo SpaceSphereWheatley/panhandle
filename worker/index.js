@@ -1116,13 +1116,13 @@ async function mintToken(u, env) {
   }, env.JWT_SECRET);
 }
 
-// Username is a by-value copy — not a foreign key — inside list_items.added_by,
-// meal_plan.responsible, recurring_schedule.responsible, users.created_by,
-// password_resets.username, and push_subscriptions.username (see TODO #17),
-// so renaming it means updating every one of those alongside the users row
-// itself, in one batch so they can't drift apart. Callers must mint a fresh
-// token afterward — the caller's existing JWT's `sub` now points at a row
-// that no longer exists.
+// Username is a by-value copy — not a foreign key — inside list_items.added_by
+// and list_items.edited_by, meal_plan.responsible, recurring_schedule.responsible,
+// users.created_by, password_resets.username, and push_subscriptions.username
+// (see TODO #17), so renaming it means updating every one of those alongside
+// the users row itself, in one batch so they can't drift apart. Callers must
+// mint a fresh token afterward — the caller's existing JWT's `sub` now points
+// at a row that no longer exists.
 // Updates every by-value username copy except list_presence.username
 // (TODO-92, deliberate): a presence row is a ~20s heartbeat, not durable
 // data — a stale one under the old username ages out and gets rewritten
@@ -1131,6 +1131,7 @@ async function mintToken(u, env) {
 async function renameUsername(env, oldUsername, newUsername) {
   await env.DB.batch([
     env.DB.prepare("UPDATE list_items SET added_by = ?1 WHERE added_by = ?2").bind(newUsername, oldUsername),
+    env.DB.prepare("UPDATE list_items SET edited_by = ?1 WHERE edited_by = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE meal_plan SET responsible = ?1 WHERE responsible = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE recurring_schedule SET responsible = ?1 WHERE responsible = ?2").bind(newUsername, oldUsername),
     env.DB.prepare("UPDATE users SET created_by = ?1 WHERE created_by = ?2").bind(newUsername, oldUsername),
@@ -2706,7 +2707,7 @@ export default {
     // ===== SHOPPING LIST (all queries scoped to user.list_id) =====
     if (path === "/list" && method === "GET") {
       const { results } = await env.DB.prepare(`
-        SELECT li.id, li.bought, li.important, li.added_by, li.added_at, li.bought_at, li.qty, li.notes, c.name, c.category
+        SELECT li.id, li.bought, li.important, li.added_by, li.added_at, li.edited_by, li.edited_at, li.bought_at, li.qty, li.notes, c.name, c.category
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
         WHERE li.list_id = ?1
@@ -2781,7 +2782,8 @@ export default {
       if (existingBought) {
         await env.DB.prepare(`
           UPDATE list_items SET bought = 0, bought_at = NULL, important = 0,
-              qty = ?2, added_by = ?3, added_at = datetime('now')
+              qty = ?2, added_by = ?3, added_at = datetime('now'),
+              edited_by = NULL, edited_at = NULL
           WHERE id = ?1
         `).bind(existingBought.id, addQty, user.username).run();
         return authedJson({ ok: true, qty: addQty, id: existingBought.id });
@@ -2827,6 +2829,11 @@ export default {
         await env.DB.prepare("UPDATE list_items SET important = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(important ? 1 : 0, patchMatch[1], user.list_id).run();
       }
+      // "Edited" tracks only the deliberate item-edit-modal fields below, not
+      // the important toggle above (a quick star action, not an edit) or
+      // bought/toggle — so the item modal's "latest action" line reflects
+      // what the edit modal actually changed.
+      const isEdit = qty !== undefined || notes !== undefined || category !== undefined || name !== undefined;
       if (qty !== undefined) {
         const cleanQty = Math.max(1, parseInt(qty, 10) || 1);
         await env.DB.prepare("UPDATE list_items SET qty = ?1 WHERE id = ?2 AND list_id = ?3")
@@ -2849,6 +2856,10 @@ export default {
         if (clash) return authedErr("ITEM_NAME_EXISTS", 400);
         await env.DB.prepare("UPDATE item_catalogue SET name = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(cleanName, row.catalogue_id, user.list_id).run();
+      }
+      if (isEdit) {
+        await env.DB.prepare("UPDATE list_items SET edited_by = ?1, edited_at = datetime('now') WHERE id = ?2 AND list_id = ?3")
+          .bind(user.username, patchMatch[1], user.list_id).run();
       }
       return authedJson({ ok: true });
     }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal } from "./Modal.jsx";
 import { Button, Input } from "../design-system/index.js";
-import { CATEGORIES, cap } from "../lib/shoppingUtils.js";
+import { CATEGORIES, cap, parseSqliteDatetime } from "../lib/shoppingUtils.js";
 import { api } from "../lib/api.js";
 import { useConfirm } from "../context/ConfirmContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -9,7 +9,18 @@ import { useListUsers } from "../context/ListUsersContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 import { translateCategoryName } from "../lib/i18n/categoryNames.js";
+import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { apiErrorMessage } from "../lib/apiError.js";
+
+// Formats a SQLite "YYYY-MM-DD HH:MM:SS" (UTC) timestamp for the "who/when"
+// line below — day/month/year plus a 24h time, in the active UI language.
+function formatActionDate(sqliteDatetime, lang) {
+  const d = parseSqliteDatetime(sqliteDatetime);
+  const locale = dateLocale(lang);
+  const date = d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
 
 export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }) {
   const confirm = useConfirm();
@@ -26,6 +37,14 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   const [qty, setQty] = useState(item.qty || 1);
   const [notes, setNotes] = useState(item.notes || "");
   const displayName = cap(translateItemName(item.name, lang));
+  // Just the latest of the two actions is shown — an edit (via this modal's
+  // save) is more recent than the original add whenever edited_at is set and
+  // sorts >= added_at (both SQLite "YYYY-MM-DD HH:MM:SS" UTC strings, so a
+  // plain string compare is enough).
+  const isLatestEdit = Boolean(item.edited_at) && (!item.added_at || item.edited_at >= item.added_at);
+  const latestActionKey = isLatestEdit ? "itemEdit.editedBy" : "itemEdit.addedBy";
+  const latestActionBy = isLatestEdit ? item.edited_by : item.added_by;
+  const latestActionAt = isLatestEdit ? item.edited_at : item.added_at;
 
   return (
     <Modal onClose={onClose} title={displayName}>
@@ -84,7 +103,6 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
 
         return (
           <>
-            <div className="meta">{t("itemEdit.addedBy", { name: nameFor(item.added_by) })}</div>
             <label htmlFor="item-edit-name">{t("itemEdit.nameLabel")}</label>
             <Input id="item-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
             <label htmlFor="item-edit-category">{t("itemEdit.categoryLabel")}</label>
@@ -117,6 +135,9 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
               <Button variant="danger" size="sm" onClick={deleteFromCatalogue}>
                 {t("itemEdit.forgetCompletely")}
               </Button>
+            </div>
+            <div className="meta" style={{ marginTop: 12, textAlign: "center" }}>
+              {t(latestActionKey, { name: nameFor(latestActionBy), date: formatActionDate(latestActionAt, lang) })}
             </div>
           </>
         );
