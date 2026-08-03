@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.7] — 2026-08-03
+
+### Fixed
+- **"What's new" no longer announces an update you haven't actually gotten yet.** Right after a new version was deployed, opening the changelog could show that newer version's notes even though your device was still running the previous one until you reloaded — confusing, since Settings still correctly showed the old version number. The changelog now only ever shows entries up to the version actually running in your tab. (`ChangelogModal.jsx` filters `parseChangelog`'s entries against the bundled `APP_VERSION` via a new `compareVersions` helper in `src/lib/version.js`, since `/CHANGELOG.md` is fetched fresh over the network and can reflect a deploy this tab's JS hasn't picked up yet.)
+
 ## [1.57.6] — 2026-08-03
 
 ### Fixed

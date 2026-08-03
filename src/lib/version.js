@@ -12,3 +12,19 @@ export function isMajorVersionBump(prev, next) {
   const nextMajor = Number(next.split(".")[0]);
   return prevMajor !== nextMajor;
 }
+
+// Numeric MAJOR.MINOR.PATCH comparison (not a string compare, so "1.9.0" <
+// "1.10.0" comes out right). Returns -1/0/1. Used by ChangelogModal to filter
+// out entries newer than the version actually running in this tab — the
+// bundled JS can lag a fresh CHANGELOG.md fetch by however long it takes
+// Cloudflare's Pages deploy to roll out and this tab to reload, so the two
+// can briefly disagree after every deploy.
+export function compareVersions(a, b) {
+  const partsA = a.split(".").map(Number);
+  const partsB = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+    const diff = (partsA[i] || 0) - (partsB[i] || 0);
+    if (diff !== 0) return diff > 0 ? 1 : -1;
+  }
+  return 0;
+}
