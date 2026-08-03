@@ -42,10 +42,15 @@ function deleteItem(base, auth, id) {
   return fetch(`${base}/list/${id}`, { method: "DELETE", headers: auth });
 }
 
+function patchItem(base, auth, id, body) {
+  return fetch(`${base}/list/${id}`, { method: "PATCH", headers: auth, body: JSON.stringify(body) });
+}
+
 async function runTests(BASE) {
   await testReaddAfterBoughtReopensRow(BASE);
   await testReaddWhileUnboughtStillMergesQty(BASE);
   await testToggleAndDeleteOnMissingOrOtherListItemReturn404(BASE);
+  await testEditedByTracksOnlyDeliberateEdits(BASE);
 }
 
 async function testReaddAfterBoughtReopensRow(BASE) {
@@ -125,6 +130,39 @@ async function testToggleAndDeleteOnMissingOrOtherListItemReturn404(BASE) {
   assert.equal(otherList.some((it) => it.id === otherListItemId), true);
 
   console.log("  - toggling/deleting a nonexistent or other-list item id returns 404 instead of a silent 200");
+}
+
+// The item modal shows only the latest of "added" vs "edited" — edited_by/
+// edited_at should stay null until a deliberate edit-modal save (name/
+// category/qty/notes), and must NOT be set by the important-star toggle,
+// which is a quick action rather than an edit.
+async function testEditedByTracksOnlyDeliberateEdits(BASE) {
+  const { auth } = await seedAndLogin(BASE, `sl_edit_${RUN_ID}`, PASS);
+
+  const add = await addItem(BASE, auth, { name: "Butter", qty: 1, category: "Dairy" });
+  const { id } = await add.json();
+
+  let list = await getList(BASE, auth);
+  let row = list.find((it) => it.id === id);
+  assert.equal(row.edited_by, null, "a freshly added item has no edit yet");
+  assert.equal(row.edited_at, null);
+
+  const importantPatch = await patchItem(BASE, auth, id, { important: true });
+  assert.equal(importantPatch.status, 200);
+  list = await getList(BASE, auth);
+  row = list.find((it) => it.id === id);
+  assert.equal(row.edited_by, null, "marking important must not count as an edit");
+  assert.equal(row.edited_at, null);
+
+  const editPatch = await patchItem(BASE, auth, id, { name: "Butter", category: "Dairy", qty: 2, notes: "Salted" });
+  assert.equal(editPatch.status, 200);
+  list = await getList(BASE, auth);
+  row = list.find((it) => it.id === id);
+  assert.notEqual(row.edited_by, null, "an edit-modal save should stamp edited_by");
+  assert.notEqual(row.edited_at, null);
+  assert.ok(row.edited_at >= row.added_at, "edited_at should be at or after added_at");
+
+  console.log("  - edited_by/edited_at only stamped by a deliberate edit, not the important toggle");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });
