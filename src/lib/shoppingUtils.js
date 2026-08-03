@@ -111,6 +111,41 @@ export function matchCatalogue(query, catalogue, lang = "nb") {
     .sort((a, b) => a.name.length - b.name.length);
 }
 
+// Fallback-only descriptor split: tried *after* a whole-phrase matchCatalogue
+// lookup already failed, so it never overrides a real match — including a
+// coincidental one (e.g. "yoghurt naturell" already matches "Plain yogurt" via
+// its Norwegian translation "Naturell yoghurt", and that's left alone). Only
+// once the full phrase matches nothing does this shrink from the trailing
+// end, one word at a time, and retry — the first (longest) leading prefix
+// that matches wins, so a real compound catalogue entry ("chicken fillet")
+// is still preferred over splitting further down to a shorter base word
+// ("chicken") that also happens to exist on its own. Anything shed off the
+// end becomes `descriptor`, meant to be folded into notes by the caller.
+export function matchWithDescriptor(query, catalogue, lang = "nb") {
+  const direct = matchCatalogue(query, catalogue, lang)[0];
+  if (direct) return { match: direct, descriptor: "" };
+  const tokens = query.trim().split(/\s+/).filter(Boolean);
+  for (let i = tokens.length - 1; i > 0; i--) {
+    const match = matchCatalogue(tokens.slice(0, i).join(" "), catalogue, lang)[0];
+    if (match) return { match, descriptor: tokens.slice(i).join(" ") };
+  }
+  return { match: null, descriptor: "" };
+}
+
+// Assembles list_items.notes from the transient signals parsed out of a
+// typed add-item string. A bare "stk" unit is dropped rather than noted —
+// it's Norwegian for "piece(s)", pure count already conveyed by qty itself —
+// while other Antall units (boks, pose, pakke, ...) carry real packaging
+// info beyond the count and are kept.
+export function buildItemNotes({ descriptor, unit, gf } = {}) {
+  const parts = [
+    descriptor || null,
+    unit && unit.toLowerCase() !== "stk" ? unit : null,
+    gf ? "Glutenfri" : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : undefined;
+}
+
 // D1/SQLite's datetime('now') produces "YYYY-MM-DD HH:MM:SS" (UTC, no "Z",
 // space instead of "T") — not reliably parseable by `new Date(...)` on Safari
 // (Chrome/Firefox are lenient about it, but Safari can yield Invalid Date).

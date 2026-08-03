@@ -3,7 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/shoppingUtils.js";
+import { cap, parseItemInput, extractGF, matchCatalogue, matchWithDescriptor, buildItemNotes, haptic } from "../lib/shoppingUtils.js";
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
@@ -382,7 +382,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       const { name: rawName, qty: parsedQty, unit } = parseItemInput(typed, catalogue);
       if (!rawName) return;
       const { name: baseName, gf } = extractGF(rawName);
-      const match = matchCatalogue(baseName, catalogue, lang)[0];
+      const { match, descriptor } = matchWithDescriptor(baseName, catalogue, lang);
       name = match ? match.name : baseName;
       category = match ? match.category : "Other";
       // Deliberately still Norwegian, unlike the canonical names/categories
@@ -391,8 +391,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       // here would surface untranslated in the Norwegian UI — same reasoning
       // that keeps meal names and typed ingredients as-is (CLAUDE.md's
       // Language support section). extractGF matches either language's marker.
-      const noteParts = [unit, gf ? "Glutenfri" : null].filter(Boolean);
-      notes = noteParts.length ? noteParts.join(", ") : undefined;
+      notes = buildItemNotes({ descriptor, unit, gf });
       qty = parsedQty;
     }
     setAddValue("");

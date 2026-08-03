@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { cap, parseItemInput, extractGF, matchCatalogue, haptic, parseSqliteDatetime } from "./shoppingUtils.js";
+import {
+  cap,
+  parseItemInput,
+  extractGF,
+  matchCatalogue,
+  matchWithDescriptor,
+  buildItemNotes,
+  haptic,
+  parseSqliteDatetime,
+} from "./shoppingUtils.js";
 
 describe("cap", () => {
   it("is null/undefined-safe", () => {
@@ -177,6 +186,71 @@ describe("matchCatalogue", () => {
   // default path is the *translating* one, the reverse of before this flip.
   it("defaults to nb matching when lang is omitted", () => {
     expect(matchCatalogue("melk", catalogue).map((r) => r.name)).toEqual(["Milk", "Low-fat milk"]);
+  });
+});
+
+describe("matchWithDescriptor", () => {
+  const catalogue = [
+    { name: "Chicken", category: "Meat" },
+    { name: "Chicken fillet", category: "Meat" },
+    { name: "Yogurt", category: "Dairy" },
+    { name: "Plain yogurt", category: "Dairy" },
+  ];
+
+  it("returns a whole-phrase match with no descriptor, preferring the compound over its base word", () => {
+    expect(matchWithDescriptor("chicken fillet", catalogue, "en")).toEqual({
+      match: catalogue[1],
+      descriptor: "",
+    });
+  });
+
+  it("falls back to a shorter leading prefix, with the leftover as descriptor", () => {
+    expect(matchWithDescriptor("yogurt vanilje", catalogue, "en")).toEqual({
+      match: catalogue[2],
+      descriptor: "vanilje",
+    });
+  });
+
+  it("prefers the longest matching prefix over a shorter one", () => {
+    expect(matchWithDescriptor("chicken fillet fresh", catalogue, "en")).toEqual({
+      match: catalogue[1],
+      descriptor: "fresh",
+    });
+  });
+
+  it("returns no match and no descriptor when nothing matches at any prefix length", () => {
+    expect(matchWithDescriptor("something totally unknown", catalogue, "en")).toEqual({
+      match: null,
+      descriptor: "",
+    });
+  });
+});
+
+describe("buildItemNotes", () => {
+  it("returns undefined when nothing is set", () => {
+    expect(buildItemNotes({})).toBeUndefined();
+    expect(buildItemNotes()).toBeUndefined();
+  });
+
+  it("drops a bare 'stk' unit, redundant with qty", () => {
+    expect(buildItemNotes({ unit: "stk" })).toBeUndefined();
+    expect(buildItemNotes({ unit: "STK" })).toBeUndefined();
+  });
+
+  it("keeps a non-'stk' antall unit", () => {
+    expect(buildItemNotes({ unit: "boks" })).toBe("boks");
+  });
+
+  it("keeps a mengde unit", () => {
+    expect(buildItemNotes({ unit: "2 kg" })).toBe("2 kg");
+  });
+
+  it("combines descriptor, unit and gf in order", () => {
+    expect(buildItemNotes({ descriptor: "vanilje", unit: "boks", gf: true })).toBe("vanilje, boks, Glutenfri");
+  });
+
+  it("omits the unit when it's 'stk' but keeps descriptor and gf", () => {
+    expect(buildItemNotes({ descriptor: "vanilje", unit: "stk", gf: true })).toBe("vanilje, Glutenfri");
   });
 });
 
