@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "./Modal.jsx";
 import { Button } from "../design-system/index.js";
 import { parseChangelog } from "../lib/changelogUtils.js";
-import { APP_VERSION } from "../lib/version.js";
+import { APP_VERSION, compareVersions } from "../lib/version.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
 
 const FULL_CHANGELOG_URL = "/changelog.html";
@@ -27,7 +27,12 @@ export function ChangelogModal({ onClose }) {
         // /CHANGELOG.md network-first, making this belt-and-suspenders there.
         const res = await fetch(`/CHANGELOG.md?v=${encodeURIComponent(APP_VERSION)}`);
         if (!res.ok) throw new Error("fetch failed");
-        setEntries(parseChangelog(await res.text()));
+        const parsed = parseChangelog(await res.text());
+        // CHANGELOG.md is fetched fresh over the network, so right after a
+        // deploy it can already list a version newer than the JS actually
+        // running in this tab (which only updates on reload) — drop those so
+        // the modal never claims an update this tab hasn't received yet.
+        setEntries(parsed.filter((entry) => compareVersions(entry.version, APP_VERSION) <= 0));
       } catch {
         setFailed(true);
       }

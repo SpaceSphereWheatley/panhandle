@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isMajorVersionBump } from "./version.js";
+import { isMajorVersionBump, compareVersions } from "./version.js";
 
 describe("isMajorVersionBump", () => {
   it("returns false for a PATCH-only bump", () => {
@@ -20,5 +20,27 @@ describe("isMajorVersionBump", () => {
 
   it("returns false when versions are identical", () => {
     expect(isMajorVersionBump("1.35.0", "1.35.0")).toBe(false);
+  });
+});
+
+describe("compareVersions", () => {
+  it("returns 0 for identical versions", () => {
+    expect(compareVersions("1.57.6", "1.57.6")).toBe(0);
+  });
+
+  it("returns -1 when the first version is older", () => {
+    expect(compareVersions("1.57.5", "1.57.6")).toBe(-1);
+  });
+
+  it("returns 1 when the first version is newer", () => {
+    expect(compareVersions("1.57.6", "1.57.5")).toBe(1);
+  });
+
+  it("compares numerically, not lexically", () => {
+    expect(compareVersions("1.9.0", "1.10.0")).toBe(-1);
+  });
+
+  it("compares the MAJOR segment first", () => {
+    expect(compareVersions("2.0.0", "1.99.99")).toBe(1);
   });
 });
