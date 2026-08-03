@@ -1167,6 +1167,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
       {editingItem && (
         <ItemEditModal
+          // Keyed on the item id so switching straight from one item's editor
+          // to another's (e.g. a long-press on a different card while the
+          // first one is still mid-close-animation, see Modal.jsx/Sheet.jsx)
+          // forces a clean remount instead of reusing a Modal instance whose
+          // internal `open`/close state belongs to the previous item — which
+          // left the sheet stuck mid-close, its full-screen backdrop still
+          // swallowing every tap/scroll.
+          key={editingId}
           item={editingItem}
           onClose={() => setEditingId(null)}
           onSaved={async () => {

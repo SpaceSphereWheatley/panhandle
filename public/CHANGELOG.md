@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.58.2] — 2026-08-03
+
+### Fixed
+- **Editing items while marking others as bought could freeze the shopping list.** Holding one item to edit it, saving, then quickly holding a different item to edit that one too could leave the whole list unresponsive — taps and scrolling stopped working, and holding an item just selected its text instead of opening the editor. (The item editor's modal was rendered without a React `key`, so switching straight from one item's editor to another's, before the first one's ~500ms close animation finished, reused that still-closing modal instance instead of opening a fresh one for the new item — leaving its full-screen backdrop stuck in place, silently swallowing every touch. `ShoppingListTab.jsx`'s `<ItemEditModal>` is now keyed on the item id, so a mid-close switch forces a clean remount instead.)
+
 ## [1.58.1] — 2026-08-03
 
 ### Added
