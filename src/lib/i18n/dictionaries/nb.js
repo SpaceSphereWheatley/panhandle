@@ -85,6 +85,7 @@ export const nb = {
 
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
+  "shoppingList.addInput.alreadyOnList": "Allerede på listen",
   "shoppingList.pendingWrites.tooltip": "Endringer lagret på enheten – sendes når du er tilkoblet igjen",
   "shoppingList.importantChip.showAll": "Vis alle varer",
   "shoppingList.importantChip.showImportantFirst": "Vis kun viktige varer først",
@@ -134,7 +135,8 @@ export const nb = {
   "itemEdit.confirmRemove.body": "«{name}» fjernes fra handlelisten. Den huskes fortsatt, så den dukker opp som forslag som før, og du kan enkelt legge den til igjen.",
   "itemEdit.confirmRemove.title": "Fjerne fra listen?",
   "itemEdit.confirmRemove.confirmLabel": "Fjern",
-  "itemEdit.addedBy": "Lagt til av {name}",
+  "itemEdit.addedBy": "Lagt til av {name} den {date}",
+  "itemEdit.editedBy": "Endret av {name} den {date}",
   "itemEdit.nameLabel": "Navn",
   "itemEdit.categoryLabel": "Kategori",
   "itemEdit.qtyLabel": "Antall",

@@ -1,12 +1,22 @@
 # Changelog
 
-## [1.57.8] — 2026-08-03
+## [1.58.1] — 2026-08-03
 
 ### Added
 - **Typing a modifier word after an item name now saves it as a note instead of creating a junk new item.** For example, "yoghurt vanilje" now adds "Yogurt" with "vanilje" saved as its note, rather than creating a brand-new "Yoghurt vanilje" item with no category. This only kicks in when the full typed phrase doesn't already match something in the catalogue, so recognized items (including multi-word ones like "chicken fillet") are never split apart. (`matchWithDescriptor` in `src/lib/shoppingUtils.js`, wired into `ShoppingListTab.jsx`'s `addItem`.)
 
 ### Fixed
 - **Adding "3 stk egg" no longer leaves a redundant "stk" note on the item.** "stk" is just Norwegian for "piece(s)" — information already shown by the quantity itself — so it's dropped instead of appearing as a note; other count units like "boks" or "pose" that describe real packaging are still kept. (New `buildItemNotes` helper in `src/lib/shoppingUtils.js`.)
+
+## [1.58.0] — 2026-08-03
+
+### Added
+- **Opening an item now shows who last touched it, and when.** The item detail sheet has a small line at the bottom saying who added it or, if it's since been edited, who made that edit and when — just the most recent of the two, so it's always the freshest answer to "who put this here?" (New `list_items.edited_by`/`edited_at` columns, migration `0026_item_action_metadata.sql`, stamped by `PATCH /list/:id` only for an actual name/category/qty/notes edit — not the important-star toggle. `ItemEditModal.jsx` picks whichever of add/edit is more recent and formats the timestamp in the active UI language.)
+
+## [1.57.8] — 2026-08-03
+
+### Fixed
+- **The add-item dropdown now tells you when a suggestion is already on your list.** Picking a name that was already sitting unbought used to silently bump its quantity instead of you knowing that's what would happen. Matching suggestions are now marked "Already on list" so that's a visible choice rather than a surprise. (`ShoppingListTab.jsx`'s suggestion rows now flag any match whose name is also an unbought `list_items` row; new `shoppingList.addInput.alreadyOnList` dictionary entry in both languages.)
 
 ## [1.57.7] — 2026-08-03
 

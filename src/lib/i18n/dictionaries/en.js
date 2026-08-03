@@ -26,6 +26,7 @@ export const en = {
 
   "shoppingList.addInput.placeholder": 'Add an item – e.g. "2 milk"',
   "shoppingList.addInput.exactOption": 'Add "{value}" exactly as typed',
+  "shoppingList.addInput.alreadyOnList": "Already on list",
   "shoppingList.pendingWrites.tooltip": "Changes saved on this device – will send once you're back online",
   "shoppingList.importantChip.showAll": "Show all items",
   "shoppingList.importantChip.showImportantFirst": "Show important items first",
@@ -75,7 +76,8 @@ export const en = {
   "itemEdit.confirmRemove.body": '"{name}" will come off your shopping list. It\'s still remembered, so it\'ll keep showing up as a suggestion and you can add it back anytime.',
   "itemEdit.confirmRemove.title": "Remove from list?",
   "itemEdit.confirmRemove.confirmLabel": "Remove",
-  "itemEdit.addedBy": "Added by {name}",
+  "itemEdit.addedBy": "Added by {name} on {date}",
+  "itemEdit.editedBy": "Edited by {name} on {date}",
   "itemEdit.nameLabel": "Name",
   "itemEdit.categoryLabel": "Category",
   "itemEdit.qtyLabel": "Quantity",

@@ -38,9 +38,10 @@ crons = ["*/15 * * * *"]
 # Public domain: the live app now lives on shop.panhandle.app (a Custom
 # Domain on this Worker — a niche verb/noun subdomain reads better than a
 # bare app.html path), alongside the historical shopping.mohibb.com, which
-# stays attached until the cutover is fully verified (see
-# docs/android-publishing.md's checklist). panhandle.app itself keeps serving
-# the marketing landing page — the Worker 301-redirects panhandle.app/app.html
+# stays attached (see docs/android-publishing.md's checklist) but no longer
+# serves anything itself — the Worker 301-redirects every request there to
+# the same path on panhandle.app. panhandle.app itself keeps serving the
+# marketing landing page — the Worker 301-redirects panhandle.app/app.html
 # to shop.panhandle.app/app.html so old links/bookmarks keep working.
 # `workers_dev = true` keeps the workers.dev route enabled too, alongside all
 # custom domains.

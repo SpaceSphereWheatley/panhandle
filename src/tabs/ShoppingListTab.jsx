@@ -813,6 +813,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             {suggestions.map((m, i) => {
               const { gf } = extractGF(parseItemInput(addValue, catalogue).name);
               const label = cap(translateItemName(m.name, lang)) + (gf ? " GF" : "");
+              // Adding a name that's already an unbought line on the list
+              // merges into that line's qty server-side (see /list POST's
+              // duplicate-merge) rather than creating a second row — flag it
+              // here so that's a visible choice, not a surprise qty bump.
+              const onList = items.some((it) => !it.bought && it.name === m.name);
               return (
                 <div
                   key={m.id}
@@ -822,11 +827,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                     cursor: "pointer",
                     color: "var(--text-primary)",
                     background: highlightedIndex === i ? "var(--surface-sunken)" : undefined,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
                   }}
                   onMouseEnter={() => setHighlightedIndex(i)}
                   onClick={() => addItem(label)}
                 >
-                  {label}
+                  <span>{label}</span>
+                  {onList && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontSize: 12,
+                        color: "var(--text-tertiary)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <UiIcon name="check" size={12} />
+                      {t("shoppingList.addInput.alreadyOnList")}
+                    </span>
+                  )}
                 </div>
               );
             })}

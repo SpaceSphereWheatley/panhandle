@@ -47,10 +47,12 @@ steps depend on earlier ones:
 5. ✅ **Flip `wrangler.toml`'s vars and push** — done (superseded by step 9
    below): originally `APP_ORIGIN = "https://panhandle.app"` and
    `EMAIL_FROM_ADDRESS = "Panhandle <noreply@panhandle.app>"`.
-6. **Remove the old custom domain** (`shopping.mohibb.com`, Worker →
-   Settings → Domains & Routes) once `shop.panhandle.app` has been live and
-   working for a while — no rush, and easy to leave all three attached
-   indefinitely if you'd rather.
+6. ✅ **Don't remove the old custom domain — redirect it instead.**
+   `shopping.mohibb.com` (Worker → Settings → Domains & Routes) stays
+   attached indefinitely; rather than detaching it, the Worker now
+   301-redirects every request there to the same path on `panhandle.app`
+   (see the ROUTING section of `worker/index.js`), so an old bookmark or
+   saved link keeps working instead of breaking outright.
 7. ✅ **Re-register on `shop.panhandle.app` in each dashboard that currently
    allow-lists `shopping.mohibb.com`:** Google Cloud Console ("Sign in with
    Google" OAuth client's authorized origins/redirect URIs —
