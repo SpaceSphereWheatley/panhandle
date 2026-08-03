@@ -91,7 +91,6 @@ export const nb = {
   "shoppingList.presence.alsoHere": "{names} er også her akkurat nå",
   "shoppingList.viewToggle.switchToList": "Bytt til listevisning",
   "shoppingList.viewToggle.switchToGrid": "Bytt til rutenettvisning",
-  "shoppingList.viewToggle.gridDisabledHint": "Rutenettvisning er slått av i klassisk visning",
   "shoppingList.empty.title": "Ingen varer på listen",
   "shoppingList.empty.description": "Legg til en vare over for å komme i gang.",
   "shoppingList.section.important": "Viktig",

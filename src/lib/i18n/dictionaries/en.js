@@ -32,7 +32,6 @@ export const en = {
   "shoppingList.presence.alsoHere": "{names} also here right now",
   "shoppingList.viewToggle.switchToList": "Switch to list view",
   "shoppingList.viewToggle.switchToGrid": "Switch to grid view",
-  "shoppingList.viewToggle.gridDisabledHint": "Grid view is off in classic mode",
   "shoppingList.empty.title": "No items on the list",
   "shoppingList.empty.description": "Add an item above to get started.",
   "shoppingList.section.important": "Important",

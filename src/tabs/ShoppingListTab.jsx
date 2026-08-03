@@ -7,7 +7,6 @@ import { cap, parseItemInput, extractGF, matchCatalogue, haptic } from "../lib/s
 import { clusterFor } from "../lib/categoryClusters.js";
 import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
-import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { ItemCard } from "../components/ItemCard.jsx";
@@ -50,7 +49,7 @@ const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 // "Important" section routinely holds one or two items, which auto-fit would
 // stretch across the full width instead of leaving them item-sized.
 // List view becomes 2-up, since one grocery item per 960px row is worse than
-// the grid it replaced (classic intensity opts out — see below).
+// the grid it replaced — applies in every intensity, including classic.
 const desktopGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 };
 const desktopListStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 8 };
 
@@ -149,7 +148,6 @@ function AllBoughtMark({ size, animate }) {
 
 export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const toast = useToast();
-  const intensity = useDesignIntensity();
   const isDesktop = useIsDesktop();
   const { shouldAnimate } = useMotionConfig();
   const { nameFor, colorFor } = useListUsers();
@@ -697,17 +695,16 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const importantDisplayItems = pinImportant
     ? importantUnbought.map((it) => ({ item: it, clusterKey: "Important" }))
     : [];
-  // Classic intensity flattens the density down to a plain linear list,
-  // regardless of the user's stored grid/list preference — ph_view stays
-  // untouched so switching back to muted/expressive restores it exactly.
-  const effectiveViewMode = intensity === "classic" ? "list" : viewMode;
-  // Desktop widens both views into multi-column grids — except classic, whose
-  // documented contract is a plain linear list, which multi-columning would
-  // contradict. On phone these resolve to the exact same two style objects as
-  // before.
+  // Classic intensity only turns off motion (see useMotionConfig) — it no
+  // longer overrides the user's stored grid/list preference, so this just
+  // mirrors viewMode directly.
+  const effectiveViewMode = viewMode;
+  // Desktop widens both views into multi-column grids/rows, in every
+  // intensity — classic just renders them without the reflow animation.
+  // On phone these resolve to the exact same two style objects as before.
   const containerStyle = effectiveViewMode === "grid"
     ? (isDesktop ? desktopGridStyle : gridStyle)
-    : (isDesktop && intensity !== "classic" ? desktopListStyle : listStyle);
+    : (isDesktop ? desktopListStyle : listStyle);
   // Fixed regardless of view mode so toggling grid/list only changes layout,
   // not which items show — a view-dependent cap (previously 9 in grid vs. 3
   // in list, to fill 3 grid rows vs. 3 list rows) made items appear/disappear
@@ -752,7 +749,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // not the current state — there's only one hit target now, so "which view
   // is this" isn't a separate question from "what does pressing it do."
   const viewToggleLabel = t(effectiveViewMode === "list" ? "shoppingList.viewToggle.switchToGrid" : "shoppingList.viewToggle.switchToList");
-  const viewToggleTitle = intensity === "classic" ? t("shoppingList.viewToggle.gridDisabledHint") : viewToggleLabel;
 
   return (
     <section>
@@ -952,8 +948,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         <button
           onClick={() => setView(effectiveViewMode === "list" ? "grid" : "list")}
           aria-label={viewToggleLabel}
-          title={viewToggleTitle}
-          disabled={intensity === "classic"}
+          title={viewToggleLabel}
           style={{
             position: "relative",
             display: "grid",
@@ -965,8 +960,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             padding: 3,
             margin: 0,
             font: "inherit",
-            cursor: intensity === "classic" ? "default" : "pointer",
-            opacity: intensity === "classic" ? 0.4 : 1,
+            cursor: "pointer",
           }}
         >
           <span

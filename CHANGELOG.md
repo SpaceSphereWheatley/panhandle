@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.6] — 2026-08-03
+
+### Fixed
+- **Grid view now works in Classic appearance mode too.** It used to silently fall back to the list layout whenever Classic was selected, even if you'd chosen grid view. Switching between grid and list under Classic now works like the other appearance modes, just without the reflow animation — consistent with Classic's calmer, motion-free style everywhere else in the app. (`ShoppingListTab.jsx`'s `effectiveViewMode` no longer forces `"list"` for `intensity === "classic"`; it now always mirrors the user's stored `ph_view` preference, and the desktop multi-column widening — previously classic-only exempt — now applies in every intensity. The view toggle button is no longer disabled/dimmed under Classic, and the now-unused "grid view is off" tooltip string was removed.)
+
 ## [1.57.5] — 2026-08-02
 
 ### Fixed
