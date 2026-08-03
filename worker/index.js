@@ -1581,6 +1581,22 @@ export default {
     const method = request.method;
 
     // ===== ROUTING =====
+    // shopping.mohibb.com is the legacy personal domain (still attached to
+    // this Worker as a Custom Domain — see wrangler.toml's comment and
+    // docs/android-publishing.md's cutover checklist item 6, which left it
+    // in place rather than removing it outright). Every request there now
+    // 301s to the same path on panhandle.app instead: panhandle.app's own
+    // /app.html redirect below chains this on to shop.panhandle.app for app
+    // requests, while any other path (e.g. the bare root) lands on the
+    // marketing page. Gated strictly on this exact hostname, matching the
+    // same strict-hostname convention as every other redirect in this
+    // section, for the same reason (a Cloudflare branch/commit preview's own
+    // hostname is never redirected away from itself).
+    if (url.hostname === "shopping.mohibb.com") {
+      const target = new URL(url.pathname + url.search, "https://panhandle.app");
+      return Response.redirect(target.toString(), 301);
+    }
+
     // panhandle.app is the marketing landing page's home; the app itself now
     // lives at shop.panhandle.app (see wrangler.toml's APP_ORIGIN comment).
     // Gated strictly on the apex hostname — never on "isn't shop.panhandle.app"
