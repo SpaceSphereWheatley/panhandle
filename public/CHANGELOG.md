@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.57.8] — 2026-08-03
+
+### Fixed
+- **The add-item dropdown now tells you when a suggestion is already on your list.** Picking a name that was already sitting unbought used to silently bump its quantity instead of you knowing that's what would happen. Matching suggestions are now marked "Already on list" so that's a visible choice rather than a surprise. (`ShoppingListTab.jsx`'s suggestion rows now flag any match whose name is also an unbought `list_items` row; new `shoppingList.addInput.alreadyOnList` dictionary entry in both languages.)
+
 ## [1.57.7] — 2026-08-03
 
 ### Fixed

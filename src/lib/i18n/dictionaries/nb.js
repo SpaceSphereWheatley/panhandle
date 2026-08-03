@@ -85,6 +85,7 @@ export const nb = {
 
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
+  "shoppingList.addInput.alreadyOnList": "Allerede på listen",
   "shoppingList.pendingWrites.tooltip": "Endringer lagret på enheten – sendes når du er tilkoblet igjen",
   "shoppingList.importantChip.showAll": "Vis alle varer",
   "shoppingList.importantChip.showImportantFirst": "Vis kun viktige varer først",
