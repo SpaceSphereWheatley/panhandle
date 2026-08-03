@@ -26,6 +26,7 @@ export const en = {
 
   "shoppingList.addInput.placeholder": 'Add an item – e.g. "2 milk"',
   "shoppingList.addInput.exactOption": 'Add "{value}" exactly as typed',
+  "shoppingList.addInput.alreadyOnList": "Already on list",
   "shoppingList.pendingWrites.tooltip": "Changes saved on this device – will send once you're back online",
   "shoppingList.importantChip.showAll": "Show all items",
   "shoppingList.importantChip.showImportantFirst": "Show important items first",
