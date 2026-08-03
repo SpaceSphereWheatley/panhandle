@@ -1,10 +1,5 @@
 # Changelog
 
-## [1.57.8] — 2026-08-03
-
-### Fixed
-- **The old shopping.mohibb.com address now forwards you to the current site instead of showing a stale page.** Anyone still using an old bookmark or link on that legacy personal domain is redirected straight to panhandle.app (and on to the app itself, for app links), instead of that domain being left to eventually break. (`worker/index.js`'s ROUTING section adds a 301 redirect from `shopping.mohibb.com` to the same path on `panhandle.app`, gated strictly on that exact hostname like the other domain redirects in the same section.)
-
 ## [1.57.7] — 2026-08-03
 
 ### Fixed
