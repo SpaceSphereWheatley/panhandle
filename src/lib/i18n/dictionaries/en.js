@@ -190,7 +190,7 @@ export const en = {
   "shell.important.legend": "Important",
   "shell.important.legendAria": "About the important marker",
 
-  "storage.previewBanner": "Personal preview — only visible to you. Changes are saved only in this browser, not shared with the household.",
+  "storage.previewBanner": "Early preview — only visible on this account for now. Boxes are saved to your household's shared list, same as the rest of the app.",
   "storage.searchPlaceholder": "Search boxes, locations and items…",
   "storage.itemCount": { one: "{count} item", other: "{count} items" },
   "storage.moreItems": "+{count} more",
@@ -203,9 +203,14 @@ export const en = {
   "storage.fab.addBox": "Add box",
   "storage.fab.labels": "Print box labels",
 
+  "storage.toast.loadFailed": "Couldn't load – check your connection",
+  "storage.toast.saveFailed": "Couldn't save the box – check your connection",
+  "storage.toast.deleteFailed": "Couldn't delete the box – check your connection",
+
   "storage.edit.title": "Edit box",
   "storage.edit.newTitle": "New box",
   "storage.edit.numberLabel": "Box number",
+  "storage.edit.numberPending": "Assigned when you save",
   "storage.edit.nameLabel": "Name",
   "storage.edit.namePlaceholder": "e.g. Christmas decorations",
   "storage.edit.locationLabel": "Location",

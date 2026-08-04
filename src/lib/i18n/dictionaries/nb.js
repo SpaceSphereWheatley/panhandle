@@ -256,7 +256,7 @@ export const nb = {
   "shell.important.legend": "Viktig",
   "shell.important.legendAria": "Om viktig-markering",
 
-  "storage.previewBanner": "Personlig forhåndsvisning — kun synlig for deg. Endringer lagres kun i denne nettleseren, ikke delt med husstanden.",
+  "storage.previewBanner": "Tidlig forhåndsvisning — kun synlig på denne kontoen foreløpig. Boksene lagres på husstandens delte liste, som resten av appen.",
   "storage.searchPlaceholder": "Søk i bokser, steder og gjenstander…",
   "storage.itemCount": { one: "{count} gjenstand", other: "{count} gjenstander" },
   "storage.moreItems": "+{count} til",
@@ -269,9 +269,14 @@ export const nb = {
   "storage.fab.addBox": "Legg til boks",
   "storage.fab.labels": "Skriv ut boksetiketter",
 
+  "storage.toast.loadFailed": "Kunne ikke laste – sjekk tilkoblingen",
+  "storage.toast.saveFailed": "Kunne ikke lagre boksen – sjekk tilkoblingen",
+  "storage.toast.deleteFailed": "Kunne ikke slette boksen – sjekk tilkoblingen",
+
   "storage.edit.title": "Rediger boks",
   "storage.edit.newTitle": "Ny boks",
   "storage.edit.numberLabel": "Boksnummer",
+  "storage.edit.numberPending": "Tildeles når du lagrer",
   "storage.edit.nameLabel": "Navn",
   "storage.edit.namePlaceholder": "f.eks. Julepynt",
   "storage.edit.locationLabel": "Sted",

@@ -3,6 +3,7 @@ import { Modal } from "../Modal.jsx";
 import { EmptyState } from "../../design-system/index.js";
 import { BoxQrCode } from "./BoxQrCode.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
+import { formatBoxNumber } from "../../lib/storageBoxes.js";
 
 const SCAN_DURATION_MS = 1600;
 // Just long enough to read the found box's number/name before the view
@@ -102,7 +103,7 @@ export function QrScanModal({ boxes, onClose, onFound }) {
                   )}
                   {foundBox && (
                     <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <BoxQrCode value={foundBox.number} size={110} />
+                      <BoxQrCode value={formatBoxNumber(foundBox.number)} size={110} />
                     </div>
                   )}
                 </div>
@@ -113,7 +114,7 @@ export function QrScanModal({ boxes, onClose, onFound }) {
                   </div>
                 ) : (
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontWeight: 700, fontSize: "var(--text-lg)" }}>{foundBox.number}</div>
+                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontWeight: 700, fontSize: "var(--text-lg)" }}>{formatBoxNumber(foundBox.number)}</div>
                     <div style={{ fontFamily: "var(--font-sans)", fontWeight: 600, marginTop: 2 }}>{foundBox.name}</div>
                     <div style={{ color: "var(--text-tertiary)", fontSize: "var(--text-sm)", marginTop: 2 }}>{foundBox.location}</div>
                   </div>
