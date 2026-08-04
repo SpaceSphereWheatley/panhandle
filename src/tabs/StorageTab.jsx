@@ -1,59 +1,102 @@
-import { useMemo, useState } from "react";
-import { Card, Badge, Input, Button, EmptyState } from "../design-system/index.js";
+import { useEffect, useMemo, useState } from "react";
+import { Card, Badge, Input, FabMenu, EmptyState } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
-import { useToast } from "../context/ToastContext.jsx";
+import { haptic } from "../lib/shoppingUtils.js";
+import { loadBoxes, saveBoxes, nextBoxNumber, matchesQuery } from "../lib/storageBoxes.js";
+import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
+import { QrScanModal } from "../components/storage/QrScanModal.jsx";
+import { BoxQrCode } from "../components/storage/BoxQrCode.jsx";
 
-// Static mock content for this prototype tab — nothing here is fetched or
-// persisted, and there's no backend for it yet. English-only regardless of
-// language, same deliberate choice as meal names (see CLAUDE.md's Language
-// support section): it's throwaway fixture data, not real user content.
-const MOCK_LOCATIONS = [
-  {
-    id: "garage",
-    icon: "car",
-    name: "Garage",
-    items: ["Christmas lights", "Tool box", "Winter tires", "Extension cords", "Paint cans"],
-  },
-  {
-    id: "attic",
-    icon: "house",
-    name: "Attic",
-    items: ["Old photo albums", "Baby clothes", "Camping tent", "Spare pillows"],
-  },
-  {
-    id: "kitchen-cupboard",
-    icon: "cooking-pot",
-    name: "Kitchen cupboard (top shelf)",
-    items: ["Fondue set", "Waffle iron", "Extra glasses", "Picnic basket"],
-  },
-  {
-    id: "basement",
-    icon: "package",
-    name: "Basement shelf 2",
-    items: ["Board games", "Suitcases", "Ski boots", "Fairy lights", "Halloween decorations"],
-  },
-];
+const ITEM_PREVIEW_LIMIT = 4;
+
+function BoxCard({ box, onClick, t }) {
+  const shown = box.items.slice(0, ITEM_PREVIEW_LIMIT);
+  const extra = box.items.length - shown.length;
+  return (
+    <Card interactive onClick={onClick}>
+      <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0, width: 48, height: 48 }}>
+          <BoxQrCode value={box.number} size={48} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", fontWeight: 700 }}>
+              {box.number}
+            </span>
+            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)" }}>{box.name}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>
+            <i className="ph ph-map-pin" aria-hidden="true" />
+            {box.location}
+          </div>
+        </div>
+        <Badge tone="neutral">{t("storage.itemCount", { count: box.items.length })}</Badge>
+      </div>
+      {box.items.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+          {shown.map((item) => (
+            <span
+              key={item}
+              style={{
+                padding: "4px 10px",
+                borderRadius: "var(--radius-pill)",
+                background: "var(--surface-sunken)",
+                color: "var(--text-secondary)",
+                fontSize: "var(--text-xs)",
+              }}
+            >
+              {item}
+            </span>
+          ))}
+          {extra > 0 && (
+            <span style={{ padding: "4px 10px", color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>
+              {t("storage.moreItems", { count: extra })}
+            </span>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 /** Storage/box-organization concept preview — see AppShell.jsx for the
- * account-gated visibility check. Client-side search over the static mock
- * data above so the eventual "find which box has X" flow feels real, even
- * though nothing is wired to a server yet. */
+ * account-gated visibility. Boxes are the primary entity (a location + a
+ * content list each), held in React state and mirrored to localStorage via
+ * storageBoxes.js so add/edit/delete survive a reload, but nothing is ever
+ * sent to a server — this whole tab has no backend. */
 export function StorageTab({ active }) {
   const t = useTranslation();
-  const toast = useToast();
+  const [boxes, setBoxes] = useState(loadBoxes);
   const [query, setQuery] = useState("");
+  const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box? }
+  const [scanning, setScanning] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return MOCK_LOCATIONS;
-    return MOCK_LOCATIONS
-      .map((loc) => {
-        const nameMatches = loc.name.toLowerCase().includes(q);
-        const items = nameMatches ? loc.items : loc.items.filter((i) => i.toLowerCase().includes(q));
-        return items.length ? { ...loc, items } : null;
-      })
-      .filter(Boolean);
-  }, [query]);
+  useEffect(() => {
+    saveBoxes(boxes);
+  }, [boxes]);
+
+  const filtered = useMemo(
+    () => boxes.filter((box) => matchesQuery(box, query)).sort((a, b) => a.number.localeCompare(b.number)),
+    [boxes, query]
+  );
+
+  const existingLocations = useMemo(
+    () => [...new Set(boxes.map((b) => b.location))].sort(),
+    [boxes]
+  );
+
+  function saveBox(boxData) {
+    setBoxes((prev) => {
+      const exists = prev.some((b) => b.id === boxData.id);
+      return exists ? prev.map((b) => (b.id === boxData.id ? boxData : b)) : [...prev, boxData];
+    });
+    setEditingBox(null);
+  }
+
+  function deleteBox(id) {
+    setBoxes((prev) => prev.filter((b) => b.id !== id));
+    setEditingBox(null);
+  }
 
   return (
     <div style={{ padding: "var(--space-4)", maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -81,40 +124,45 @@ export function StorageTab({ active }) {
       />
 
       {filtered.length === 0 ? (
-        <EmptyState icon="magnifying-glass" title={t("storage.emptyTitle")} description={t("storage.emptyDescription")} />
+        <EmptyState icon="package" title={t("storage.emptyTitle")} description={t(boxes.length === 0 ? "storage.emptyNoBoxes" : "storage.emptyDescription")} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          {filtered.map((loc) => (
-            <Card key={loc.id}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <i className={`ph ph-${loc.icon}`} style={{ fontSize: 20, color: "var(--accent-primary)" }} aria-hidden="true" />
-                <span style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)", flex: 1 }}>{loc.name}</span>
-                <Badge tone="neutral">{t("storage.itemCount", { count: loc.items.length })}</Badge>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {loc.items.map((item) => (
-                  <span
-                    key={item}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "var(--radius-pill)",
-                      background: "var(--surface-sunken)",
-                      color: "var(--text-secondary)",
-                      fontSize: "var(--text-xs)",
-                    }}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </Card>
+          {filtered.map((box) => (
+            <BoxCard key={box.id} box={box} t={t} onClick={() => setEditingBox({ mode: "edit", box })} />
           ))}
         </div>
       )}
 
-      <Button variant="secondary" icon="plus" onClick={() => toast(t("storage.addBoxToast"))} style={{ alignSelf: "center" }}>
-        {t("storage.addBox")}
-      </Button>
+      <FabMenu
+        label={t("storage.fab.label")}
+        haptic={haptic}
+        actions={[
+          { icon: "qr-code", label: t("storage.fab.scan"), onClick: () => setScanning(true) },
+          { icon: "plus", label: t("storage.fab.addBox"), onClick: () => setEditingBox({ mode: "new" }) },
+        ]}
+      />
+
+      {editingBox && (
+        <BoxEditModal
+          box={editingBox.box || null}
+          nextNumber={nextBoxNumber(boxes)}
+          existingLocations={existingLocations}
+          onClose={() => setEditingBox(null)}
+          onSave={saveBox}
+          onDelete={deleteBox}
+        />
+      )}
+
+      {scanning && (
+        <QrScanModal
+          boxes={boxes}
+          onClose={() => setScanning(false)}
+          onFound={(box) => {
+            setScanning(false);
+            setEditingBox({ mode: "edit", box });
+          }}
+        />
+      )}
     </div>
   );
 }
