@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Header, TabBar } from "../design-system/index.js";
 import { ChangelogModal } from "./ChangelogModal.jsx";
 import { ImportantInfoModal } from "./ImportantInfoModal.jsx";
@@ -6,7 +6,19 @@ import { InstallBanner } from "./InstallBanner.jsx";
 import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
 import { MealsTab } from "../tabs/MealsTab.jsx";
 import { SettingsTab } from "../tabs/SettingsTab.jsx";
-import { StorageTab } from "../tabs/StorageTab.jsx";
+
+// The only code-split tab, and deliberately so: it pulls in the QR encoder
+// (`qrcode`) and decoder (`jsqr`) — together ~58KB gzip, most of it jsqr's
+// pure-JS fallback decoder for browsers without BarcodeDetector — which no
+// other part of the app touches. Statically imported, every user downloaded
+// all of that to render a tab almost none of them can even see (it's gated
+// on STORAGE_TAB_USER, see below). Lazy keeps it out of the main bundle
+// until someone actually opens the tab. Worth revisiting at launch: once the
+// gate comes off this is a normal tab, and whether the split still earns its
+// keep depends on how many users reach for it.
+const StorageTab = lazy(() =>
+  import("../tabs/StorageTab.jsx").then((m) => ({ default: m.StorageTab }))
+);
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
@@ -321,11 +333,18 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
             style={{ display: tab === "storage" ? "block" : "none", position: "relative" }}
           >
-            <StorageTab
-              active={tab === "storage"}
-              pendingBoxNumber={pendingBoxNumber}
-              onConsumedPendingBoxNumber={onConsumePendingBoxNumber}
-            />
+            {/* No visible fallback: the pane only mounts once the tab has
+                been opened at least once (`visited.storage`), and the chunk
+                resolves from cache on every subsequent switch — a spinner
+                would flash for one frame on the first open and never again,
+                which reads worse than the pane simply appearing. */}
+            <Suspense fallback={null}>
+              <StorageTab
+                active={tab === "storage"}
+                pendingBoxNumber={pendingBoxNumber}
+                onConsumedPendingBoxNumber={onConsumePendingBoxNumber}
+              />
+            </Suspense>
           </div>
         )}
         {visited.settings && (

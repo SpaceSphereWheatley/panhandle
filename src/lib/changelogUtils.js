@@ -1,3 +1,5 @@
+import { compareVersions } from "./version.js";
+
 const VERSION_RE = /^## \[(.+?)\]\s*(?:—|-)\s*(.+?)\s*$/;
 const BULLET_RE = /^- (.+)$/;
 // The optional captured group tolerates a closing quote landing between the
@@ -17,6 +19,24 @@ function extractTitle(text) {
     title = `${title.slice(0, MAX_TITLE_LENGTH).trimEnd()}…`;
   }
   return title;
+}
+
+// Whether ChangelogModal would actually have something new to show a user
+// coming from `lastSeen` — i.e. an entry newer than what they last ran, but
+// not newer than the JS running right now (the same upper bound the modal
+// itself applies, since a freshly-fetched CHANGELOG.md can list a version
+// this tab's bundle hasn't received yet).
+//
+// Exists because a release can legitimately bump VERSION with no changelog
+// entry at all: an internal/gated change still alters the built output, so
+// CLAUDE.md's versioning rule requires the bump, but there's deliberately
+// nothing to announce. Without this check useDeployVersionCheck would tell
+// every user "updated to X" and then show them a changelog whose newest
+// entry predates the version it just named.
+export function hasUnseenChangelogEntry(entries, { lastSeen, current }) {
+  return entries.some(
+    (entry) => compareVersions(entry.version, lastSeen) > 0 && compareVersions(entry.version, current) <= 0
+  );
 }
 
 // Parses CHANGELOG.md into per-version entry titles (the bold lead sentence
