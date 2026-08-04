@@ -14,19 +14,18 @@ import { dateLocale } from "../lib/i18n/dateLocale.js";
 import { settingsTitleKey } from "../lib/settingsNav.js";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
+import { useStorageModuleEnabled } from "../hooks/useStorageModuleEnabled.js";
+import { STORAGE_TAB_USER } from "../lib/storageModule.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
-const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", settings: "shell.tab.settings", storage: "shell.tab.storage" };
-const TAB_ORDER = ["list", "meals", "settings", "storage"];
-
-// Storage/box-organization concept preview (see src/tabs/StorageTab.jsx) —
-// a personal-only experiment, not a real household feature yet, so it's
-// gated on this one account rather than a backend flag (no DB changes for
-// a placeholder). Purely a client-side check like the rest of this app's
-// UI-level gating (e.g. isSuperAdmin) — it hides the tab, it doesn't secure
-// anything, which is fine since the tab has no real data behind it.
-const STORAGE_TAB_USER = "mohibb91@gmail.com";
+// Settings stays the rightmost/last tab always (it's the one users reach
+// for regardless of which other tabs exist), so Storage — see
+// src/tabs/StorageTab.jsx, a personal-only experiment gated on
+// STORAGE_TAB_USER plus the Settings → Appearance on/off toggle, not a real
+// household feature yet — slots in just before it rather than after.
+const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", storage: "shell.tab.storage", settings: "shell.tab.settings" };
+const TAB_ORDER = ["list", "meals", "storage", "settings"];
 
 // Same star path ItemCard's importance badge/swipe-reveal draws — app.html
 // only loads Phosphor's "regular" icon weight (not "fill"), so a filled star
@@ -111,7 +110,8 @@ export function AppShell() {
   const t = useTranslation();
   const isDesktop = useIsDesktop();
   const { user } = useAuth();
-  const showStorageTab = user === STORAGE_TAB_USER;
+  const storageModuleEnabled = useStorageModuleEnabled();
+  const showStorageTab = user === STORAGE_TAB_USER && storageModuleEnabled;
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -219,6 +219,18 @@ export function AppShell() {
     pushNav(t);
   }
 
+  // Toggling the Storage module off (Settings → Appearance) while it's the
+  // active tab would otherwise leave the nav with no matching item
+  // highlighted and an empty pane, since the tab itself un-registers from
+  // both the moment showStorageTab flips.
+  useEffect(() => {
+    if (tab === "storage" && !showStorageTab) {
+      setTab("list");
+      pushNav("list");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showStorageTab]);
+
   const subpageTitleKey = tab === "settings" && settingsPath.length > 0
     ? settingsTitleKey(settingsPath)
     : null;
@@ -233,8 +245,8 @@ export function AppShell() {
       tabs={[
         { key: "list", label: t("shell.tab.list"), icon: "shopping-cart-simple" },
         { key: "meals", label: t("shell.tab.meals"), icon: "cooking-pot" },
-        { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
         showStorageTab ? { key: "storage", label: t("shell.tab.storage"), icon: "package" } : null,
+        { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
       ].filter(Boolean)}
       active={tab}
       onChange={switchTab}
@@ -286,15 +298,6 @@ export function AppShell() {
             <MealsTab active={tab === "meals"} onSyncTick={onSyncTick} onOffline={onOffline} />
           </div>
         )}
-        {visited.settings && (
-          <div
-            ref={(el) => { paneRefs.current.settings = el; }}
-            onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
-            style={{ display: tab === "settings" ? "block" : "none", position: "relative" }}
-          >
-            <SettingsTab settingsPath={settingsPath} onNavigate={pushSettingsPath} />
-          </div>
-        )}
         {showStorageTab && visited.storage && (
           <div
             ref={(el) => { paneRefs.current.storage = el; }}
@@ -302,6 +305,15 @@ export function AppShell() {
             style={{ display: tab === "storage" ? "block" : "none", position: "relative" }}
           >
             <StorageTab active={tab === "storage"} />
+          </div>
+        )}
+        {visited.settings && (
+          <div
+            ref={(el) => { paneRefs.current.settings = el; }}
+            onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
+            style={{ display: tab === "settings" ? "block" : "none", position: "relative" }}
+          >
+            <SettingsTab settingsPath={settingsPath} onNavigate={pushSettingsPath} />
           </div>
         )}
       </main>

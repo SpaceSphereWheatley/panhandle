@@ -201,6 +201,7 @@ export const en = {
   "storage.fab.label": "Storage actions",
   "storage.fab.scan": "Scan QR code",
   "storage.fab.addBox": "Add box",
+  "storage.fab.labels": "Print box labels",
 
   "storage.edit.title": "Edit box",
   "storage.edit.newTitle": "New box",
@@ -219,11 +220,15 @@ export const en = {
 
   "storage.scan.title": "Scan QR code",
   "storage.scan.scanning": "Looking for a QR code…",
-  "storage.scan.scanAgain": "Scan again",
-  "storage.scan.viewBox": "View box",
   "storage.scan.noBoxesTitle": "No boxes to scan yet",
   "storage.scan.noBoxesDescription": "Add a box first, then you can simulate scanning its label.",
   "storage.scan.disclaimer": "Simulated scan — no camera is used.",
+
+  "storage.labels.title": "Box labels",
+  "storage.labels.description": "One sticker per box — just the QR code and box number. Print and cut apart to label your boxes.",
+  "storage.labels.printButton": "Print",
+  "storage.labels.emptyTitle": "No boxes yet",
+  "storage.labels.emptyDescription": "Add a box first, then its label will show up here.",
 
   "settings.nav.appearance": "Appearance",
   "settings.nav.account": "Account",
@@ -260,6 +265,8 @@ export const en = {
   "settings.appearance.haptics.description": "A short vibration when you tick off or add items. Applies to this device only.",
   "settings.appearance.preferPhoneUi.label": "Use phone layout",
   "settings.appearance.preferPhoneUi.description": "Show the phone-style layout even on this wide screen. Applies to this device only.",
+  "settings.appearance.storageModule.label": "Storage module",
+  "settings.appearance.storageModule.description": "Show the Storage tab (personal preview). Applies to this device only.",
 
   "settings.language.label": "Language",
   "settings.language.description": "The language the app is shown in. Applies to this device only.",

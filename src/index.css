@@ -61,6 +61,22 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
   .qr-scan-line { animation: none; top: 50%; }
 }
 
+/* Box label stickers (StorageTab's FAB → BoxLabelsModal.jsx "Print" button).
+   Printing straight out of a modal would otherwise print the whole app
+   shell behind it (fixed header/tab bar, backdrop, everything) — this is the
+   standard print-isolation trick: hide the entire page, then re-reveal just
+   the sticker grid and size it to the page instead of the modal's width. */
+@media print {
+  body * { visibility: hidden; }
+  .storage-print-labels, .storage-print-labels * { visibility: visible; }
+  .storage-print-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
 /* Desktop framing: the layout (Header/main/TabBar) is already centered at
    480px, but on a wide viewport it just floats on a body of the same
    background as the app itself, with no visible edge. Above a phone/tablet

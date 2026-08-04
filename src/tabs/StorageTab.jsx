@@ -5,6 +5,7 @@ import { haptic } from "../lib/shoppingUtils.js";
 import { loadBoxes, saveBoxes, nextBoxNumber, matchesQuery } from "../lib/storageBoxes.js";
 import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
 import { QrScanModal } from "../components/storage/QrScanModal.jsx";
+import { BoxLabelsModal } from "../components/storage/BoxLabelsModal.jsx";
 import { BoxQrCode } from "../components/storage/BoxQrCode.jsx";
 
 const ITEM_PREVIEW_LIMIT = 4;
@@ -70,6 +71,7 @@ export function StorageTab({ active }) {
   const [query, setQuery] = useState("");
   const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box? }
   const [scanning, setScanning] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
 
   useEffect(() => {
     saveBoxes(boxes);
@@ -137,8 +139,9 @@ export function StorageTab({ active }) {
         label={t("storage.fab.label")}
         haptic={haptic}
         actions={[
-          { icon: "qr-code", label: t("storage.fab.scan"), onClick: () => setScanning(true) },
           { icon: "plus", label: t("storage.fab.addBox"), onClick: () => setEditingBox({ mode: "new" }) },
+          { icon: "qr-code", label: t("storage.fab.scan"), onClick: () => setScanning(true) },
+          { icon: "printer", label: t("storage.fab.labels"), onClick: () => setShowLabels(true) },
         ]}
       />
 
@@ -163,6 +166,8 @@ export function StorageTab({ active }) {
           }}
         />
       )}
+
+      {showLabels && <BoxLabelsModal boxes={boxes} onClose={() => setShowLabels(false)} />}
     </div>
   );
 }

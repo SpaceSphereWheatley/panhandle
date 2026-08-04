@@ -262,6 +262,7 @@ export const nb = {
   "storage.fab.label": "Lagerhandlinger",
   "storage.fab.scan": "Skann QR-kode",
   "storage.fab.addBox": "Legg til boks",
+  "storage.fab.labels": "Skriv ut boksetiketter",
 
   "storage.edit.title": "Rediger boks",
   "storage.edit.newTitle": "Ny boks",
@@ -280,11 +281,15 @@ export const nb = {
 
   "storage.scan.title": "Skann QR-kode",
   "storage.scan.scanning": "Leter etter en QR-kode…",
-  "storage.scan.scanAgain": "Skann på nytt",
-  "storage.scan.viewBox": "Vis boks",
   "storage.scan.noBoxesTitle": "Ingen bokser å skanne ennå",
   "storage.scan.noBoxesDescription": "Legg til en boks først, så kan du simulere skanning av etiketten.",
   "storage.scan.disclaimer": "Simulert skanning — kameraet brukes ikke.",
+
+  "storage.labels.title": "Boksetiketter",
+  "storage.labels.description": "Én etikett per boks — kun QR-koden og boksnummeret. Skriv ut og klipp fra hverandre for å merke boksene.",
+  "storage.labels.printButton": "Skriv ut",
+  "storage.labels.emptyTitle": "Ingen bokser ennå",
+  "storage.labels.emptyDescription": "Legg til en boks først, så vises etiketten her.",
 
   "settings.nav.appearance": "Utseende",
   "settings.nav.account": "Konto",
@@ -321,6 +326,8 @@ export const nb = {
   "settings.appearance.haptics.description": "Kort vibrasjon når du krysser av eller legger til varer. Gjelder bare denne enheten.",
   "settings.appearance.preferPhoneUi.label": "Bruk mobilvisning",
   "settings.appearance.preferPhoneUi.description": "Vis mobilvisningen selv på denne brede skjermen. Gjelder bare denne enheten.",
+  "settings.appearance.storageModule.label": "Lager-modul",
+  "settings.appearance.storageModule.description": "Vis Lager-fanen (personlig forhåndsvisning). Gjelder bare denne enheten.",
 
   "settings.language.label": "Språk",
   "settings.language.description": "Språket appen vises på. Gjelder bare denne enheten.",
