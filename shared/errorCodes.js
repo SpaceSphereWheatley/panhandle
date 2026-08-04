@@ -104,6 +104,12 @@ export const ERROR_MESSAGES_EN = {
   RECIPE_FETCH_FAILED: "Couldn't fetch that page. Check the link and try again.",
   RECIPE_PARSE_FAILED: "Couldn't find a recipe on that page",
   TOO_MANY_RECIPE_IMPORTS: "Too many imports. Try again later.",
+
+  // Storage module (docs/storage-module-plan.md)
+  STORAGE_NOT_ENABLED: "The storage module isn't available on this account",
+  STORAGE_BOX_NOT_FOUND: "Box not found",
+  STORAGE_BOX_NAME_REQUIRED: "Enter a name for the box",
+  STORAGE_BOX_LIMIT: "The storage list is full (max 300 boxes)",
 };
 
 export const ERROR_CODES = Object.keys(ERROR_MESSAGES_EN);

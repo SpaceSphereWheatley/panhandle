@@ -83,6 +83,11 @@ export const nb = {
   "error.RECIPE_PARSE_FAILED": "Fant ingen oppskrift på den siden",
   "error.TOO_MANY_RECIPE_IMPORTS": "For mange importer. Prøv igjen senere.",
 
+  "error.STORAGE_NOT_ENABLED": "Lagermodulen er ikke tilgjengelig på denne kontoen",
+  "error.STORAGE_BOX_NOT_FOUND": "Fant ikke boksen",
+  "error.STORAGE_BOX_NAME_REQUIRED": "Skriv inn et navn på boksen",
+  "error.STORAGE_BOX_LIMIT": "Lagerlisten er full (maks 300 bokser)",
+
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",
   "shoppingList.addInput.alreadyOnList": "Allerede på listen",
