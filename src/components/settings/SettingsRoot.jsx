@@ -27,6 +27,7 @@ const PATHS = {
   members: ["members"],
   dinnerDuty: ["dinner-duty"],
   store: ["store"],
+  storage: ["storage"],
   admin: ["admin"],
   calendarSync: ["calendar-sync"],
 };
@@ -104,6 +105,12 @@ export function SettingsRoot({ onNavigate }) {
           label={t(settingsTitleKey(PATHS.store))}
           supportingText={t("settings.root.store.supporting")}
           onClick={() => onNavigate(PATHS.store)}
+        />
+        <SettingsRow
+          icon="package"
+          label={t(settingsTitleKey(PATHS.storage))}
+          supportingText={t("settings.root.storage.supporting")}
+          onClick={() => onNavigate(PATHS.storage)}
         />
         {isAdmin && (
           <SettingsRow

@@ -83,7 +83,6 @@ export const nb = {
   "error.RECIPE_PARSE_FAILED": "Fant ingen oppskrift på den siden",
   "error.TOO_MANY_RECIPE_IMPORTS": "For mange importer. Prøv igjen senere.",
 
-  "error.STORAGE_NOT_ENABLED": "Lagermodulen er ikke tilgjengelig på denne kontoen",
   "error.STORAGE_BOX_NOT_FOUND": "Fant ikke boksen",
   "error.STORAGE_BOX_NAME_REQUIRED": "Skriv inn et navn på boksen",
   "error.STORAGE_BOX_LIMIT": "Lagerlisten er full (maks 300 bokser)",
@@ -257,7 +256,6 @@ export const nb = {
   "shell.important.legend": "Viktig",
   "shell.important.legendAria": "Om viktig-markering",
 
-  "storage.previewBanner": "Tidlig forhåndsvisning — kun synlig på denne kontoen foreløpig. Boksene lagres på husstandens delte liste, som resten av appen.",
   "storage.searchPlaceholder": "Søk i bokser, steder og gjenstander…",
   "storage.itemCount": { one: "{count} gjenstand", other: "{count} gjenstander" },
   "storage.moreItems": "+{count} til",
@@ -265,6 +263,8 @@ export const nb = {
   "storage.emptyDescription": "Prøv et annet søk.",
   "storage.emptyNoBoxesTitle": "Ingen bokser ennå",
   "storage.emptyNoBoxes": "Legg til den første, så kan du søke opp innholdet hvor som helst.",
+  "storage.error.title": "Kunne ikke laste boksene dine",
+  "storage.error.description": "Sjekk nettforbindelsen og prøv igjen.",
   "storage.unplacedLocation": "Uten sted",
 
   "storage.fab.label": "Lagerhandlinger",
@@ -331,6 +331,7 @@ export const nb = {
   "settings.nav.members": "Husstandsmedlemmer",
   "settings.nav.dinnerDuty": "Middagsansvar",
   "settings.nav.store": "Butikkoppsett",
+  "settings.nav.storage": "Lager",
   "settings.nav.admin": "Administrasjon",
   "settings.nav.stats": "Statistikk",
   "settings.nav.calendarSync": "Kalendersynk",
@@ -342,6 +343,7 @@ export const nb = {
   "settings.root.members.supporting": "{count} / 10 medlemmer",
   "settings.root.dinnerDuty.supporting": "Hvem lager middag hvilke dager",
   "settings.root.store.supporting": "Varegrupper og gamle varer",
+  "settings.root.storage.supporting": "Bokser, steder og etiketter",
   "settings.root.admin.supporting": "Brukere, lister og statistikk",
   "settings.root.calendarSync.supporting": "Synk middagsplanen til kalenderen din",
 
@@ -359,8 +361,6 @@ export const nb = {
   "settings.appearance.haptics.description": "Kort vibrasjon når du krysser av eller legger til varer. Gjelder bare denne enheten.",
   "settings.appearance.preferPhoneUi.label": "Bruk mobilvisning",
   "settings.appearance.preferPhoneUi.description": "Vis mobilvisningen selv på denne brede skjermen. Gjelder bare denne enheten.",
-  "settings.appearance.storageModule.label": "Lager-modul",
-  "settings.appearance.storageModule.description": "Vis Lager-fanen (personlig forhåndsvisning). Gjelder bare denne enheten.",
 
   "settings.language.label": "Språk",
   "settings.language.description": "Språket appen vises på. Gjelder bare denne enheten.",
@@ -415,6 +415,9 @@ export const nb = {
   "settings.store.stale.days": "Antall dager",
   "settings.store.stale.decrease": "Reduser antall dager",
   "settings.store.stale.increase": "Øk antall dager",
+
+  "settings.storage.showTab.label": "Vis Lager-fanen",
+  "settings.storage.showTab.description": "Vis Lager-fanen i hovednavigasjonen. Gjelder bare denne enheten.",
 
   "settings.calendarSync.label": "Abonner fra kalenderappen din",
   "settings.calendarSync.explain": "Generer en personlig lenke og legg den til i Google Kalender, Apple Kalender eller Outlook som et \"abonner via URL\"-abonnement. Nye og endrede planlagte middager dukker opp automatisk — kalenderapper oppdaterer seg som regel hver time, ikke øyeblikkelig.",
@@ -607,6 +610,7 @@ export const nb = {
   "common.confirm.defaultTitle": "Er du sikker?",
   "common.confirm.defaultLabel": "Bekreft",
   "common.loading": "Laster...",
+  "common.retry": "Prøv igjen",
   "common.saveFailed": "Kunne ikke lagre – sjekk nettforbindelsen",
 
   "importantInfo.title": "Merk som viktig",

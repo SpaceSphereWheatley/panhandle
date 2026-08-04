@@ -1,12 +1,16 @@
 # Storage module: boxes, locations, and QR labels
 
-> **Status: decisions locked, not yet built.** What currently exists is a
-> personal-only *prototype* (`src/tabs/StorageTab.jsx`, gated on one account
-> plus a Settings → Appearance toggle) that stores everything in
-> `localStorage` and has no backend at all. This document scopes out what a
-> real, household-shared implementation would take. The open questions an
-> earlier draft carried have since been answered — see "Decisions" at the
-> bottom for the list and the reasoning. Nothing below has shipped.
+> **Status: shipped and launched.** Everything below has been built: the real
+> household-shared backend (`migrations/0027_storage_boxes.sql`,
+> `migrations/0028_storage_reserved_numbers.sql`, the `/storage/*` endpoints),
+> genuine scannable QR generation and in-app scanning, and A4 printable
+> labels. The v1/v2 account allowlist gate (`STORAGE_TAB_USER`/
+> `hasStorageAccess`+`STORAGE_BETA_USERNAMES`) has been removed — every list
+> member has the tab today, with only a per-device show/hide toggle left
+> (Settings → "Lager", `StorageSubpage.jsx`). See CLAUDE.md's "Storage
+> module" section for the current, maintained reference; this document is
+> kept as the original design writeup/rationale and is otherwise historical
+> — the "Status/Rollout/Decisions" framing below predates launch.
 
 ## What problem this solves
 

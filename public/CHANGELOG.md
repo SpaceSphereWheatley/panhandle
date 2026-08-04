@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.0] — 2026-08-04
+
+### Added
+- **Storage — a shared inventory of your physical storage boxes — is now available to everyone.** Give a box a name, a location (garage, attic shelf, wherever) and a list of what's inside, then find it later by searching from anywhere in the app, or by scanning a printed QR sticker with your phone's camera. Boxes are shared with your whole household, just like the shopping list and meal plan. It's a new tab next to Shopping list and Meals — turn it off on this device from Settings → Lager (Storage) if you'd rather not see it. This release also smooths out a handful of rough edges found in a UX/UI polish pass: a failed load no longer looks identical to an empty list, saving or deleting a box now shows a loading state instead of allowing a double-tap to submit twice, long box names/notes/item names truncate neatly instead of stretching the layout, and the reserved-labels screen's buttons are easier to tap. (Removes the `STORAGE_TAB_USER` client gate and the `hasStorageAccess`/`STORAGE_BETA_USERNAMES` server gate that limited the module to one allowlisted account; the per-device show/hide toggle moves out of Appearance into its own new `StorageSubpage.jsx` Settings page. `StorageTab.jsx` distinguishes a load failure from a genuinely empty list via a new `EmptyState` `action` slot with a retry button; `BoxEditModal.jsx` gained `saving`/`deleting` in-flight guards disabling Save/Delete/Cancel during the request; `BoxCard`'s name/notes/item pills gained `text-overflow: ellipsis` truncation plus `title` tooltips; the loading skeleton uses three varied heights instead of one repeated block; `BoxLabelsModal.jsx`'s outstanding-reservation chips now use the design system's `IconButton` for their discard action instead of a hand-rolled low-touch-target button.)
+
 ## [1.60.1] — 2026-08-04
 
 ### Fixed

@@ -106,7 +106,6 @@ export const ERROR_MESSAGES_EN = {
   TOO_MANY_RECIPE_IMPORTS: "Too many imports. Try again later.",
 
   // Storage module (docs/storage-module-plan.md)
-  STORAGE_NOT_ENABLED: "The storage module isn't available on this account",
   STORAGE_BOX_NOT_FOUND: "Box not found",
   STORAGE_BOX_NAME_REQUIRED: "Enter a name for the box",
   STORAGE_BOX_LIMIT: "The storage list is full (max 300 boxes)",

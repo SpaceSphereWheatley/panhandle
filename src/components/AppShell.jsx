@@ -10,16 +10,14 @@ import { SettingsTab } from "../tabs/SettingsTab.jsx";
 // The only code-split tab, and deliberately so: it pulls in the QR encoder
 // (`qrcode`) and decoder (`jsqr`) — together ~58KB gzip, most of it jsqr's
 // pure-JS fallback decoder for browsers without BarcodeDetector — which no
-// other part of the app touches. Statically imported, every user downloaded
-// all of that to render a tab almost none of them can even see (it's gated
-// on STORAGE_TAB_USER, see below). Lazy keeps it out of the main bundle
-// until someone actually opens the tab. Worth revisiting at launch: once the
-// gate comes off this is a normal tab, and whether the split still earns its
-// keep depends on how many users reach for it.
+// other part of the app touches. Statically imported, every user would
+// download all of that just to render a tab most of them won't open on a
+// given visit. Lazy keeps it out of the main bundle until someone actually
+// opens the tab (someone still can turn it off entirely via the Storage
+// settings subpage's toggle, see showStorageTab below).
 const StorageTab = lazy(() =>
   import("../tabs/StorageTab.jsx").then((m) => ({ default: m.StorageTab }))
 );
-import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
@@ -27,15 +25,14 @@ import { settingsTitleKey } from "../lib/settingsNav.js";
 import { useDeployVersionCheck } from "../hooks/useDeployVersionCheck.js";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useStorageModuleEnabled } from "../hooks/useStorageModuleEnabled.js";
-import { STORAGE_TAB_USER } from "../lib/storageModule.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
 // Settings stays the rightmost/last tab always (it's the one users reach
 // for regardless of which other tabs exist), so Storage — see
-// src/tabs/StorageTab.jsx, a personal-only experiment gated on
-// STORAGE_TAB_USER plus the Settings → Appearance on/off toggle, not a real
-// household feature yet — slots in just before it rather than after.
+// src/tabs/StorageTab.jsx, a household feature any list member can turn off
+// per-device via the Storage settings subpage — slots in just before it
+// rather than after.
 const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", storage: "shell.tab.storage", settings: "shell.tab.settings" };
 const TAB_ORDER = ["list", "meals", "storage", "settings"];
 
@@ -121,9 +118,8 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   const toast = useToast();
   const t = useTranslation();
   const isDesktop = useIsDesktop();
-  const { user } = useAuth();
   const storageModuleEnabled = useStorageModuleEnabled();
-  const showStorageTab = user === STORAGE_TAB_USER && storageModuleEnabled;
+  const showStorageTab = storageModuleEnabled;
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -245,9 +241,9 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
 
   // A scanned box's deep link (docs/storage-module-plan.md's .../b/{number}
   // route) switches straight to the Storage tab so StorageTab can resolve
-  // and open it — see its own pendingBoxNumber effect. An account the
-  // module isn't gated for just drops the link silently rather than
-  // erroring, since this is still a beta feature.
+  // and open it — see its own pendingBoxNumber effect. A device with the
+  // tab toggled off just drops the link silently rather than erroring,
+  // consistent with how the toggle otherwise behaves.
   useEffect(() => {
     if (!pendingBoxNumber) return;
     if (showStorageTab) {
