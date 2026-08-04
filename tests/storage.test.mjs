@@ -59,6 +59,10 @@ async function runTests(BASE) {
   await testNumberingNeverReusesAfterDelete(BASE);
   await testByNumberLookupIsListScoped(BASE);
   await testClaimingAReservedNumber(BASE);
+  // Both of these create boxes, so they must run before testBoxCap — it
+  // fills the shared account's list to the 300-box cap and never empties it,
+  // after which any create returns STORAGE_BOX_LIMIT.
+  await testOutstandingReservationsAreVisibleAndDisposable(BASE);
   await testBoxCap(BASE);
   await testReserveDoesNotCreateRows(BASE);
 }
@@ -322,6 +326,57 @@ async function testReserveDoesNotCreateRows(BASE) {
   assert.equal(oversized.numbers.length, 60, "an oversized count should be clamped to 60, not refused");
 
   console.log("  - reserving numbers burns the counter without creating rows, and clamps an oversized count to 60");
+}
+
+// Reserved numbers used to be write-only: burned from the counter with
+// nothing recording them, so a lost print-out left them unrecoverable and
+// invisible. They're now tracked (migration 0028) and stay listed until
+// either claimed by a real box or explicitly discarded.
+async function testOutstandingReservationsAreVisibleAndDisposable(BASE) {
+  const { token } = await storageUser(BASE);
+
+  const before = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
+  const { numbers } = await (await fetch(`${BASE}/storage/boxes/reserve`, {
+    method: "POST", headers: authHeaders(token), body: JSON.stringify({ count: 3 }),
+  })).json();
+
+  const listed = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
+  assert.equal(listed.length, before.length + 3, "a fresh reservation should show up as outstanding");
+  for (const n of numbers) {
+    assert.ok(listed.some((r) => r.number === n), `reserved number ${n} should be listed`);
+  }
+
+  // Claiming one with a real box retires its reservation automatically.
+  await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(token),
+    body: JSON.stringify({ name: "Filled from a reserved sticker", claim_number: numbers[0] }),
+  });
+  const afterClaim = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
+  assert.ok(!afterClaim.some((r) => r.number === numbers[0]), "claiming a reserved number should clear its reservation");
+  assert.ok(afterClaim.some((r) => r.number === numbers[1]), "the batch's other numbers stay outstanding");
+
+  // Discarding drops it from the list without rewinding the counter — the
+  // number stays burned, it's just no longer offered for reprinting.
+  const discardRes = await fetch(`${BASE}/storage/boxes/reserved/${numbers[1]}`, {
+    method: "DELETE", headers: authHeaders(token),
+  });
+  assert.equal(discardRes.status, 200);
+  const afterDiscard = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
+  assert.ok(!afterDiscard.some((r) => r.number === numbers[1]), "a discarded reservation should be gone");
+
+  const discardAgain = await fetch(`${BASE}/storage/boxes/reserved/${numbers[1]}`, {
+    method: "DELETE", headers: authHeaders(token),
+  });
+  assert.equal(discardAgain.status, 404, "discarding an already-gone reservation should 404");
+
+  // The gate covers the new routes too.
+  const outsider = `st_res_outsider_${RUN_ID}`;
+  const { token: outsiderToken } = await seedAndLogin(BASE, outsider, PASS);
+  const gated = await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(outsiderToken) });
+  assert.equal(gated.status, 403);
+  assert.equal((await gated.json()).code, "STORAGE_NOT_ENABLED");
+
+  console.log("  - outstanding reservations are listed, cleared by claiming, discardable by hand, and gated");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

@@ -31,5 +31,30 @@ export function matchesQuery(box, query) {
   if (formatBoxNumber(box.number).includes(q)) return true;
   if (box.name.toLowerCase().includes(q)) return true;
   if (box.location.toLowerCase().includes(q)) return true;
+  // Notes are searchable too — "fragile" or "top shelf" is exactly the kind
+  // of thing you'd type looking for a box, and it'd be odd for the field to
+  // be findable in the edit modal but invisible to search.
+  if ((box.notes || "").toLowerCase().includes(q)) return true;
   return box.items.some((item) => item.toLowerCase().includes(q));
+}
+
+// Groups boxes by location for the browse view — "what's in the garage" is
+// at least half of what this tab is for, and a flat number-sorted list makes
+// that unanswerable without searching. Locations are ordered alphabetically,
+// boxes within one by number; boxes with no location yet collect under a
+// caller-supplied label, always last (they're the ones still to be shelved).
+export function groupByLocation(boxes, unplacedLabel) {
+  const groups = new Map();
+  for (const box of boxes) {
+    const key = box.location?.trim() || unplacedLabel;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(box);
+  }
+  return [...groups.entries()]
+    .map(([location, items]) => ({ location, boxes: items.sort((a, b) => a.number - b.number) }))
+    .sort((a, b) => {
+      if (a.location === unplacedLabel) return 1;
+      if (b.location === unplacedLabel) return -1;
+      return a.location.localeCompare(b.location);
+    });
 }

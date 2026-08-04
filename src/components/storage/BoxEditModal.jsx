@@ -29,6 +29,7 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
   const [name, setName] = useState(box?.name || "");
   const [location, setLocation] = useState(box?.location || "");
   const [items, setItems] = useState(box?.items || []);
+  const [notes, setNotes] = useState(box?.notes || "");
 
   return (
     <Modal onClose={onClose} title={t(box ? "storage.edit.title" : claimNumber ? "storage.edit.setupTitle" : "storage.edit.newTitle")}>
@@ -41,7 +42,7 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
             return;
           }
           const body = JSON.stringify({
-            name: trimmedName, location: trimmedLocation, items,
+            name: trimmedName, location: trimmedLocation, items, notes: notes.trim(),
             ...(box ? {} : claimNumber ? { claim_number: claimNumber } : {}),
           });
           let res;
@@ -134,6 +135,14 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
 
             <label htmlFor="box-edit-items">{t("storage.edit.itemsLabel")}</label>
             <TokenInput id="box-edit-items" value={items} onChange={setItems} placeholder={t("storage.edit.itemsPlaceholder")} />
+
+            <label htmlFor="box-edit-notes">{t("storage.edit.notesLabel")}</label>
+            <Input
+              id="box-edit-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={t("storage.edit.notesPlaceholder")}
+            />
 
             <div className="actions">
               <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
