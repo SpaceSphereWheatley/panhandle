@@ -1,38 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Badge, Input, FabMenu, EmptyState } from "../design-system/index.js";
+import { Card, Badge, Input, FabMenu, EmptyState, Skeleton } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { api } from "../lib/api.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 import { haptic } from "../lib/shoppingUtils.js";
-import { formatBoxNumber, matchesQuery, boxDeepLinkUrl } from "../lib/storageBoxes.js";
+import { formatBoxNumber, matchesQuery, groupByLocation } from "../lib/storageBoxes.js";
 import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
 import { QrScanModal } from "../components/storage/QrScanModal.jsx";
 import { BoxLabelsModal } from "../components/storage/BoxLabelsModal.jsx";
-import { BoxQrCode } from "../components/storage/BoxQrCode.jsx";
 
 const ITEM_PREVIEW_LIMIT = 4;
 
+// The number is the identifier that matters (it's what's on the physical
+// sticker), so it leads. An earlier version put a 48px QR thumbnail here
+// instead: unscannable at that size, near-identical between boxes, and the
+// highest-contrast thing on the card — it out-competed the box *name*, which
+// is what the eye is actually hunting for down a list. The real QR lives
+// where it's useful: on the printed label and in the box's own editor.
 function BoxCard({ box, onClick, t }) {
   const shown = box.items.slice(0, ITEM_PREVIEW_LIMIT);
   const extra = box.items.length - shown.length;
   return (
     <Card interactive onClick={onClick}>
-      <div style={{ display: "flex", gap: 12 }}>
-        <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0, width: 48, height: 48 }}>
-          <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={48} />
-        </div>
+      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+        <span
+          aria-hidden="true"
+          style={{
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "var(--text-lg)",
+            fontWeight: 700,
+            color: "var(--text-tertiary)",
+            lineHeight: 1.2,
+            flexShrink: 0,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {formatBoxNumber(box.number)}
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", fontWeight: 700 }}>
-              {formatBoxNumber(box.number)}
-            </span>
-            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)" }}>{box.name}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>
-            <i className="ph ph-map-pin" aria-hidden="true" />
-            {box.location}
-          </div>
+          <div style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)" }}>{box.name}</div>
+          {box.notes ? (
+            <div style={{ marginTop: 2, color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>{box.notes}</div>
+          ) : null}
         </div>
         <Badge tone="neutral">{t("storage.itemCount", { count: box.items.length })}</Badge>
       </div>
@@ -82,6 +92,11 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
   const toast = useToast();
   const [boxes, setBoxes] = useState([]);
   const [loadedOnce, setLoadedOnce] = useState(false);
+  // Distinct from `loadedOnce`, which only records that the fetch was
+  // *started*. Without this the first render (boxes still []) fell straight
+  // through to the empty state, so opening the tab flashed "no boxes yet"
+  // before the real list arrived.
+  const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box?, claimNumber? }
   const [scanning, setScanning] = useState(false);
@@ -93,6 +108,10 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
       if (Array.isArray(res)) setBoxes(res);
     } catch {
       toast(t("storage.toast.loadFailed"), { error: true });
+    } finally {
+      // Set even on failure: the error is surfaced as a toast, and leaving
+      // the skeleton up forever would read as a permanent hang.
+      setLoaded(true);
     }
   }
 
@@ -140,9 +159,11 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingBoxNumber]);
 
-  const filtered = useMemo(
-    () => boxes.filter((box) => matchesQuery(box, query)).sort((a, b) => a.number - b.number),
-    [boxes, query]
+  const filtered = useMemo(() => boxes.filter((box) => matchesQuery(box, query)), [boxes, query]);
+
+  const grouped = useMemo(
+    () => groupByLocation(filtered, t("storage.unplacedLocation")),
+    [filtered, t]
   );
 
   const existingLocations = useMemo(
@@ -152,6 +173,10 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
 
   return (
     <div style={{ padding: "var(--space-4)", maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      {/* A neutral sunken surface with an accent rule, not
+          --accent-primary-subtle: under the dark theme that token resolves to
+          a heavily saturated rust fill, which read as an error banner rather
+          than an aside. */}
       <div
         style={{
           display: "flex",
@@ -159,7 +184,8 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
           gap: 8,
           padding: "10px 14px",
           borderRadius: "var(--radius-md)",
-          background: "var(--accent-primary-subtle)",
+          background: "var(--surface-sunken)",
+          borderLeft: "3px solid var(--accent-primary)",
           color: "var(--text-secondary)",
           fontSize: "var(--text-sm)",
         }}
@@ -175,12 +201,49 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      {filtered.length === 0 ? (
-        <EmptyState icon="package" title={t("storage.emptyTitle")} description={t(boxes.length === 0 ? "storage.emptyNoBoxes" : "storage.emptyDescription")} />
-      ) : (
+      {!loaded ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          {filtered.map((box) => (
-            <BoxCard key={box.id} box={box} t={t} onClick={() => setEditingBox({ mode: "edit", box })} />
+          {[0, 1, 2].map((i) => <Skeleton key={i} height={92} />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon="package"
+          title={t(boxes.length === 0 ? "storage.emptyNoBoxesTitle" : "storage.emptyTitle")}
+          description={t(boxes.length === 0 ? "storage.emptyNoBoxes" : "storage.emptyDescription")}
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+          {grouped.map((group) => (
+            <section key={group.location}>
+              {/* Deliberately normal text flow, not a flex row: a long
+                  location ("Kitchen cupboard (top shelf, behind the big
+                  pots)") wraps to two lines, and as flex items the count
+                  was pushed to the far right of the second line, reading as
+                  though it belonged to something else. Inline, it just
+                  follows the last word wherever that lands. */}
+              <h3
+                style={{
+                  margin: "0 0 8px 2px",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: 700,
+                  letterSpacing: ".04em",
+                  textTransform: "uppercase",
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                <i className="ph ph-map-pin" aria-hidden="true" style={{ marginRight: 6, verticalAlign: "-1px" }} />
+                {group.location}
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                  {" "}({group.boxes.length})
+                </span>
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                {group.boxes.map((box) => (
+                  <BoxCard key={box.id} box={box} t={t} onClick={() => setEditingBox({ mode: "edit", box })} />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}

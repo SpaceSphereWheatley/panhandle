@@ -2262,6 +2262,7 @@ export default {
             // storage_box_items cascades automatically from this (its FK is
             // to storage_boxes(id), not lists(id) directly).
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1").bind(user.list_id),
             // list_presence references lists(id) without ON DELETE CASCADE, so
             // it must be cleared before the DELETE FROM lists below or that
             // final statement hits a FK violation and aborts the whole batch
@@ -2502,6 +2503,7 @@ export default {
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
             // aborts on a FK violation.
@@ -3371,6 +3373,11 @@ export default {
             .bind(box.id, itemName, i)
         ));
       }
+      // A claimed number is no longer outstanding — drop its reservation if
+      // it had one (a no-op for the auto-allocate path and for claiming a
+      // deleted box's number, neither of which has a row here).
+      await env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1 AND number = ?2")
+        .bind(user.list_id, number).run();
       return authedJson({ ...box, items });
     }
 
@@ -3389,7 +3396,36 @@ export default {
         "UPDATE lists SET next_box_number = next_box_number + ?2 WHERE id = ?1 RETURNING next_box_number - ?2 AS start"
       ).bind(user.list_id, count).first();
       const numbers = Array.from({ length: count }, (_, i) => allocated.start + i);
+      // Recorded so the numbers stay visible and reprintable — a lost
+      // print-out previously meant they were burned with nothing in the UI
+      // showing they existed (migration 0028).
+      await env.DB.batch(numbers.map((n) =>
+        env.DB.prepare("INSERT INTO storage_reserved_numbers (list_id, number) VALUES (?1, ?2)")
+          .bind(user.list_id, n)
+      ));
       return authedJson({ numbers });
+    }
+
+    // Numbers reserved but not yet given a box — drives the labels modal's
+    // "you already have N unused codes" prompt, so reserving more isn't the
+    // only way forward after a sheet goes missing.
+    if (path === "/storage/boxes/reserved" && method === "GET") {
+      const { results } = await env.DB.prepare(
+        "SELECT number, created_at FROM storage_reserved_numbers WHERE list_id = ?1 ORDER BY number ASC"
+      ).bind(user.list_id).all();
+      return authedJson(results);
+    }
+
+    // Discards an outstanding reservation ("that sheet is long gone"). The
+    // number itself stays burned — the counter never rewinds — this only
+    // stops it being offered for reprinting.
+    const reservedDelMatch = path.match(/^\/storage\/boxes\/reserved\/(\d+)$/);
+    if (reservedDelMatch && method === "DELETE") {
+      const result = await env.DB.prepare(
+        "DELETE FROM storage_reserved_numbers WHERE list_id = ?1 AND number = ?2"
+      ).bind(user.list_id, Number(reservedDelMatch[1])).run();
+      if (!result.meta.changes) return authedErr("STORAGE_BOX_NOT_FOUND", 404);
+      return authedJson({ ok: true });
     }
 
     // The QR/deep-link lookup (GET /b/{number}, see the ROUTING section) —

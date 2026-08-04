@@ -33,6 +33,24 @@ export function BoxLabelsModal({ boxes, onClose }) {
   const [reserveCount, setReserveCount] = useState(12);
   const [reserving, setReserving] = useState(false);
   const [reservedNumbers, setReservedNumbers] = useState(null);
+  // Numbers reserved on some earlier visit that never got a box — without
+  // these surfaced, a lost print-out meant they were burned invisibly and
+  // reserving more was the only way forward.
+  const [outstanding, setOutstanding] = useState([]);
+  const [outstandingSelected, setOutstandingSelected] = useState(() => new Set());
+
+  async function loadOutstanding() {
+    try {
+      const res = await api("/storage/boxes/reserved");
+      if (Array.isArray(res)) setOutstanding(res.map((r) => r.number));
+    } catch {
+      /* non-critical: the reserve-more path below still works */
+    }
+  }
+
+  useEffect(() => {
+    loadOutstanding();
+  }, []);
 
   // window.print() has to wait until the just-reserved sheet is actually in
   // the DOM — an effect keyed on the state that only changes right after a
@@ -46,6 +64,14 @@ export function BoxLabelsModal({ boxes, onClose }) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleOutstanding(number) {
+    setOutstandingSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(number)) next.delete(number); else next.add(number);
       return next;
     });
   }
@@ -65,7 +91,30 @@ export function BoxLabelsModal({ boxes, onClose }) {
       toast(apiErrorMessage(res, t), { error: true });
       return;
     }
+    loadOutstanding();
     setReservedNumbers(res.numbers);
+  }
+
+  async function discardOutstanding(number) {
+    try {
+      await api(`/storage/boxes/reserved/${number}`, { method: "DELETE" });
+    } catch {
+      toast(t("storage.labels.discardFailed"), { error: true });
+      return;
+    }
+    setOutstanding((prev) => prev.filter((n) => n !== number));
+    setOutstandingSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(number);
+      return next;
+    });
+  }
+
+  // Reprinting a selection of outstanding codes goes through the same
+  // reservedNumbers state (and so the same print effect) as a fresh reserve —
+  // from the sheet's point of view they're identical, just already allocated.
+  function reprintOutstanding() {
+    setReservedNumbers([...outstandingSelected].sort((a, b) => a - b));
   }
 
   const printSheet = mode === "existing"
@@ -131,6 +180,62 @@ export function BoxLabelsModal({ boxes, onClose }) {
             )
           ) : (
             <>
+              {outstanding.length > 0 && !reservedNumbers && (
+                <div style={{ margin: "12px 0 18px" }}>
+                  <h4 style={{ margin: "0 0 4px", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", fontWeight: 700 }}>
+                    {t("storage.labels.outstandingTitle")}
+                  </h4>
+                  <p style={{ margin: "0 0 10px", color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>
+                    {t("storage.labels.outstandingDescription")}
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                    {outstanding.map((number) => {
+                      const on = outstandingSelected.has(number);
+                      return (
+                        <span key={number} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleOutstanding(number)}
+                            aria-pressed={on}
+                            style={{
+                              fontFamily: "var(--font-mono, monospace)",
+                              fontWeight: 700,
+                              fontSize: "var(--text-xs)",
+                              padding: "5px 10px",
+                              borderRadius: "var(--radius-pill)",
+                              cursor: "pointer",
+                              border: `1.5px solid ${on ? "var(--accent-primary)" : "var(--border-default)"}`,
+                              background: on ? "var(--accent-primary)" : "transparent",
+                              color: on ? "var(--text-on-accent)" : "var(--text-secondary)",
+                            }}
+                          >
+                            {formatBoxNumber(number)}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => discardOutstanding(number)}
+                            aria-label={`${t("storage.labels.discard")} ${formatBoxNumber(number)}`}
+                            title={t("storage.labels.discard")}
+                            style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 2, lineHeight: 1 }}
+                          >
+                            <i className="ph ph-x" aria-hidden="true" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    icon="printer"
+                    disabled={outstandingSelected.size === 0}
+                    onClick={reprintOutstanding}
+                    style={{ width: "100%" }}
+                  >
+                    {t("storage.labels.reprintSelected")}
+                  </Button>
+                </div>
+              )}
+
               <label htmlFor="storage-reserve-count" style={{ display: "block", margin: "12px 0 6px" }}>
                 {t("storage.labels.reserveCountLabel")}
               </label>
