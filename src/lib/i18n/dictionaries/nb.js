@@ -87,6 +87,7 @@ export const nb = {
   "error.STORAGE_BOX_NOT_FOUND": "Fant ikke boksen",
   "error.STORAGE_BOX_NAME_REQUIRED": "Skriv inn et navn på boksen",
   "error.STORAGE_BOX_LIMIT": "Lagerlisten er full (maks 300 bokser)",
+  "error.STORAGE_BOX_NUMBER_UNAVAILABLE": "Det boksnummeret er ikke tilgjengelig",
 
   "shoppingList.addInput.placeholder": "Legg til vare – f.eks. «2 melk»",
   "shoppingList.addInput.exactOption": "Legg til «{value}» nøyaktig som skrevet",

@@ -3333,18 +3333,37 @@ export default {
       ).bind(user.list_id).first();
       if (liveCount >= STORAGE_BOX_CAP) return authedErr("STORAGE_BOX_LIMIT", 400);
 
-      // Server allocates the number, never accepted from the request body —
-      // monotonic per-list counter, not MAX(number)+1, so a deleted box's
-      // number is never reissued to a new one (see the migration's comment).
-      const allocated = await env.DB.prepare(
-        "UPDATE lists SET next_box_number = next_box_number + 1 WHERE id = ?1 RETURNING next_box_number - 1 AS number"
-      ).bind(user.list_id).first();
+      let number;
+      if (body.claim_number !== undefined) {
+        // Claiming a number reserved earlier (POST /storage/boxes/reserve)
+        // whose sticker got printed and stuck on a box before the box
+        // itself existed in the app — the scan-a-blank-sticker flow the
+        // reserve endpoint exists for. Only ever a number this list's own
+        // counter has already advanced past (never a client-chosen value —
+        // same guarantee as the auto-allocate path below) and that no live
+        // box currently holds.
+        const claimed = parseInt(body.claim_number, 10);
+        const list = await env.DB.prepare("SELECT next_box_number FROM lists WHERE id = ?1").bind(user.list_id).first();
+        const alreadyUsed = Number.isInteger(claimed) && claimed >= 1 && claimed < list.next_box_number
+          ? await env.DB.prepare("SELECT id FROM storage_boxes WHERE list_id = ?1 AND number = ?2").bind(user.list_id, claimed).first()
+          : true; // out of range counts as unavailable without a second query
+        if (alreadyUsed) return authedErr("STORAGE_BOX_NUMBER_UNAVAILABLE", 400);
+        number = claimed;
+      } else {
+        // Server allocates the number, never accepted from the request body —
+        // monotonic per-list counter, not MAX(number)+1, so a deleted box's
+        // number is never reissued to a new one (see the migration's comment).
+        const allocated = await env.DB.prepare(
+          "UPDATE lists SET next_box_number = next_box_number + 1 WHERE id = ?1 RETURNING next_box_number - 1 AS number"
+        ).bind(user.list_id).first();
+        number = allocated.number;
+      }
 
       const box = await env.DB.prepare(`
         INSERT INTO storage_boxes (list_id, number, name, location, notes, created_by)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
         RETURNING id, number, name, location, notes, created_by, created_at, edited_by, edited_at
-      `).bind(user.list_id, allocated.number, name, location, notes, user.username).first();
+      `).bind(user.list_id, number, name, location, notes, user.username).first();
 
       if (items.length) {
         await env.DB.batch(items.map((itemName, i) =>

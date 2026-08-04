@@ -110,6 +110,7 @@ export const ERROR_MESSAGES_EN = {
   STORAGE_BOX_NOT_FOUND: "Box not found",
   STORAGE_BOX_NAME_REQUIRED: "Enter a name for the box",
   STORAGE_BOX_LIMIT: "The storage list is full (max 300 boxes)",
+  STORAGE_BOX_NUMBER_UNAVAILABLE: "That box number isn't available to use",
 };
 
 export const ERROR_CODES = Object.keys(ERROR_MESSAGES_EN);

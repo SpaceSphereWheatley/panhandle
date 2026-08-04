@@ -58,6 +58,7 @@ async function runTests(BASE) {
   await testCrudAndItemsRoundTrip(BASE);
   await testNumberingNeverReusesAfterDelete(BASE);
   await testByNumberLookupIsListScoped(BASE);
+  await testClaimingAReservedNumber(BASE);
   await testBoxCap(BASE);
   await testReserveDoesNotCreateRows(BASE);
 }
@@ -214,6 +215,52 @@ async function testByNumberLookupIsListScoped(BASE) {
   assert.equal((await crossListRes.json()).code, "STORAGE_BOX_NOT_FOUND");
 
   console.log("  - GET /storage/boxes/by-number resolves within the caller's own list, 404s for an unknown number and for another list's number");
+}
+
+// Covers the reserve-then-fill-in flow the reserve endpoint exists for
+// (docs/storage-module-plan.md): a sticker gets printed and stuck on a box
+// before the box exists in the app, so creating the box afterward has to be
+// able to land on that exact already-reserved number, not the next one from
+// the counter.
+async function testClaimingAReservedNumber(BASE) {
+  const { token: storageToken } = await storageUser(BASE);
+
+  const reserveRes = await fetch(`${BASE}/storage/boxes/reserve`, {
+    method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ count: 3 }),
+  });
+  const { numbers } = await reserveRes.json();
+  const [first, , third] = numbers;
+
+  const claimRes = await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(storageToken),
+    body: JSON.stringify({ name: "Claimed box", claim_number: first }),
+  });
+  assert.equal(claimRes.status, 200);
+  const claimed = await claimRes.json();
+  assert.equal(claimed.number, first, "the created box should land on the exact reserved number, not the next counter value");
+
+  const reclaimRes = await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(storageToken),
+    body: JSON.stringify({ name: "Duplicate claim", claim_number: first }),
+  });
+  assert.equal(reclaimRes.status, 400, "a number already claimed by a live box must not be claimable again");
+  assert.equal((await reclaimRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
+
+  const neverReservedRes = await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(storageToken),
+    body: JSON.stringify({ name: "Never reserved", claim_number: 999999 }),
+  });
+  assert.equal(neverReservedRes.status, 400, "a number past the list's own counter must not be claimable");
+  assert.equal((await neverReservedRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
+
+  const stillClaimableRes = await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(storageToken),
+    body: JSON.stringify({ name: "Third reserved box", claim_number: third }),
+  });
+  assert.equal(stillClaimableRes.status, 200);
+  assert.equal((await stillClaimableRes.json()).number, third, "an unclaimed reserved number in the same batch should still be claimable");
+
+  console.log("  - claim_number lands a new box on an exact reserved number, rejects an already-claimed or never-reserved one");
 }
 
 async function testBoxCap(BASE) {
