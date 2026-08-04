@@ -6,6 +6,8 @@ import { InstallBanner } from "./InstallBanner.jsx";
 import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
 import { MealsTab } from "../tabs/MealsTab.jsx";
 import { SettingsTab } from "../tabs/SettingsTab.jsx";
+import { StorageTab } from "../tabs/StorageTab.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
@@ -15,8 +17,16 @@ import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import logoMark from "../design-system/assets/logo/panhandle-mark.svg";
 
-const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", settings: "shell.tab.settings" };
-const TAB_ORDER = ["list", "meals", "settings"];
+const TITLE_KEYS = { list: "shell.tab.list", meals: "shell.tab.meals", settings: "shell.tab.settings", storage: "shell.tab.storage" };
+const TAB_ORDER = ["list", "meals", "settings", "storage"];
+
+// Storage/box-organization concept preview (see src/tabs/StorageTab.jsx) —
+// a personal-only experiment, not a real household feature yet, so it's
+// gated on this one account rather than a backend flag (no DB changes for
+// a placeholder). Purely a client-side check like the rest of this app's
+// UI-level gating (e.g. isSuperAdmin) — it hides the tab, it doesn't secure
+// anything, which is fine since the tab has no real data behind it.
+const STORAGE_TAB_USER = "mohibb91@gmail.com";
 
 // Same star path ItemCard's importance badge/swipe-reveal draws — app.html
 // only loads Phosphor's "regular" icon weight (not "fill"), so a filled star
@@ -100,6 +110,8 @@ export function AppShell() {
   const toast = useToast();
   const t = useTranslation();
   const isDesktop = useIsDesktop();
+  const { user } = useAuth();
+  const showStorageTab = user === STORAGE_TAB_USER;
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -222,7 +234,8 @@ export function AppShell() {
         { key: "list", label: t("shell.tab.list"), icon: "shopping-cart-simple" },
         { key: "meals", label: t("shell.tab.meals"), icon: "cooking-pot" },
         { key: "settings", label: t("shell.tab.settings"), icon: "gear" },
-      ]}
+        showStorageTab ? { key: "storage", label: t("shell.tab.storage"), icon: "package" } : null,
+      ].filter(Boolean)}
       active={tab}
       onChange={switchTab}
       navLabel={t("shell.nav.primaryAria")}
@@ -280,6 +293,15 @@ export function AppShell() {
             style={{ display: tab === "settings" ? "block" : "none", position: "relative" }}
           >
             <SettingsTab settingsPath={settingsPath} onNavigate={pushSettingsPath} />
+          </div>
+        )}
+        {showStorageTab && visited.storage && (
+          <div
+            ref={(el) => { paneRefs.current.storage = el; }}
+            onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
+            style={{ display: tab === "storage" ? "block" : "none", position: "relative" }}
+          >
+            <StorageTab active={tab === "storage"} />
           </div>
         )}
       </main>
