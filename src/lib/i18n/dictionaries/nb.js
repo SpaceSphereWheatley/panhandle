@@ -276,6 +276,7 @@ export const nb = {
 
   "storage.edit.title": "Rediger boks",
   "storage.edit.newTitle": "Ny boks",
+  "storage.edit.setupTitle": "Sett opp boks",
   "storage.edit.numberLabel": "Boksnummer",
   "storage.edit.numberPending": "Tildeles når du lagrer",
   "storage.edit.nameLabel": "Navn",
@@ -291,10 +292,12 @@ export const nb = {
   "storage.edit.confirmDelete.confirmLabel": "Slett",
 
   "storage.scan.title": "Skann QR-kode",
+  "storage.scan.starting": "Starter kameraet…",
   "storage.scan.scanning": "Leter etter en QR-kode…",
-  "storage.scan.noBoxesTitle": "Ingen bokser å skanne ennå",
-  "storage.scan.noBoxesDescription": "Legg til en boks først, så kan du simulere skanning av etiketten.",
-  "storage.scan.disclaimer": "Simulert skanning — kameraet brukes ikke.",
+  "storage.scan.deniedTitle": "Fikk ikke tilgang til kameraet",
+  "storage.scan.deniedDescription": "Gi tilgang til kameraet for å skanne en etikett, eller søk opp boksnummeret i stedet.",
+  "storage.scan.unsupportedTitle": "Skanning støttes ikke her",
+  "storage.scan.unsupportedDescription": "Denne nettleseren har ikke tilgang til kameraet. Prøv igjen på mobilen, eller søk opp boksnummeret i stedet.",
 
   "storage.labels.title": "Boksetiketter",
   "storage.labels.description": "Én etikett per boks — kun QR-koden og boksnummeret. Skrives ut på A4, 12 per ark, klipp fra hverandre for å merke boksene.",

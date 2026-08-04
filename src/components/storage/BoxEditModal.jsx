@@ -16,8 +16,13 @@ const LOCATIONS_DATALIST_ID = "storage-box-location-options";
 // endpoints (docs/storage-module-plan.md) — same server-call-inside-the-modal
 // shape as ItemEditModal, rather than handing data back to the caller to
 // persist. The server allocates the box number (never accepted from the
-// client), so a new box has no number to show until after it's saved.
-export function BoxEditModal({ box, existingLocations, onClose, onSaved }) {
+// client), so a plain new box has no number to show until after it's saved.
+//
+// `claimNumber` (only meaningful when box=null): set when this add flow was
+// reached via StorageTab's openBoxByNumber — scanning a reserved-but-unfilled
+// sticker, or one whose old box was deleted — "set it up?" for that exact
+// number rather than a fresh one, sent as POST /storage/boxes's claim_number.
+export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onSaved }) {
   const toast = useToast();
   const confirm = useConfirm();
   const t = useTranslation();
@@ -26,7 +31,7 @@ export function BoxEditModal({ box, existingLocations, onClose, onSaved }) {
   const [items, setItems] = useState(box?.items || []);
 
   return (
-    <Modal onClose={onClose} title={t(box ? "storage.edit.title" : "storage.edit.newTitle")}>
+    <Modal onClose={onClose} title={t(box ? "storage.edit.title" : claimNumber ? "storage.edit.setupTitle" : "storage.edit.newTitle")}>
       {(requestClose) => {
         async function save() {
           const trimmedName = name.trim();
@@ -35,7 +40,10 @@ export function BoxEditModal({ box, existingLocations, onClose, onSaved }) {
             toast(t("storage.edit.requiredFields"), { error: true });
             return;
           }
-          const body = JSON.stringify({ name: trimmedName, location: trimmedLocation, items });
+          const body = JSON.stringify({
+            name: trimmedName, location: trimmedLocation, items,
+            ...(box ? {} : claimNumber ? { claim_number: claimNumber } : {}),
+          });
           let res;
           try {
             res = box
@@ -83,6 +91,20 @@ export function BoxEditModal({ box, existingLocations, onClose, onSaved }) {
                     </div>
                     <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
                       {formatBoxNumber(box.number)}
+                    </div>
+                  </div>
+                </>
+              ) : claimNumber ? (
+                <>
+                  <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
+                    <BoxQrCode value={boxDeepLinkUrl(claimNumber)} label={formatBoxNumber(claimNumber)} size={72} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
+                      {t("storage.edit.numberLabel")}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
+                      {formatBoxNumber(claimNumber)}
                     </div>
                   </div>
                 </>

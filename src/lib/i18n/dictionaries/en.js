@@ -209,6 +209,7 @@ export const en = {
 
   "storage.edit.title": "Edit box",
   "storage.edit.newTitle": "New box",
+  "storage.edit.setupTitle": "Set up box",
   "storage.edit.numberLabel": "Box number",
   "storage.edit.numberPending": "Assigned when you save",
   "storage.edit.nameLabel": "Name",
@@ -224,10 +225,12 @@ export const en = {
   "storage.edit.confirmDelete.confirmLabel": "Delete",
 
   "storage.scan.title": "Scan QR code",
+  "storage.scan.starting": "Starting the camera…",
   "storage.scan.scanning": "Looking for a QR code…",
-  "storage.scan.noBoxesTitle": "No boxes to scan yet",
-  "storage.scan.noBoxesDescription": "Add a box first, then you can simulate scanning its label.",
-  "storage.scan.disclaimer": "Simulated scan — no camera is used.",
+  "storage.scan.deniedTitle": "Couldn't access the camera",
+  "storage.scan.deniedDescription": "Allow camera access to scan a box's label, or type its number into search instead.",
+  "storage.scan.unsupportedTitle": "Scanning isn't supported here",
+  "storage.scan.unsupportedDescription": "This browser can't access the camera. Try again on your phone, or type the box's number into search instead.",
 
   "storage.labels.title": "Box labels",
   "storage.labels.description": "One sticker per box — just the QR code and box number. Prints on A4, 12 per sheet, cut apart to label your boxes.",

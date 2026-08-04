@@ -73,18 +73,17 @@ function BoxCard({ box, onClick, t }) {
  *
  * `pendingBoxNumber`/`onConsumedPendingBoxNumber`: a scanned box's deep link
  * (.../b/{number}, see App.jsx and worker/index.js's ROUTING section) lands
- * here already switched to this tab by AppShell — this resolves the number
- * via the by-number lookup endpoint and opens straight into that box, with
- * no intermediate "is this the right one?" step (the scan itself is the
- * confirmation, per the doc), independent of whether the full box list has
- * loaded yet. */
+ * here already switched to this tab by AppShell. Resolved the same way as
+ * an in-app camera scan (see `openBoxByNumber` below) — no intermediate
+ * "is this the right one?" step (the scan itself is the confirmation, per
+ * the doc), independent of whether the full box list has loaded yet. */
 export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumber }) {
   const t = useTranslation();
   const toast = useToast();
   const [boxes, setBoxes] = useState([]);
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [query, setQuery] = useState("");
-  const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box? }
+  const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box?, claimNumber? }
   const [scanning, setScanning] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
 
@@ -105,24 +104,38 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, loadedOnce]);
 
+  // Shared by both entry points that resolve a scanned/deep-linked number —
+  // the in-app camera scanner and the .../b/{number} URL below. A number
+  // with no box yet (STORAGE_BOX_NOT_FOUND) isn't necessarily an error: it's
+  // also what a reserved-but-unfilled number looks like (POST
+  // /storage/boxes/reserve), or a deleted box's old sticker — the doc calls
+  // for the same "set it up?" screen in every one of those cases, so this
+  // opens a new-box editor pre-targeting that exact number (via
+  // BoxEditModal's claimNumber prop / POST /storage/boxes's claim_number)
+  // rather than surfacing the 404 as a toast.
+  async function openBoxByNumber(number) {
+    try {
+      const res = await api(`/storage/boxes/by-number/${number}`);
+      if (res.error) {
+        if (res.code === "STORAGE_BOX_NOT_FOUND") {
+          setEditingBox({ mode: "new", claimNumber: Number(number) });
+        } else {
+          toast(apiErrorMessage(res, t), { error: true });
+        }
+      } else {
+        setEditingBox({ mode: "edit", box: res });
+      }
+    } catch {
+      toast(t("storage.toast.loadFailed"), { error: true });
+    }
+  }
+
   useEffect(() => {
     if (!pendingBoxNumber) return;
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await api(`/storage/boxes/by-number/${pendingBoxNumber}`);
-        if (cancelled) return;
-        if (res.error) {
-          toast(apiErrorMessage(res, t), { error: true });
-        } else {
-          setEditingBox({ mode: "edit", box: res });
-        }
-      } catch {
-        if (!cancelled) toast(t("storage.toast.loadFailed"), { error: true });
-      } finally {
-        if (!cancelled) onConsumedPendingBoxNumber?.();
-      }
-    })();
+    openBoxByNumber(pendingBoxNumber).finally(() => {
+      if (!cancelled) onConsumedPendingBoxNumber?.();
+    });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingBoxNumber]);
@@ -185,6 +198,7 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
       {editingBox && (
         <BoxEditModal
           box={editingBox.box || null}
+          claimNumber={editingBox.claimNumber}
           existingLocations={existingLocations}
           onClose={() => setEditingBox(null)}
           onSaved={() => {
@@ -196,11 +210,10 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
 
       {scanning && (
         <QrScanModal
-          boxes={boxes}
           onClose={() => setScanning(false)}
-          onFound={(box) => {
+          onFound={(number) => {
             setScanning(false);
-            setEditingBox({ mode: "edit", box });
+            openBoxByNumber(number);
           }}
         />
       )}
