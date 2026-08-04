@@ -3,6 +3,7 @@ import { Card, Badge, Input, FabMenu, EmptyState } from "../design-system/index.
 import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { api } from "../lib/api.js";
+import { apiErrorMessage } from "../lib/apiError.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { formatBoxNumber, matchesQuery, boxDeepLinkUrl } from "../lib/storageBoxes.js";
 import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
@@ -68,8 +69,16 @@ function BoxCard({ box, onClick, t }) {
  * (GET/POST/PATCH/DELETE /storage/boxes), not localStorage. Unlike
  * ShoppingListTab/MealsTab there's no 7s poll — read-mostly reference data,
  * so this loads once when the tab first becomes active and again after any
- * write, rather than continuously. */
-export function StorageTab({ active }) {
+ * write, rather than continuously.
+ *
+ * `pendingBoxNumber`/`onConsumedPendingBoxNumber`: a scanned box's deep link
+ * (.../b/{number}, see App.jsx and worker/index.js's ROUTING section) lands
+ * here already switched to this tab by AppShell — this resolves the number
+ * via the by-number lookup endpoint and opens straight into that box, with
+ * no intermediate "is this the right one?" step (the scan itself is the
+ * confirmation, per the doc), independent of whether the full box list has
+ * loaded yet. */
+export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumber }) {
   const t = useTranslation();
   const toast = useToast();
   const [boxes, setBoxes] = useState([]);
@@ -95,6 +104,28 @@ export function StorageTab({ active }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, loadedOnce]);
+
+  useEffect(() => {
+    if (!pendingBoxNumber) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/storage/boxes/by-number/${pendingBoxNumber}`);
+        if (cancelled) return;
+        if (res.error) {
+          toast(apiErrorMessage(res, t), { error: true });
+        } else {
+          setEditingBox({ mode: "edit", box: res });
+        }
+      } catch {
+        if (!cancelled) toast(t("storage.toast.loadFailed"), { error: true });
+      } finally {
+        if (!cancelled) onConsumedPendingBoxNumber?.();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBoxNumber]);
 
   const filtered = useMemo(
     () => boxes.filter((box) => matchesQuery(box, query)).sort((a, b) => a.number - b.number),

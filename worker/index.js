@@ -1659,6 +1659,18 @@ export default {
       if (url.hostname === "shop.panhandle.app" && url.pathname === "/") {
         pagesUrl.pathname = "/app.html";
       }
+      // The storage module's QR/deep-link route (docs/storage-module-plan.md):
+      // a scanned box's sticker encodes .../b/{number}, and the app itself
+      // has to be loaded (app.html) before it can read that path and open
+      // the box (see App.jsx's pendingBoxNumber). Unlike the "/" rewrite
+      // above, this is NOT hostname-gated — there's no static content
+      // (public/ has no "b" directory) at this path on any hostname to
+      // collide with, so a branch/commit preview's own generated deep links
+      // (built from window.location.origin, whatever that preview's host
+      // is) work for click-testing too, the same as everywhere else.
+      if (/^\/b\/\d+$/.test(url.pathname)) {
+        pagesUrl.pathname = "/app.html";
+      }
       // Cloudflare Pages auto-redirects a request for "*.html" to the
       // extension-less canonical path (e.g. /app.html -> /app). The incoming
       // request's redirect mode defaults to "manual", so without forcing

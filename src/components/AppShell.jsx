@@ -87,7 +87,7 @@ function ImportantLegendTrigger({ onClick }) {
   );
 }
 
-export function AppShell() {
+export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   const [tab, setTab] = useState("list");
   // Tabs are mounted once (on first visit) and then kept alive, hidden via
   // CSS, so switching panes never re-fetches from an empty state — see
@@ -231,6 +231,23 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showStorageTab]);
 
+  // A scanned box's deep link (docs/storage-module-plan.md's .../b/{number}
+  // route) switches straight to the Storage tab so StorageTab can resolve
+  // and open it — see its own pendingBoxNumber effect. An account the
+  // module isn't gated for just drops the link silently rather than
+  // erroring, since this is still a beta feature.
+  useEffect(() => {
+    if (!pendingBoxNumber) return;
+    if (showStorageTab) {
+      setTab("storage");
+      setVisited((prev) => (prev.storage ? prev : { ...prev, storage: true }));
+      pushNav("storage");
+    } else {
+      onConsumePendingBoxNumber?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBoxNumber, showStorageTab]);
+
   const subpageTitleKey = tab === "settings" && settingsPath.length > 0
     ? settingsTitleKey(settingsPath)
     : null;
@@ -304,7 +321,11 @@ export function AppShell() {
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
             style={{ display: tab === "storage" ? "block" : "none", position: "relative" }}
           >
-            <StorageTab active={tab === "storage"} />
+            <StorageTab
+              active={tab === "storage"}
+              pendingBoxNumber={pendingBoxNumber}
+              onConsumedPendingBoxNumber={onConsumePendingBoxNumber}
+            />
           </div>
         )}
         {visited.settings && (
