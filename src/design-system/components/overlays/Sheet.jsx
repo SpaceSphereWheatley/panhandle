@@ -167,6 +167,16 @@ export function Sheet({ open = true, onClose, onExited, title, children, classNa
       // flush instead.
       padding: isDialog ? 'var(--space-6)' : undefined,
       zIndex: 100,
+      // Stops intercepting taps the instant a close is requested, rather than
+      // waiting for the exit animation (or its EXIT_FALLBACK_MS safety net,
+      // above) to actually unmount this fixed full-screen div. Both of those
+      // signals — the CSS animationend event and the JS timer — are things
+      // mobile browsers throttle for a backgrounded tab, so closing a modal
+      // and immediately switching apps/locking the phone can leave this
+      // (by-then-invisible) scrim mounted and eating every touch for well
+      // past 650ms once the user returns. pointer-events is inherited, so
+      // this also covers the Container below without needing its own rule.
+      pointerEvents: open ? 'auto' : 'none',
       animation: open
         ? 'ph-scrim-in var(--duration-base) var(--ease-out)'
         : 'ph-scrim-out var(--duration-base) var(--ease-out) forwards',

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.60.1] — 2026-08-04
+
+### Fixed
+- **The app could stop responding to touch for a while after closing a dialog and immediately switching away.** Tapping Cancel/Save and right away backgrounding the app (switching apps, locking the phone) could leave an invisible full-screen layer behind, silently swallowing every tap once you came back — sometimes for much longer than usual, since a backgrounded tab's animations and timers run slower. The screen now stops blocking touch the instant a dialog's close is requested, instead of waiting for its exit animation (or the fallback timer backing it up) to actually finish. (`Sheet.jsx`'s backdrop now sets `pointer-events: none` as soon as it's told to close, rather than only once `onExited` actually unmounts it — a more general safety net for the same class of bug fixed differently in 1.58.2.)
+- **Pressing back once while a confirmation dialog was open on top of another dialog closed both instead of just the confirmation.** For example, confirming a delete from the item editor, then hitting back, used to close the confirmation *and* the item editor together. Only the top-most dialog closes now. (`Modal.jsx` tracks open dialogs as a stack instead of a count, so only the current top of the stack reacts to a given back-press, restoring the guard for whatever's left underneath.)
+
 ## [1.58.3] — 2026-08-04
 
 ### Fixed

@@ -6,12 +6,29 @@ import { useIsDesktop } from "../hooks/useIsDesktop.js";
 // "is a modal open" gate: only the first modal to open pushes a history
 // entry, and only the last one to close pops it, so switching between modal
 // types (e.g. MealsTab swapping its single `modal` state from one type to
-// another) doesn't churn the history stack.
-let openModalCount = 0;
+// another) doesn't churn the history stack — the old instance's cleanup
+// always finishes before the new one's effect runs in the same commit, so
+// the stack below is already empty again by the time a same-slot swap checks
+// it.
+//
+// modalStack (not a plain count) is what lets a *genuinely* nested modal —
+// e.g. useConfirm()'s dialog opened from inside ItemEditModal while it's
+// still open — behave differently from a same-slot swap: onPopState below
+// only reacts if this instance is the current top of the stack, so one
+// back-press closes just the confirm dialog, not both. There's still only
+// ever one shared history entry (matching the anti-churn goal above); it's
+// popped and immediately re-pushed by the closing top instance whenever the
+// stack isn't empty afterward, so the guard survives for the next back-press
+// to reach whatever's left underneath.
+let modalStack = [];
 let historyEntryPushed = false;
 
 export function Modal({ onClose, title, children }) {
   const closedByPopRef = useRef(false);
+  // Stable per-instance identity for the top-of-stack check in the effect
+  // below — a plain object so reference equality (not value equality) is
+  // what matters, same reasoning as a React key.
+  const selfRef = useRef({});
   // Modal is the only consumer of Sheet, so this one call site decides the
   // placement for every modal in the app.
   const isDesktop = useIsDesktop();
@@ -50,30 +67,44 @@ export function Modal({ onClose, title, children }) {
   }
 
   useEffect(() => {
-    openModalCount += 1;
+    const self = selfRef.current;
+    modalStack.push(self);
     if (!historyEntryPushed) {
       historyEntryPushed = true;
       history.pushState({ ...history.state, phModal: true }, "");
     }
 
     function onPopState(e) {
-      if (!e.state?.phModal) {
-        closedByPopRef.current = true;
-        historyEntryPushed = false;
-        requestClose();
+      // A pop that still lands inside modal-guarded history (phModal still
+      // set — e.g. this instance re-pushed the guard for a modal stacked
+      // below it, see below) isn't a close. Nor is a pop while this instance
+      // isn't the current top of the stack — that back-press belongs to
+      // whichever modal opened after this one.
+      if (e.state?.phModal || modalStack[modalStack.length - 1] !== self) return;
+      closedByPopRef.current = true;
+      historyEntryPushed = false;
+      requestClose();
+      // Other modals are still open underneath (this one was nested, e.g. a
+      // confirm dialog over an edit modal) — restore the guard entry so the
+      // next back-press reaches the next one down instead of leaving the
+      // rest of the app's history unprotected.
+      if (modalStack.length > 1) {
+        historyEntryPushed = true;
+        history.pushState({ ...history.state, phModal: true }, "");
       }
     }
     window.addEventListener("popstate", onPopState);
 
     return () => {
       window.removeEventListener("popstate", onPopState);
-      openModalCount -= 1;
+      const idx = modalStack.indexOf(self);
+      if (idx !== -1) modalStack.splice(idx, 1);
       if (!closedByPopRef.current) {
         // Deferred: a same-commit swap to a different modal type (e.g.
         // browse -> edit) unmounts this one and mounts the next before this
         // task finishes. Only pop the shared entry if nothing re-claimed it.
         queueMicrotask(() => {
-          if (openModalCount === 0 && historyEntryPushed) {
+          if (modalStack.length === 0 && historyEntryPushed) {
             historyEntryPushed = false;
             history.back();
           }
