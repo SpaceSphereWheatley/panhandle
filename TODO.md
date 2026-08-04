@@ -237,6 +237,33 @@ were triaged).
      `docs/ui-review-plan.md` U23.
      _Value: Low · Importance: Low · Type: UX / Security hygiene_
 
+### Storage module polish (from the 2026-08-04 UX/UI audit, #1-#5 fixed same pass)
+
+142. **`BoxLabelsModal`'s outstanding-reserved-numbers fetch fails silently.**
+     `loadOutstanding()` swallows any error with no toast and no retry —
+     unlike every other network call in the storage feature (`loadBoxes`,
+     `reserveAndPrint`, `discardOutstanding`), a failure here just makes the
+     "reserved but unused" section silently never appear, indistinguishable
+     from "you have none outstanding."
+     _Value: Low · Importance: Low · Type: UX / Error handling_
+
+143. **No success toast on box save/delete.** Saving or deleting a box in
+     `BoxEditModal.jsx` only closes the modal and reloads the list — errors
+     toast, success doesn't. Matches `ItemEditModal`/`MealEditModal`'s
+     existing pattern app-wide, so fixing it in Storage alone would be
+     inconsistent; revisit as an app-wide decision, likely alongside #118's
+     button-system consolidation.
+     _Value: Low · Importance: Low · Type: UX / Consistency_
+
+144. **No shared `Banner`/`Callout` primitive for one-off informational
+     banners.** `StorageTab.jsx`'s former "early preview" banner (a sunken
+     surface with an accent left-rule, since removed now that the module is
+     ungated — see `CHANGELOG.md`) was a fully bespoke inline-styled block
+     with nothing else in the app to compare it against. If a future screen
+     needs a persistent info/beta banner, factor a shared component instead
+     of copy-pasting the inline styles again.
+     _Value: Low · Importance: Low · Type: UI polish / Consistency_
+
 ## Code quality
 
 From a Principal-Engineer-style code quality/architecture review (2026-07-31)

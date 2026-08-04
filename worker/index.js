@@ -1167,17 +1167,6 @@ export function isSuperAdmin(username, env) {
   return allowed.includes((username || "").toLowerCase());
 }
 
-// Server-side gate for the storage module (docs/storage-module-plan.md),
-// beyond the client-side STORAGE_TAB_USER check in storageModule.js. That
-// client check alone was fine while there was no backend behind it — it
-// isn't once these endpoints exist, since a hidden tab doesn't stop any
-// account from calling them directly. Same allowlist shape as isSuperAdmin.
-// Remove this (and STORAGE_BETA_USERNAMES) at v2 launch.
-export function hasStorageAccess(username, env) {
-  const allowed = (env.STORAGE_BETA_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-  return allowed.includes((username || "").toLowerCase());
-}
-
 // Bounds GET /storage/boxes's payload (every live box + every box's items,
 // in one response) — every other bounded thing in this app has a cap too
 // (10 users, 710 catalogue items). Independent of lists.next_box_number,
@@ -3293,14 +3282,8 @@ export default {
 
     // ===== STORAGE MODULE (docs/storage-module-plan.md) =====
     // Boxes with a location and a content list, identified by a per-list
-    // number printed on a physical sticker. Beta-gated via hasStorageAccess
-    // on top of the client-side STORAGE_TAB_USER check (storageModule.js) —
-    // a hidden tab alone doesn't stop any account from calling these
-    // directly once they exist. Single gate point covering every route
-    // below, so ungating at v2 launch is deleting this one check.
-    if (path.startsWith("/storage/") && !hasStorageAccess(user.username, env)) {
-      return authedErr("STORAGE_NOT_ENABLED", 403);
-    }
+    // number printed on a physical sticker. Any list member — same
+    // any-list-member permission level as /recurring and /category-order.
 
     if (path === "/storage/boxes" && method === "GET") {
       const { results: boxes } = await env.DB.prepare(

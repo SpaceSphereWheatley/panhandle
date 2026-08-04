@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button, EmptyState, Checkbox, SegmentedControl, Input } from "../../design-system/index.js";
+import { Button, EmptyState, Checkbox, SegmentedControl, Input, IconButton } from "../../design-system/index.js";
 import { BoxQrCode } from "./BoxQrCode.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
@@ -189,40 +189,16 @@ export function BoxLabelsModal({ boxes, onClose }) {
                     {t("storage.labels.outstandingDescription")}
                   </p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                    {outstanding.map((number) => {
-                      const on = outstandingSelected.has(number);
-                      return (
-                        <span key={number} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <button
-                            type="button"
-                            onClick={() => toggleOutstanding(number)}
-                            aria-pressed={on}
-                            style={{
-                              fontFamily: "var(--font-mono, monospace)",
-                              fontWeight: 700,
-                              fontSize: "var(--text-xs)",
-                              padding: "5px 10px",
-                              borderRadius: "var(--radius-pill)",
-                              cursor: "pointer",
-                              border: `1.5px solid ${on ? "var(--accent-primary)" : "var(--border-default)"}`,
-                              background: on ? "var(--accent-primary)" : "transparent",
-                              color: on ? "var(--text-on-accent)" : "var(--text-secondary)",
-                            }}
-                          >
-                            {formatBoxNumber(number)}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => discardOutstanding(number)}
-                            aria-label={`${t("storage.labels.discard")} ${formatBoxNumber(number)}`}
-                            title={t("storage.labels.discard")}
-                            style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 2, lineHeight: 1 }}
-                          >
-                            <i className="ph ph-x" aria-hidden="true" />
-                          </button>
-                        </span>
-                      );
-                    })}
+                    {outstanding.map((number) => (
+                      <OutstandingChip
+                        key={number}
+                        number={number}
+                        selected={outstandingSelected.has(number)}
+                        onToggle={() => toggleOutstanding(number)}
+                        onDiscard={() => discardOutstanding(number)}
+                        t={t}
+                      />
+                    ))}
                   </div>
                   <Button
                     variant="outline"
@@ -282,5 +258,48 @@ export function BoxLabelsModal({ boxes, onClose }) {
         </>
       )}
     </Modal>
+  );
+}
+
+// An outstanding reserved number, toggle-able for reprint + individually
+// discardable. Its own component (not inlined in the .map() above) so the
+// toggle's hover state can be a plain useState — hooks can't be called from
+// inside a callback passed to .map(). The discard action goes through the
+// design system's IconButton (danger/sm) instead of a hand-rolled `<button>`
+// so it gets the same hover/press state layer and a real ~32px touch target,
+// rather than the ~16px hit area a bare icon-with-2px-padding gave it.
+function OutstandingChip({ number, selected, onToggle, onDiscard, t }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        onPointerEnter={(e) => { if (e.pointerType === "mouse") setHover(true); }}
+        onPointerLeave={() => setHover(false)}
+        aria-pressed={selected}
+        style={{
+          fontFamily: "var(--font-mono, monospace)",
+          fontWeight: 700,
+          fontSize: "var(--text-xs)",
+          padding: "5px 10px",
+          borderRadius: "var(--radius-pill)",
+          cursor: "pointer",
+          border: `1.5px solid ${selected ? "var(--accent-primary)" : "var(--border-default)"}`,
+          background: selected ? "var(--accent-primary)" : hover ? "var(--surface-sunken)" : "transparent",
+          color: selected ? "var(--text-on-accent)" : "var(--text-secondary)",
+          transition: "background-color var(--duration-fast) var(--ease-out)",
+        }}
+      >
+        {formatBoxNumber(number)}
+      </button>
+      <IconButton
+        icon="x"
+        size="sm"
+        variant="danger"
+        onClick={onDiscard}
+        label={`${t("storage.labels.discard")} ${formatBoxNumber(number)}`}
+      />
+    </span>
   );
 }

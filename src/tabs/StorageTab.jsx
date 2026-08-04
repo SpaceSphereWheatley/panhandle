@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Badge, Input, FabMenu, EmptyState, Skeleton } from "../design-system/index.js";
+import { Card, Badge, Input, FabMenu, EmptyState, Skeleton, Button } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { api } from "../lib/api.js";
@@ -39,9 +39,19 @@ function BoxCard({ box, onClick, t }) {
           {formatBoxNumber(box.number)}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)" }}>{box.name}</div>
+          <div
+            title={box.name}
+            style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
+            {box.name}
+          </div>
           {box.notes ? (
-            <div style={{ marginTop: 2, color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>{box.notes}</div>
+            <div
+              title={box.notes}
+              style={{ marginTop: 2, color: "var(--text-tertiary)", fontSize: "var(--text-xs)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            >
+              {box.notes}
+            </div>
           ) : null}
         </div>
         <Badge tone="neutral">{t("storage.itemCount", { count: box.items.length })}</Badge>
@@ -51,12 +61,17 @@ function BoxCard({ box, onClick, t }) {
           {shown.map((item) => (
             <span
               key={item}
+              title={item}
               style={{
                 padding: "4px 10px",
                 borderRadius: "var(--radius-pill)",
                 background: "var(--surface-sunken)",
                 color: "var(--text-secondary)",
                 fontSize: "var(--text-xs)",
+                maxWidth: 160,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
               {item}
@@ -73,10 +88,11 @@ function BoxCard({ box, onClick, t }) {
   );
 }
 
-/** Storage/box-organization tab — see AppShell.jsx for the account+device
- * gating (STORAGE_TAB_USER client-side, hasStorageAccess server-side; see
- * docs/storage-module-plan.md). Boxes are real household-shared data now
- * (GET/POST/PATCH/DELETE /storage/boxes), not localStorage. Unlike
+/** Storage/box-organization tab — available to every list member; see
+ * AppShell.jsx / StorageSubpage.jsx for the one remaining per-device
+ * show/hide toggle (docs/storage-module-plan.md). Boxes are real
+ * household-shared data (GET/POST/PATCH/DELETE /storage/boxes), not
+ * localStorage. Unlike
  * ShoppingListTab/MealsTab there's no 7s poll — read-mostly reference data,
  * so this loads once when the tab first becomes active and again after any
  * write, rather than continuously.
@@ -97,6 +113,13 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
   // through to the empty state, so opening the tab flashed "no boxes yet"
   // before the real list arrived.
   const [loaded, setLoaded] = useState(false);
+  // A failed load must not render as "no boxes yet" — that's indistinguishable
+  // from an actually-empty household and, if the toast below is missed, reads
+  // as "your boxes are gone" for data people rely on being durable. Kept
+  // separate from `boxes` (left untouched on failure) so a retry that
+  // succeeds after a stale cache isn't needed — there's nothing to preserve,
+  // the tab has no offline cache unlike ShoppingListTab.
+  const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState("");
   const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box?, claimNumber? }
   const [scanning, setScanning] = useState(false);
@@ -105,9 +128,19 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
   async function loadBoxes() {
     try {
       const res = await api("/storage/boxes");
-      if (Array.isArray(res)) setBoxes(res);
+      if (Array.isArray(res)) {
+        setBoxes(res);
+        setLoadError(false);
+      } else {
+        // A reachable server that rejected the request (e.g. a 500) — same
+        // "couldn't load" outcome as a network throw below, just without an
+        // exception, so it needs the same toast + error-state handling.
+        toast(apiErrorMessage(res, t), { error: true });
+        setLoadError(true);
+      }
     } catch {
       toast(t("storage.toast.loadFailed"), { error: true });
+      setLoadError(true);
     } finally {
       // Set even on failure: the error is surfaced as a toast, and leaving
       // the skeleton up forever would read as a permanent hang.
@@ -173,27 +206,6 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
 
   return (
     <div style={{ padding: "var(--space-4)", maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      {/* A neutral sunken surface with an accent rule, not
-          --accent-primary-subtle: under the dark theme that token resolves to
-          a heavily saturated rust fill, which read as an error banner rather
-          than an aside. */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 14px",
-          borderRadius: "var(--radius-md)",
-          background: "var(--surface-sunken)",
-          borderLeft: "3px solid var(--accent-primary)",
-          color: "var(--text-secondary)",
-          fontSize: "var(--text-sm)",
-        }}
-      >
-        <i className="ph ph-eye" style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true" />
-        <span>{t("storage.previewBanner")}</span>
-      </div>
-
       <Input
         icon="magnifying-glass"
         placeholder={t("storage.searchPlaceholder")}
@@ -203,8 +215,19 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
 
       {!loaded ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          {[0, 1, 2].map((i) => <Skeleton key={i} height={92} />)}
+          {/* Varied heights, not one repeated block: a real card's height swings
+              with whether it has notes/item pills, so three identical placeholders
+              all snapping to one different height on load reads as a bigger jump
+              than three that already look like plausible, differently-sized cards. */}
+          {[64, 100, 78].map((h, i) => <Skeleton key={i} height={h} />)}
         </div>
+      ) : loadError ? (
+        <EmptyState
+          icon="cloud-slash"
+          title={t("storage.error.title")}
+          description={t("storage.error.description")}
+          action={<Button variant="outline" onClick={loadBoxes}>{t("common.retry")}</Button>}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="package"

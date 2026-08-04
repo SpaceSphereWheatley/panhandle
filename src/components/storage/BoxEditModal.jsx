@@ -30,6 +30,14 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
   const [location, setLocation] = useState(box?.location || "");
   const [items, setItems] = useState(box?.items || []);
   const [notes, setNotes] = useState(box?.notes || "");
+  // Guards against a double-tap double-submit on a slow connection: unlike a
+  // duplicate list item (which the server just merges), a duplicate box POST
+  // burns/allocates a second monotonic box number, so this needs an actual
+  // in-flight lock, not just cosmetic feedback. Mutually exclusive with
+  // `deleting` — only one destructive/write action can be in flight at once.
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting;
 
   return (
     <Modal onClose={onClose} title={t(box ? "storage.edit.title" : claimNumber ? "storage.edit.setupTitle" : "storage.edit.newTitle")}>
@@ -45,16 +53,19 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
             name: trimmedName, location: trimmedLocation, items, notes: notes.trim(),
             ...(box ? {} : claimNumber ? { claim_number: claimNumber } : {}),
           });
+          setSaving(true);
           let res;
           try {
             res = box
               ? await api(`/storage/boxes/${box.id}`, { method: "PATCH", body })
               : await api("/storage/boxes", { method: "POST", body });
           } catch {
+            setSaving(false);
             toast(t("storage.toast.saveFailed"), { error: true });
             return;
           }
           if (res.error) {
+            setSaving(false);
             toast(apiErrorMessage(res, t), { error: true });
             return;
           }
@@ -69,9 +80,11 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
             }))
           )
             return;
+          setDeleting(true);
           try {
             await api(`/storage/boxes/${box.id}`, { method: "DELETE" });
           } catch {
+            setDeleting(false);
             toast(t("storage.toast.deleteFailed"), { error: true });
             return;
           }
@@ -145,12 +158,12 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
             />
 
             <div className="actions">
-              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
-              <Button variant="primary" onClick={save}>{t("common.save")}</Button>
+              <Button variant="outline" disabled={busy} onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" disabled={busy} onClick={save}>{t(saving ? "common.loading" : "common.save")}</Button>
             </div>
             {box && (
-              <Button variant="danger" icon="trash" onClick={deleteBox} style={{ width: "100%", marginTop: 8 }}>
-                {t("storage.edit.deleteBox")}
+              <Button variant="danger" icon="trash" disabled={busy} onClick={deleteBox} style={{ width: "100%", marginTop: 8 }}>
+                {t(deleting ? "common.loading" : "storage.edit.deleteBox")}
               </Button>
             )}
           </>

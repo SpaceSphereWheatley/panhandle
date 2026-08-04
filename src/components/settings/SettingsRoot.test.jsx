@@ -51,6 +51,7 @@ describe("SettingsRoot", () => {
       "Household members",
       "Dinner duty",
       "Store layout",
+      "Storage",
       "Administration",
     ]);
     for (const label of labels) {
@@ -66,6 +67,7 @@ describe("SettingsRoot", () => {
     expect(screen.queryByText("Administration")).toBeNull();
     expect(screen.getByText("Dinner duty")).toBeTruthy();
     expect(screen.getByText("Store layout")).toBeTruthy();
+    expect(screen.getByText("Storage")).toBeTruthy();
   });
 
   it("shows the members row to an owner, with the member count", () => {

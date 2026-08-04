@@ -6,6 +6,7 @@ import { NotificationsSubpage } from "../components/settings/subpages/Notificati
 import { MembersSubpage } from "../components/settings/subpages/MembersSubpage.jsx";
 import { DinnerDutySubpage } from "../components/settings/subpages/DinnerDutySubpage.jsx";
 import { StoreSubpage } from "../components/settings/subpages/StoreSubpage.jsx";
+import { StorageSubpage } from "../components/settings/subpages/StorageSubpage.jsx";
 import { AdminSubpage } from "../components/settings/subpages/AdminSubpage.jsx";
 import { StatsSubpage } from "../components/settings/subpages/StatsSubpage.jsx";
 import { CalendarSyncSubpage } from "../components/settings/subpages/CalendarSyncSubpage.jsx";
@@ -23,6 +24,7 @@ export function SettingsTab({ settingsPath = [], onNavigate }) {
   if (root === "members") return <MembersSubpage />;
   if (root === "dinner-duty") return <DinnerDutySubpage />;
   if (root === "store") return <StoreSubpage />;
+  if (root === "storage") return <StorageSubpage />;
   if (root === "calendar-sync") return <CalendarSyncSubpage />;
   if (root === "admin" && sub === "stats") return <StatsSubpage />;
   if (root === "admin") return <AdminSubpage onNavigate={onNavigate} />;

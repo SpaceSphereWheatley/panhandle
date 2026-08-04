@@ -1,8 +1,8 @@
 // Plain-Node integration test for the storage module (docs/storage-module-plan.md):
-// the server-side hasStorageAccess gate, basic box CRUD, monotonic never-reused
-// numbering, the 300-box cap, and the reserve endpoint's no-row-created behavior
-// (see CLAUDE.md's Testing conventions). Spins up the real Worker locally
-// against a local D1 via tests/_helpers.mjs.
+// basic box CRUD, monotonic never-reused numbering, the 300-box cap, and the
+// reserve endpoint's no-row-created behavior (see CLAUDE.md's Testing
+// conventions). Spins up the real Worker locally against a local D1 via
+// tests/_helpers.mjs.
 //
 // Run: node tests/storage.test.mjs
 import assert from "node:assert/strict";
@@ -11,19 +11,15 @@ import { startWorker, seedAndLogin, runSql } from "./_helpers.mjs";
 const PORT = 8809;
 const RUN_ID = Date.now().toString(36);
 const PASS = "Test-password-123!";
-// Two allowlisted accounts, each getting their own fresh list on signup —
-// lets testByNumberLookupIsListScoped prove isolation *between two gated
-// accounts*, which is the actual security property (list_id, not gate
-// status). Every other account created in this run is deliberately left
-// off the allowlist, so the gate itself gets exercised too.
-const STORAGE_USERNAME = `st_beta_${RUN_ID}`;
-const STORAGE_USERNAME_2 = `st_beta2_${RUN_ID}`;
+// Two ordinary accounts, each getting their own fresh list on signup — lets
+// testByNumberLookupIsListScoped prove isolation *between two lists*, which
+// is the actual security property (list_id, same as every other per-list
+// table — there's no separate module gate anymore).
+const STORAGE_USERNAME = `st_user_${RUN_ID}`;
+const STORAGE_USERNAME_2 = `st_user2_${RUN_ID}`;
 
 async function main() {
-  const worker = await startWorker({
-    port: PORT,
-    extraDevVars: `STORAGE_BETA_USERNAMES=${STORAGE_USERNAME},${STORAGE_USERNAME_2}\n`,
-  });
+  const worker = await startWorker({ port: PORT });
   try {
     await runTests(worker.base);
     console.log("\nAll storage tests passed.");
@@ -47,14 +43,12 @@ async function login(base, username, password) {
 
 async function runTests(BASE) {
   // Bootstrapped once, up front, then logged into (not re-seeded) by every
-  // test below — both are shared, fixed accounts (access is granted by
-  // exact username match in .dev.vars, set once at worker startup), and
-  // seedAndLogin's bootstrap step would collide on the users PK if called
-  // more than once for the same username.
+  // test below — both are shared, fixed accounts, and seedAndLogin's
+  // bootstrap step would collide on the users PK if called more than once
+  // for the same username.
   await seedAndLogin(BASE, STORAGE_USERNAME, PASS);
   await seedAndLogin(BASE, STORAGE_USERNAME_2, PASS);
 
-  await testGateRefusesNonAllowlistedAccount(BASE);
   await testCrudAndItemsRoundTrip(BASE);
   await testNumberingNeverReusesAfterDelete(BASE);
   await testByNumberLookupIsListScoped(BASE);
@@ -73,29 +67,6 @@ async function storageUser(BASE) {
 
 async function storageUser2(BASE) {
   return login(BASE, STORAGE_USERNAME_2, PASS);
-}
-
-async function testGateRefusesNonAllowlistedAccount(BASE) {
-  const username = `st_outsider_${RUN_ID}`;
-  const { token } = await seedAndLogin(BASE, username, PASS);
-
-  const getRes = await fetch(`${BASE}/storage/boxes`, { headers: authHeaders(token) });
-  assert.equal(getRes.status, 403);
-  assert.equal((await getRes.json()).code, "STORAGE_NOT_ENABLED");
-
-  const postRes = await fetch(`${BASE}/storage/boxes`, {
-    method: "POST", headers: authHeaders(token), body: JSON.stringify({ name: "Tools" }),
-  });
-  assert.equal(postRes.status, 403);
-  assert.equal((await postRes.json()).code, "STORAGE_NOT_ENABLED");
-
-  const reserveRes = await fetch(`${BASE}/storage/boxes/reserve`, {
-    method: "POST", headers: authHeaders(token), body: JSON.stringify({ count: 3 }),
-  });
-  assert.equal(reserveRes.status, 403);
-  assert.equal((await reserveRes.json()).code, "STORAGE_NOT_ENABLED");
-
-  console.log("  - an account not on STORAGE_BETA_USERNAMES gets 403 STORAGE_NOT_ENABLED on every /storage/* route");
 }
 
 async function testCrudAndItemsRoundTrip(BASE) {
@@ -170,8 +141,7 @@ async function testCrudAndItemsRoundTrip(BASE) {
 }
 
 async function testNumberingNeverReusesAfterDelete(BASE) {
-  // Access is granted per-username via .dev.vars, fixed at worker startup,
-  // so every test in this file shares the one allowlisted account
+  // Every test in this file shares the one bootstrapped account
   // (STORAGE_USERNAME) rather than seeding a fresh one each time.
   const { token: storageToken } = await storageUser(BASE);
 
@@ -268,7 +238,7 @@ async function testClaimingAReservedNumber(BASE) {
 }
 
 async function testBoxCap(BASE) {
-  // Bulk-insert straight to the allowlisted account's list_id via runSql,
+  // Bulk-insert straight to the account's list_id via runSql,
   // bypassing the 300 HTTP round trips reaching the cap through the API
   // would otherwise cost.
   const { token: storageToken } = await storageUser(BASE);
@@ -369,14 +339,13 @@ async function testOutstandingReservationsAreVisibleAndDisposable(BASE) {
   });
   assert.equal(discardAgain.status, 404, "discarding an already-gone reservation should 404");
 
-  // The gate covers the new routes too.
-  const outsider = `st_res_outsider_${RUN_ID}`;
-  const { token: outsiderToken } = await seedAndLogin(BASE, outsider, PASS);
-  const gated = await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(outsiderToken) });
-  assert.equal(gated.status, 403);
-  assert.equal((await gated.json()).code, "STORAGE_NOT_ENABLED");
+  // list_id scoping covers the new route too — a different list's account
+  // must not see this list's outstanding reservations.
+  const { token: otherStorageToken } = await storageUser2(BASE);
+  const otherList = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(otherStorageToken) })).json();
+  assert.ok(!otherList.some((r) => r.number === numbers[1]), "another list must not see this list's outstanding reservations");
 
-  console.log("  - outstanding reservations are listed, cleared by claiming, discardable by hand, and gated");
+  console.log("  - outstanding reservations are listed, cleared by claiming, discardable by hand, and scoped per list");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

@@ -190,7 +190,6 @@ export const en = {
   "shell.important.legend": "Important",
   "shell.important.legendAria": "About the important marker",
 
-  "storage.previewBanner": "Early preview — only visible on this account for now. Boxes are saved to your household's shared list, same as the rest of the app.",
   "storage.searchPlaceholder": "Search boxes, locations and items…",
   "storage.itemCount": { one: "{count} item", other: "{count} items" },
   "storage.moreItems": "+{count} more",
@@ -198,6 +197,8 @@ export const en = {
   "storage.emptyDescription": "Try a different search.",
   "storage.emptyNoBoxesTitle": "No boxes yet",
   "storage.emptyNoBoxes": "Add your first one, then its contents are searchable from anywhere.",
+  "storage.error.title": "Couldn't load your boxes",
+  "storage.error.description": "Check your connection and try again.",
   "storage.unplacedLocation": "No location yet",
 
   "storage.fab.label": "Storage actions",
@@ -264,6 +265,7 @@ export const en = {
   "settings.nav.members": "Household members",
   "settings.nav.dinnerDuty": "Dinner duty",
   "settings.nav.store": "Store layout",
+  "settings.nav.storage": "Storage",
   "settings.nav.admin": "Administration",
   "settings.nav.stats": "Statistics",
   "settings.nav.calendarSync": "Calendar sync",
@@ -275,6 +277,7 @@ export const en = {
   "settings.root.members.supporting": "{count} / 10 members",
   "settings.root.dinnerDuty.supporting": "Who cooks on each day",
   "settings.root.store.supporting": "Aisles and stale items",
+  "settings.root.storage.supporting": "Boxes, locations and labels",
   "settings.root.admin.supporting": "Users, lists and statistics",
   "settings.root.calendarSync.supporting": "Sync the meal plan to your calendar",
 
@@ -292,8 +295,6 @@ export const en = {
   "settings.appearance.haptics.description": "A short vibration when you tick off or add items. Applies to this device only.",
   "settings.appearance.preferPhoneUi.label": "Use phone layout",
   "settings.appearance.preferPhoneUi.description": "Show the phone-style layout even on this wide screen. Applies to this device only.",
-  "settings.appearance.storageModule.label": "Storage module",
-  "settings.appearance.storageModule.description": "Show the Storage tab (personal preview). Applies to this device only.",
 
   "settings.language.label": "Language",
   "settings.language.description": "The language the app is shown in. Applies to this device only.",
@@ -348,6 +349,9 @@ export const en = {
   "settings.store.stale.days": "Number of days",
   "settings.store.stale.decrease": "Decrease the number of days",
   "settings.store.stale.increase": "Increase the number of days",
+
+  "settings.storage.showTab.label": "Show Storage tab",
+  "settings.storage.showTab.description": "Show the Storage tab in the main navigation. Applies to this device only.",
 
   "settings.calendarSync.label": "Subscribe from your calendar app",
   "settings.calendarSync.explain": "Generate a personal link and add it to Google, Apple, or Outlook Calendar as a \"subscribe by URL\" feed. New and changed planned meals show up automatically — calendar apps typically refresh every few hours, not instantly.",
@@ -537,6 +541,7 @@ export const en = {
   "common.confirm.defaultTitle": "Are you sure?",
   "common.confirm.defaultLabel": "Confirm",
   "common.loading": "Loading...",
+  "common.retry": "Try again",
   "common.saveFailed": "Couldn't save – check your connection",
 
   "importantInfo.title": "Mark as important",

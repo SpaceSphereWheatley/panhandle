@@ -11,6 +11,7 @@ export const SETTINGS_SUBPAGE_TITLE_KEYS = {
   members: "settings.nav.members",
   "dinner-duty": "settings.nav.dinnerDuty",
   store: "settings.nav.store",
+  storage: "settings.nav.storage",
   admin: "settings.nav.admin",
   "admin/stats": "settings.nav.stats",
   "calendar-sync": "settings.nav.calendarSync",
