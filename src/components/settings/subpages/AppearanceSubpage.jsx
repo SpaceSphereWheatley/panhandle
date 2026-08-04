@@ -3,7 +3,9 @@ import { Card, SegmentedControl, Switch } from "../../../design-system/index.js"
 import { currentTheme, setTheme } from "../../../lib/theme.js";
 import { currentIntensity, setIntensity } from "../../../lib/designIntensity.js";
 import { layoutOverride, setLayoutOverride } from "../../../lib/layoutMode.js";
+import { isStorageModuleEnabled, setStorageModuleEnabled, STORAGE_TAB_USER } from "../../../lib/storageModule.js";
 import { useIsDesktopViewport } from "../../../hooks/useIsDesktop.js";
+import { useAuth } from "../../../context/AuthContext.jsx";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { useTranslation } from "../../../context/LanguageContext.jsx";
 
@@ -35,6 +37,8 @@ export function AppearanceSubpage() {
   const [haptics, setHapticsState] = useState(hapticsEnabled());
   const [preferPhoneUi, setPreferPhoneUiState] = useState(layoutOverride() === "compact");
   const isDesktopViewport = useIsDesktopViewport();
+  const [storageModuleOn, setStorageModuleOnState] = useState(isStorageModuleEnabled());
+  const { user } = useAuth();
 
   function onSetTheme(t) {
     setTheme(t);
@@ -52,6 +56,10 @@ export function AppearanceSubpage() {
   function onSetPreferPhoneUi(on) {
     setLayoutOverride(on ? "compact" : null);
     setPreferPhoneUiState(on);
+  }
+  function onSetStorageModule(on) {
+    setStorageModuleEnabled(on);
+    setStorageModuleOnState(on);
   }
 
   return (
@@ -83,6 +91,15 @@ export function AppearanceSubpage() {
           description={t("settings.appearance.preferPhoneUi.description")}
         >
           <Switch checked={preferPhoneUi} onChange={onSetPreferPhoneUi} />
+        </SubpageSection>
+      )}
+
+      {user === STORAGE_TAB_USER && (
+        <SubpageSection
+          label={t("settings.appearance.storageModule.label")}
+          description={t("settings.appearance.storageModule.description")}
+        >
+          <Switch checked={storageModuleOn} onChange={onSetStorageModule} />
         </SubpageSection>
       )}
     </Card>

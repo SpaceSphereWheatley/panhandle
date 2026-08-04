@@ -13,13 +13,13 @@ const STORAGE_BOXES_KEY = "ph_storage_boxes_v1";
 // number, a single location string, and its own content list. English-only
 // like meal names — throwaway fixture data, not real user content.
 const SEED_BOXES = [
-  { id: "seed-1", number: "B-001", name: "Christmas decorations", location: "Garage", items: ["Christmas lights", "Ornaments", "Tree stand"] },
-  { id: "seed-2", number: "B-002", name: "Tools", location: "Garage", items: ["Tool box", "Extension cords", "Paint cans"] },
-  { id: "seed-3", number: "B-003", name: "Winter tires", location: "Garage", items: ["Winter tires (set of 4)"] },
-  { id: "seed-4", number: "B-004", name: "Photo albums", location: "Attic", items: ["Old photo albums", "Baby clothes"] },
-  { id: "seed-5", number: "B-005", name: "Camping gear", location: "Attic", items: ["Camping tent", "Spare pillows", "Sleeping bags"] },
-  { id: "seed-6", number: "B-006", name: "Party supplies", location: "Kitchen cupboard (top shelf)", items: ["Fondue set", "Waffle iron", "Extra glasses", "Picnic basket"] },
-  { id: "seed-7", number: "B-007", name: "Games & seasonal decor", location: "Basement shelf 2", items: ["Board games", "Suitcases", "Ski boots", "Fairy lights", "Halloween decorations"] },
+  { id: "seed-1", number: "001", name: "Christmas decorations", location: "Garage", items: ["Christmas lights", "Ornaments", "Tree stand"] },
+  { id: "seed-2", number: "002", name: "Tools", location: "Garage", items: ["Tool box", "Extension cords", "Paint cans"] },
+  { id: "seed-3", number: "003", name: "Winter tires", location: "Garage", items: ["Winter tires (set of 4)"] },
+  { id: "seed-4", number: "004", name: "Photo albums", location: "Attic", items: ["Old photo albums", "Baby clothes"] },
+  { id: "seed-5", number: "005", name: "Camping gear", location: "Attic", items: ["Camping tent", "Spare pillows", "Sleeping bags"] },
+  { id: "seed-6", number: "006", name: "Party supplies", location: "Kitchen cupboard (top shelf)", items: ["Fondue set", "Waffle iron", "Extra glasses", "Picnic basket"] },
+  { id: "seed-7", number: "007", name: "Games & seasonal decor", location: "Basement shelf 2", items: ["Board games", "Suitcases", "Ski boots", "Fairy lights", "Halloween decorations"] },
 ];
 
 export function loadBoxes() {
@@ -30,14 +30,16 @@ export function saveBoxes(boxes) {
   writeCache(STORAGE_BOXES_KEY, boxes);
 }
 
-// "B-001", "B-002", ... — the next unused sequential number, so a box kept
+// "001", "002", ... — the next unused sequential number, so a box kept
 // through edits/deletes never gets renumbered and a new one never collides.
+// Plain digits, no letter prefix, so it's short enough to hand-write on a
+// physical box/sticker next to the printed QR code — see BoxLabelsModal.jsx.
 export function nextBoxNumber(boxes) {
   const max = boxes.reduce((m, b) => {
-    const match = /^B-(\d+)$/.exec(b.number || "");
+    const match = /^(\d+)$/.exec(b.number || "");
     return match ? Math.max(m, parseInt(match[1], 10)) : m;
   }, 0);
-  return `B-${String(max + 1).padStart(3, "0")}`;
+  return String(max + 1).padStart(3, "0");
 }
 
 export function newBoxId() {
