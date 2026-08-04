@@ -238,13 +238,48 @@ refinement if the cutting gets tedious.
 @page { size: A4; margin: 10mm; }
 ```
 
-**The current print CSS does not survive multi-page output.** `index.css`'s
-`@media print` block hides siblings with `visibility: hidden` and pulls
-`.storage-print-labels` out with `position: absolute` — fine for one
-screenful, but absolutely-positioned content doesn't paginate, and 12 labels
-per sheet means a full household is ~25 sheets. Rewrite it to `display: none`
-the siblings and leave the grid in normal flow, with
-`break-inside: avoid` on each sticker so none is split across a page break.
+**Fixed — three independent bugs, each found and confirmed by actually
+rendering it through Chromium's headless PDF output (`page.pdf()`), not by
+reading the CSS and reasoning about it:**
+
+1. The sticker grid was `display: grid`
+   (`grid-template-columns: repeat(auto-fill, minmax(96px, 1fr))`) —
+   Chromium doesn't fragment a grid container across printed pages at all,
+   so a batch larger than one sheet's worth got force-fit onto a single
+   page instead of flowing onto a second. Fixed by switching to plain
+   `inline-block` stickers (`break-inside`/`page-break-inside: avoid` so
+   none splits across a page boundary), the oldest and most
+   print-fragmentation-safe CSS layout mode.
+2. The `visibility: hidden`/`visibility: visible` hide-everything-but-the-
+   grid trick itself was never the problem and is kept exactly as it was —
+   it has to be `visibility`, not `display`: `.storage-print-labels` sits
+   nested many levels deep inside Modal/Sheet's own tree (no portal — see
+   Sheet.jsx). A `display: none` ancestor removes the whole subtree from
+   the render tree with no way for any descendant, however specific its own
+   selector, to undo that; only `visibility` allows the override. A draft of
+   this fix tried switching to `display` anyway (chasing bug 1) and it
+   silently broke rendering entirely — every sticker collapsed to a
+   zero-size box at the top-left corner.
+3. Separately, `.storage-print-labels` still rendered at the wrong width
+   and pagination stayed capped at a fixed page count regardless of how
+   many stickers were added — traced to Sheet's backdrop being
+   `position: fixed` (an inline style, no class name to target). Left
+   alone, that fixed ancestor becomes `.storage-print-labels`'s containing
+   block for its own `position: absolute`, and Chromium's print layout
+   resolves both its width (`width: 100%` measured narrower than the real
+   page — fixed with an explicit `width: 190mm` literal instead) and its
+   pagination against that fixed ancestor's box instead of the true page.
+   Fixed by adding `body * { position: static !important }` under print —
+   a stylesheet `!important` is one of the few things that can override an
+   inline `style` attribute — which removes every fixed/positioned ancestor
+   as a positioning context, so `.storage-print-labels`'s own
+   `position: absolute` resolves against the true page box.
+
+Verified end to end: a battery of sticker counts (1, 11, 12, 13, 24, 25, 36,
+37) against the real nested Modal/Sheet DOM shape (including the
+`position: fixed` backdrop) each produced exactly `Math.ceil(count / 12)`
+pages, with correct A4 page dimensions and forced black-on-white QR
+contrast regardless of the on-screen theme (see below).
 
 ### Two print paths, one modal
 

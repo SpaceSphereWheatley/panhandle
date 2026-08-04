@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, Badge, Input, FabMenu, EmptyState } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
+import { api } from "../lib/api.js";
+import { apiErrorMessage } from "../lib/apiError.js";
 import { haptic } from "../lib/shoppingUtils.js";
-import { loadBoxes, saveBoxes, nextBoxNumber, matchesQuery } from "../lib/storageBoxes.js";
+import { formatBoxNumber, matchesQuery, boxDeepLinkUrl } from "../lib/storageBoxes.js";
 import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
 import { QrScanModal } from "../components/storage/QrScanModal.jsx";
 import { BoxLabelsModal } from "../components/storage/BoxLabelsModal.jsx";
@@ -17,12 +20,12 @@ function BoxCard({ box, onClick, t }) {
     <Card interactive onClick={onClick}>
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0, width: 48, height: 48 }}>
-          <BoxQrCode value={box.number} size={48} />
+          <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={48} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)", fontWeight: 700 }}>
-              {box.number}
+              {formatBoxNumber(box.number)}
             </span>
             <span style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: "var(--text-md)" }}>{box.name}</span>
           </div>
@@ -60,45 +63,92 @@ function BoxCard({ box, onClick, t }) {
   );
 }
 
-/** Storage/box-organization concept preview — see AppShell.jsx for the
- * account-gated visibility. Boxes are the primary entity (a location + a
- * content list each), held in React state and mirrored to localStorage via
- * storageBoxes.js so add/edit/delete survive a reload, but nothing is ever
- * sent to a server — this whole tab has no backend. */
-export function StorageTab({ active }) {
+/** Storage/box-organization tab — see AppShell.jsx for the account+device
+ * gating (STORAGE_TAB_USER client-side, hasStorageAccess server-side; see
+ * docs/storage-module-plan.md). Boxes are real household-shared data now
+ * (GET/POST/PATCH/DELETE /storage/boxes), not localStorage. Unlike
+ * ShoppingListTab/MealsTab there's no 7s poll — read-mostly reference data,
+ * so this loads once when the tab first becomes active and again after any
+ * write, rather than continuously.
+ *
+ * `pendingBoxNumber`/`onConsumedPendingBoxNumber`: a scanned box's deep link
+ * (.../b/{number}, see App.jsx and worker/index.js's ROUTING section) lands
+ * here already switched to this tab by AppShell. Resolved the same way as
+ * an in-app camera scan (see `openBoxByNumber` below) — no intermediate
+ * "is this the right one?" step (the scan itself is the confirmation, per
+ * the doc), independent of whether the full box list has loaded yet. */
+export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumber }) {
   const t = useTranslation();
-  const [boxes, setBoxes] = useState(loadBoxes);
+  const toast = useToast();
+  const [boxes, setBoxes] = useState([]);
+  const [loadedOnce, setLoadedOnce] = useState(false);
   const [query, setQuery] = useState("");
-  const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box? }
+  const [editingBox, setEditingBox] = useState(null); // { mode: "new" | "edit", box?, claimNumber? }
   const [scanning, setScanning] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
 
+  async function loadBoxes() {
+    try {
+      const res = await api("/storage/boxes");
+      if (Array.isArray(res)) setBoxes(res);
+    } catch {
+      toast(t("storage.toast.loadFailed"), { error: true });
+    }
+  }
+
   useEffect(() => {
-    saveBoxes(boxes);
-  }, [boxes]);
+    if (active && !loadedOnce) {
+      setLoadedOnce(true);
+      loadBoxes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, loadedOnce]);
+
+  // Shared by both entry points that resolve a scanned/deep-linked number —
+  // the in-app camera scanner and the .../b/{number} URL below. A number
+  // with no box yet (STORAGE_BOX_NOT_FOUND) isn't necessarily an error: it's
+  // also what a reserved-but-unfilled number looks like (POST
+  // /storage/boxes/reserve), or a deleted box's old sticker — the doc calls
+  // for the same "set it up?" screen in every one of those cases, so this
+  // opens a new-box editor pre-targeting that exact number (via
+  // BoxEditModal's claimNumber prop / POST /storage/boxes's claim_number)
+  // rather than surfacing the 404 as a toast.
+  async function openBoxByNumber(number) {
+    try {
+      const res = await api(`/storage/boxes/by-number/${number}`);
+      if (res.error) {
+        if (res.code === "STORAGE_BOX_NOT_FOUND") {
+          setEditingBox({ mode: "new", claimNumber: Number(number) });
+        } else {
+          toast(apiErrorMessage(res, t), { error: true });
+        }
+      } else {
+        setEditingBox({ mode: "edit", box: res });
+      }
+    } catch {
+      toast(t("storage.toast.loadFailed"), { error: true });
+    }
+  }
+
+  useEffect(() => {
+    if (!pendingBoxNumber) return;
+    let cancelled = false;
+    openBoxByNumber(pendingBoxNumber).finally(() => {
+      if (!cancelled) onConsumedPendingBoxNumber?.();
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBoxNumber]);
 
   const filtered = useMemo(
-    () => boxes.filter((box) => matchesQuery(box, query)).sort((a, b) => a.number.localeCompare(b.number)),
+    () => boxes.filter((box) => matchesQuery(box, query)).sort((a, b) => a.number - b.number),
     [boxes, query]
   );
 
   const existingLocations = useMemo(
-    () => [...new Set(boxes.map((b) => b.location))].sort(),
+    () => [...new Set(boxes.map((b) => b.location).filter(Boolean))].sort(),
     [boxes]
   );
-
-  function saveBox(boxData) {
-    setBoxes((prev) => {
-      const exists = prev.some((b) => b.id === boxData.id);
-      return exists ? prev.map((b) => (b.id === boxData.id ? boxData : b)) : [...prev, boxData];
-    });
-    setEditingBox(null);
-  }
-
-  function deleteBox(id) {
-    setBoxes((prev) => prev.filter((b) => b.id !== id));
-    setEditingBox(null);
-  }
 
   return (
     <div style={{ padding: "var(--space-4)", maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -148,21 +198,22 @@ export function StorageTab({ active }) {
       {editingBox && (
         <BoxEditModal
           box={editingBox.box || null}
-          nextNumber={nextBoxNumber(boxes)}
+          claimNumber={editingBox.claimNumber}
           existingLocations={existingLocations}
           onClose={() => setEditingBox(null)}
-          onSave={saveBox}
-          onDelete={deleteBox}
+          onSaved={() => {
+            setEditingBox(null);
+            loadBoxes();
+          }}
         />
       )}
 
       {scanning && (
         <QrScanModal
-          boxes={boxes}
           onClose={() => setScanning(false)}
-          onFound={(box) => {
+          onFound={(number) => {
             setScanning(false);
-            setEditingBox({ mode: "edit", box });
+            openBoxByNumber(number);
           }}
         />
       )}

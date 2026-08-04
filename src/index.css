@@ -61,19 +61,105 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
   .qr-scan-line { animation: none; top: 50%; }
 }
 
-/* Box label stickers (StorageTab's FAB → BoxLabelsModal.jsx "Print" button).
-   Printing straight out of a modal would otherwise print the whole app
-   shell behind it (fixed header/tab bar, backdrop, everything) — this is the
-   standard print-isolation trick: hide the entire page, then re-reveal just
-   the sticker grid and size it to the page instead of the modal's width. */
+/* Box label stickers (StorageTab's FAB → BoxLabelsModal.jsx "Print"
+   button). The grid is print-only content — BoxLabelsModal's own on-screen
+   UI is a compact checkbox list / reserve form, not a second visual copy of
+   the sheet, so `.storage-print-labels` stays display:none until printing.
+
+   Everything below was arrived at empirically, by actually rendering test
+   pages through Chromium's headless PDF output (page.pdf(), not just
+   emulateMedia — see the PR): three separate, independent bugs, each with a
+   plausible-looking fix that turned out to be wrong on its own.
+
+   1. Hiding the rest of the page has to use `visibility`, not `display`.
+      `.storage-print-labels` sits nested many levels deep inside
+      Modal/Sheet's own tree (Sheet has no portal — see Sheet.jsx). A
+      `visibility: hidden` ancestor still lets a `visibility: visible`
+      descendant repaint — that override is exactly why the original code
+      used it — but a `display: none` ancestor removes the whole subtree
+      from the render tree with no way for any descendant, however specific
+      its own selector, to undo that. A first attempt here switched to
+      `display` to chase bug 2 below and it silently broke rendering
+      entirely (every sticker collapsed to a zero-size box at the top-left
+      corner).
+   2. The sticker grid itself must not be CSS Grid. Verified: a grid
+      container simply doesn't fragment across printed pages in Chromium —
+      14 stickers all got force-fit onto a single page instead of the
+      expected 12 + 2 overflowing onto a second, silently clipping past the
+      first sheet. Plain inline-block, the oldest and most
+      print-fragmentation-safe CSS layout mode, wraps the extra onto
+      additional sheets correctly.
+   3. `.storage-print-labels` itself needs `position: static !important` on
+      every OTHER element on the page (see the `body *` rule below), not
+      just `visibility: hidden` — Sheet's backdrop is `position: fixed`
+      (Sheet.jsx), an inline style with no class name to target directly.
+      Left alone, that fixed ancestor becomes `.storage-print-labels`'s
+      containing block for its own `position: absolute`, and under
+      Chromium's print layout specifically that silently corrupts both the
+      container's resolved width (a plain 190mm literal instead fixed this,
+      `width: 100%` measured narrower than the real page) and pagination
+      itself (page count stayed frozen at a fixed number regardless of how
+      many stickers were added). Forcing every ancestor to `position: static`
+      under print — a stylesheet `!important` is one of the few things that
+      *can* override an inline `style` attribute — removes the fixed
+      backdrop as a positioning context entirely, so `.storage-print-labels`'s
+      own `position: absolute` resolves against the true page box instead. */
+.storage-print-labels {
+  display: none;
+}
 @media print {
-  body * { visibility: hidden; }
+  /* A4, 3 columns x 4 rows = 12 stickers/sheet (docs/storage-module-plan.md).
+     A 10mm page margin leaves a 190x277mm usable area, so each cell is
+     190/3mm wide, 277/4mm tall — via calc() for exact division rather than
+     a rounded decimal. No `gap` on the container, since each sticker's own
+     dashed border already doubles as the cut line. */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  body * { visibility: hidden; position: static !important; }
   .storage-print-labels, .storage-print-labels * { visibility: visible; }
   .storage-print-labels {
-    position: absolute;
+    display: block !important;
+    position: absolute !important;
     top: 0;
     left: 0;
-    width: 100%;
+    width: 190mm; /* not 100% — see bug 3 above */
+    font-size: 0; /* collapses the whitespace gap inline-block would otherwise leave between stickers */
+  }
+  .storage-sticker {
+    display: inline-block;
+    width: calc(190mm / 3);
+    height: calc(277mm / 4);
+    vertical-align: top;
+    box-sizing: border-box;
+    border: 1.5px dashed #999;
+    font-size: 12pt; /* reset after .storage-print-labels' font-size: 0 */
+    text-align: center;
+    /* Keeps a sticker from being split across a page boundary once a
+       sheet's 12 cells fill up — break-inside is the modern property,
+       page-break-inside the older name some engines still key off. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Explicit black-on-white, not the theme's --text-primary/--surface-card:
+     under a dark theme those resolve to a light foreground on a dark
+     background (meant for an on-screen surface, not paper), which a
+     printer either renders as invisible or inverted-contrast — either way
+     unscannable. A printed QR code's contrast has to be right regardless
+     of which theme generated it. */
+  .storage-sticker svg {
+    width: 45mm !important;
+    height: 45mm !important;
+  }
+  .storage-sticker svg rect { fill: #000 !important; }
+  .storage-sticker svg rect:first-child { fill: #fff !important; }
+  .storage-sticker__number {
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    font-size: 14pt;
+    color: #000;
+    margin-top: 6px;
   }
 }
 

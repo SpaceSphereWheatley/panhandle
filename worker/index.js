@@ -1167,6 +1167,23 @@ export function isSuperAdmin(username, env) {
   return allowed.includes((username || "").toLowerCase());
 }
 
+// Server-side gate for the storage module (docs/storage-module-plan.md),
+// beyond the client-side STORAGE_TAB_USER check in storageModule.js. That
+// client check alone was fine while there was no backend behind it — it
+// isn't once these endpoints exist, since a hidden tab doesn't stop any
+// account from calling them directly. Same allowlist shape as isSuperAdmin.
+// Remove this (and STORAGE_BETA_USERNAMES) at v2 launch.
+export function hasStorageAccess(username, env) {
+  const allowed = (env.STORAGE_BETA_USERNAMES || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes((username || "").toLowerCase());
+}
+
+// Bounds GET /storage/boxes's payload (every live box + every box's items,
+// in one response) — every other bounded thing in this app has a cap too
+// (10 users, 710 catalogue items). Independent of lists.next_box_number,
+// which only ever increases and isn't bounded by this.
+const STORAGE_BOX_CAP = 300;
+
 // Builds the same {token, user, is_admin, is_owner, list_id, is_superadmin}
 // shape that /login, /register, /reset-password, and /auth/google all return,
 // so the frontend has one response shape to store regardless of which path
@@ -1640,6 +1657,18 @@ export default {
       // preview's own hostname keeps using /app.html for click-testing (see
       // CLAUDE.md's testing conventions).
       if (url.hostname === "shop.panhandle.app" && url.pathname === "/") {
+        pagesUrl.pathname = "/app.html";
+      }
+      // The storage module's QR/deep-link route (docs/storage-module-plan.md):
+      // a scanned box's sticker encodes .../b/{number}, and the app itself
+      // has to be loaded (app.html) before it can read that path and open
+      // the box (see App.jsx's pendingBoxNumber). Unlike the "/" rewrite
+      // above, this is NOT hostname-gated — there's no static content
+      // (public/ has no "b" directory) at this path on any hostname to
+      // collide with, so a branch/commit preview's own generated deep links
+      // (built from window.location.origin, whatever that preview's host
+      // is) work for click-testing too, the same as everywhere else.
+      if (/^\/b\/\d+$/.test(url.pathname)) {
         pagesUrl.pathname = "/app.html";
       }
       // Cloudflare Pages auto-redirects a request for "*.html" to the
@@ -2230,6 +2259,9 @@ export default {
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(user.list_id),
+            // storage_box_items cascades automatically from this (its FK is
+            // to storage_boxes(id), not lists(id) directly).
+            env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(user.list_id),
             // list_presence references lists(id) without ON DELETE CASCADE, so
             // it must be cleared before the DELETE FROM lists below or that
             // final statement hits a FK violation and aborts the whole batch
@@ -2469,6 +2501,7 @@ export default {
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
             // aborts on a FK violation.
@@ -3253,6 +3286,166 @@ export default {
       } catch (e) {
         return authedErr("DB_ERROR", 500, { detail: e?.message ?? String(e) });
       }
+      return authedJson({ ok: true });
+    }
+
+    // ===== STORAGE MODULE (docs/storage-module-plan.md) =====
+    // Boxes with a location and a content list, identified by a per-list
+    // number printed on a physical sticker. Beta-gated via hasStorageAccess
+    // on top of the client-side STORAGE_TAB_USER check (storageModule.js) —
+    // a hidden tab alone doesn't stop any account from calling these
+    // directly once they exist. Single gate point covering every route
+    // below, so ungating at v2 launch is deleting this one check.
+    if (path.startsWith("/storage/") && !hasStorageAccess(user.username, env)) {
+      return authedErr("STORAGE_NOT_ENABLED", 403);
+    }
+
+    if (path === "/storage/boxes" && method === "GET") {
+      const { results: boxes } = await env.DB.prepare(
+        "SELECT id, number, name, location, notes, created_by, created_at, edited_by, edited_at FROM storage_boxes WHERE list_id = ?1 ORDER BY number ASC"
+      ).bind(user.list_id).all();
+      const { results: items } = await env.DB.prepare(`
+        SELECT sbi.box_id, sbi.name
+        FROM storage_box_items sbi
+        JOIN storage_boxes sb ON sb.id = sbi.box_id
+        WHERE sb.list_id = ?1
+        ORDER BY sbi.box_id ASC, sbi.position ASC
+      `).bind(user.list_id).all();
+      const itemsByBox = new Map();
+      for (const it of items) {
+        if (!itemsByBox.has(it.box_id)) itemsByBox.set(it.box_id, []);
+        itemsByBox.get(it.box_id).push(it.name);
+      }
+      return authedJson(boxes.map((b) => ({ ...b, items: itemsByBox.get(b.id) || [] })));
+    }
+
+    if (path === "/storage/boxes" && method === "POST") {
+      const body = await readJson(request);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
+      const name = (body.name || "").trim();
+      if (!name) return authedErr("STORAGE_BOX_NAME_REQUIRED", 400);
+      const location = (body.location || "").trim();
+      const notes = (body.notes || "").trim();
+      const items = Array.isArray(body.items) ? body.items.map((s) => String(s).trim()).filter(Boolean) : [];
+
+      const { count: liveCount } = await env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM storage_boxes WHERE list_id = ?1"
+      ).bind(user.list_id).first();
+      if (liveCount >= STORAGE_BOX_CAP) return authedErr("STORAGE_BOX_LIMIT", 400);
+
+      let number;
+      if (body.claim_number !== undefined) {
+        // Claiming a number reserved earlier (POST /storage/boxes/reserve)
+        // whose sticker got printed and stuck on a box before the box
+        // itself existed in the app — the scan-a-blank-sticker flow the
+        // reserve endpoint exists for. Only ever a number this list's own
+        // counter has already advanced past (never a client-chosen value —
+        // same guarantee as the auto-allocate path below) and that no live
+        // box currently holds.
+        const claimed = parseInt(body.claim_number, 10);
+        const list = await env.DB.prepare("SELECT next_box_number FROM lists WHERE id = ?1").bind(user.list_id).first();
+        const alreadyUsed = Number.isInteger(claimed) && claimed >= 1 && claimed < list.next_box_number
+          ? await env.DB.prepare("SELECT id FROM storage_boxes WHERE list_id = ?1 AND number = ?2").bind(user.list_id, claimed).first()
+          : true; // out of range counts as unavailable without a second query
+        if (alreadyUsed) return authedErr("STORAGE_BOX_NUMBER_UNAVAILABLE", 400);
+        number = claimed;
+      } else {
+        // Server allocates the number, never accepted from the request body —
+        // monotonic per-list counter, not MAX(number)+1, so a deleted box's
+        // number is never reissued to a new one (see the migration's comment).
+        const allocated = await env.DB.prepare(
+          "UPDATE lists SET next_box_number = next_box_number + 1 WHERE id = ?1 RETURNING next_box_number - 1 AS number"
+        ).bind(user.list_id).first();
+        number = allocated.number;
+      }
+
+      const box = await env.DB.prepare(`
+        INSERT INTO storage_boxes (list_id, number, name, location, notes, created_by)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        RETURNING id, number, name, location, notes, created_by, created_at, edited_by, edited_at
+      `).bind(user.list_id, number, name, location, notes, user.username).first();
+
+      if (items.length) {
+        await env.DB.batch(items.map((itemName, i) =>
+          env.DB.prepare("INSERT INTO storage_box_items (box_id, name, position) VALUES (?1, ?2, ?3)")
+            .bind(box.id, itemName, i)
+        ));
+      }
+      return authedJson({ ...box, items });
+    }
+
+    // A reserved number is burned by bumping the counter but creates no box
+    // row — prints a sheet of blank-numbered stickers for boxes that don't
+    // exist yet, labeled once at packing time and filled in later by
+    // scanning. Bounded to 60 (5 sheets at 12/sheet) per request.
+    if (path === "/storage/boxes/reserve" && method === "POST") {
+      const body = await readJson(request);
+      // Same "clamp to a sane default rather than reject" shape as POST
+      // /list's addQty — a missing/garbage count reserves one number rather
+      // than erroring, and an oversized one is silently capped at 60 (5
+      // sheets at 12/sheet) instead of refused.
+      const count = Math.min(60, Math.max(1, parseInt(body?.count, 10) || 1));
+      const allocated = await env.DB.prepare(
+        "UPDATE lists SET next_box_number = next_box_number + ?2 WHERE id = ?1 RETURNING next_box_number - ?2 AS start"
+      ).bind(user.list_id, count).first();
+      const numbers = Array.from({ length: count }, (_, i) => allocated.start + i);
+      return authedJson({ numbers });
+    }
+
+    // The QR/deep-link lookup (GET /b/{number}, see the ROUTING section) —
+    // resolves a scanned number within the caller's own list only. The
+    // number isn't a secret and the URL is guessable, so this must never
+    // resolve globally: a number that doesn't exist in your list is a clean
+    // STORAGE_BOX_NOT_FOUND, not someone else's data.
+    const byNumberMatch = path.match(/^\/storage\/boxes\/by-number\/(\d+)$/);
+    if (byNumberMatch && method === "GET") {
+      const box = await env.DB.prepare(
+        "SELECT id, number, name, location, notes, created_by, created_at, edited_by, edited_at FROM storage_boxes WHERE list_id = ?1 AND number = ?2"
+      ).bind(user.list_id, Number(byNumberMatch[1])).first();
+      if (!box) return authedErr("STORAGE_BOX_NOT_FOUND", 404);
+      const { results: items } = await env.DB.prepare(
+        "SELECT name FROM storage_box_items WHERE box_id = ?1 ORDER BY position ASC"
+      ).bind(box.id).all();
+      return authedJson({ ...box, items: items.map((i) => i.name) });
+    }
+
+    const storageBoxIdMatch = path.match(/^\/storage\/boxes\/(\d+)$/);
+    if (storageBoxIdMatch && method === "PATCH") {
+      const boxId = Number(storageBoxIdMatch[1]);
+      const existing = await env.DB.prepare(
+        "SELECT id FROM storage_boxes WHERE id = ?1 AND list_id = ?2"
+      ).bind(boxId, user.list_id).first();
+      if (!existing) return authedErr("STORAGE_BOX_NOT_FOUND", 404);
+
+      const body = await readJson(request);
+      if (!body) return authedErr("INVALID_REQUEST", 400);
+      const name = (body.name || "").trim();
+      if (!name) return authedErr("STORAGE_BOX_NAME_REQUIRED", 400);
+      const location = (body.location || "").trim();
+      const notes = (body.notes || "").trim();
+      // Items replace wholesale — the list is small enough that diffing
+      // isn't worth it (same reasoning as the doc's endpoint table).
+      const items = Array.isArray(body.items) ? body.items.map((s) => String(s).trim()).filter(Boolean) : [];
+
+      await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE storage_boxes SET name = ?1, location = ?2, notes = ?3, edited_by = ?4, edited_at = datetime('now') WHERE id = ?5"
+        ).bind(name, location, notes, user.username, boxId),
+        env.DB.prepare("DELETE FROM storage_box_items WHERE box_id = ?1").bind(boxId),
+        ...items.map((itemName, i) =>
+          env.DB.prepare("INSERT INTO storage_box_items (box_id, name, position) VALUES (?1, ?2, ?3)")
+            .bind(boxId, itemName, i)
+        ),
+      ]);
+      return authedJson({ ok: true });
+    }
+
+    if (storageBoxIdMatch && method === "DELETE") {
+      const boxId = Number(storageBoxIdMatch[1]);
+      const result = await env.DB.prepare(
+        "DELETE FROM storage_boxes WHERE id = ?1 AND list_id = ?2"
+      ).bind(boxId, user.list_id).run();
+      if (!result.meta.changes) return authedErr("STORAGE_BOX_NOT_FOUND", 404);
       return authedJson({ ok: true });
     }
 

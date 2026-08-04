@@ -57,6 +57,15 @@ workers_dev = true
 APP_ORIGIN = "https://shop.panhandle.app"
 EMAIL_FROM_ADDRESS = "Panhandle <noreply@panhandle.app>"
 
+# Comma-separated allowlist gating the storage module (docs/storage-module-plan.md)
+# beyond the client-side STORAGE_TAB_USER check in src/lib/storageModule.js —
+# same shape as SUPERADMIN_USERNAMES, but a plain [vars] entry rather than a
+# dashboard secret since these are email addresses, not credentials, and one
+# is already version-controlled in storageModule.js. Remove this var (and the
+# hasStorageAccess() check in worker/index.js) at v2 launch, once the module
+# has proven itself in real use and is ready to ungate for everyone.
+STORAGE_BETA_USERNAMES = "mohibb91@gmail.com"
+
 # Secrets (set under Worker -> Settings -> Variables and Secrets):
 #   JWT_SECRET            - long random string, signs login tokens
 #   TURNSTILE_SECRET_KEY  - Cloudflare Turnstile secret key (Turnstile dashboard, separate from Workers)

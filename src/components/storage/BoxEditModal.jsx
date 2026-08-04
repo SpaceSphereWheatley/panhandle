@@ -6,42 +6,58 @@ import { BoxQrCode } from "./BoxQrCode.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
-import { newBoxId } from "../../lib/storageBoxes.js";
+import { api } from "../../lib/api.js";
+import { apiErrorMessage } from "../../lib/apiError.js";
+import { formatBoxNumber, boxDeepLinkUrl } from "../../lib/storageBoxes.js";
 
 const LOCATIONS_DATALIST_ID = "storage-box-location-options";
 
-// Add (box=null) or edit (box given) a box, entirely in local component
-// state — see StorageTab.jsx for how the result is merged into the
-// localStorage-backed list. No server call, so there's no error/loading
-// state to handle, unlike every other *EditModal in the app.
-export function BoxEditModal({ box, nextNumber, existingLocations, onClose, onSave, onDelete }) {
+// Add (box=null) or edit (box given) a box against the real /storage/boxes
+// endpoints (docs/storage-module-plan.md) — same server-call-inside-the-modal
+// shape as ItemEditModal, rather than handing data back to the caller to
+// persist. The server allocates the box number (never accepted from the
+// client), so a plain new box has no number to show until after it's saved.
+//
+// `claimNumber` (only meaningful when box=null): set when this add flow was
+// reached via StorageTab's openBoxByNumber — scanning a reserved-but-unfilled
+// sticker, or one whose old box was deleted — "set it up?" for that exact
+// number rather than a fresh one, sent as POST /storage/boxes's claim_number.
+export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onSaved }) {
   const toast = useToast();
   const confirm = useConfirm();
   const t = useTranslation();
   const [name, setName] = useState(box?.name || "");
   const [location, setLocation] = useState(box?.location || "");
   const [items, setItems] = useState(box?.items || []);
-  const number = box?.number || nextNumber;
 
   return (
-    <Modal onClose={onClose} title={t(box ? "storage.edit.title" : "storage.edit.newTitle")}>
+    <Modal onClose={onClose} title={t(box ? "storage.edit.title" : claimNumber ? "storage.edit.setupTitle" : "storage.edit.newTitle")}>
       {(requestClose) => {
-        function save() {
+        async function save() {
           const trimmedName = name.trim();
           const trimmedLocation = location.trim();
           if (!trimmedName || !trimmedLocation) {
             toast(t("storage.edit.requiredFields"), { error: true });
             return;
           }
-          requestClose(() =>
-            onSave({
-              id: box?.id || newBoxId(),
-              number,
-              name: trimmedName,
-              location: trimmedLocation,
-              items,
-            })
-          );
+          const body = JSON.stringify({
+            name: trimmedName, location: trimmedLocation, items,
+            ...(box ? {} : claimNumber ? { claim_number: claimNumber } : {}),
+          });
+          let res;
+          try {
+            res = box
+              ? await api(`/storage/boxes/${box.id}`, { method: "PATCH", body })
+              : await api("/storage/boxes", { method: "POST", body });
+          } catch {
+            toast(t("storage.toast.saveFailed"), { error: true });
+            return;
+          }
+          if (res.error) {
+            toast(apiErrorMessage(res, t), { error: true });
+            return;
+          }
+          requestClose(onSaved);
         }
 
         async function deleteBox() {
@@ -52,21 +68,51 @@ export function BoxEditModal({ box, nextNumber, existingLocations, onClose, onSa
             }))
           )
             return;
-          requestClose(() => onDelete(box.id));
+          try {
+            await api(`/storage/boxes/${box.id}`, { method: "DELETE" });
+          } catch {
+            toast(t("storage.toast.deleteFailed"), { error: true });
+            return;
+          }
+          requestClose(onSaved);
         }
 
         return (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
-              <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
-                <BoxQrCode value={number} size={72} />
-              </div>
-              <div>
-                <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
-                  {t("storage.edit.numberLabel")}
+              {box ? (
+                <>
+                  <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
+                    <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={72} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
+                      {t("storage.edit.numberLabel")}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
+                      {formatBoxNumber(box.number)}
+                    </div>
+                  </div>
+                </>
+              ) : claimNumber ? (
+                <>
+                  <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
+                    <BoxQrCode value={boxDeepLinkUrl(claimNumber)} label={formatBoxNumber(claimNumber)} size={72} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
+                      {t("storage.edit.numberLabel")}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
+                      {formatBoxNumber(claimNumber)}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>
+                  {t("storage.edit.numberPending")}
                 </div>
-                <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>{number}</div>
-              </div>
+              )}
             </div>
 
             <label htmlFor="box-edit-name">{t("storage.edit.nameLabel")}</label>

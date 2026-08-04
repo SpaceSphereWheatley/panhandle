@@ -31,9 +31,23 @@ function SketchyFilterDefs() {
   );
 }
 
+// A scanned box sticker (docs/storage-module-plan.md) lands here as a plain
+// path — .../b/007 — not a query param like the invite/reset-token deep
+// links in AuthScreens.jsx, since the QR itself has to encode a URL a
+// phone's camera app can open with Panhandle closed (see BoxQrCode.jsx).
+// Read once at mount, kept in Root's state (not sessionStorage) since login
+// is a pure client-side state transition here, not a page navigation — the
+// value survives AuthScreens -> AppShell without needing to persist across
+// a reload.
+function pendingBoxNumberFromUrl() {
+  const m = window.location.pathname.match(/^\/b\/(\d+)$/);
+  return m ? m[1] : null;
+}
+
 function Root() {
   const { token } = useAuth();
   const [onboardingSeen, setOnboardingSeen] = useState(hasSeenOnboarding);
+  const [pendingBoxNumber, setPendingBoxNumber] = useState(pendingBoxNumberFromUrl);
 
   if (!token) return <AuthScreens />;
   if (!onboardingSeen) {
@@ -51,7 +65,10 @@ function Root() {
       <RecurringProvider>
         <CategoryOrderProvider>
           <PushProvider>
-            <AppShell />
+            <AppShell
+              pendingBoxNumber={pendingBoxNumber}
+              onConsumePendingBoxNumber={() => setPendingBoxNumber(null)}
+            />
           </PushProvider>
         </CategoryOrderProvider>
       </RecurringProvider>

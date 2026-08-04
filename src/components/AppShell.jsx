@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Header, TabBar } from "../design-system/index.js";
 import { ChangelogModal } from "./ChangelogModal.jsx";
 import { ImportantInfoModal } from "./ImportantInfoModal.jsx";
@@ -6,7 +6,19 @@ import { InstallBanner } from "./InstallBanner.jsx";
 import { ShoppingListTab } from "../tabs/ShoppingListTab.jsx";
 import { MealsTab } from "../tabs/MealsTab.jsx";
 import { SettingsTab } from "../tabs/SettingsTab.jsx";
-import { StorageTab } from "../tabs/StorageTab.jsx";
+
+// The only code-split tab, and deliberately so: it pulls in the QR encoder
+// (`qrcode`) and decoder (`jsqr`) — together ~58KB gzip, most of it jsqr's
+// pure-JS fallback decoder for browsers without BarcodeDetector — which no
+// other part of the app touches. Statically imported, every user downloaded
+// all of that to render a tab almost none of them can even see (it's gated
+// on STORAGE_TAB_USER, see below). Lazy keeps it out of the main bundle
+// until someone actually opens the tab. Worth revisiting at launch: once the
+// gate comes off this is a normal tab, and whether the split still earns its
+// keep depends on how many users reach for it.
+const StorageTab = lazy(() =>
+  import("../tabs/StorageTab.jsx").then((m) => ({ default: m.StorageTab }))
+);
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
@@ -87,7 +99,7 @@ function ImportantLegendTrigger({ onClick }) {
   );
 }
 
-export function AppShell() {
+export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   const [tab, setTab] = useState("list");
   // Tabs are mounted once (on first visit) and then kept alive, hidden via
   // CSS, so switching panes never re-fetches from an empty state — see
@@ -231,6 +243,23 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showStorageTab]);
 
+  // A scanned box's deep link (docs/storage-module-plan.md's .../b/{number}
+  // route) switches straight to the Storage tab so StorageTab can resolve
+  // and open it — see its own pendingBoxNumber effect. An account the
+  // module isn't gated for just drops the link silently rather than
+  // erroring, since this is still a beta feature.
+  useEffect(() => {
+    if (!pendingBoxNumber) return;
+    if (showStorageTab) {
+      setTab("storage");
+      setVisited((prev) => (prev.storage ? prev : { ...prev, storage: true }));
+      pushNav("storage");
+    } else {
+      onConsumePendingBoxNumber?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBoxNumber, showStorageTab]);
+
   const subpageTitleKey = tab === "settings" && settingsPath.length > 0
     ? settingsTitleKey(settingsPath)
     : null;
@@ -304,7 +333,18 @@ export function AppShell() {
             onAnimationEnd={(e) => { if (e.animationName === "ph-pane-enter") e.currentTarget.style.animation = ""; }}
             style={{ display: tab === "storage" ? "block" : "none", position: "relative" }}
           >
-            <StorageTab active={tab === "storage"} />
+            {/* No visible fallback: the pane only mounts once the tab has
+                been opened at least once (`visited.storage`), and the chunk
+                resolves from cache on every subsequent switch — a spinner
+                would flash for one frame on the first open and never again,
+                which reads worse than the pane simply appearing. */}
+            <Suspense fallback={null}>
+              <StorageTab
+                active={tab === "storage"}
+                pendingBoxNumber={pendingBoxNumber}
+                onConsumedPendingBoxNumber={onConsumePendingBoxNumber}
+              />
+            </Suspense>
           </div>
         )}
         {visited.settings && (
