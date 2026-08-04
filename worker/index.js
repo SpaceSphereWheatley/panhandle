@@ -3349,8 +3349,11 @@ export default {
     // scanning. Bounded to 60 (5 sheets at 12/sheet) per request.
     if (path === "/storage/boxes/reserve" && method === "POST") {
       const body = await readJson(request);
-      const count = Math.min(60, Math.max(1, parseInt(body?.count, 10) || 0));
-      if (!count) return authedErr("INVALID_REQUEST", 400);
+      // Same "clamp to a sane default rather than reject" shape as POST
+      // /list's addQty — a missing/garbage count reserves one number rather
+      // than erroring, and an oversized one is silently capped at 60 (5
+      // sheets at 12/sheet) instead of refused.
+      const count = Math.min(60, Math.max(1, parseInt(body?.count, 10) || 1));
       const allocated = await env.DB.prepare(
         "UPDATE lists SET next_box_number = next_box_number + ?2 WHERE id = ?1 RETURNING next_box_number - ?2 AS start"
       ).bind(user.list_id, count).first();
