@@ -8,7 +8,7 @@ import { useConfirm } from "../../context/ConfirmContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
 import { api } from "../../lib/api.js";
 import { apiErrorMessage } from "../../lib/apiError.js";
-import { formatBoxNumber } from "../../lib/storageBoxes.js";
+import { formatBoxNumber, boxDeepLinkUrl } from "../../lib/storageBoxes.js";
 
 const LOCATIONS_DATALIST_ID = "storage-box-location-options";
 
@@ -75,7 +75,7 @@ export function BoxEditModal({ box, existingLocations, onClose, onSaved }) {
               {box ? (
                 <>
                   <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
-                    <BoxQrCode value={formatBoxNumber(box.number)} size={72} />
+                    <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={72} />
                   </div>
                   <div>
                     <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>

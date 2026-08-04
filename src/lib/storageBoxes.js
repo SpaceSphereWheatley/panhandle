@@ -12,6 +12,16 @@ export function formatBoxNumber(number) {
   return String(number).padStart(3, "0");
 }
 
+// The QR/deep-link target for a box — a full URL, not a bare number, so a
+// phone's built-in camera app resolves it with Panhandle closed (the whole
+// point of a sticker on a shelf). See the /b/{number} route in worker/index.js
+// and App.jsx's boot-time handling of it. window.location.origin (not a
+// hardcoded domain) matches InviteLinkModal/CalendarFeedLinkModal's existing
+// pattern, so a branch/commit preview generates a working link to itself.
+export function boxDeepLinkUrl(number) {
+  return `${window.location.origin}/b/${formatBoxNumber(number)}`;
+}
+
 // Client-side filter over the already-loaded box list — search is the
 // primary interaction, but at household scale (tens to low hundreds of
 // boxes) there's no need for server-side search.

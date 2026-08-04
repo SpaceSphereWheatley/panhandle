@@ -4,7 +4,7 @@ import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { api } from "../lib/api.js";
 import { haptic } from "../lib/shoppingUtils.js";
-import { formatBoxNumber, matchesQuery } from "../lib/storageBoxes.js";
+import { formatBoxNumber, matchesQuery, boxDeepLinkUrl } from "../lib/storageBoxes.js";
 import { BoxEditModal } from "../components/storage/BoxEditModal.jsx";
 import { QrScanModal } from "../components/storage/QrScanModal.jsx";
 import { BoxLabelsModal } from "../components/storage/BoxLabelsModal.jsx";
@@ -19,7 +19,7 @@ function BoxCard({ box, onClick, t }) {
     <Card interactive onClick={onClick}>
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0, width: 48, height: 48 }}>
-          <BoxQrCode value={formatBoxNumber(box.number)} size={48} />
+          <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={48} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
