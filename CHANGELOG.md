@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.58.3] — 2026-08-04
+
+### Fixed
+- **"Recently bought" no longer briefly grows past its usual size when you check off an item.** Checking off a 10th item used to hold the list at 10 rows for a moment before the oldest one disappeared, rather than smoothly settling back to 9. The oldest row now fades out at the same time the new one arrives, instead of lingering after it. (`ShoppingListTab.jsx`'s `BOUGHT_CAP` slice now hands a card that falls out of the cap a synced `evicting` fade — new `evictingIds` state, mirroring the existing `resolvingIds` hold-then-resolve pattern used when an item first gets checked off — instead of relying on Framer's default `AnimatePresence` exit, whose lingering-in-place duration was what let the section balloon by one row. `ItemCard.jsx` gained a matching `evicting` prop/`onEvicted` callback.)
+
 ## [1.58.2] — 2026-08-03
 
 ### Fixed

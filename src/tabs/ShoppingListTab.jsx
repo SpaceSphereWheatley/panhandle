@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
@@ -34,6 +34,13 @@ const ITEMS_CACHE_KEY = "ph_cache_items_v1";
 // animating the card (see ItemCard's onAnimationComplete), the resolve fires
 // off the real animation finishing instead of this constant.
 const FALLBACK_RESOLVE_MS = 400;
+// Fallback duration for a "Recently bought" row's fade-out when it's pushed
+// past BOUGHT_CAP by a newer arrival and Framer isn't animating (reduced
+// motion / "classic" intensity) — mirrors FALLBACK_RESOLVE_MS's role, just
+// for the opposite transition. Kept in lockstep with ItemCard's `evicting`
+// animation duration (EVICT_ANIM_S, 0.22s) so the non-animated fallback
+// removes the row at roughly the pace a Framer user sees it finish fading.
+const EVICT_MS = 220;
 
 // Cap track width at 1/3 of the row (minus the two 8px gaps) so auto-fit
 // never lays out more than 3 columns, while still stretching a short last
@@ -183,6 +190,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // Items mid "checked-off" animation: still rendered in their category, struck
   // through and fading out, before they re-sort into "Recently bought".
   const [resolvingIds, setResolvingIds] = useState(() => new Set());
+  // "Recently bought" rows that just fell out of BOUGHT_CAP (see below) and
+  // are mid synced-fade-out rather than having simply vanished — see the
+  // cappedIdsKey effect and ItemCard's `evicting` prop.
+  const [evictingIds, setEvictingIds] = useState(() => new Set());
   // Stale-item marker threshold (days), a per-list preference — see
   // /notification-settings and NotificationsSubpage.jsx. Falls back to the app
   // default until the first fetch resolves.
@@ -206,6 +217,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const [celebrate, setCelebrate] = useState(false);
 
   const resolveTimers = useRef(new Map());
+  const evictTimers = useRef(new Map());
+  // Ids that were inside the capped "Recently bought" window on the last
+  // render this was checked — compared against on every render to notice an
+  // item that just fell out of BOUGHT_CAP while still bought, so it can be
+  // handed a synced fade-out (evictingIds) instead of silently vanishing.
+  const prevCappedIdsRef = useRef(new Set());
   const addInputRef = useRef(null);
   const suggestionRefs = useRef([]);
   // Id of the item whose resolve completion should trigger `celebrate` —
@@ -276,9 +293,12 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // mounted (hidden via CSS) once visited, see AppShell.jsx.
   useEffect(() => {
     const timers = resolveTimers.current;
+    const evTimers = evictTimers.current;
     return () => {
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
+      evTimers.forEach((t) => clearTimeout(t));
+      evTimers.clear();
       clearTimeout(celebrateTimer.current);
     };
   }, []);
@@ -465,6 +485,30 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     );
   }
 
+  // scheduleResolve's counterpart for a "Recently bought" row that's just
+  // been pushed past BOUGHT_CAP: starts the fallback timer that finally drops
+  // it from evictingIds when there's no Framer animation to key off (see
+  // EVICT_MS). When Framer is animating the card, ItemCard calls
+  // clearEvicting itself once the real fade-out completes, same relationship
+  // as scheduleResolve/clearResolving above.
+  function scheduleEvict(id) {
+    if (shouldAnimate) return;
+    const existing = evictTimers.current.get(id);
+    if (existing) clearTimeout(existing);
+    evictTimers.current.set(
+      id,
+      setTimeout(() => {
+        evictTimers.current.delete(id);
+        setEvictingIds((prev) => {
+          if (!prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, EVICT_MS)
+    );
+  }
+
   async function toggleItem(id) {
     const it = items.find((x) => x.id === id);
     if (!it) return;
@@ -553,6 +597,24 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       resolveTimers.current.delete(id);
     }
     setResolvingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  // clearResolving's counterpart for a "Recently bought" row that just
+  // finished its synced fade-out — passed to renderItems as the bought
+  // section's onEvicted, called by ItemCard's onAnimationComplete once the
+  // real `evicting` animation is done.
+  function clearEvicting(id) {
+    const t = evictTimers.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      evictTimers.current.delete(id);
+    }
+    setEvictingIds((prev) => {
       if (!prev.has(id)) return prev;
       const next = new Set(prev);
       next.delete(id);
@@ -709,7 +771,42 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // in list, to fill 3 grid rows vs. 3 list rows) made items appear/disappear
   // on toggle, which read as a bug rather than an intentional density choice.
   const BOUGHT_CAP = 9;
-  const boughtDisplayItems = bought.slice(0, BOUGHT_CAP).map((it) => ({ item: it, clusterKey: "Recently bought" }));
+  const cappedBought = bought.slice(0, BOUGHT_CAP);
+  const cappedIds = new Set(cappedBought.map((it) => it.id));
+  // Still-bought rows that fell out of the cap but are mid synced-fade (see
+  // the effect below) — appended after the capped ones so a freshly-evicted
+  // row keeps its trailing position while it fades out, instead of the array
+  // silently dropping it a frame before its own animation gets to play.
+  const evictingBought = bought.filter((it) => evictingIds.has(it.id) && !cappedIds.has(it.id));
+  const boughtDisplayItems = [...cappedBought, ...evictingBought].map((it) => ({
+    item: it,
+    clusterKey: "Recently bought",
+    evicting: !cappedIds.has(it.id),
+  }));
+  // Notices an item that was inside the BOUGHT_CAP window on the previous
+  // render but has just been pushed out by a newer arrival, and hands it a
+  // synced fade-out (evictingIds) instead of letting it vanish silently —
+  // previously a plain slice(0, BOUGHT_CAP) cutoff, which let the section
+  // balloon to BOUGHT_CAP+1 rows for however long the evicted card's default
+  // exit animation took before it noticed the item was gone. A layout effect
+  // (not a plain effect) so the corrected render — re-including the
+  // freshly-evicted item, now flagged `evicting` — commits before the browser
+  // paints, instead of the row flashing away for a frame first. Guarded on
+  // `bought` still containing the id: an item leaving because the user
+  // un-toggled it (not because of the cap) isn't in `bought` at all anymore,
+  // and keeps its normal AnimatePresence exit instead of this synced one.
+  const cappedIdsKey = [...cappedIds].join(",");
+  useLayoutEffect(() => {
+    const boughtIds = new Set(bought.map((it) => it.id));
+    prevCappedIdsRef.current.forEach((id) => {
+      if (!cappedIds.has(id) && boughtIds.has(id) && !evictingIds.has(id)) {
+        setEvictingIds((prev) => new Set(prev).add(id));
+        scheduleEvict(id);
+      }
+    });
+    prevCappedIdsRef.current = cappedIds;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cappedIdsKey]);
   // Count genuinely-remaining items (a resolving item is on its way out, so it
   // shouldn't hold the counter up even though it's still rendered in place).
   const remaining = items.filter((it) => !it.bought).length;
@@ -1099,7 +1196,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   handler), so marking one important here would have nothing
                   to persist — ItemCard hides the badge and swipe gesture
                   entirely when this is undefined. */}
-              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving)}
+              {/* staleItemDays/onExitComplete (positions 10-11) stay undefined here: the
+                  stale marker never applies to a bought item, and the celebration effect
+                  only cares about the unbought section's exit — see clearEvicting as
+                  onEvicted (position 12) for this section's own cap-eviction fade. */}
+              {!boughtCollapsed && renderItems(boughtDisplayItems, effectiveViewMode, containerStyle, resolvingIds, toggleItem, undefined, setEditingId, renderGeneration, clearResolving, undefined, undefined, clearEvicting)}
             </div>
           )}
         </>
@@ -1212,11 +1313,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   );
 }
 
-function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays, onExitComplete) {
+function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onToggle, onToggleImportant, onEdit, renderGeneration, onResolved, staleItemDays, onExitComplete, onEvicted) {
   return (
     <div key={renderGeneration} style={containerStyle}>
       <AnimatePresence initial={false} mode="popLayout" onExitComplete={onExitComplete}>
-        {displayItems.map(({ item, clusterKey }, index) => {
+        {displayItems.map(({ item, clusterKey, evicting }, index) => {
           const { bg, on } = clusterFor(clusterKey);
           return (
             <ItemCard
@@ -1225,10 +1326,12 @@ function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onTog
               clusterOn={on}
               clusterBg={bg}
               resolving={!!resolvingIds?.has(item.id)}
+              evicting={!!evicting}
               onToggle={onToggle}
               onToggleImportant={onToggleImportant}
               onEdit={onEdit}
               onResolved={onResolved}
+              onEvicted={onEvicted}
               viewMode={viewMode}
               index={index}
               staleItemDays={staleItemDays}

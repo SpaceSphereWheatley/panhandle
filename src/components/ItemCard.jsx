@@ -18,6 +18,12 @@ const MotionDiv = motion.div;
 const STAGGER_STEP_S = 0.024;
 const STAGGER_CAP = 10;
 
+// How long a "Recently bought" row's synced fade-out takes when a newer
+// arrival pushes it past BOUGHT_CAP (see ShoppingListTab's `evicting` prop
+// and its own EVICT_MS, kept in lockstep with this for the non-animated
+// fallback path).
+const EVICT_ANIM_S = 0.22;
+
 // Swipe-right-to-mark-important thresholds (list-view values — grid view
 // scales these down since its tiles are much narrower, see isGrid below).
 const SWIPE_COMMIT_PX = 72;
@@ -32,7 +38,7 @@ const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6
 // `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
 // badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
 // not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit, onResolved, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
+export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportant, onEdit, onResolved, onEvicted, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
   const isGrid = viewMode === "grid";
   const { lang } = useLanguage();
   const t = useTranslation();
@@ -113,6 +119,16 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
   // animation takes, onAnimationComplete reports the real finish back to it —
   // the `resolving` check guards against firing for the plain enter/settle
   // animation too, since that one shares this same callback.
+  //
+  // `evicting` is the mirror case at the other end of "Recently bought": a
+  // row that's just been pushed past BOUGHT_CAP by a newer arrival. Rather
+  // than letting AnimatePresence's default `exit` fire only once the caller
+  // has already dropped it from the array (which is what let the section
+  // balloon to one extra row for the length of that exit), the caller keeps
+  // it in the array for one more beat, flagged `evicting`, so this fade plays
+  // via `animate` — in sync with the new arrival's own enter — instead of a
+  // lingering `exit`. onAnimationComplete reports that finish back too, same
+  // shape as `resolving`/onResolved.
   const motionProps = shouldAnimate
     ? {
         layout: true,
@@ -120,9 +136,14 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
         initial: { opacity: 0, y: 8 },
         animate: resolving
           ? { opacity: 0.55, scale: [1, 1.05, 1], y: 0, transition: { duration: 0.3, ease: "easeOut" } }
-          : { opacity: 1, scale: 1, y: 0 },
+          : evicting
+            ? { opacity: 0, scale: 0.92, y: 10, transition: { duration: EVICT_ANIM_S, ease: "easeIn" } }
+            : { opacity: 1, scale: 1, y: 0 },
         exit: { opacity: 0, scale: 0.9 },
-        onAnimationComplete: () => { if (resolving) onResolved?.(item.id); },
+        onAnimationComplete: () => {
+          if (resolving) onResolved?.(item.id);
+          else if (evicting) onEvicted?.(item.id);
+        },
       }
     : {};
   // The icon badge and text block track their own position/size within the
@@ -349,7 +370,7 @@ export function ItemCard({ item, resolving, onToggle, onToggleImportant, onEdit,
         touchAction: "manipulation",
         userSelect: "none",
         ...(isGrid ? { padding: "16px 10px" } : null),
-        ...(resolving ? { pointerEvents: "none" } : null),
+        ...(resolving || evicting ? { pointerEvents: "none" } : null),
       }}
     >
       {shouldAnimate && onToggleImportant ? (
