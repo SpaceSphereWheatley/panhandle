@@ -48,6 +48,19 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
   to   { left: 0; opacity: 1; }
 }
 
+/* QrScanModal's simulated scan line — see src/components/storage/QrScanModal.jsx. */
+@keyframes ph-qr-scanline {
+  from { top: 8px; }
+  to   { top: calc(100% - 10px); }
+}
+.qr-scan-line {
+  top: 8px;
+  animation: ph-qr-scanline 1.4s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qr-scan-line { animation: none; top: 50%; }
+}
+
 /* Desktop framing: the layout (Header/main/TabBar) is already centered at
    480px, but on a wide viewport it just floats on a body of the same
    background as the app itself, with no visible edge. Above a phone/tablet
