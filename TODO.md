@@ -45,9 +45,8 @@ Completed items live in `Todo_done.md`, not below.
 4. **Code quality / architecture review (2026-07-31, Principal-Engineer
    pass)** — a full-repo pass over `worker/index.js` and the React frontend
    for architecture, performance, and error-handling gaps (see `## Code
-   quality` below). Nothing urgent: the concrete gaps are #136-#140, plus
-   an explicitly optional/long-term idea (#141). Two worth calling out —
-   **#139** (four separate hand-rolled copies of the same rate-limit
+   quality` below). Nothing urgent: the concrete gaps are #136-#140. Two
+   worth calling out — **#139** (four separate hand-rolled copies of the same rate-limit
    check, `/login`/`/change-password`/`/change-email`/`DELETE /account`,
    instead of the shared helper every other rate-limited endpoint uses)
    and **#140** (the frontend's `api()` helper can throw uncaught on a
@@ -105,8 +104,8 @@ original 2026-07-31 pass — #116 + #121 and #130 — shipped in #265; step 3,
    into one sprint.
 
 Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
-#142, #143, #144, #115, #1, #5, and the `## Ideas` section) is
-deliberately not in this sequence — see each item's own note for why, or
+#142, #143, #144, #115, #1, #5) is deliberately not in this sequence —
+see each item's own note for why, or
 the group priority rationale above. Note #120 and #143 both become easier
 calls once step 4 lands: #120 (gesture discoverability) is worth
 revisiting once long-press actually works app-wide, and #143 (success
@@ -519,55 +518,6 @@ were re-verified after `main` moved).
      repoint `FEEDBACK_EMAIL` at the alias instead of the raw personal
      address.
      _Value: Medium · Importance: Low · Type: Ops / Privacy_
-
-## Ideas (unvetted)
-
-Raw suggestions from the 2026-07-20 app-audit — **not** accepted work like the
-items above, and not yet weighed against effort/appetite. Promote an idea into
-a real section (Feature / Data model / …) once it's actually decided on; delete
-the ones that don't earn their keep. Keep the same stable-ID discipline.
-
-_High value, low effort:_
-
-101. Quantity stepper on the item card (subtle +/- or long-press) so the common
-     "need 2, not 1" adjustment doesn't require opening the edit modal.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
-
-_Exploratory / higher ceiling:_
-
-107. Pantry / "have at home" state to suppress suggestions for staples you keep
-     stocked, complementing the current overdue-interval suggestions.
-     _Value: Low · Importance: Low · Type: Idea / Shopping list_
-
-108. Seed new lists from a shared `seed_catalogue` table (copy-on-create)
-     instead of the 710-entry `COMMON_ITEMS` array duplicated between
-     `worker/index.js` and migrations 0002/0003 — kills a documented drift
-     hazard. Refactor, not a user-facing feature.
-     _Value: Low · Importance: Low · Type: Idea / Refactor_
-
-_Carried over from `docs/ui-review-plan.md` (2026-07-31 UI/UX audit):_
-
-128. "Shopping mode" — hide bought items, large high-contrast text, keep-
-     screen-awake, tuned for actually walking the store. Carried over from
-     `docs/ui-review-plan.md` U25.
-     _Value: Medium · Importance: Low · Type: Idea / Shopping list_
-
-129. Multi-week / month meal-plan overview, for planning past the current
-     one-week strip (`weekOffset` is still clamped `[WEEK_MIN, WEEK_MAX]` =
-     `[-1, 4]`). Carried over from `docs/ui-review-plan.md` U27.
-     _Value: Low · Importance: Low · Type: Idea / Meals_
-
-141. Replace `worker/index.js`'s ~50+ sequential
-     `if (path === X && method === Y)` route checks (from the 2026-07-31
-     code quality review — see `## Code quality`) with a plain object
-     dispatch table (`{ "GET /list": handler, ... }`) — same handler
-     bodies, no new dependency/framework, just an object lookup instead of
-     a linear scan. Explicitly optional/long-term: the current shape is a
-     deliberate, documented trade for a solo dev without a framework (see
-     CLAUDE.md), and the existing extract-pure-logic-and-unit-test pattern
-     already mitigates its worst downside (untestable handlers). Only
-     worth doing if route count keeps growing.
-     _Value: Low · Importance: Low · Type: Idea / Refactor_
 
 ## Done
 
