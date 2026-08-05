@@ -33,7 +33,15 @@ Completed items live in `Todo_done.md`, not below.
    open items were carried over here (**#125, #126, #127**); the rest of its
    open items (U1, U6-U10, U15, U17, U19, U20) are either already shipped by
    the rewrite or superseded by it and can be treated as closed even though
-   still unchecked in that file.
+   still unchecked in that file. A follow-on **interaction-consistency pass
+   (2026-08-05)** over gestures, motion, haptics and in-flight state added
+   **#145-#151** to the same section: the modal layer, `FabMenu` and the
+   `useIsDesktop()` switches all held up as genuinely shared, but
+   per-row/per-card interaction was built independently per tab — Storage
+   is outside the motion system entirely, Meals and Storage are silent to
+   the touch, and long-press-to-edit only ever worked on the shopping list.
+   **#148** (three modals with no double-submit guard) is the only real bug
+   in that batch and is sequenced with the other bugs, not with the polish.
 4. **Code quality / architecture review (2026-07-31, Principal-Engineer
    pass)** — a full-repo pass over `worker/index.js` and the React frontend
    for architecture, performance, and error-handling gaps (see `## Code
@@ -64,22 +72,38 @@ fixed; step 4 (formerly #87 + #88 + #89 + #92) shipped as the bug sweep
 (see `Todo_done.md`); renumbered below):
 
 1. **#131 + #132** — backend data-integrity batch.
-2. **#137** — real live bug (uncaught exception), ranks above the
-   performance items in Code quality despite both being P2.
+2. **#137 + #148** — the two real reliability bugs, batched: an uncaught
+   exception on a malformed response, and three editor modals with no
+   double-submit guard. Both rank above the performance items in Code
+   quality despite all being P2.
 3. **#117 → #118 → #124** — strictly in this order: the shared button
    base (#118) must be built on top of the focus ring (#117), not
    retrofitted; #124 folds into the same pass.
-4. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+4. **#149 → #147** — also strictly in this order, and deliberately
+   adjacent to step 3: both are "hoist one shared primitive, then migrate
+   the call sites," so they reuse the design-system context step 3 just
+   built. #149 (one shared `MotionCard`) must land before #147 (wiring
+   Storage into the motion system), or #147 creates a third copy of the
+   thing #149 exists to remove.
+5. **#145 + #146 + #150 + #151** — the gesture/haptic/desktop-gate batch.
+   Kept contiguous with steps 3-4 because it lands in the same files
+   those passes leave hot (`MealsTab.jsx` especially, which #118 also
+   migrates). #151 is the write-up of what #145 settles, so it goes last
+   in the batch, not first.
+6. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
-5. **#136 phase 1**, then — only after a full deploy cycle confirms all
+7. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
    into one sprint.
 
 Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
-#115, #1, #5, and the `## Ideas` section) is deliberately not in this
-sequence — see each item's own note for why, or the group priority
-rationale above.
+#142, #143, #144, #115, #1, #5, and the `## Ideas` section) is
+deliberately not in this sequence — see each item's own note for why, or
+the group priority rationale above. Note #120 and #143 both become easier
+calls once step 5 lands: #120 (gesture discoverability) is worth
+revisiting once long-press actually works app-wide, and #143 (success
+toasts) is already pointed at #118's pass.
 
 ## Backend / API
 
@@ -190,7 +214,11 @@ were triaged).
      a new one-off component; a slide reuses `OnboardingFlow`'s existing
      mechanism but only reaches first-run devices, not existing users) — pick
      one before pulling this into a build wave. Supersedes
-     `docs/ui-review-plan.md` U15.
+     `docs/ui-review-plan.md` U15. **Revisit after #145** — once long-press
+     opens the editor on meal and storage cards too, it stops being a
+     shopping-list-only trick and becomes one app-wide gesture worth
+     teaching, which tilts the decision toward the onboarding slide (one
+     lesson, one mechanism) over a per-tab coach-mark.
      _Value: Medium · Importance: Low · Type: UX / Discoverability_
 
 122. **`SuggestionsModal` has no neutral close button.** Its only footer
@@ -263,6 +291,116 @@ were triaged).
      needs a persistent info/beta banner, factor a shared component instead
      of copy-pasting the inline styles again.
      _Value: Low · Importance: Low · Type: UI polish / Consistency_
+
+### Interaction consistency (from the 2026-08-05 gesture/UX audit)
+
+A pass over gestures, motion, haptics and in-flight state across all four
+tabs, Settings, and the modal layer. The *chrome* turned out to be genuinely
+unified — all ~23 modals route through the one `Modal.jsx`→`Sheet.jsx` pair
+(identical open/close, drag-to-dismiss, Cancel/Save placement), `FabMenu` is
+the same component with the same position/animation/haptics in all three
+tabs that have one, and every desktop/compact structural switch really does
+go through `useIsDesktop()`. What diverges is per-row/per-card *interaction*,
+which was designed independently per tab. Items below are ordered by how
+much a user actually feels them.
+
+Two decisions were taken up front, and the items assume both:
+
+- **Shopping's row-tap stays a bought/unbought toggle** (it's a check-off
+  surface — tapping to open an editor would be wrong there), even though
+  Meals and Storage open their editor on tap. The divergence is deliberate
+  and gets documented rather than converged (#151), not treated as a defect.
+- **Long-press is the app-wide "open this thing's editor" gesture, and no
+  new swipe gestures are added.** The three existing drag implementations
+  (`ItemCard`'s horizontal important-swipe, `MealsTab`'s week-pager,
+  `StoreSubpage`'s `Reorder` handle) each serve a genuinely different task
+  and stay as they are; no shared swipe abstraction is worth building for
+  three one-offs that share only boilerplate.
+
+145. **Long-press-to-edit exists only on the shopping list.**
+     `useLongPress` (`src/hooks/useLongPress.js`, 500ms, 10px move
+     tolerance, already suppresses the trailing synthetic click and already
+     fires `haptic()` itself) is imported by exactly one component in the
+     app — `ItemCard.jsx`. A user who learns hold-to-edit in Shopping finds
+     it dead on a meal day card or a storage box. Attach the same hook to
+     `MealsTab.jsx`'s day cards and `StorageTab.jsx`'s `BoxCard`, opening
+     the same editor their tap already opens. Deliberately redundant with
+     tap there: the point is that the gesture never *fails*, not that it's
+     the only route. Pure addition — no existing behaviour changes.
+     _Value: Medium · Importance: Medium · Type: UX / Gesture consistency_
+
+146. **Meals and Storage are almost entirely silent to the touch.** Both
+     tabs import `haptic` (`MealsTab.jsx:9`, `StorageTab.jsx:7`) and each
+     uses it in exactly one place: passing it to `FabMenu`
+     (`MealsTab.jsx:734`, `StorageTab.jsx:276`). So the only vibration
+     anywhere in either tab is opening the FAB or picking an item from it —
+     planning a meal, deleting a meal, saving a box, deleting a box and
+     scanning a QR code are all silent, while the shopping list buzzes on
+     add, toggle, important, swipe-commit, long-press, ping and
+     mark-all-bought. Fire `haptic()` at the write-completion points in
+     both tabs to match. #145 supplies the long-press half of this for
+     free. Note `haptic()` is already user-gated (`ph_haptics`), so no new
+     setting is needed.
+     _Value: Medium · Importance: Medium · Type: UX / Consistency_
+
+147. **The Storage module sits entirely outside the motion system.**
+     Neither `StorageTab.jsx` nor any file in `src/components/storage/`
+     imports framer-motion or `useMotionConfig` (repo-wide grep confirms).
+     Box cards use the plain `Card` unconditionally, so adding, deleting or
+     filtering a box pops with no enter/exit transition, and the
+     Appearance design-intensity setting has literally nothing to turn off
+     there — unlike Shopping and Meals, which both thread `shouldAnimate`
+     through to their cards. Wire `useMotionConfig()` into `StorageTab` and
+     give the box list the same `AnimatePresence` + `shouldAnimate ?
+     MotionCard : Card` treatment the other two tabs use. Depends on #149
+     landing first, so this consumes the shared primitive rather than
+     adding a third copy of it.
+     _Value: Medium · Importance: Low · Type: UI consistency / Motion_
+
+148. **Only one of the four editor modals guards against a double-submit.**
+     `BoxEditModal.jsx` tracks `saving`/`deleting`, disables
+     Save/Delete/Cancel and swaps in a progress label while the request is
+     in flight (shipped in 1.61.0). `ItemEditModal`, `MealPlanModal` and
+     `MealEditModal` have no such guard, so a double-tap on a slow
+     connection submits twice — the one item in this group that is a
+     stability bug rather than a polish gap, and the reason it's sequenced
+     first. Replicate `BoxEditModal`'s pattern in the other three. Watch
+     for handlers that close optimistically or delegate the request to the
+     parent tab — those need the in-flight state lifted, not just a
+     disabled attribute.
+     _Value: Medium · Importance: Medium · Type: Bug / Reliability_
+
+149. **`MotionCard` is defined twice, identically.** `const MotionCard =
+     motion(Card)` appears in both `ItemCard.jsx:12` and `MealsTab.jsx:23`,
+     each followed by the same `shouldAnimate ? MotionCard : Card`
+     selection. #147 would make it three copies. Hoist one `MotionCard`
+     (and ideally the selection helper) into the design system next to
+     `Card`, so the "animate a card, unless the user turned motion off"
+     decision has one home. Small, but it's the precondition that keeps
+     #147 from being a copy-paste.
+     _Value: Low · Importance: Medium · Type: Refactor / Design system_
+
+150. **`ItemCard`'s swipe gesture is never disabled on desktop.**
+     `ItemCard.jsx` doesn't import `useIsDesktop` at all, so its horizontal
+     drag-to-mark-important stays mouse-draggable at desktop widths — even
+     though the always-present star badge is the non-gesture route there,
+     and even though `MealsTab.jsx:699` explicitly does the opposite for
+     its week-pager (`drag={isDesktop ? false : "x"}`, with a comment
+     saying swipe-paging is a touch affordance). This is the one place the
+     otherwise-clean `useIsDesktop()` discipline has a hole; CLAUDE.md's
+     "4 of 7 structural switches" inventory never counted this fifth
+     touch-only gesture. Gate it the way MealsTab does.
+     _Value: Low · Importance: Low · Type: UI consistency / Desktop_
+
+151. **The tap-semantics divergence is undocumented.** Tapping a row means
+     "toggle bought" in Shopping but "open the editor" in Meals and
+     Storage. Per the decision above this stays as-is — but nothing in
+     `CLAUDE.md` says so, so the next pass over this code has to
+     re-derive whether it's intentional (it is) or drift (it isn't).
+     Write it down alongside the long-press rule from #145, in the same
+     place the four `useIsDesktop()` structural switches are already
+     inventoried. Documentation only; no code change.
+     _Value: Low · Importance: Medium · Type: Documentation_
 
 ## Code quality
 
