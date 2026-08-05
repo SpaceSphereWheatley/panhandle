@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.4] — 2026-08-05
+
+### Changed
+- **The Storage tab's boxes now animate in and out like the shopping list and meal plan already do, and respect the Appearance motion setting.** Adding, deleting, or searching/filtering boxes used to make them pop in and out instantly with no transition; boxes now fade and settle into place, and turning off animations in Settings → Appearance now also turns them off here, which it didn't before. (Hoisted a single shared `MotionCard`/`cardComponent()` helper into the design system next to `Card` — previously `ItemCard.jsx` and `MealsTab.jsx` each defined their own identical `motion(Card)`; `StorageTab.jsx` now wires in `useMotionConfig()` and wraps each location group's box list in `AnimatePresence`, consuming that same shared primitive instead of adding a third copy.)
+
 ## [1.61.3] — 2026-08-05
 
 ### Fixed

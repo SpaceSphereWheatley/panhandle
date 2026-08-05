@@ -15,12 +15,11 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, FabMenu, Skeleton, BaseButton } from "../design-system/index.js";
+import { Avatar, FabMenu, Skeleton, BaseButton, cardComponent } from "../design-system/index.js";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { readCache, writeCache } from "../lib/localCache.js";
 
 const POLL_MS = 7000;
-const MotionCard = motion(Card);
 // Every navigable week (WEEK_MIN..WEEK_MAX is a small, fixed range — 6 weeks
 // total), not just the current one. All 6 panes are always mounted side by
 // side in a single wide row; swiping/paging just translates that row, so the
@@ -184,7 +183,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor
               const recurring = !p?.responsible ? schedule[dow] : null;
               const responsible = p?.responsible || recurring || null;
               const muted = !p?.responsible;
-              const CardComponent = shouldAnimate ? MotionCard : Card;
+              const CardComponent = cardComponent(shouldAnimate);
               // `layout` gated on `active`, not just `shouldAnimate`: this tab stays
               // mounted (hidden via `display: none`) when switched away from (see
               // AppShell.jsx), and a display:none subtree measures as a zero-size

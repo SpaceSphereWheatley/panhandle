@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Badge, Input, FabMenu, EmptyState, Skeleton, Button } from "../design-system/index.js";
+import { AnimatePresence } from "framer-motion";
+import { Badge, Input, FabMenu, EmptyState, Skeleton, Button, cardComponent } from "../design-system/index.js";
 import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { api } from "../lib/api.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 import { haptic } from "../lib/shoppingUtils.js";
@@ -18,11 +20,25 @@ const ITEM_PREVIEW_LIMIT = 4;
 // highest-contrast thing on the card — it out-competed the box *name*, which
 // is what the eye is actually hunting for down a list. The real QR lives
 // where it's useful: on the printed label and in the box's own editor.
-function BoxCard({ box, onClick, t }) {
+function BoxCard({ box, onClick, t, shouldAnimate, transition }) {
   const shown = box.items.slice(0, ITEM_PREVIEW_LIMIT);
   const extra = box.items.length - shown.length;
+  const CardComponent = cardComponent(shouldAnimate);
+  // Same base enter/exit shape as ItemCard.jsx's non-resolving/non-evicting
+  // case — Storage has neither of those concepts (no "just bought" hold), so
+  // a plain fade+layout is enough for a box appearing, being deleted, or
+  // dropping out of a search filter.
+  const motionProps = shouldAnimate
+    ? {
+        layout: true,
+        transition,
+        initial: { opacity: 0, y: 8 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.9 },
+      }
+    : {};
   return (
-    <Card interactive onClick={onClick}>
+    <CardComponent interactive onClick={onClick} {...motionProps}>
       <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
         <span
           aria-hidden="true"
@@ -84,7 +100,7 @@ function BoxCard({ box, onClick, t }) {
           )}
         </div>
       )}
-    </Card>
+    </CardComponent>
   );
 }
 
@@ -106,6 +122,7 @@ function BoxCard({ box, onClick, t }) {
 export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumber }) {
   const t = useTranslation();
   const toast = useToast();
+  const { shouldAnimate, transition } = useMotionConfig();
   const [boxes, setBoxes] = useState([]);
   const [loadedOnce, setLoadedOnce] = useState(false);
   // Distinct from `loadedOnce`, which only records that the fetch was
@@ -262,9 +279,18 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
                 </span>
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                {group.boxes.map((box) => (
-                  <BoxCard key={box.id} box={box} t={t} onClick={() => setEditingBox({ mode: "edit", box })} />
-                ))}
+                <AnimatePresence initial={false} mode="popLayout">
+                  {group.boxes.map((box) => (
+                    <BoxCard
+                      key={box.id}
+                      box={box}
+                      t={t}
+                      shouldAnimate={shouldAnimate}
+                      transition={transition}
+                      onClick={() => setEditingBox({ mode: "edit", box })}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             </section>
           ))}
