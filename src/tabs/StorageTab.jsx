@@ -4,6 +4,7 @@ import { Badge, Input, FabMenu, EmptyState, Skeleton, Button, cardComponent } fr
 import { useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
+import { useLongPress } from "../hooks/useLongPress.js";
 import { api } from "../lib/api.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 import { haptic } from "../lib/shoppingUtils.js";
@@ -37,8 +38,11 @@ function BoxCard({ box, onClick, t, shouldAnimate, transition }) {
         exit: { opacity: 0, scale: 0.9 },
       }
     : {};
+  // Long-press opens the same editor tap does (TODO #145) — deliberately
+  // redundant with tap, not a replacement for it.
+  const longPress = useLongPress(onClick);
   return (
-    <CardComponent interactive onClick={onClick} {...motionProps}>
+    <CardComponent interactive onClick={onClick} {...longPress} {...motionProps}>
       <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
         <span
           aria-hidden="true"
@@ -314,6 +318,12 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
           existingLocations={existingLocations}
           onClose={() => setEditingBox(null)}
           onSaved={() => {
+            // BoxEditModal shares this one callback for both a successful
+            // save and a successful delete (see its own requestClose(onSaved)
+            // calls) — one haptic covers "saving a box, deleting a box" (TODO
+            // #146), matching how loud the shopping list already is for its
+            // own writes.
+            haptic();
             setEditingBox(null);
             loadBoxes();
           }}
@@ -324,6 +334,10 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
         <QrScanModal
           onClose={() => setScanning(false)}
           onFound={(number) => {
+            // A recognized scan, not a server write — same reasoning as
+            // useLongPress firing haptic on gesture recognition rather than
+            // on the request it triggers.
+            haptic();
             setScanning(false);
             openBoxByNumber(number);
           }}

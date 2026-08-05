@@ -6,6 +6,7 @@ import { cap, parseSqliteDatetime, haptic } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
 import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
+import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 
@@ -52,6 +53,7 @@ export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportan
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const intensity = useDesignIntensity();
+  const isDesktop = useIsDesktop();
   const CardComponent = cardComponent(shouldAnimate);
   const ContentWrapper = shouldAnimate ? MotionDiv : "div";
 
@@ -413,9 +415,14 @@ export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportan
         </motion.div>
       ) : null}
       {shouldAnimate && onToggleImportant ? (
+        // Swipe-to-mark-important is a touch affordance, same reasoning as
+        // MealsTab's week-pager (TODO #150) — disabled on desktop, where the
+        // always-present star badge (above) is the non-gesture route
+        // already, rather than left mouse-draggable with no other
+        // `useIsDesktop()` gate in this file.
         <motion.div
           style={{ ...contentLayerStyle, x, touchAction: "pan-y" }}
-          drag="x"
+          drag={isDesktop ? false : "x"}
           dragConstraints={{ left: 0, right: swipeMaxPx }}
           dragElastic={{ left: 0, right: 0.35 }}
           dragMomentum={false}
