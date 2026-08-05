@@ -24,11 +24,12 @@ Completed items live in `Todo_done.md`, not below.
    in use — see `Todo_done.md`.
 3. **UI/UX audit findings (2026-07-31)** — a fresh design-system/consistency/
    accessibility pass over every screen (see `## UI/UX` below). #116
-   (removing a shopping-list item had no confirm and no undo) is fixed —
-   see `Todo_done.md`. The remaining P1 gap is **#117** (no
-   `:focus-visible` styling anywhere in the app — a full keyboard/
-   switch-control accessibility gap). #118-#124 are consistency/
-   accessibility/polish. This pass also triaged `docs/ui-review-plan.md`,
+   (removing a shopping-list item had no confirm and no undo), #117 (the
+   backlog's only P1 — no `:focus-visible` styling anywhere in the app),
+   #118 (one-off buttons with no press feedback), and #124 (icon/component
+   consistency nits) are all fixed — see `Todo_done.md`. #119-#123,
+   #125-#127 are the remaining consistency/accessibility/polish gaps. This
+   pass also triaged `docs/ui-review-plan.md`,
    which predates the design-system rewrite and is now stale: its still-valid
    open items were carried over here (**#125, #126, #127**); the rest of its
    open items (U1, U6-U10, U15, U17, U19, U20) are either already shipped by
@@ -55,7 +56,6 @@ Completed items live in `Todo_done.md`, not below.
 5. **Small UI/polish items — low value, low risk, good filler:**
    - **#5** Poll-interval backoff when idle (explicitly: don't do
      speculatively, only if load actually grows)
-   - **#124** Minor icon/component consistency nits (see below)
 6. **Multi-list data model (#1)** — high ceiling if this app ever needs
    more than one household/list, but nothing today needs it (still just
    2 users, 1 list) and it's a real schema/data-model change, not a small
@@ -72,44 +72,37 @@ waited behind its two lowest-priority items for no dependency reason. Group
 priority above still governs anything not listed here. Steps 1-2 of the
 original 2026-07-31 pass — #116 + #121 and #130 — shipped in #265; step 3,
 #133, turned out to already be fixed; step 4 (formerly #87 + #88 + #89 +
-#92) shipped as the bug sweep (see `Todo_done.md`); renumbered below):
+#92) shipped as the bug sweep (see `Todo_done.md`); step 1 of this
+2026-08-05 reorder — #117 → #118 → #124 — shipped in #292; renumbered
+below):
 
-1. **#117 → #118 → #124** — strictly in this order: the shared button
-   base (#118) must be built on top of the focus ring (#117), not
-   retrofitted; #124 folds into the same pass. Promoted to lead the queue
-   since #117 is the only P1 in the whole backlog and nothing blocks it.
-2. **#137 + #148** — the two real reliability bugs, batched: an uncaught
+1. **#137 + #148** — the two real reliability bugs, batched: an uncaught
    exception on a malformed response, and three editor modals with no
    double-submit guard. Both rank above the performance items in Code
    quality despite all being P2.
-3. **#149 → #147** — strictly in this order, and deliberately adjacent to
-   step 1: both are "hoist one shared primitive, then migrate the call
-   sites," so they reuse the design-system context step 1 just built.
-   #149 (one shared `MotionCard`) must land before #147 (wiring Storage
-   into the motion system), or #147 creates a third copy of the thing
-   #149 exists to remove.
-4. **#145 + #146 + #150 + #151** — the gesture/haptic/desktop-gate batch.
-   Kept contiguous with steps 1 and 3 because it lands in the same files
-   those passes leave hot (`MealsTab.jsx` especially, which #118 also
-   migrates). #151 is the write-up of what #145 settles, so it goes last
-   in the batch, not first.
-5. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+2. **#149 → #147** — strictly in this order. #149 (one shared `MotionCard`)
+   must land before #147 (wiring Storage into the motion system), or #147
+   creates a third copy of the thing #149 exists to remove.
+3. **#145 + #146 + #150 + #151** — the gesture/haptic/desktop-gate batch.
+   Kept contiguous with step 2 because it lands in the same files that pass
+   leaves hot (`MealsTab.jsx` especially). #151 is the write-up of what
+   #145 settles, so it goes last in the batch, not first.
+4. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
-6. **#131 + #132** — backend data-integrity batch. Both Low/Low — demoted
-   to just ahead of #136 now that step order leads with value instead of
-   file-locality; nothing else depends on these landing earlier.
-7. **#136 phase 1**, then — only after a full deploy cycle confirms all
+5. **#131 + #132** — backend data-integrity batch. Both Low/Low — nothing
+   else depends on these landing earlier.
+6. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
    into one sprint.
 
 Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
 #142, #143, #144, #115, #1, #5) is deliberately not in this sequence —
-see each item's own note for why, or
-the group priority rationale above. Note #120 and #143 both become easier
-calls once step 4 lands: #120 (gesture discoverability) is worth
-revisiting once long-press actually works app-wide, and #143 (success
-toasts) is already pointed at #118's pass.
+see each item's own note for why, or the group priority rationale above.
+Note #120 and #143 both become easier calls once step 3 lands: #120
+(gesture discoverability) is worth revisiting once long-press actually
+works app-wide, and #143 (success toasts) is already pointed at the
+button-system pass that shipped in #292.
 
 ## Backend / API
 
@@ -168,39 +161,7 @@ every Settings subpage, auth screens, and ~15 modals — cross-checked against
 now stale (see the group-priority note above for how its still-open items
 were triaged).
 
-### P1 — Correctness / trust
-
-117. **No `:focus-visible` styling anywhere in the app.** A full-repo grep
-     turns up zero `:focus`/`:focus-visible` rules in any CSS or inline style.
-     Every interactive element is a React inline-style component, so a
-     keyboard/switch-control user gets no visual focus indication anywhere.
-     Needs a shared focus ring that the design-system components (and the
-     one-off buttons in #118) can all opt into — inline `style` objects can't
-     express the pseudo-class directly, so this likely means a shared CSS
-     class in `base.css` plus each component applying it. Supersedes
-     `docs/ui-review-plan.md` U3 (never actually fixed, despite predating the
-     rewrite).
-     _Value: High · Importance: High · Type: Bug / Accessibility_
-
 ### P2 — Consistency & accessibility polish
-
-118. **Two button systems.** `Button`/`IconButton`/`Fab` implement careful
-     hover/press/ripple state layers, but a large share of real controls
-     bypass them with raw, hand-styled `<button>` elements that get none:
-     `MealsTab.jsx`'s week-nav arrows/"this week"/"Alle måltider ›"/density
-     toggle, `ShoppingListTab.jsx`'s view toggle/important-chip/"Recently
-     bought" collapse, `StoreSubpage.jsx`'s reorder up/down buttons,
-     `Header.jsx`'s back arrow. None of these give any visual feedback on tap.
-     Factor a shared low-level button base (radius/padding/press-state) that
-     both the design-system components and these one-off controls go through.
-     Do in this order (must land after #117 — the base should be built with
-     the focus ring, not retrofitted): (a) decide the primitive's prop shape
-     (variant/size/press-state) before any call site is migrated, so the four
-     migrations below don't each improvise a different shape; (b) migrate
-     `MealsTab.jsx`'s controls; (c) migrate `ShoppingListTab.jsx`'s controls;
-     (d) migrate `StoreSubpage.jsx`'s reorder buttons + `Header.jsx`'s back
-     arrow. Supersedes `docs/ui-review-plan.md` U6/U7/U10.
-     _Value: Medium · Importance: Medium · Type: UI consistency_
 
 119. **Hardcoded Norwegian text in a fully-i18n'd app.** `Spinner.jsx`'s
      `aria-label="Laster"` and `LoadingState`'s default `label = 'Laster...'`
@@ -240,13 +201,6 @@ were triaged).
      strength hint). Carried over from `docs/ui-review-plan.md` U19.
      _Value: Medium · Importance: Low · Type: UX / Forms_
 
-124. **Minor consistency nits — bundle as filler.** Two icon call conventions
-     coexist (`<UiIcon name="x">` vs. raw `<i className="ph ph-x">` inline
-     elsewhere); `Checkbox`/`Switch`/`Tag` each hand-roll their own radius/
-     press treatment rather than sharing one base. Cosmetic; fold into
-     whichever pass picks up #118.
-     _Value: Low · Importance: Low · Type: UI polish_
-
 ### P3 — Carried over from `docs/ui-review-plan.md` (still valid)
 
 125. **Fonts still load render-blocking from Google Fonts.** `app.html` and
@@ -285,8 +239,8 @@ were triaged).
      `BoxEditModal.jsx` only closes the modal and reloads the list — errors
      toast, success doesn't. Matches `ItemEditModal`/`MealEditModal`'s
      existing pattern app-wide, so fixing it in Storage alone would be
-     inconsistent; revisit as an app-wide decision, likely alongside #118's
-     button-system consolidation.
+     inconsistent; revisit as an app-wide decision now that #118's
+     button-system consolidation has shipped (#292).
      _Value: Low · Importance: Low · Type: UX / Consistency_
 
 144. **No shared `Banner`/`Callout` primitive for one-off informational
