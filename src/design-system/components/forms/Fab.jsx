@@ -1,5 +1,6 @@
 import React from 'react';
-import { useRipple, Ripples } from '../../lib/useRipple.jsx';
+import { usePressInteractions } from '../../lib/usePressInteractions.js';
+import { Ripples } from '../../lib/useRipple.jsx';
 
 /**
  * Floating action button — the Android-style primary "add" action, pinned
@@ -12,9 +13,7 @@ import { useRipple, Ripples } from '../../lib/useRipple.jsx';
  * Source: Panhandle Design System (README "Platform: Android web app").
  */
 export function Fab({ icon = 'plus', label, onClick, badge = null, active = false }) {
-  const [press, setPress] = React.useState(false);
-  const [hover, setHover] = React.useState(false);
-  const { ripples, spawn } = useRipple();
+  const { hover, press, ripples, handlers } = usePressInteractions();
 
   return (
     <button
@@ -22,11 +21,7 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
       aria-label={label}
       aria-expanded={active || undefined}
       onClick={onClick}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
-      onPointerDown={(e) => { setPress(true); spawn(e); }}
-      onPointerUp={() => setPress(false)}
-      onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerCancel={() => setPress(false)}
+      {...handlers}
       style={{
         position: 'fixed',
         // Tracks the content column's right edge in both layouts — see

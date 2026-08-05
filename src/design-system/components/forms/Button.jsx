@@ -1,11 +1,12 @@
 import React from 'react';
-import { useRipple, Ripples } from '../../lib/useRipple.jsx';
+import { BaseButton } from './BaseButton.jsx';
 
 /**
  * Primary action button. Pill-shaped, terracotta fill by default.
  * Source: Panhandle Design System (components/forms/Button.jsx), with the
  * app's pointer-based press/hover (so touch taps get the "give" too) and the
- * design system's Android Material ripple.
+ * design system's Android Material ripple — via the shared `BaseButton`
+ * primitive (TODO #118).
  */
 export function Button({
   children,
@@ -22,16 +23,10 @@ export function Button({
     fontWeight: 'var(--weight-semibold)',
     borderRadius: 'var(--radius-pill)',
     border: 'none',
-    cursor: disabled ? 'default' : 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    position: 'relative',
-    overflow: 'hidden',
-    transition:
-      'background-color var(--duration-fast) var(--ease-out), transform var(--spring-duration-soft) var(--ease-spring-soft), opacity var(--duration-fast) var(--ease-out)',
-    opacity: disabled ? 0.45 : 1,
   };
 
   const sizes = {
@@ -67,10 +62,6 @@ export function Button({
     },
   };
 
-  const [hover, setHover] = React.useState(false);
-  const [press, setPress] = React.useState(false);
-  const { ripples, spawn } = useRipple();
-
   const hoverBg = {
     primary: 'var(--accent-primary-hover)',
     secondary: 'var(--accent-secondary-hover)',
@@ -103,44 +94,19 @@ export function Button({
         ? 'var(--status-danger)'
         : 'var(--md-on-surface)';
 
-  const style = {
-    ...base,
-    ...sizes[size],
-    ...variants[variant],
-    ...(hover && !disabled ? { background: hoverBg[variant] } : {}),
-    ...(press && !disabled ? { background: pressBg[variant], transform: 'scale(var(--press-scale))' } : {}),
-    ...styleOverride,
-  };
-
-  // Pointer events (not mouse events) so touch taps get the press "give" too;
-  // hover is gated to mouse pointers to avoid sticky hover after a touch tap.
   return (
-    <button
+    <BaseButton
       type={type}
-      style={style}
       disabled={disabled}
       onClick={onClick}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
-      onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerDown={(e) => { if (!disabled) { setPress(true); spawn(e); } }}
-      onPointerUp={() => setPress(false)}
-      onPointerCancel={() => setPress(false)}
+      style={{ ...base, ...sizes[size], ...variants[variant], ...styleOverride }}
+      hoverStyle={{ background: hoverBg[variant] }}
+      pressStyle={{ background: pressBg[variant], transform: 'scale(var(--press-scale))' }}
+      stateLayerColor={stateLayerColor}
+      rippleTint={rippleTint}
     >
-      {!disabled && (hover || press) ? (
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background: stateLayerColor,
-            opacity: press ? 'var(--state-pressed-opacity)' : 'var(--state-hover-opacity)',
-          }}
-        />
-      ) : null}
-      <Ripples ripples={ripples} tint={rippleTint} />
       {icon ? <i className={`ph ph-${icon}`} style={{ fontSize: '1.15em', position: 'relative' }} /> : null}
       <span style={{ position: 'relative' }}>{children}</span>
-    </button>
+    </BaseButton>
   );
 }

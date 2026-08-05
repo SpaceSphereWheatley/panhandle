@@ -16,3 +16,26 @@ a { color: var(--text-link); text-decoration: none; }
 a:hover { color: var(--text-link-hover); text-decoration: underline; }
 
 button { font-family: inherit; }
+
+/* Shared keyboard-focus ring (TODO #117). Every interactive control in this
+   app is a React inline-style component, so `:focus-visible` can't be
+   expressed per-component the way a stylesheet class normally would be —
+   these tag selectors give every native button/input/select/textarea/link,
+   and anything with an explicit tabIndex, the same ring for free, with no
+   per-component opt-in needed. `:focus-visible` (not `:focus`) so it only
+   shows for keyboard/switch-control input, never a mouse or touch tap.
+   `outline` rather than `box-shadow` so it survives a control's own
+   `overflow: hidden` (several buttons clip their ripple that way) and still
+   traces each element's own border-radius. A component with its own inline
+   `outline: none` (Input/Select/token-input's fields) wins over this by CSS
+   cascade order — those already show an equivalent focus treatment via a
+   colored border/box-shadow, so this rule intentionally doesn't fight them. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--accent-primary);
+  outline-offset: 2px;
+}

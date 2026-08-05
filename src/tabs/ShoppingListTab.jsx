@@ -14,7 +14,7 @@ import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
-import { Input, Avatar, FabMenu, Skeleton, EmptyState } from "../design-system/index.js";
+import { Input, Avatar, FabMenu, Skeleton, EmptyState, BaseButton } from "../design-system/index.js";
 import { readCache, writeCache } from "../lib/localCache.js";
 import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -65,6 +65,20 @@ const desktopListStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fi
 // as ImportantInfoModal's copy: this is the pinImportant toggle chip's icon,
 // not a real item row.
 const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z";
+
+const IMPORTANT_CHIP_PRESS_STYLE = { transform: "scale(var(--press-scale))" };
+
+const VIEW_TOGGLE_STYLE = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 4,
+  background: "var(--surface-sunken)",
+  border: "none",
+  borderRadius: "var(--radius-pill)",
+  padding: 3,
+  margin: 0,
+  font: "inherit",
+};
 
 // Cold-load placeholder, shaped like a couple of categories worth of items —
 // a category label bar plus a handful of item-card-shaped blocks — so first
@@ -1016,7 +1030,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             </span>
           )}
           {importantUnbought.length > 0 && (
-            <button
+            <BaseButton
               onClick={() => {
                 // Same "force a clean remount" move as the active-pane
                 // effect above: an item moving between this section and the
@@ -1041,16 +1055,16 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                 padding: "3px 8px",
                 fontSize: "var(--text-2xs)",
                 fontWeight: "var(--weight-semibold)",
-                cursor: "pointer",
                 background: pinImportant ? "var(--accent-tertiary)" : "var(--accent-tertiary-subtle)",
                 color: pinImportant ? "var(--text-on-accent)" : "var(--accent-tertiary)",
               }}
+              pressStyle={IMPORTANT_CHIP_PRESS_STYLE}
             >
               <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d={STAR_PATH} />
               </svg>
               {importantUnbought.length}
-            </button>
+            </BaseButton>
           )}
           {presentUsers.length > 0 && (
             <div
@@ -1065,23 +1079,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             </div>
           )}
         </div>
-        <button
+        <BaseButton
           onClick={() => setView(effectiveViewMode === "list" ? "grid" : "list")}
           aria-label={viewToggleLabel}
           title={viewToggleLabel}
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 4,
-            background: "var(--surface-sunken)",
-            border: "none",
-            borderRadius: "var(--radius-pill)",
-            padding: 3,
-            margin: 0,
-            font: "inherit",
-            cursor: "pointer",
-          }}
+          style={VIEW_TOGGLE_STYLE}
         >
           <span
             aria-hidden="true"
@@ -1104,7 +1106,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           <span style={viewToggleIconStyle(effectiveViewMode === "grid")}>
             <UiIcon name="grid" size={16} />
           </span>
-        </button>
+        </BaseButton>
       </div>
 
       {loading ? (
@@ -1162,7 +1164,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
           {boughtDisplayItems.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <button
+              <BaseButton
                 onClick={toggleBoughtCollapsed}
                 style={{
                   display: "flex",
@@ -1170,14 +1172,15 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                   gap: 6,
                   background: "none",
                   border: "none",
+                  borderRadius: "var(--radius-sm)",
                   fontFamily: "var(--font-sans)",
-                  cursor: "pointer",
                   fontSize: "var(--text-2xs)",
                   fontWeight: 700,
                   color: clusterFor("Recently bought").on,
                   textTransform: "uppercase",
                   letterSpacing: "var(--tracking-wide)",
-                  padding: 0,
+                  padding: "4px 6px",
+                  marginLeft: -6,
                   marginBottom: boughtCollapsed ? 0 : 8,
                 }}
               >
@@ -1190,7 +1193,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
                     transform: boughtCollapsed ? "rotate(-90deg)" : "none",
                   }}
                 />
-              </button>
+              </BaseButton>
               {/* No onToggleImportant here: a bought item's important flag is
                   always cleared server-side (see toggleItem/worker's /toggle
                   handler), so marking one important here would have nothing

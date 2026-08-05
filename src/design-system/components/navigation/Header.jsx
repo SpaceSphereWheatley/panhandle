@@ -1,9 +1,13 @@
 import React from 'react';
+import { IconButton } from '../forms/IconButton.jsx';
 
 /** Screen-top header — title, optional back button, optional trailing action.
  * Source: Panhandle Design System (components/navigation/Header.jsx),
  * extended with a sticky/safe-area treatment to match the real app's
- * single-page-with-fixed-chrome layout. */
+ * single-page-with-fixed-chrome layout. Back button goes through the shared
+ * `IconButton` (TODO #118) instead of a hand-styled `<button>`, so it gets
+ * real press/hover feedback and a proper 40px touch target like every other
+ * icon button in the app. */
 export function Header({ title, onBack, action }) {
   return (
     <div style={{
@@ -21,9 +25,7 @@ export function Header({ title, onBack, action }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         {onBack ? (
-          <button onClick={onBack} aria-label="Tilbake" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--text-primary)' }}>
-            <i className="ph ph-caret-left" style={{ fontSize: 22 }} />
-          </button>
+          <IconButton icon="caret-left" variant="ghost" label="Tilbake" onClick={onBack} style={{ marginLeft: -8 }} />
         ) : null}
         <h1 style={{
           fontFamily: 'var(--font-sans)',

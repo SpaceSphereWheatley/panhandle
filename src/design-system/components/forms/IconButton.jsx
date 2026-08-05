@@ -1,21 +1,25 @@
 import React from 'react';
-import { useRipple, Ripples } from '../../lib/useRipple.jsx';
+import { BaseButton } from './BaseButton.jsx';
 
 /** Icon-only circular button, for compact toolbar/list actions.
  * Source: Panhandle Design System (components/forms/IconButton.jsx), with the
- * app's pointer-based press and the design system's Android Material ripple. */
+ * app's pointer-based press and the design system's Android Material ripple —
+ * via the shared `BaseButton` primitive (TODO #118). */
 export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, label, style: styleOverride }) {
-  const [hover, setHover] = React.useState(false);
-  const [press, setPress] = React.useState(false);
-  const { ripples, spawn } = useRipple();
   const sizes = { sm: 32, md: 40, lg: 48 };
   const dim = sizes[size];
 
-  const variants = {
-    ghost: { background: hover ? 'var(--surface-sunken)' : 'transparent', color: 'var(--text-primary)' },
-    filled: { background: hover ? 'var(--accent-primary-hover)' : 'var(--accent-primary)', color: 'var(--text-on-accent)' },
-    subtle: { background: hover ? 'var(--accent-primary-subtle)' : 'var(--surface-sunken)', color: 'var(--accent-primary)' },
-    danger: { background: hover ? 'var(--status-danger-subtle)' : 'transparent', color: 'var(--status-danger)' },
+  const restBg = {
+    ghost: { background: 'transparent', color: 'var(--text-primary)' },
+    filled: { background: 'var(--accent-primary)', color: 'var(--text-on-accent)' },
+    subtle: { background: 'var(--surface-sunken)', color: 'var(--accent-primary)' },
+    danger: { background: 'transparent', color: 'var(--status-danger)' },
+  };
+  const hoverBg = {
+    ghost: { background: 'var(--surface-sunken)' },
+    filled: { background: 'var(--accent-primary-hover)' },
+    subtle: { background: 'var(--accent-primary-subtle)' },
+    danger: { background: 'var(--status-danger-subtle)' },
   };
 
   const rippleTint = variant === 'filled' ? 'rgba(255,255,255,0.35)' : 'rgba(43,38,33,0.15)';
@@ -23,48 +27,28 @@ export function IconButton({ icon, size = 'md', variant = 'ghost', onClick, labe
   const stateLayerColor = variant === 'filled' ? 'var(--md-on-primary)' : 'var(--md-on-surface)';
 
   return (
-    <button
-      type="button"
+    <BaseButton
       aria-label={label}
       onClick={onClick}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
-      onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerDown={(e) => { setPress(true); spawn(e); }}
-      onPointerUp={() => setPress(false)}
-      onPointerCancel={() => setPress(false)}
       style={{
         width: dim,
         height: dim,
         borderRadius: 'var(--radius-pill)',
         border: 'none',
-        cursor: 'pointer',
-        position: 'relative',
-        overflow: 'hidden',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'background-color var(--duration-fast) var(--ease-out), transform var(--spring-duration-soft) var(--ease-spring-soft)',
-        transform: press ? 'scale(var(--press-scale))' : 'scale(1)',
         fontSize: dim * 0.5,
         flexShrink: 0,
-        ...variants[variant],
+        ...restBg[variant],
         ...styleOverride,
       }}
+      hoverStyle={hoverBg[variant]}
+      pressStyle={{ transform: 'scale(var(--press-scale))' }}
+      stateLayerColor={stateLayerColor}
+      rippleTint={rippleTint}
     >
-      {hover || press ? (
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background: stateLayerColor,
-            opacity: press ? 'var(--state-pressed-opacity)' : 'var(--state-hover-opacity)',
-          }}
-        />
-      ) : null}
-      <Ripples ripples={ripples} tint={rippleTint} />
       <i className={`ph ph-${icon}`} style={{ position: 'relative' }} />
-    </button>
+    </BaseButton>
   );
 }
