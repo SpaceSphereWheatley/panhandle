@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { ItemIcon } from "./ItemIcon.jsx";
-import { Card } from "../design-system/index.js";
+import { cardComponent } from "../design-system/index.js";
 import { cap, parseSqliteDatetime, haptic } from "../lib/shoppingUtils.js";
 import { useLongPress } from "../hooks/useLongPress.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
@@ -9,7 +9,6 @@ import { useDesignIntensity } from "../hooks/useDesignIntensity.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 
-const MotionCard = motion(Card);
 const MotionDiv = motion.div;
 
 // Choreographed stagger, expressive intensity only — cards ripple in instead
@@ -53,7 +52,7 @@ export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportan
   const longPress = useLongPress(() => onEdit(item.id));
   const { shouldAnimate, transition } = useMotionConfig();
   const intensity = useDesignIntensity();
-  const CardComponent = shouldAnimate ? MotionCard : Card;
+  const CardComponent = cardComponent(shouldAnimate);
   const ContentWrapper = shouldAnimate ? MotionDiv : "div";
 
   // Grid tiles are much narrower than list rows (ShoppingListTab's gridStyle

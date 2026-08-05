@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useRipple } from '../../lib/useRipple.jsx';
 
 /** Base surface card — rounded, soft shadow, used to contain any grouped content.
@@ -96,3 +97,17 @@ export const Card = React.forwardRef(function Card(
     </div>
   );
 });
+
+/** `motion(Card)` — hoisted here (TODO #149) so `ItemCard.jsx`, `MealsTab.jsx`,
+ * and `StorageTab.jsx` share one instance instead of each defining their own
+ * `const MotionCard = motion(Card)`. */
+export const MotionCard = motion(Card);
+
+/** Picks the motion-wrapped `Card` when animations are enabled, or the plain
+ * `Card` otherwise — the "animate a card, unless the user turned motion off"
+ * decision (driven by `useMotionConfig()`'s `shouldAnimate`) has one home
+ * instead of being copy-pasted as `shouldAnimate ? MotionCard : Card` at
+ * every call site. */
+export function cardComponent(shouldAnimate) {
+  return shouldAnimate ? MotionCard : Card;
+}

@@ -12,7 +12,7 @@ export { Switch } from './components/forms/Switch.jsx';
 export { SegmentedControl } from './components/forms/SegmentedControl.jsx';
 export { Select } from './components/forms/Select.jsx';
 export { Tag } from './components/forms/Tag.jsx';
-export { Card } from './components/data-display/Card.jsx';
+export { Card, MotionCard, cardComponent } from './components/data-display/Card.jsx';
 export { ListItem } from './components/data-display/ListItem.jsx';
 export { Avatar } from './components/data-display/Avatar.jsx';
 export { Badge } from './components/data-display/Badge.jsx';
