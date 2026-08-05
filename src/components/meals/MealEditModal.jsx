@@ -28,6 +28,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
   const [recipeUrl, setRecipeUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting || importing;
 
   useEffect(() => {
     (async () => {
@@ -100,16 +103,29 @@ export function MealEditModal({ id, onClose, onSaved }) {
   return (
     <Modal onClose={onClose} title={t(id ? "meals.edit.title" : "meals.edit.newTitle")}>
       {(requestClose) => {
+        // Guards against a double-tap double-submit on a slow connection,
+        // same pattern as BoxEditModal.jsx's saving/deleting (and this
+        // modal's own pre-existing `importing` guard on the recipe-import
+        // button above).
         async function save() {
           const trimmed = name.trim();
           if (!trimmed) {
             toast(t("meals.toast.emptyName"), { error: true });
             return;
           }
-          const res = id
-            ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
-            : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
+          setSaving(true);
+          let res;
+          try {
+            res = id
+              ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
+              : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
+          } catch {
+            setSaving(false);
+            toast(t("shoppingList.toast.genericError"), { error: true });
+            return;
+          }
           if (res.error) {
+            setSaving(false);
             toast(apiErrorMessage(res, t), { error: true });
             return;
           }
@@ -128,7 +144,14 @@ export function MealEditModal({ id, onClose, onSaved }) {
             }))
           )
             return;
-          await api(`/meals/${id}`, { method: "DELETE" });
+          setDeleting(true);
+          try {
+            await api(`/meals/${id}`, { method: "DELETE" });
+          } catch {
+            setDeleting(false);
+            toast(t("shoppingList.toast.genericError"), { error: true });
+            return;
+          }
           requestClose(onSaved);
         }
 
@@ -158,13 +181,13 @@ export function MealEditModal({ id, onClose, onSaved }) {
                     placeholder={t("meals.edit.importUrlPlaceholder")}
                     style={{ flex: 1 }}
                   />
-                  <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || importing}>
+                  <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || busy}>
                     {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
                   </Button>
                 </div>
               </>
             ) : (
-              <Button variant="ghost" size="sm" icon="link" onClick={() => setShowImport(true)} style={{ marginTop: 4, padding: "8px 4px" }}>
+              <Button variant="ghost" size="sm" icon="link" disabled={busy} onClick={() => setShowImport(true)} style={{ marginTop: 4, padding: "8px 4px" }}>
                 {t("meals.edit.importToggle")}
               </Button>
             )}
@@ -186,12 +209,12 @@ export function MealEditModal({ id, onClose, onSaved }) {
               placeholder={t("meals.edit.labelsPlaceholder")}
             />
             <div className="actions">
-              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
-              <Button variant="primary" onClick={save}>{t("common.save")}</Button>
+              <Button variant="outline" disabled={busy} onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" disabled={busy} onClick={save}>{t(saving ? "common.loading" : "common.save")}</Button>
             </div>
             {id && (
-              <Button variant="danger" icon="trash" onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
-                {t("meals.edit.deleteFromCatalogue")}
+              <Button variant="danger" icon="trash" disabled={busy} onClick={deleteEntry} style={{ width: "100%", marginTop: 8 }}>
+                {t(deleting ? "common.loading" : "meals.edit.deleteFromCatalogue")}
               </Button>
             )}
           </>

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.3] — 2026-08-05
+
+### Fixed
+- **A bad server response could silently leave the shopping list's item catalogue empty for the rest of your session, with no error shown — fixed, and the item editor, meal-plan editor, and meal editor no longer risk a double-tap submitting the same save or delete twice.** Loading the catalogue (which powers autocomplete and duplicate detection while adding items) now shows an error message and recovers instead of failing silently and forever; a catalogue hiccup also no longer prevents the shopping list itself from loading, which it used to. Saving or deleting from those three editors now disables the buttons and shows "Loading..." while the request is in flight, matching how the storage box editor already worked, so a slow connection can't turn one tap into two. (`src/lib/api.js`'s `api()` helper now catches a non-JSON/malformed response body instead of throwing uncaught; `ShoppingListTab.jsx`'s `loadCatalogue()` catches its own errors and no longer blocks `loadList()` via a `.then()` chain. `ItemEditModal`, `MealPlanModal`, and `MealEditModal` gained `saving`/`deleting`-style in-flight guards; `MealPlanModal`'s save/delete used to close instantly without waiting for the write to finish, so they now await it first.)
+
 ## [1.61.2] — 2026-08-05
 
 ### Fixed
