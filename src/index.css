@@ -383,7 +383,7 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
 }
 .token-chip button:active { background: rgba(0, 0, 0, 0.12); }
 .token-input .token-input-field {
-  flex: 1; min-width: 80px; border: none; background: none; outline: none; width: auto;
+  flex: 1; min-width: 80px; border: none; background: none; width: auto;
   padding: 4px 2px; font-size: var(--text-md); font-family: var(--font-sans); color: var(--text-primary);
 }
 .token-dropdown {

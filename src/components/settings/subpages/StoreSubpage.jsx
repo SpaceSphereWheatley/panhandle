@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
-import { Button, Card, Input, IconButton } from "../../../design-system/index.js";
+import { Button, Card, Input, IconButton, BaseButton } from "../../../design-system/index.js";
 import { useCategoryOrder } from "../../../context/CategoryOrderContext.jsx";
 import { useToast } from "../../../context/ToastContext.jsx";
 import { useLanguage, useTranslation } from "../../../context/LanguageContext.jsx";
@@ -220,24 +220,26 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
         }}
       />
       <span style={{ flex: 1, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
-      <button
+      <BaseButton
         onClick={() => onMove(index, -1)}
         disabled={index === 0}
         aria-label={t("settings.store.order.moveUp", { category: label })}
         title={t("settings.store.order.moveUpTitle")}
-        style={reorderBtnStyle(index === 0)}
+        style={reorderBtnStyle}
+        pressStyle={REORDER_PRESS_STYLE}
       >
         <UiIcon name="caret-up" size={16} />
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
         onClick={() => onMove(index, 1)}
         disabled={index === total - 1}
         aria-label={t("settings.store.order.moveDown", { category: label })}
         title={t("settings.store.order.moveDownTitle")}
-        style={reorderBtnStyle(index === total - 1)}
+        style={reorderBtnStyle}
+        pressStyle={REORDER_PRESS_STYLE}
       >
         <UiIcon name="caret-down" size={16} />
-      </button>
+      </BaseButton>
       <span
         aria-hidden="true"
         onPointerDown={(e) => dragControls.start(e)}
@@ -259,19 +261,17 @@ function CategoryRow({ cat, index, total, onMove, onDragSettled }) {
   );
 }
 
-function reorderBtnStyle(disabled) {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 36,
-    height: 36,
-    flexShrink: 0,
-    borderRadius: 10,
-    border: "1px solid var(--border-default)",
-    background: "var(--surface-sunken)",
-    color: disabled ? "var(--text-tertiary)" : "var(--text-primary)",
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.4 : 1,
-  };
-}
+const reorderBtnStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 36,
+  height: 36,
+  flexShrink: 0,
+  borderRadius: 10,
+  border: "1px solid var(--border-default)",
+  background: "var(--surface-sunken)",
+  color: "var(--text-primary)",
+};
+
+const REORDER_PRESS_STYLE = { transform: "scale(var(--press-scale))" };

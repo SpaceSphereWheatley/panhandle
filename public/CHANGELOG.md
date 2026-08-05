@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.2] — 2026-08-05
+
+### Fixed
+- **Every button, toggle, and link in the app now shows a visible outline when you tab to it with a keyboard, and a handful of buttons that previously gave no feedback at all now visibly press/ripple when tapped.** Before this, navigating the app without a mouse or touchscreen (keyboard-only, or a switch-control device) gave no visual sign of where you were on the screen — this fixes that everywhere at once. The checkbox and toggle-switch controls (used throughout Settings and the meal/box pickers) can now also be reached and operated with a keyboard at all, which they couldn't before. (New shared `:focus-visible` outline in `base.css`, covering every native button/input/select/link app-wide — see CLAUDE.md's UI/UX section. `Checkbox`/`Switch` are now real `<button role="checkbox"|"switch">` elements instead of a plain clickable `<span>`. A new shared `BaseButton` primitive, plus the `usePressInteractions` hook it and `Button`/`IconButton`/`Fab` now share, gives Meals' week-nav arrows/"this week"/"Alle måltider ›"/density toggle, the shopping list's view toggle/important-count chip/"Recently bought" collapse, Butikkoppsett's reorder buttons, and the header's back arrow the same press/ripple feedback every other button in the app already had.)
+
 ## [1.61.1] — 2026-08-05
 
 ### Changed

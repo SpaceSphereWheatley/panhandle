@@ -2,6 +2,7 @@
 // from the Claude Design project (ad507229-d666-40ec-854b-087397bc37cb)
 // into this repo. See src/design-system/styles.css for the token layer.
 export { Button } from './components/forms/Button.jsx';
+export { BaseButton } from './components/forms/BaseButton.jsx';
 export { IconButton } from './components/forms/IconButton.jsx';
 export { Fab } from './components/forms/Fab.jsx';
 export { FabMenu } from './components/forms/FabMenu.jsx';

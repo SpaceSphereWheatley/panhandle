@@ -15,7 +15,7 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Card, Avatar, FabMenu, Skeleton } from "../design-system/index.js";
+import { Card, Avatar, FabMenu, Skeleton, BaseButton } from "../design-system/index.js";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { readCache, writeCache } from "../lib/localCache.js";
 
@@ -138,7 +138,7 @@ function ResponsibleAvatar({ name, nameFor, colorFor, size, muted, t }) {
           justifyContent: "center",
         }}
       >
-        <i className="ph ph-repeat" style={{ fontSize: badgeSize * 0.55, color: "var(--text-on-accent)" }} aria-hidden="true" />
+        <UiIcon name="repeat" size={badgeSize * 0.55} style={{ color: "var(--text-on-accent)" }} />
       </span>
     </div>
   );
@@ -296,7 +296,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor
                               flexShrink: 0,
                             }}
                           >
-                            <i className="ph ph-plus" style={{ fontSize: 10 }} aria-hidden="true" />
+                            <UiIcon name="plus" size={10} />
                           </span>
                           <span
                             style={{
@@ -350,7 +350,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor
                       </span>
                     )}
                     {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={40} muted={muted} t={t} />}
-                    <i className="ph ph-caret-right" style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)", flexShrink: 0 }} aria-hidden="true" />
+                    <UiIcon name="caretRight" size={"var(--text-sm)"} style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
                   </div>
                 </CardComponent>
               );
@@ -626,38 +626,42 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
-        <button disabled={weekOffset <= WEEK_MIN} style={{ ...weekNavBtnStyle, opacity: weekOffset <= WEEK_MIN ? 0.4 : 1 }} onClick={() => shiftWeek(-1)}>‹ {t("meals.nav.prev")}</button>
+        <BaseButton
+          disabled={weekOffset <= WEEK_MIN}
+          style={weekNavBtnStyle}
+          pressStyle={WEEK_NAV_PRESS_STYLE}
+          onClick={() => shiftWeek(-1)}
+        >
+          ‹ {t("meals.nav.prev")}
+        </BaseButton>
         <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--text-tertiary)", textAlign: "center", flex: 1 }}>
           {targetMonday.toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" })} – {" "}
           {targetSunday.toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short" })}
         </span>
-        <button style={weekNavBtnStyle} onClick={() => shiftWeek(0)}>{t("meals.nav.thisWeek")}</button>
-        <button disabled={weekOffset >= WEEK_MAX} style={{ ...weekNavBtnStyle, opacity: weekOffset >= WEEK_MAX ? 0.4 : 1 }} onClick={() => shiftWeek(1)}>{t("meals.nav.next")} ›</button>
+        <BaseButton style={weekNavBtnStyle} pressStyle={WEEK_NAV_PRESS_STYLE} onClick={() => shiftWeek(0)}>
+          {t("meals.nav.thisWeek")}
+        </BaseButton>
+        <BaseButton
+          disabled={weekOffset >= WEEK_MAX}
+          style={weekNavBtnStyle}
+          pressStyle={WEEK_NAV_PRESS_STYLE}
+          onClick={() => shiftWeek(1)}
+        >
+          {t("meals.nav.next")} ›
+        </BaseButton>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-        <button
+        <BaseButton
           onClick={() => setModal({ type: "browse" })}
-          style={{ background: "none", border: "none", color: "var(--accent-primary)", fontSize: "var(--text-sm)", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer", padding: 0 }}
+          style={allMealsLinkStyle}
         >
           {t("meals.allMeals")} ›
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}
           aria-label={t(density === "compact" ? "meals.densityToggle.switchToComfortable" : "meals.densityToggle.switchToCompact")}
           title={t(density === "compact" ? "meals.densityToggle.switchToComfortable" : "meals.densityToggle.switchToCompact")}
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 4,
-            background: "var(--surface-sunken)",
-            border: "none",
-            borderRadius: "var(--radius-pill)",
-            padding: 3,
-            margin: 0,
-            font: "inherit",
-            cursor: "pointer",
-          }}
+          style={densityToggleStyle}
         >
           <span
             aria-hidden="true"
@@ -680,7 +684,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           <span style={densityToggleIconStyle(density === "comfortable")}>
             <UiIcon name="rowsComfortable" size={16} />
           </span>
-        </button>
+        </BaseButton>
       </div>
 
       {/* containerRef is always mounted (even while `loading`/before paneWidth
@@ -782,7 +786,35 @@ const weekNavBtnStyle = {
   fontSize: "var(--text-xs)",
   fontFamily: "var(--font-sans)",
   color: "var(--text-primary)",
-  cursor: "pointer",
+};
+
+const WEEK_NAV_PRESS_STYLE = { transform: "scale(var(--press-scale))" };
+
+// Negative margin cancels the padding's layout impact so BaseButton's tap
+// target/ripple area is bigger than the bare text without shifting it inside
+// this row's justify-content: space-between.
+const allMealsLinkStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--accent-primary)",
+  fontSize: "var(--text-sm)",
+  fontWeight: 600,
+  fontFamily: "var(--font-sans)",
+  padding: "4px 6px",
+  margin: "-4px -6px",
+  borderRadius: "var(--radius-sm)",
+};
+
+const densityToggleStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 4,
+  background: "var(--surface-sunken)",
+  border: "none",
+  borderRadius: "var(--radius-pill)",
+  padding: 3,
+  margin: 0,
+  font: "inherit",
 };
 
 // Mirrors ShoppingListTab's viewToggleIconStyle: the two icons are inert
