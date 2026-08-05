@@ -7,6 +7,30 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+124. (124) Folded the icon-convention nit into the #118 pass: the raw
+     `<i className="ph ph-x">` icons in the touched files (`MealsTab.jsx`)
+     now go through the shared `UiIcon` component. (The other half of
+     #124 — `Checkbox`/`Switch` no longer hand-rolling their own press
+     treatment — landed as a side effect of #117, below.) (1.61.2)
+
+123. (118) Factored the hover/press/ripple logic `Button`, `IconButton`,
+     and `Fab` each hand-rolled independently into a shared
+     `usePressInteractions` hook and a new `BaseButton` primitive, then
+     migrated every one-off raw `<button>` the review flagged as silent on
+     tap: `MealsTab.jsx`'s week-nav arrows/"this week"/"Alle måltider ›"/
+     density toggle, `ShoppingListTab.jsx`'s view toggle/important-chip/
+     "Recently bought" collapse, `StoreSubpage.jsx`'s reorder buttons, and
+     `Header.jsx`'s back arrow (now the shared `IconButton`). (1.61.2)
+
+122. (117) Added the app's first `:focus-visible` styling — a shared
+     tag-selector rule in `base.css` covering every native
+     button/input/select/textarea/link app-wide, no per-component opt-in
+     needed. `Checkbox`/`Switch` were previously a plain `<span onClick>`,
+     not just unstyled on focus but entirely unreachable by keyboard, so
+     both are now real `<button role="checkbox"|"switch">` elements nested
+     in their existing `<label>` (a label-forwarded click still lands on
+     them, since `button` is labelable). (1.61.2)
+
 121. (109) The bottom-sheet drag-grabber pill turned out to already dismiss
      on drag — that shipped back in #257 (1.55.0-era), before the
      2026-07-31 UI/UX audit stale-listed it as unwired in `TODO.md`'s
