@@ -63,35 +63,42 @@ Completed items live in `Todo_done.md`, not below.
    one. Correctly deferred; revisit only if a concrete second-list need
    shows up.
 
-**Execution order** (cross-cutting sequencing pass, 2026-07-31 — bundles
+**Execution order** (cross-cutting sequencing pass, 2026-07-31, bundling
 items across the groups above by shared file/dependency rather than by
-review-pass, to minimize context-switching. Group priority above still
-governs anything not listed here. Steps 1-2 of the original pass — #116 +
-#121 and #130 — shipped in #265; step 3, #133, turned out to already be
-fixed; step 4 (formerly #87 + #88 + #89 + #92) shipped as the bug sweep
-(see `Todo_done.md`); renumbered below):
+review-pass, to minimize context-switching; **reordered 2026-08-05** to lead
+with value/importance instead of file-locality alone — the original pass put
+step 3 (#117's chain) behind a Low/Low backend batch, which meant the
+backlog's only P1 item and its two Medium-rated reliability bugs would've
+waited behind its two lowest-priority items for no dependency reason. Group
+priority above still governs anything not listed here. Steps 1-2 of the
+original 2026-07-31 pass — #116 + #121 and #130 — shipped in #265; step 3,
+#133, turned out to already be fixed; step 4 (formerly #87 + #88 + #89 +
+#92) shipped as the bug sweep (see `Todo_done.md`); renumbered below):
 
-1. **#131 + #132** — backend data-integrity batch.
+1. **#117 → #118 → #124** — strictly in this order: the shared button
+   base (#118) must be built on top of the focus ring (#117), not
+   retrofitted; #124 folds into the same pass. Promoted to lead the queue
+   since #117 is the only P1 in the whole backlog and nothing blocks it.
 2. **#137 + #148** — the two real reliability bugs, batched: an uncaught
    exception on a malformed response, and three editor modals with no
    double-submit guard. Both rank above the performance items in Code
    quality despite all being P2.
-3. **#117 → #118 → #124** — strictly in this order: the shared button
-   base (#118) must be built on top of the focus ring (#117), not
-   retrofitted; #124 folds into the same pass.
-4. **#149 → #147** — also strictly in this order, and deliberately
-   adjacent to step 3: both are "hoist one shared primitive, then migrate
-   the call sites," so they reuse the design-system context step 3 just
-   built. #149 (one shared `MotionCard`) must land before #147 (wiring
-   Storage into the motion system), or #147 creates a third copy of the
-   thing #149 exists to remove.
-5. **#145 + #146 + #150 + #151** — the gesture/haptic/desktop-gate batch.
-   Kept contiguous with steps 3-4 because it lands in the same files
+3. **#149 → #147** — strictly in this order, and deliberately adjacent to
+   step 1: both are "hoist one shared primitive, then migrate the call
+   sites," so they reuse the design-system context step 1 just built.
+   #149 (one shared `MotionCard`) must land before #147 (wiring Storage
+   into the motion system), or #147 creates a third copy of the thing
+   #149 exists to remove.
+4. **#145 + #146 + #150 + #151** — the gesture/haptic/desktop-gate batch.
+   Kept contiguous with steps 1 and 3 because it lands in the same files
    those passes leave hot (`MealsTab.jsx` especially, which #118 also
    migrates). #151 is the write-up of what #145 settles, so it goes last
    in the batch, not first.
-6. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
+5. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead.
+6. **#131 + #132** — backend data-integrity batch. Both Low/Low — demoted
+   to just ahead of #136 now that step order leads with value instead of
+   file-locality; nothing else depends on these landing earlier.
 7. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
@@ -101,7 +108,7 @@ Everything else (#120, #125, #126, #127, #134, #135, #138, #139, #140,
 #142, #143, #144, #115, #1, #5, and the `## Ideas` section) is
 deliberately not in this sequence — see each item's own note for why, or
 the group priority rationale above. Note #120 and #143 both become easier
-calls once step 5 lands: #120 (gesture discoverability) is worth
+calls once step 4 lands: #120 (gesture discoverability) is worth
 revisiting once long-press actually works app-wide, and #143 (success
 toasts) is already pointed at #118's pass.
 
