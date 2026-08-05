@@ -41,7 +41,16 @@ export async function api(path, opts = {}) {
   if (refreshed && refreshed !== getToken() && path !== "/change-password") {
     onRefresh(refreshed);
   }
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    // A non-JSON or empty body — an origin 500 HTML error page, a gateway
+    // timeout, a dropped connection mid-response. res.json() throws
+    // SyntaxError for these, which callers weren't guarding against; give it
+    // a distinct, catchable message so a caller can tell it apart from the
+    // "network" case above (never got a response at all) if it needs to.
+    throw new Error("bad_response");
+  }
 }
 
 export async function rawLogin(username, password) {

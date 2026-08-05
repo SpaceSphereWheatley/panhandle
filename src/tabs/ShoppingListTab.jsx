@@ -265,7 +265,16 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   itemsRef.current = items;
 
   async function loadCatalogue() {
-    setCatalogue(await api("/catalogue"));
+    try {
+      setCatalogue(await api("/catalogue"));
+    } catch {
+      // Non-fatal: matching/autocomplete degrades to whatever catalogue is
+      // already in state (empty on a first-load failure) rather than
+      // crashing — but still worth telling the user, unlike loadList's
+      // /catalogue/suggestions catch below, since this is the catalogue the
+      // whole add/autocomplete flow depends on, not a nice-to-have.
+      toast(t("shoppingList.toast.genericError"), { error: true });
+    }
   }
 
   async function loadList() {
@@ -338,7 +347,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   useEffect(() => {
     if (!active) return;
-    loadCatalogue().then(loadList).finally(() => setLoading(false));
+    // Independent, not chained: loadCatalogue() now catches its own errors
+    // (see above) rather than rejecting, but even before that fix, chaining
+    // via .then(loadList) meant a failed catalogue load silently skipped
+    // loadList too — the shopping list itself never appearing over one
+    // unrelated catalogue hiccup. The loading spinner only waits on loadList,
+    // the one that actually gates what's on screen.
+    loadCatalogue();
+    loadList().finally(() => setLoading(false));
     const timer = setInterval(() => {
       if (!document.hidden) loadList();
     }, POLL_MS);

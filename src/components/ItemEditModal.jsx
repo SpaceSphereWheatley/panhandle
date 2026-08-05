@@ -28,6 +28,15 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   const { nameFor } = useListUsers();
   const { lang } = useLanguage();
   const t = useTranslation();
+  // Guards against a double-tap double-submit on a slow connection, same
+  // pattern as BoxEditModal.jsx's saving/deleting. Three separate write
+  // actions here, so three separate flags (only ever one true at a time in
+  // practice) rather than one shared boolean, so each button's own label can
+  // swap to "Loading..." independently.
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [deletingCatalogue, setDeletingCatalogue] = useState(false);
+  const busy = saving || removing || deletingCatalogue;
   // The edit input always operates on the canonical (Norwegian) stored name
   // — translation is a display concern (see itemNames.js), not something a
   // rename should rewrite. The modal title/confirm dialog below are
@@ -55,11 +64,20 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
             toast(t("itemEdit.emptyName"), { error: true });
             return;
           }
-          const res = await api(`/list/${item.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
-          });
+          setSaving(true);
+          let res;
+          try {
+            res = await api(`/list/${item.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
+            });
+          } catch {
+            setSaving(false);
+            toast(t("shoppingList.toast.genericError"), { error: true });
+            return;
+          }
           if (res.error) {
+            setSaving(false);
             toast(apiErrorMessage(res, t), { error: true });
             return;
           }
@@ -80,7 +98,20 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
             }))
           )
             return;
-          await api(`/list/${item.id}`, { method: "DELETE" });
+          setRemoving(true);
+          let res;
+          try {
+            res = await api(`/list/${item.id}`, { method: "DELETE" });
+          } catch {
+            setRemoving(false);
+            toast(t("shoppingList.toast.genericError"), { error: true });
+            return;
+          }
+          if (res.error) {
+            setRemoving(false);
+            toast(apiErrorMessage(res, t), { error: true });
+            return;
+          }
           requestClose(onSaved);
         }
 
@@ -97,7 +128,20 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
             }))
           )
             return;
-          await api(`/list/${item.id}/catalogue`, { method: "DELETE" });
+          setDeletingCatalogue(true);
+          let res;
+          try {
+            res = await api(`/list/${item.id}/catalogue`, { method: "DELETE" });
+          } catch {
+            setDeletingCatalogue(false);
+            toast(t("shoppingList.toast.genericError"), { error: true });
+            return;
+          }
+          if (res.error) {
+            setDeletingCatalogue(false);
+            toast(apiErrorMessage(res, t), { error: true });
+            return;
+          }
           requestClose(onDeletedFromCatalogue);
         }
 
@@ -125,15 +169,15 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
               placeholder={t("itemEdit.notesPlaceholder")}
             />
             <div className="actions">
-              <Button variant="outline" onClick={() => requestClose()}>{t("itemEdit.cancel")}</Button>
-              <Button variant="primary" onClick={save}>{t("itemEdit.save")}</Button>
+              <Button variant="outline" disabled={busy} onClick={() => requestClose()}>{t("itemEdit.cancel")}</Button>
+              <Button variant="primary" disabled={busy} onClick={save}>{t(saving ? "common.loading" : "itemEdit.save")}</Button>
             </div>
-            <Button variant="outline" icon="trash" onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
-              {t("itemEdit.removeFromList")}
+            <Button variant="outline" icon="trash" disabled={busy} onClick={removeFromList} style={{ width: "100%", marginTop: 8 }}>
+              {t(removing ? "common.loading" : "itemEdit.removeFromList")}
             </Button>
             <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-              <Button variant="danger" size="sm" onClick={deleteFromCatalogue}>
-                {t("itemEdit.forgetCompletely")}
+              <Button variant="danger" size="sm" disabled={busy} onClick={deleteFromCatalogue}>
+                {t(deletingCatalogue ? "common.loading" : "itemEdit.forgetCompletely")}
               </Button>
             </div>
             <div className="meta" style={{ marginTop: 12, textAlign: "center" }}>

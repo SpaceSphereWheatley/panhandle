@@ -32,6 +32,17 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   const [showDropdown, setShowDropdown] = useState(false);
   const [respSelect, setRespSelect] = useState("");
   const [respOther, setRespOther] = useState("");
+  // Guards against a double-tap double-submit on a slow connection, same
+  // pattern as BoxEditModal.jsx's saving/deleting. savePlan/deletePlanDay
+  // delegate the actual write to MealsTab (onSavePlan/onDeletePlanDay) and
+  // used to close the instant they were called, with no window to guard —
+  // now they await that promise (MealsTab's own handlers already catch their
+  // errors and never reject) before closing, so a second tap while the first
+  // is still in flight has a busy flag to check.
+  const [saving, setSaving] = useState(false);
+  const [deletingDay, setDeletingDay] = useState(false);
+  const [addingIngredients, setAddingIngredients] = useState(false);
+  const busy = saving || deletingDay || addingIngredients;
   const fieldRef = useRef(null);
   // savePlan/deletePlanDay/the load-failure effect below all need to trigger
   // Sheet's dismissal animation, but they're defined outside <Modal>'s
@@ -98,14 +109,15 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
     return respSelect;
   }
 
-  function savePlan() {
+  async function savePlan() {
     const name = mealName.trim();
     const responsible = getResp();
     if (!name && !responsible) {
       requestCloseRef.current();
       return;
     }
-    onSavePlan(iso, { meal_name: name || null, responsible, ingredients });
+    setSaving(true);
+    await onSavePlan(iso, { meal_name: name || null, responsible, ingredients });
     requestCloseRef.current();
   }
 
@@ -117,7 +129,8 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       }))
     )
       return;
-    onDeletePlanDay(iso);
+    setDeletingDay(true);
+    await onDeletePlanDay(iso);
     requestCloseRef.current();
   }
 
@@ -133,15 +146,18 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       return;
     }
     if (name) {
+      setAddingIngredients(true);
       try {
         await api("/plan", {
           method: "POST",
           body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients }),
         });
       } catch {
+        setAddingIngredients(false);
         toast(t("meals.toast.saveFailed"), { error: true });
         return;
       }
+      setAddingIngredients(false);
     }
     onOpenIngredientPicker(ingredients, iso);
   }
@@ -229,8 +245,8 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
             <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
               {t("meals.plan.ingredientsHint")}
             </div>
-            <Button variant="outline" icon="shopping-cart-simple" onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
-              {t("meals.plan.addIngredientsToList")}
+            <Button variant="outline" icon="shopping-cart-simple" disabled={busy} onClick={pickIngredients} style={{ width: "100%", marginTop: 10 }}>
+              {t(addingIngredients ? "common.loading" : "meals.plan.addIngredientsToList")}
             </Button>
             <label htmlFor="meal-plan-resp">{t("meals.responsibleLabel")}</label>
             <select id="meal-plan-resp" value={respSelect} onChange={(e) => setRespSelect(e.target.value)}>
@@ -251,12 +267,12 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
               />
             )}
             <div className="actions">
-              <Button variant="outline" onClick={() => requestClose()}>{t("common.cancel")}</Button>
-              <Button variant="primary" onClick={savePlan}>{t("common.save")}</Button>
+              <Button variant="outline" disabled={busy} onClick={() => requestClose()}>{t("common.cancel")}</Button>
+              <Button variant="primary" disabled={busy} onClick={savePlan}>{t(saving ? "common.loading" : "common.save")}</Button>
             </div>
             {(current.meal_name || current.responsible) && (
-              <Button variant="danger" icon="trash" onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
-                {t("meals.plan.removeDay")}
+              <Button variant="danger" icon="trash" disabled={busy} onClick={deletePlanDay} style={{ width: "100%", marginTop: 8 }}>
+                {t(deletingDay ? "common.loading" : "meals.plan.removeDay")}
               </Button>
             )}
           </>
