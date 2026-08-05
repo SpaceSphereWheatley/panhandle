@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.5] — 2026-08-05
+
+### Changed
+- **Holding down on a meal day or a storage box now opens its editor, the same way it already does on a shopping list item — and planning/deleting a meal, saving/deleting a box, and scanning a QR code now give the same little vibration the shopping list already does for its own actions.** Long-press-to-edit and haptic feedback used to only work on the shopping list, so a habit learned there quietly stopped working on the other two tabs. Also: dragging a shopping-list item to mark it important — a touch gesture — no longer stays draggable with a mouse on a desktop-width screen, matching how the meal-plan week-swipe already behaves there. (New `DayCard` sub-component in `MealsTab.jsx` so `useLongPress` can be called per day-card, since hooks can't run inside a `.map()`; `StorageTab.jsx`'s `BoxCard` gained the same. The design system's `Card` component now composes a caller's own `onPointer*` handlers with its `interactive` press-state instead of one silently overriding the other — needed for `useLongPress`'s handlers and `Card`'s built-in ripple/hover feedback to coexist on the same element. `ItemCard.jsx`'s swipe gesture now checks `useIsDesktop()` like `MealsTab`'s week-pager already does. See CLAUDE.md's new "Interaction patterns" section for the full writeup, including the deliberate tap-semantics split between Shopping and Meals/Storage.)
+
 ## [1.61.4] — 2026-08-05
 
 ### Changed

@@ -16,9 +16,24 @@ import { useRipple } from '../../lib/useRipple.jsx';
  * Framer-untouched node to stay safe next to `motion(Card)`'s `layout`
  * tracking — a follow-up once colour+ripple alone has been checked live,
  * not speculative complexity added up front.
+ *
+ * A caller's own `onPointer*` props (e.g. `useLongPress`'s handlers, TODO
+ * #145) are composed with `interactive`'s internal hover/press state instead
+ * of one silently overriding the other — they're destructured out by name
+ * and called alongside the internal state update, not left to fall through
+ * `...rest`, which would land *after* (so replace) the JSX below's own
+ * `onPointerDown` etc.
  * Source: Panhandle Design System (components/data-display/Card.jsx). */
 export const Card = React.forwardRef(function Card(
-  { children, padding = 'md', onClick, interactive = false, style, ...rest },
+  {
+    children, padding = 'md', onClick, interactive = false, style,
+    onPointerEnter: onPointerEnterProp,
+    onPointerLeave: onPointerLeaveProp,
+    onPointerDown: onPointerDownProp,
+    onPointerUp: onPointerUpProp,
+    onPointerCancel: onPointerCancelProp,
+    ...rest
+  },
   ref
 ) {
   const paddings = { sm: '12px 16px', md: '18px 20px', lg: '24px', none: 0 };
@@ -36,7 +51,17 @@ export const Card = React.forwardRef(function Card(
 
   if (!interactive) {
     return (
-      <div ref={ref} onClick={onClick} style={{ ...baseStyle, ...style }} {...rest}>
+      <div
+        ref={ref}
+        onClick={onClick}
+        onPointerEnter={onPointerEnterProp}
+        onPointerLeave={onPointerLeaveProp}
+        onPointerDown={onPointerDownProp}
+        onPointerUp={onPointerUpProp}
+        onPointerCancel={onPointerCancelProp}
+        style={{ ...baseStyle, ...style }}
+        {...rest}
+      >
         {children}
       </div>
     );
@@ -54,11 +79,11 @@ export const Card = React.forwardRef(function Card(
           onClick?.(e);
         }
       }}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); }}
-      onPointerLeave={() => { setHover(false); setPress(false); }}
-      onPointerDown={(e) => { setPress(true); spawn(e); }}
-      onPointerUp={() => setPress(false)}
-      onPointerCancel={() => setPress(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(true); onPointerEnterProp?.(e); }}
+      onPointerLeave={(e) => { setHover(false); setPress(false); onPointerLeaveProp?.(e); }}
+      onPointerDown={(e) => { setPress(true); spawn(e); onPointerDownProp?.(e); }}
+      onPointerUp={(e) => { setPress(false); onPointerUpProp?.(e); }}
+      onPointerCancel={(e) => { setPress(false); onPointerCancelProp?.(e); }}
       style={{ ...baseStyle, position: 'relative', overflow: 'hidden', ...style }}
       {...rest}
     >
