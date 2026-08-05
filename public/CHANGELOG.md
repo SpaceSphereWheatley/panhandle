@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.1] — 2026-08-05
+
+### Changed
+- **Storage box numbers are now reused instead of being skipped forever.** Deleting a box now frees its number so the next box you create can take it back, rather than every new box always getting a brand-new, ever-increasing number regardless of what's been deleted. You can also type in a specific box number yourself when adding a new box, not just scan a blank sticker to claim one as before. (`POST /storage/boxes` now allocates the smallest number not held by a live box in the list, replacing the old `lists.next_box_number` monotonic-counter allocation — see CLAUDE.md's Storage module section for the full reasoning; `claim_number` no longer has to be below that counter, so any unused positive integer is claimable, which also backs `BoxEditModal.jsx`'s new optional manual-number field on a plain new box. `POST /storage/boxes/reserve` similarly now hands out the smallest currently-free numbers instead of bumping the counter; outstanding reservations still block a second reservation from reusing the same number, but no longer block an ordinary new box's auto-assigned number.)
+
 ## [1.61.0] — 2026-08-04
 
 ### Added

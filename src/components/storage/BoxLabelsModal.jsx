@@ -20,9 +20,9 @@ const RESERVE_MAX = 60;
 //  - "Existing boxes": reprint a selected subset of already-created boxes,
 //    so replacing one lost sticker doesn't cost a full sheet.
 //  - "New codes": reserve a batch of not-yet-assigned numbers
-//    (POST /storage/boxes/reserve burns the counter without creating any
-//    box rows) so a stack of empty boxes can be labeled in one pass and
-//    filled in later by scanning.
+//    (POST /storage/boxes/reserve hands out the smallest currently-free
+//    numbers without creating any box rows) so a stack of empty boxes can be
+//    labeled in one pass and filled in later by scanning.
 export function BoxLabelsModal({ boxes, onClose }) {
   const t = useTranslation();
   const toast = useToast();

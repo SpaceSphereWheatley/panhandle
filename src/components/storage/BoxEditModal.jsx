@@ -30,11 +30,16 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
   const [location, setLocation] = useState(box?.location || "");
   const [items, setItems] = useState(box?.items || []);
   const [notes, setNotes] = useState(box?.notes || "");
+  // Only meaningful for a plain new box (no existing box, and not already
+  // targeting an exact number via a scan — see claimNumber above): lets
+  // someone type the number they want instead of accepting the
+  // server-allocated smallest-available one. Blank means auto-assign.
+  const [manualNumber, setManualNumber] = useState("");
   // Guards against a double-tap double-submit on a slow connection: unlike a
   // duplicate list item (which the server just merges), a duplicate box POST
-  // burns/allocates a second monotonic box number, so this needs an actual
-  // in-flight lock, not just cosmetic feedback. Mutually exclusive with
-  // `deleting` — only one destructive/write action can be in flight at once.
+  // allocates a second box number, so this needs an actual in-flight lock,
+  // not just cosmetic feedback. Mutually exclusive with `deleting` — only
+  // one destructive/write action can be in flight at once.
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const busy = saving || deleting;
@@ -49,9 +54,21 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
             toast(t("storage.edit.requiredFields"), { error: true });
             return;
           }
+          const trimmedManualNumber = manualNumber.trim();
+          const parsedManualNumber = trimmedManualNumber ? parseInt(trimmedManualNumber, 10) : null;
+          if (trimmedManualNumber && (!Number.isInteger(parsedManualNumber) || parsedManualNumber < 1)) {
+            toast(t("storage.edit.invalidNumber"), { error: true });
+            return;
+          }
           const body = JSON.stringify({
             name: trimmedName, location: trimmedLocation, items, notes: notes.trim(),
-            ...(box ? {} : claimNumber ? { claim_number: claimNumber } : {}),
+            ...(box
+              ? {}
+              : claimNumber
+                ? { claim_number: claimNumber }
+                : parsedManualNumber
+                  ? { claim_number: parsedManualNumber }
+                  : {}),
           });
           setSaving(true);
           let res;
@@ -93,41 +110,53 @@ export function BoxEditModal({ box, claimNumber, existingLocations, onClose, onS
 
         return (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
-              {box ? (
-                <>
-                  <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
-                    <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={72} />
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
-                      {t("storage.edit.numberLabel")}
+            {(box || claimNumber) && (
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
+                {box ? (
+                  <>
+                    <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
+                      <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={72} />
                     </div>
-                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
-                      {formatBoxNumber(box.number)}
+                    <div>
+                      <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
+                        {t("storage.edit.numberLabel")}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
+                        {formatBoxNumber(box.number)}
+                      </div>
                     </div>
-                  </div>
-                </>
-              ) : claimNumber ? (
-                <>
-                  <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
-                    <BoxQrCode value={boxDeepLinkUrl(claimNumber)} label={formatBoxNumber(claimNumber)} size={72} />
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
-                      {t("storage.edit.numberLabel")}
+                  </>
+                ) : (
+                  <>
+                    <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-default)", flexShrink: 0 }}>
+                      <BoxQrCode value={boxDeepLinkUrl(claimNumber)} label={formatBoxNumber(claimNumber)} size={72} />
                     </div>
-                    <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
-                      {formatBoxNumber(claimNumber)}
+                    <div>
+                      <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xs)", color: "var(--text-tertiary)" }}>
+                        {t("storage.edit.numberLabel")}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "var(--text-lg)", fontWeight: 700 }}>
+                        {formatBoxNumber(claimNumber)}
+                      </div>
                     </div>
-                  </div>
-                </>
-              ) : (
-                <div style={{ color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>
-                  {t("storage.edit.numberPending")}
-                </div>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!box && !claimNumber && (
+              <>
+                <label htmlFor="box-edit-number">{t("storage.edit.numberManualLabel")}</label>
+                <Input
+                  id="box-edit-number"
+                  type="number"
+                  min={1}
+                  value={manualNumber}
+                  onChange={(e) => setManualNumber(e.target.value)}
+                  placeholder={t("storage.edit.numberManualPlaceholder")}
+                />
+              </>
+            )}
 
             <label htmlFor="box-edit-name">{t("storage.edit.nameLabel")}</label>
             <Input id="box-edit-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("storage.edit.namePlaceholder")} />

@@ -1169,8 +1169,7 @@ export function isSuperAdmin(username, env) {
 
 // Bounds GET /storage/boxes's payload (every live box + every box's items,
 // in one response) — every other bounded thing in this app has a cap too
-// (10 users, 710 catalogue items). Independent of lists.next_box_number,
-// which only ever increases and isn't bounded by this.
+// (10 users, 710 catalogue items).
 const STORAGE_BOX_CAP = 300;
 
 // Builds the same {token, user, is_admin, is_owner, list_id, is_superadmin}
@@ -3320,35 +3319,54 @@ export default {
 
       let number;
       if (body.claim_number !== undefined) {
-        // Claiming a number reserved earlier (POST /storage/boxes/reserve)
-        // whose sticker got printed and stuck on a box before the box
-        // itself existed in the app — the scan-a-blank-sticker flow the
-        // reserve endpoint exists for. Only ever a number this list's own
-        // counter has already advanced past (never a client-chosen value —
-        // same guarantee as the auto-allocate path below) and that no live
-        // box currently holds.
+        // A specific number the client asked for — either scanning a sticker
+        // already printed for a reservation/a deleted box's old number (see
+        // POST /storage/boxes/reserve), or someone just typing the number
+        // they want in the "new box" form. Any positive integer is fair
+        // game as long as no *live* box in this list currently holds it —
+        // there's no longer a counter to bound it against (see CLAUDE.md's
+        // Storage module: number reuse was a deliberate later reversal of
+        // the original monotonic-never-reused design).
         const claimed = parseInt(body.claim_number, 10);
-        const list = await env.DB.prepare("SELECT next_box_number FROM lists WHERE id = ?1").bind(user.list_id).first();
-        const alreadyUsed = Number.isInteger(claimed) && claimed >= 1 && claimed < list.next_box_number
+        const valid = Number.isInteger(claimed) && claimed >= 1 && claimed <= 999999999;
+        const alreadyUsed = valid
           ? await env.DB.prepare("SELECT id FROM storage_boxes WHERE list_id = ?1 AND number = ?2").bind(user.list_id, claimed).first()
-          : true; // out of range counts as unavailable without a second query
-        if (alreadyUsed) return authedErr("STORAGE_BOX_NUMBER_UNAVAILABLE", 400);
+          : true;
+        if (!valid || alreadyUsed) return authedErr("STORAGE_BOX_NUMBER_UNAVAILABLE", 400);
         number = claimed;
       } else {
-        // Server allocates the number, never accepted from the request body —
-        // monotonic per-list counter, not MAX(number)+1, so a deleted box's
-        // number is never reissued to a new one (see the migration's comment).
-        const allocated = await env.DB.prepare(
-          "UPDATE lists SET next_box_number = next_box_number + 1 WHERE id = ?1 RETURNING next_box_number - 1 AS number"
-        ).bind(user.list_id).first();
+        // Server allocates the number, never accepted from the request body:
+        // the smallest positive integer not currently held by a live box in
+        // this list — a deleted box's number is reused once nothing live
+        // holds it. Outstanding reservations (storage_reserved_numbers)
+        // deliberately don't block this: they're advisory for the "print
+        // blank stickers in advance" flow only, not a hold on the number.
+        const allocated = await env.DB.prepare(`
+          SELECT MIN(n) AS number FROM (
+            SELECT 1 AS n
+            UNION ALL
+            SELECT number + 1 AS n FROM storage_boxes WHERE list_id = ?1
+          ) c
+          WHERE NOT EXISTS (SELECT 1 FROM storage_boxes b WHERE b.list_id = ?1 AND b.number = c.n)
+        `).bind(user.list_id).first();
         number = allocated.number;
       }
 
-      const box = await env.DB.prepare(`
-        INSERT INTO storage_boxes (list_id, number, name, location, notes, created_by)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        RETURNING id, number, name, location, notes, created_by, created_at, edited_by, edited_at
-      `).bind(user.list_id, number, name, location, notes, user.username).first();
+      // A concurrent create landing on the same number (auto-allocate raced
+      // by another request, or two people typing the same manual number at
+      // once) trips storage_boxes' UNIQUE(list_id, number) — surfaced as a
+      // clean "try again" rather than a 500, since a plain retry picks a
+      // fresh smallest-available number.
+      let box;
+      try {
+        box = await env.DB.prepare(`
+          INSERT INTO storage_boxes (list_id, number, name, location, notes, created_by)
+          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+          RETURNING id, number, name, location, notes, created_by, created_at, edited_by, edited_at
+        `).bind(user.list_id, number, name, location, notes, user.username).first();
+      } catch {
+        return authedErr("STORAGE_BOX_NUMBER_UNAVAILABLE", 400);
+      }
 
       if (items.length) {
         await env.DB.batch(items.map((itemName, i) =>
@@ -3364,10 +3382,10 @@ export default {
       return authedJson({ ...box, items });
     }
 
-    // A reserved number is burned by bumping the counter but creates no box
-    // row — prints a sheet of blank-numbered stickers for boxes that don't
-    // exist yet, labeled once at packing time and filled in later by
-    // scanning. Bounded to 60 (5 sheets at 12/sheet) per request.
+    // A reservation burns numbers without creating a box row — prints a
+    // sheet of blank-numbered stickers for boxes that don't exist yet,
+    // labeled once at packing time and filled in later by scanning. Bounded
+    // to 60 (5 sheets at 12/sheet) per request.
     if (path === "/storage/boxes/reserve" && method === "POST") {
       const body = await readJson(request);
       // Same "clamp to a sane default rather than reject" shape as POST
@@ -3375,17 +3393,32 @@ export default {
       // than erroring, and an oversized one is silently capped at 60 (5
       // sheets at 12/sheet) instead of refused.
       const count = Math.min(60, Math.max(1, parseInt(body?.count, 10) || 1));
-      const allocated = await env.DB.prepare(
-        "UPDATE lists SET next_box_number = next_box_number + ?2 WHERE id = ?1 RETURNING next_box_number - ?2 AS start"
-      ).bind(user.list_id, count).first();
-      const numbers = Array.from({ length: count }, (_, i) => allocated.start + i);
+      // Smallest available numbers, same reuse policy as auto-allocating a
+      // box — but here a number already outstanding on another reservation
+      // *does* count as used, so two reservations never hand out the same
+      // not-yet-claimed number (unlike box auto-allocate, which ignores
+      // reservations entirely).
+      const { results: usedRows } = await env.DB.prepare(`
+        SELECT number FROM storage_boxes WHERE list_id = ?1
+        UNION
+        SELECT number FROM storage_reserved_numbers WHERE list_id = ?1
+      `).bind(user.list_id).all();
+      const used = new Set(usedRows.map((r) => r.number));
+      const numbers = [];
+      for (let n = 1; numbers.length < count; n++) {
+        if (!used.has(n)) numbers.push(n);
+      }
       // Recorded so the numbers stay visible and reprintable — a lost
       // print-out previously meant they were burned with nothing in the UI
       // showing they existed (migration 0028).
-      await env.DB.batch(numbers.map((n) =>
-        env.DB.prepare("INSERT INTO storage_reserved_numbers (list_id, number) VALUES (?1, ?2)")
-          .bind(user.list_id, n)
-      ));
+      try {
+        await env.DB.batch(numbers.map((n) =>
+          env.DB.prepare("INSERT INTO storage_reserved_numbers (list_id, number) VALUES (?1, ?2)")
+            .bind(user.list_id, n)
+        ));
+      } catch (e) {
+        return authedErr("DB_ERROR", 500, { detail: e?.message ?? String(e) });
+      }
       return authedJson({ numbers });
     }
 

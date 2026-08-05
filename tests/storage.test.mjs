@@ -1,5 +1,5 @@
 // Plain-Node integration test for the storage module (docs/storage-module-plan.md):
-// basic box CRUD, monotonic never-reused numbering, the 300-box cap, and the
+// basic box CRUD, smallest-available-number reuse, the 300-box cap, and the
 // reserve endpoint's no-row-created behavior (see CLAUDE.md's Testing
 // conventions). Spins up the real Worker locally against a local D1 via
 // tests/_helpers.mjs.
@@ -50,7 +50,7 @@ async function runTests(BASE) {
   await seedAndLogin(BASE, STORAGE_USERNAME_2, PASS);
 
   await testCrudAndItemsRoundTrip(BASE);
-  await testNumberingNeverReusesAfterDelete(BASE);
+  await testNumberingReusesSmallestAvailable(BASE);
   await testByNumberLookupIsListScoped(BASE);
   await testClaimingAReservedNumber(BASE);
   // Both of these create boxes, so they must run before testBoxCap — it
@@ -140,7 +140,7 @@ async function testCrudAndItemsRoundTrip(BASE) {
   console.log("  - create/list/patch(wholesale items)/delete round-trips correctly, and number can't be spoofed from the body");
 }
 
-async function testNumberingNeverReusesAfterDelete(BASE) {
+async function testNumberingReusesSmallestAvailable(BASE) {
   // Every test in this file shares the one bootstrapped account
   // (STORAGE_USERNAME) rather than seeding a fresh one each time.
   const { token: storageToken } = await storageUser(BASE);
@@ -151,17 +151,21 @@ async function testNumberingNeverReusesAfterDelete(BASE) {
   const second = await (await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ name: "Box B (numbering test)" }),
   })).json();
-  assert.equal(second.number, first.number + 1, "numbers should allocate sequentially");
+  // `first` took the smallest number free at its own turn, so `second` (created
+  // after `first` is already live) must land on something larger.
+  assert.ok(second.number > first.number, "each auto-assigned number should be larger than an already-live one");
 
-  // Delete the higher-numbered box, then create a third — MAX(number)+1
-  // would reissue `second.number`; the counter must not.
-  await fetch(`${BASE}/storage/boxes/${second.id}`, { method: "DELETE", headers: authHeaders(storageToken) });
+  // Delete the lower-numbered box, then create a third — the smallest number
+  // that's now free is exactly the one `first` gave up, since nothing smaller
+  // than it was ever free (see the assertion above).
+  await fetch(`${BASE}/storage/boxes/${first.id}`, { method: "DELETE", headers: authHeaders(storageToken) });
   const third = await (await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ name: "Box C (numbering test)" }),
   })).json();
-  assert.equal(third.number, second.number + 1, "a deleted box's number must never be reissued");
+  assert.equal(third.number, first.number, "a deleted box's number should be reused by the next auto-assigned box");
+  assert.notEqual(third.number, second.number);
 
-  console.log("  - deleting the highest-numbered box doesn't let a later one reclaim its number");
+  console.log("  - deleting a box frees its number for the next auto-assigned box to reuse");
 }
 
 async function testByNumberLookupIsListScoped(BASE) {
@@ -220,12 +224,23 @@ async function testClaimingAReservedNumber(BASE) {
   assert.equal(reclaimRes.status, 400, "a number already claimed by a live box must not be claimable again");
   assert.equal((await reclaimRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
 
-  const neverReservedRes = await fetch(`${BASE}/storage/boxes`, {
+  const invalidRes = await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken),
-    body: JSON.stringify({ name: "Never reserved", claim_number: 999999 }),
+    body: JSON.stringify({ name: "Invalid claim", claim_number: 0 }),
   });
-  assert.equal(neverReservedRes.status, 400, "a number past the list's own counter must not be claimable");
-  assert.equal((await neverReservedRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
+  assert.equal(invalidRes.status, 400, "a non-positive claim_number must be rejected");
+  assert.equal((await invalidRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
+
+  // There's no counter to bound claim_number against anymore — any unused
+  // positive integer is claimable directly, not just a previously reserved
+  // one. This is also the "type the number in yourself" manual-entry path
+  // (BoxEditModal's optional number field on a plain new box).
+  const manualRes = await fetch(`${BASE}/storage/boxes`, {
+    method: "POST", headers: authHeaders(storageToken),
+    body: JSON.stringify({ name: "Manually numbered box", claim_number: 555555 }),
+  });
+  assert.equal(manualRes.status, 200);
+  assert.equal((await manualRes.json()).number, 555555, "an arbitrary unused number should be claimable directly, not just a previously reserved one");
 
   const stillClaimableRes = await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken),
@@ -234,7 +249,7 @@ async function testClaimingAReservedNumber(BASE) {
   assert.equal(stillClaimableRes.status, 200);
   assert.equal((await stillClaimableRes.json()).number, third, "an unclaimed reserved number in the same batch should still be claimable");
 
-  console.log("  - claim_number lands a new box on an exact reserved number, rejects an already-claimed or never-reserved one");
+  console.log("  - claim_number lands a new box on an exact number (reserved or arbitrary), rejects an already-claimed or invalid one");
 }
 
 async function testBoxCap(BASE) {
@@ -282,8 +297,13 @@ async function testReserveDoesNotCreateRows(BASE) {
   assert.equal(reserveRes.status, 200);
   const { numbers } = await reserveRes.json();
   assert.equal(numbers.length, 5);
+  // Not necessarily consecutive — an earlier test (testOutstandingReservations…)
+  // deliberately left a reservation outstanding, and that number must stay
+  // skipped here (a reservation blocks a second reservation from also
+  // claiming it, unlike box auto-allocate, which ignores reservations
+  // entirely). Just strictly increasing, and each smaller than the next.
   for (let i = 1; i < numbers.length; i++) {
-    assert.equal(numbers[i], numbers[i - 1] + 1, "reserved numbers should be sequential");
+    assert.ok(numbers[i] > numbers[i - 1], "reserved numbers should be strictly increasing");
   }
 
   const after = await (await fetch(`${BASE}/storage/boxes`, { headers: authHeaders(storageToken) })).json();
