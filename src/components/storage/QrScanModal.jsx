@@ -3,15 +3,10 @@ import jsQR from "jsqr";
 import { Modal } from "../Modal.jsx";
 import { EmptyState } from "../../design-system/index.js";
 import { useTranslation } from "../../context/LanguageContext.jsx";
-import { formatBoxNumber } from "../../lib/storageBoxes.js";
 
 // ~5fps: plenty for a static/slow-moving QR code held up to the camera, and
 // keeps CPU/battery use down between frames.
 const DETECT_INTERVAL_MS = 200;
-// Same "beep and flash before it acts" pacing as the earlier mock — long
-// enough to read the found number, short enough that it doesn't feel like a
-// confirmation step the user has to wait through.
-const FOUND_DISPLAY_MS = 700;
 
 // Parses a decoded QR payload into a box number. Accepts the full deep-link
 // URL a real sticker encodes (.../b/007 — see BoxQrCode.jsx/boxDeepLinkUrl)
@@ -43,17 +38,23 @@ function parseScannedBoxNumber(text) {
 // component's — `onFound(number)` just hands back the parsed number the
 // same way a .../b/{number} deep link does, so both paths share StorageTab's
 // one openBoxByNumber resolver instead of duplicating it here.
+//
+// A recognized code hands off *immediately*: no pause showing the decoded
+// number, and no exit animation via Modal's requestClose. This used to hold
+// the number on screen for 700ms first, which read as a confirmation step to
+// sit through on the way to the box — the scan itself is the confirmation
+// (docs/storage-module-plan.md), so the box's own editor is the only thing
+// worth waiting for. StorageTab unmounts this modal and mounts that editor in
+// the same commit, so the handoff is one swap rather than a close-then-open.
 export function QrScanModal({ onClose, onFound }) {
   const t = useTranslation();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
-  const requestCloseRef = useRef(null);
-  // Guards against a second detection firing while the found-state pause
-  // (FOUND_DISPLAY_MS) is still playing out — the detect loop itself stops
-  // once the camera does, but an in-flight BarcodeDetector.detect() promise
-  // could still resolve after that.
+  // Guards against a second detection resolving after the first handed off —
+  // the detect loop itself stops once the camera does, but an in-flight
+  // BarcodeDetector.detect() promise could still resolve after that.
   const resolvedRef = useRef(false);
 
   const [detector] = useState(() => {
@@ -64,8 +65,7 @@ export function QrScanModal({ onClose, onFound }) {
       return null;
     }
   });
-  const [status, setStatus] = useState("starting"); // "starting" | "scanning" | "found" | "denied" | "unsupported"
-  const [foundNumber, setFoundNumber] = useState(null);
+  const [status, setStatus] = useState("starting"); // "starting" | "scanning" | "denied" | "unsupported"
 
   const stopCamera = useCallback(() => {
     clearTimeout(timerRef.current);
@@ -81,11 +81,7 @@ export function QrScanModal({ onClose, onFound }) {
     if (!number) return; // not one of our codes — keep scanning
     resolvedRef.current = true;
     stopCamera();
-    setFoundNumber(number);
-    setStatus("found");
-    timerRef.current = setTimeout(() => {
-      requestCloseRef.current?.(() => onFound(number));
-    }, FOUND_DISPLAY_MS);
+    onFound(number);
   }, [stopCamera, onFound]);
 
   const tick = useCallback(() => {
@@ -147,8 +143,7 @@ export function QrScanModal({ onClose, onFound }) {
 
   return (
     <Modal onClose={() => { stopCamera(); onClose(); }} title={t("storage.scan.title")}>
-      {(requestClose) => {
-        requestCloseRef.current = requestClose;
+      {() => {
         const failed = status === "denied" || status === "unsupported";
         return (
           <>
@@ -208,22 +203,6 @@ export function QrScanModal({ onClose, onFound }) {
                         boxShadow: "0 0 8px var(--accent-primary)",
                       }}
                     />
-                  )}
-                  {status === "found" && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontFamily: "var(--font-mono, monospace)",
-                        fontWeight: 700,
-                        fontSize: "var(--text-2xl)",
-                      }}
-                    >
-                      {formatBoxNumber(foundNumber)}
-                    </div>
                   )}
                 </div>
 

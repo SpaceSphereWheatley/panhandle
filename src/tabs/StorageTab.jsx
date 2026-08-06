@@ -187,6 +187,18 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
   // BoxEditModal's claimNumber prop / POST /storage/boxes's claim_number)
   // rather than surfacing the 404 as a toast.
   async function openBoxByNumber(number) {
+    // Instant path: this tab already holds every box in the list (one
+    // request, 300-box cap) and GET /storage/boxes returns the exact same
+    // per-box shape the by-number lookup does, so a scan of an
+    // already-loaded box opens its editor synchronously — no round trip to
+    // wait through, and no glimpse of the box list in between. Deliberately
+    // no freshness concern: it's the same data a tap on that box's card
+    // already opens, and this tab doesn't poll.
+    const known = boxes.find((b) => b.number === Number(number));
+    if (known) {
+      setEditingBox({ mode: "edit", box: known });
+      return;
+    }
     try {
       const res = await api(`/storage/boxes/by-number/${number}`);
       if (res.error) {
@@ -338,6 +350,10 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
             // useLongPress firing haptic on gesture recognition rather than
             // on the request it triggers.
             haptic();
+            // Both state updates land in one commit, so for an already-loaded
+            // box (openBoxByNumber's instant path) the scanner is replaced by
+            // that box's editor directly, without the tab showing through in
+            // between.
             setScanning(false);
             openBoxByNumber(number);
           }}
