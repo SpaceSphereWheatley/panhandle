@@ -97,7 +97,17 @@ function ImportantLegendTrigger({ onClick }) {
 }
 
 export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
-  const [tab, setTab] = useState("list");
+  const storageModuleEnabled = useStorageModuleEnabled();
+  const showStorageTab = storageModuleEnabled;
+  // A scanned sticker's deep link (.../b/{number}) opens *on* the Storage tab
+  // from the very first render rather than switching to it a commit later —
+  // the effect below used to be the only thing doing that, so a scan from a
+  // phone's camera app visibly landed on the shopping list first and bounced
+  // through it on the way to the box. Safe as lazy initial state because
+  // pendingBoxNumber can never appear later: App.jsx reads it from the URL
+  // once, before AppShell mounts at all.
+  const deepLinkedToStorage = Boolean(pendingBoxNumber) && showStorageTab;
+  const [tab, setTab] = useState(deepLinkedToStorage ? "storage" : "list");
   // Tabs are mounted once (on first visit) and then kept alive, hidden via
   // CSS, so switching panes never re-fetches from an empty state — see
   // src/tabs/ShoppingListTab.jsx and MealsTab.jsx's `active`-driven effects.
@@ -105,7 +115,9 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   // one) so Måltider's data is already loading by the time the user
   // switches to it, instead of only starting then — Settings stays lazy,
   // there's no equivalent "check it right away" need for it.
-  const [visited, setVisited] = useState({ list: true, meals: true });
+  const [visited, setVisited] = useState(
+    deepLinkedToStorage ? { list: true, meals: true, storage: true } : { list: true, meals: true }
+  );
   const [sync, setSync] = useState({ kind: null, at: 0, offline: false });
   const [showChangelog, setShowChangelog] = useState(false);
   const [showImportantInfo, setShowImportantInfo] = useState(false);
@@ -118,8 +130,6 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   const toast = useToast();
   const t = useTranslation();
   const isDesktop = useIsDesktop();
-  const storageModuleEnabled = useStorageModuleEnabled();
-  const showStorageTab = storageModuleEnabled;
   const applyingPopRef = useRef(false);
   // Direction-aware "enter" animation for whichever pane just became active
   // (tab-bar tap or hardware back/forward — both just change `tab`, so this
@@ -167,7 +177,10 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   // (or one level shallower) no matter how many other tabs were visited in
   // between. (Modals don't participate in this yet — see CLAUDE.md/PR notes.)
   useEffect(() => {
-    history.replaceState({ tab: "list", settingsPath: [] }, "");
+    // Seeded with whichever tab actually rendered first — normally "list",
+    // but "storage" when a box deep link opened the app straight onto it, so
+    // the bottom history entry matches what's on screen.
+    history.replaceState({ tab: deepLinkedToStorage ? "storage" : "list", settingsPath: [] }, "");
     function onPopState(e) {
       const state = e.state || { tab: "list", settingsPath: [] };
       applyingPopRef.current = true;
@@ -178,6 +191,7 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Replaces (not pushes) the current history entry for a plain tab switch.
@@ -240,10 +254,13 @@ export function AppShell({ pendingBoxNumber, onConsumePendingBoxNumber }) {
   }, [showStorageTab]);
 
   // A scanned box's deep link (docs/storage-module-plan.md's .../b/{number}
-  // route) switches straight to the Storage tab so StorageTab can resolve
-  // and open it — see its own pendingBoxNumber effect. A device with the
-  // tab toggled off just drops the link silently rather than erroring,
-  // consistent with how the toggle otherwise behaves.
+  // route) is normally already on the Storage tab by now — see
+  // deepLinkedToStorage above — so this mostly just records the history
+  // entry. It still has to run for the case that initial state can't cover:
+  // the Storage module being toggled *on* while a deep link is still pending
+  // (showStorageTab flipping true after mount). A device with the tab toggled
+  // off just drops the link silently rather than erroring, consistent with
+  // how the toggle otherwise behaves.
   useEffect(() => {
     if (!pendingBoxNumber) return;
     if (showStorageTab) {

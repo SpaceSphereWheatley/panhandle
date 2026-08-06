@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.61.6] — 2026-08-06
+
+### Changed
+- **Scanning a storage box's QR code now opens that box straight away, instead of first showing the scanned number and passing through the box list on the way.** Both scanning routes are affected: the in-app scanner no longer holds the decoded number on screen for a moment before acting, and a sticker scanned with the phone's own camera app now opens the app directly on Storage rather than showing the shopping list first and switching a moment later. A box that's already loaded now opens with no waiting for the server at all. (`QrScanModal.jsx` drops its 700ms `FOUND_DISPLAY_MS` found-state pause and hands the parsed number back the instant it's recognized, so `StorageTab.jsx` swaps the scanner for the box editor in a single commit. `StorageTab`'s `openBoxByNumber` resolves against the already-loaded box list before falling back to `GET /storage/boxes/by-number/{number}` — same per-box shape from either source, and the same data a tap on that box's card already opens. `AppShell.jsx` derives the initial `tab`/`visited` state from `pendingBoxNumber` instead of switching to Storage in an effect after the first render.)
+
 ## [1.61.5] — 2026-08-05
 
 ### Changed
