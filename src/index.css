@@ -117,20 +117,31 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
     size: A4;
     margin: 10mm;
   }
+  @page[data-orientation="landscape"] {
+    size: A4 landscape;
+  }
   body * { visibility: hidden; position: static !important; }
   .storage-print-labels, .storage-print-labels * { visibility: visible; }
   .storage-print-labels {
+    --cols: 3;
+    --rows: 4;
+    --page-width: 190mm;  /* portrait */
+    --page-height: 277mm; /* portrait */
     display: block !important;
     position: absolute !important;
     top: 0;
     left: 0;
-    width: 190mm; /* not 100% — see bug 3 above */
+    width: var(--page-width); /* not 100% — see bug 3 above */
     font-size: 0; /* collapses the whitespace gap inline-block would otherwise leave between stickers */
+  }
+  .storage-print-labels[data-orientation="landscape"] {
+    --page-width: 277mm;  /* landscape */
+    --page-height: 190mm; /* landscape */
   }
   .storage-sticker {
     display: inline-block;
-    width: calc(190mm / 3);
-    height: calc(277mm / 4);
+    width: calc(var(--page-width) / var(--cols));
+    height: calc(var(--page-height) / var(--rows));
     vertical-align: top;
     box-sizing: border-box;
     border: 1.5px dashed #999;
