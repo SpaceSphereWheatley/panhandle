@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Modal } from "../Modal.jsx";
 import { Button, EmptyState, Checkbox, SegmentedControl, Input, Select } from "../../design-system/index.js";
 import { BoxQrCode } from "./BoxQrCode.jsx";
@@ -245,22 +246,31 @@ export function BoxLabelsModal({ boxes, onClose }) {
             </>
           )}
 
-          <div
-            className="storage-print-labels"
-            style={{
-              '--cols': layout.cols,
-              '--rows': layout.rows,
-            }}
-          >
-            {printSheet.map((box) => (
-              <div key={box.id} className="storage-sticker">
-                <div className="storage-sticker__inner">
-                  <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={80} />
-                  <div className="storage-sticker__number">{formatBoxNumber(box.number)}</div>
+          {createPortal(
+            // Portaled straight to <body> — a sibling of #root, not nested
+            // inside Sheet's own position:fixed backdrop — so the print
+            // stylesheet (index.css's `.storage-print-labels` block) can
+            // just hide #root outright under @media print instead of
+            // fighting that nesting (see the block comment there for what
+            // that used to require).
+            <div
+              className="storage-print-labels"
+              style={{
+                '--cols': layout.cols,
+                '--rows': layout.rows,
+              }}
+            >
+              {printSheet.map((box) => (
+                <div key={box.id} className="storage-sticker">
+                  <div className="storage-sticker__inner">
+                    <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={80} />
+                    <div className="storage-sticker__number">{formatBoxNumber(box.number)}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>,
+            document.body
+          )}
         </>
       )}
     </Modal>
