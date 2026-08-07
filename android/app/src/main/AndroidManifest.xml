@@ -15,7 +15,8 @@
              matching public/.well-known/assetlinks.json on the server) is
              verified against this app's signing certificate. -->
         <activity android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.customtabs.trusted.DEFAULT_URL"
                 android:value="@string/launchUrl" />

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.4] — 2026-08-07
+
+### Fixed
+- **The app no longer rotates to landscape, even when a phone's own screen-rotation lock is off.** It's meant to stay portrait-only regardless of that device setting, so a stray landscape flip no longer squeezes the layout sideways mid-shop. (`public/manifest.json`'s `orientation` is now `"portrait-primary"` instead of `"any"`, backed by a best-effort `screen.orientation.lock('portrait')` call in `src/main.jsx` for contexts the manifest setting doesn't reach; the Android TWA wrapper's `android/twa-manifest.json` and `AndroidManifest.xml` now also declare `portrait` orientation.)
+
 ## [1.62.3] — 2026-08-07
 
 ### Fixed

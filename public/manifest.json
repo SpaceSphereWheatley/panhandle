@@ -8,7 +8,7 @@
   "start_url": "/app.html",
   "scope": "/",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "background_color": "#FAF6EF",
   "theme_color": "#C1592A",
   "categories": ["shopping", "food", "lifestyle"],
