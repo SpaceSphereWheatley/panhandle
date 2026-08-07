@@ -240,7 +240,7 @@ export const en = {
   "storage.scan.unsupportedDescription": "This browser can't access the camera. Try again on your phone, or type the box's number into search instead.",
 
   "storage.labels.title": "Box labels",
-  "storage.labels.description": "One sticker per box — just the QR code and box number. Customize the layout: choose your start number, how many to print, and how many columns & rows per A4 sheet.",
+  "storage.labels.description": "One sticker per box — just the QR code and box number. Choose your start number, how many to print, and a sheet type to match the label paper you have.",
   "storage.labels.printButton": "Print",
   "storage.labels.emptyTitle": "No boxes yet",
   "storage.labels.emptyDescription": "Add a box first, then its label will show up here.",
@@ -255,11 +255,8 @@ export const en = {
   "storage.labels.totalStickers": { one: "Total: {count} sticker", other: "Total: {count} stickers" },
   "storage.labels.sheetsNeeded": { one: "{count} sheet needed", other: "{count} sheets needed" },
   "storage.labels.labelSize": "~{width}mm × {height}mm per label",
-  "storage.labels.columnsPerSheet": "Columns per sheet",
-  "storage.labels.rowsPerSheet": "Rows per sheet",
-  "storage.labels.orientation": "Page orientation",
-  "storage.labels.portrait": "Portrait",
-  "storage.labels.landscape": "Landscape",
+  "storage.labels.sheetType": "Sheet type",
+  "storage.labels.sheetTypeOption": "{count} per sheet ({cols} × {rows})",
 
   "settings.nav.appearance": "Appearance",
   "settings.nav.account": "Account",
