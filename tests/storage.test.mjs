@@ -1,6 +1,6 @@
 // Plain-Node integration test for the storage module (docs/storage-module-plan.md):
-// basic box CRUD, smallest-available-number reuse, the 300-box cap, and the
-// reserve endpoint's no-row-created behavior (see CLAUDE.md's Testing
+// basic box CRUD, smallest-available-number reuse, the 300-box cap, and
+// claiming an arbitrary number directly (see CLAUDE.md's Testing
 // conventions). Spins up the real Worker locally against a local D1 via
 // tests/_helpers.mjs.
 //
@@ -52,13 +52,11 @@ async function runTests(BASE) {
   await testCrudAndItemsRoundTrip(BASE);
   await testNumberingReusesSmallestAvailable(BASE);
   await testByNumberLookupIsListScoped(BASE);
-  await testClaimingAReservedNumber(BASE);
-  // Both of these create boxes, so they must run before testBoxCap — it
-  // fills the shared account's list to the 300-box cap and never empties it,
-  // after which any create returns STORAGE_BOX_LIMIT.
-  await testOutstandingReservationsAreVisibleAndDisposable(BASE);
+  await testClaimingAnArbitraryNumber(BASE);
+  // Creates boxes, so it must run before testBoxCap — that one fills the
+  // shared account's list to the 300-box cap and never empties it, after
+  // which any create returns STORAGE_BOX_LIMIT.
   await testBoxCap(BASE);
-  await testReserveDoesNotCreateRows(BASE);
 }
 
 async function storageUser(BASE) {
@@ -195,31 +193,28 @@ async function testByNumberLookupIsListScoped(BASE) {
   console.log("  - GET /storage/boxes/by-number resolves within the caller's own list, 404s for an unknown number and for another list's number");
 }
 
-// Covers the reserve-then-fill-in flow the reserve endpoint exists for
-// (docs/storage-module-plan.md): a sticker gets printed and stuck on a box
-// before the box exists in the app, so creating the box afterward has to be
-// able to land on that exact already-reserved number, not the next one from
-// the counter.
-async function testClaimingAReservedNumber(BASE) {
+// Covers the scan-a-printed-sticker-first flow: a sticker for a
+// client-generated number sequence gets printed and stuck on a box before
+// the box exists in the app, so creating the box afterward has to be able to
+// land on that exact number, not the next one the server would auto-assign.
+async function testClaimingAnArbitraryNumber(BASE) {
   const { token: storageToken } = await storageUser(BASE);
 
-  const reserveRes = await fetch(`${BASE}/storage/boxes/reserve`, {
-    method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ count: 3 }),
-  });
-  const { numbers } = await reserveRes.json();
-  const [first, , third] = numbers;
-
+  // Any unused positive integer is claimable directly — there's no reserve
+  // step or counter to check it against. This is also the "type the number
+  // in yourself" manual-entry path (BoxEditModal's optional number field on
+  // a plain new box) and the "print a sequence, scan a sticker" path.
   const claimRes = await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken),
-    body: JSON.stringify({ name: "Claimed box", claim_number: first }),
+    body: JSON.stringify({ name: "Claimed box", claim_number: 777 }),
   });
   assert.equal(claimRes.status, 200);
   const claimed = await claimRes.json();
-  assert.equal(claimed.number, first, "the created box should land on the exact reserved number, not the next counter value");
+  assert.equal(claimed.number, 777, "the created box should land on the exact claimed number");
 
   const reclaimRes = await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken),
-    body: JSON.stringify({ name: "Duplicate claim", claim_number: first }),
+    body: JSON.stringify({ name: "Duplicate claim", claim_number: 777 }),
   });
   assert.equal(reclaimRes.status, 400, "a number already claimed by a live box must not be claimable again");
   assert.equal((await reclaimRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
@@ -231,25 +226,14 @@ async function testClaimingAReservedNumber(BASE) {
   assert.equal(invalidRes.status, 400, "a non-positive claim_number must be rejected");
   assert.equal((await invalidRes.json()).code, "STORAGE_BOX_NUMBER_UNAVAILABLE");
 
-  // There's no counter to bound claim_number against anymore — any unused
-  // positive integer is claimable directly, not just a previously reserved
-  // one. This is also the "type the number in yourself" manual-entry path
-  // (BoxEditModal's optional number field on a plain new box).
   const manualRes = await fetch(`${BASE}/storage/boxes`, {
     method: "POST", headers: authHeaders(storageToken),
     body: JSON.stringify({ name: "Manually numbered box", claim_number: 555555 }),
   });
   assert.equal(manualRes.status, 200);
-  assert.equal((await manualRes.json()).number, 555555, "an arbitrary unused number should be claimable directly, not just a previously reserved one");
+  assert.equal((await manualRes.json()).number, 555555, "an arbitrary unused number should be claimable directly");
 
-  const stillClaimableRes = await fetch(`${BASE}/storage/boxes`, {
-    method: "POST", headers: authHeaders(storageToken),
-    body: JSON.stringify({ name: "Third reserved box", claim_number: third }),
-  });
-  assert.equal(stillClaimableRes.status, 200);
-  assert.equal((await stillClaimableRes.json()).number, third, "an unclaimed reserved number in the same batch should still be claimable");
-
-  console.log("  - claim_number lands a new box on an exact number (reserved or arbitrary), rejects an already-claimed or invalid one");
+  console.log("  - claim_number lands a new box on an exact arbitrary number, rejects an already-claimed or invalid one");
 }
 
 async function testBoxCap(BASE) {
@@ -282,90 +266,6 @@ async function testBoxCap(BASE) {
   assert.equal((await overCapRes.json()).code, "STORAGE_BOX_LIMIT");
 
   console.log("  - a 301st box is refused with STORAGE_BOX_LIMIT once a list hits the 300-box cap");
-}
-
-async function testReserveDoesNotCreateRows(BASE) {
-  const { token: storageToken } = await storageUser(BASE);
-
-  // The box cap test above may have already saturated this account's list
-  // at 300 — reserve must still work, since it never touches storage_boxes.
-  const before = await (await fetch(`${BASE}/storage/boxes`, { headers: authHeaders(storageToken) })).json();
-
-  const reserveRes = await fetch(`${BASE}/storage/boxes/reserve`, {
-    method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ count: 5 }),
-  });
-  assert.equal(reserveRes.status, 200);
-  const { numbers } = await reserveRes.json();
-  assert.equal(numbers.length, 5);
-  // Not necessarily consecutive — an earlier test (testOutstandingReservations…)
-  // deliberately left a reservation outstanding, and that number must stay
-  // skipped here (a reservation blocks a second reservation from also
-  // claiming it, unlike box auto-allocate, which ignores reservations
-  // entirely). Just strictly increasing, and each smaller than the next.
-  for (let i = 1; i < numbers.length; i++) {
-    assert.ok(numbers[i] > numbers[i - 1], "reserved numbers should be strictly increasing");
-  }
-
-  const after = await (await fetch(`${BASE}/storage/boxes`, { headers: authHeaders(storageToken) })).json();
-  assert.equal(after.length, before.length, "reserving numbers must not create any box rows");
-
-  const oversizedRes = await fetch(`${BASE}/storage/boxes/reserve`, {
-    method: "POST", headers: authHeaders(storageToken), body: JSON.stringify({ count: 1000 }),
-  });
-  const oversized = await oversizedRes.json();
-  assert.equal(oversized.numbers.length, 60, "an oversized count should be clamped to 60, not refused");
-
-  console.log("  - reserving numbers burns the counter without creating rows, and clamps an oversized count to 60");
-}
-
-// Reserved numbers used to be write-only: burned from the counter with
-// nothing recording them, so a lost print-out left them unrecoverable and
-// invisible. They're now tracked (migration 0028) and stay listed until
-// either claimed by a real box or explicitly discarded.
-async function testOutstandingReservationsAreVisibleAndDisposable(BASE) {
-  const { token } = await storageUser(BASE);
-
-  const before = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
-  const { numbers } = await (await fetch(`${BASE}/storage/boxes/reserve`, {
-    method: "POST", headers: authHeaders(token), body: JSON.stringify({ count: 3 }),
-  })).json();
-
-  const listed = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
-  assert.equal(listed.length, before.length + 3, "a fresh reservation should show up as outstanding");
-  for (const n of numbers) {
-    assert.ok(listed.some((r) => r.number === n), `reserved number ${n} should be listed`);
-  }
-
-  // Claiming one with a real box retires its reservation automatically.
-  await fetch(`${BASE}/storage/boxes`, {
-    method: "POST", headers: authHeaders(token),
-    body: JSON.stringify({ name: "Filled from a reserved sticker", claim_number: numbers[0] }),
-  });
-  const afterClaim = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
-  assert.ok(!afterClaim.some((r) => r.number === numbers[0]), "claiming a reserved number should clear its reservation");
-  assert.ok(afterClaim.some((r) => r.number === numbers[1]), "the batch's other numbers stay outstanding");
-
-  // Discarding drops it from the list without rewinding the counter — the
-  // number stays burned, it's just no longer offered for reprinting.
-  const discardRes = await fetch(`${BASE}/storage/boxes/reserved/${numbers[1]}`, {
-    method: "DELETE", headers: authHeaders(token),
-  });
-  assert.equal(discardRes.status, 200);
-  const afterDiscard = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(token) })).json();
-  assert.ok(!afterDiscard.some((r) => r.number === numbers[1]), "a discarded reservation should be gone");
-
-  const discardAgain = await fetch(`${BASE}/storage/boxes/reserved/${numbers[1]}`, {
-    method: "DELETE", headers: authHeaders(token),
-  });
-  assert.equal(discardAgain.status, 404, "discarding an already-gone reservation should 404");
-
-  // list_id scoping covers the new route too — a different list's account
-  // must not see this list's outstanding reservations.
-  const { token: otherStorageToken } = await storageUser2(BASE);
-  const otherList = await (await fetch(`${BASE}/storage/boxes/reserved`, { headers: authHeaders(otherStorageToken) })).json();
-  assert.ok(!otherList.some((r) => r.number === numbers[1]), "another list must not see this list's outstanding reservations");
-
-  console.log("  - outstanding reservations are listed, cleared by claiming, discardable by hand, and scoped per list");
 }
 
 main().catch((err) => { console.error(err); process.exitCode = 1; });

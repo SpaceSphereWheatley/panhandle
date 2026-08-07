@@ -227,14 +227,6 @@ were triaged).
 
 ### Storage module polish (from the 2026-08-04 UX/UI audit, #1-#5 fixed same pass)
 
-142. **`BoxLabelsModal`'s outstanding-reserved-numbers fetch fails silently.**
-     `loadOutstanding()` swallows any error with no toast and no retry —
-     unlike every other network call in the storage feature (`loadBoxes`,
-     `reserveAndPrint`, `discardOutstanding`), a failure here just makes the
-     "reserved but unused" section silently never appear, indistinguishable
-     from "you have none outstanding."
-     _Value: Low · Importance: Low · Type: UX / Error handling_
-
 143. **No success toast on box save/delete.** Saving or deleting a box in
      `BoxEditModal.jsx` only closes the modal and reloads the list — errors
      toast, success doesn't. Matches `ItemEditModal`/`MealEditModal`'s

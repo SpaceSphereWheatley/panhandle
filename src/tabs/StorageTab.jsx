@@ -180,8 +180,8 @@ export function StorageTab({ active, pendingBoxNumber, onConsumedPendingBoxNumbe
   // Shared by both entry points that resolve a scanned/deep-linked number —
   // the in-app camera scanner and the .../b/{number} URL below. A number
   // with no box yet (STORAGE_BOX_NOT_FOUND) isn't necessarily an error: it's
-  // also what a reserved-but-unfilled number looks like (POST
-  // /storage/boxes/reserve), or a deleted box's old sticker — the doc calls
+  // also what a printed-but-unclaimed number from a client-generated
+  // sequence looks like, or a deleted box's old sticker — the doc calls
   // for the same "set it up?" screen in every one of those cases, so this
   // opens a new-box editor pre-targeting that exact number (via
   // BoxEditModal's claimNumber prop / POST /storage/boxes's claim_number)

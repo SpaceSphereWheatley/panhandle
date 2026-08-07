@@ -3320,13 +3320,13 @@ export default {
       let number;
       if (body.claim_number !== undefined) {
         // A specific number the client asked for — either scanning a sticker
-        // already printed for a reservation/a deleted box's old number (see
-        // POST /storage/boxes/reserve), or someone just typing the number
-        // they want in the "new box" form. Any positive integer is fair
-        // game as long as no *live* box in this list currently holds it —
-        // there's no longer a counter to bound it against (see CLAUDE.md's
-        // Storage module: number reuse was a deliberate later reversal of
-        // the original monotonic-never-reused design).
+        // printed from a client-generated sequence/a deleted box's old
+        // number, or someone just typing the number they want in the "new
+        // box" form. Any positive integer is fair game as long as no *live*
+        // box in this list currently holds it — there's no longer a counter
+        // to bound it against (see CLAUDE.md's Storage module: number reuse
+        // was a deliberate later reversal of the original
+        // monotonic-never-reused design).
         const claimed = parseInt(body.claim_number, 10);
         const valid = Number.isInteger(claimed) && claimed >= 1 && claimed <= 999999999;
         const alreadyUsed = valid
@@ -3338,9 +3338,7 @@ export default {
         // Server allocates the number, never accepted from the request body:
         // the smallest positive integer not currently held by a live box in
         // this list — a deleted box's number is reused once nothing live
-        // holds it. Outstanding reservations (storage_reserved_numbers)
-        // deliberately don't block this: they're advisory for the "print
-        // blank stickers in advance" flow only, not a hold on the number.
+        // holds it.
         const allocated = await env.DB.prepare(`
           SELECT MIN(n) AS number FROM (
             SELECT 1 AS n
@@ -3374,74 +3372,7 @@ export default {
             .bind(box.id, itemName, i)
         ));
       }
-      // A claimed number is no longer outstanding — drop its reservation if
-      // it had one (a no-op for the auto-allocate path and for claiming a
-      // deleted box's number, neither of which has a row here).
-      await env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1 AND number = ?2")
-        .bind(user.list_id, number).run();
       return authedJson({ ...box, items });
-    }
-
-    // A reservation burns numbers without creating a box row — prints a
-    // sheet of blank-numbered stickers for boxes that don't exist yet,
-    // labeled once at packing time and filled in later by scanning. Bounded
-    // to 60 (5 sheets at 12/sheet) per request.
-    if (path === "/storage/boxes/reserve" && method === "POST") {
-      const body = await readJson(request);
-      // Same "clamp to a sane default rather than reject" shape as POST
-      // /list's addQty — a missing/garbage count reserves one number rather
-      // than erroring, and an oversized one is silently capped at 60 (5
-      // sheets at 12/sheet) instead of refused.
-      const count = Math.min(60, Math.max(1, parseInt(body?.count, 10) || 1));
-      // Smallest available numbers, same reuse policy as auto-allocating a
-      // box — but here a number already outstanding on another reservation
-      // *does* count as used, so two reservations never hand out the same
-      // not-yet-claimed number (unlike box auto-allocate, which ignores
-      // reservations entirely).
-      const { results: usedRows } = await env.DB.prepare(`
-        SELECT number FROM storage_boxes WHERE list_id = ?1
-        UNION
-        SELECT number FROM storage_reserved_numbers WHERE list_id = ?1
-      `).bind(user.list_id).all();
-      const used = new Set(usedRows.map((r) => r.number));
-      const numbers = [];
-      for (let n = 1; numbers.length < count; n++) {
-        if (!used.has(n)) numbers.push(n);
-      }
-      // Recorded so the numbers stay visible and reprintable — a lost
-      // print-out previously meant they were burned with nothing in the UI
-      // showing they existed (migration 0028).
-      try {
-        await env.DB.batch(numbers.map((n) =>
-          env.DB.prepare("INSERT INTO storage_reserved_numbers (list_id, number) VALUES (?1, ?2)")
-            .bind(user.list_id, n)
-        ));
-      } catch (e) {
-        return authedErr("DB_ERROR", 500, { detail: e?.message ?? String(e) });
-      }
-      return authedJson({ numbers });
-    }
-
-    // Numbers reserved but not yet given a box — drives the labels modal's
-    // "you already have N unused codes" prompt, so reserving more isn't the
-    // only way forward after a sheet goes missing.
-    if (path === "/storage/boxes/reserved" && method === "GET") {
-      const { results } = await env.DB.prepare(
-        "SELECT number, created_at FROM storage_reserved_numbers WHERE list_id = ?1 ORDER BY number ASC"
-      ).bind(user.list_id).all();
-      return authedJson(results);
-    }
-
-    // Discards an outstanding reservation ("that sheet is long gone"). The
-    // number itself stays burned — the counter never rewinds — this only
-    // stops it being offered for reprinting.
-    const reservedDelMatch = path.match(/^\/storage\/boxes\/reserved\/(\d+)$/);
-    if (reservedDelMatch && method === "DELETE") {
-      const result = await env.DB.prepare(
-        "DELETE FROM storage_reserved_numbers WHERE list_id = ?1 AND number = ?2"
-      ).bind(user.list_id, Number(reservedDelMatch[1])).run();
-      if (!result.meta.changes) return authedErr("STORAGE_BOX_NOT_FOUND", 404);
-      return authedJson({ ok: true });
     }
 
     // The QR/deep-link lookup (GET /b/{number}, see the ROUTING section) —

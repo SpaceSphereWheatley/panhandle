@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.0] — 2026-08-07
+
+### Changed
+- **Printing new storage box labels is now a lot more flexible.** Instead of "reserving" a batch of numbers from the server, you now type in a start number and either an end number or a count, and the labels are generated instantly with no server round-trip. You can also choose how many columns and rows fit on the A4 sheet (so labels can be bigger or smaller depending on your boxes) and pick portrait or landscape. Reprinting labels for boxes you've already created works the same as before. (`BoxLabelsModal.jsx`'s "New" tab replaces the old reserve-and-track flow with a purely client-side number sequence; `index.css`'s print rules now size each sticker from `--cols`/`--rows` CSS custom properties instead of a fixed 3×4 grid, and support an `@page`-level landscape override. The old `POST /storage/boxes/reserve`, `GET /storage/boxes/reserved`, and `DELETE /storage/boxes/reserved/{number}` endpoints, and the `storage_reserved_numbers` tracking table they wrote to, are removed/unused — see CLAUDE.md's Storage module section.)
+
 ## [1.61.6] — 2026-08-06
 
 ### Changed

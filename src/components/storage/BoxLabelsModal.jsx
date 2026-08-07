@@ -1,64 +1,44 @@
 import { useEffect, useState } from "react";
 import { Modal } from "../Modal.jsx";
-import { Button, EmptyState, Checkbox, SegmentedControl, Input, IconButton } from "../../design-system/index.js";
+import { Button, EmptyState, Checkbox, SegmentedControl, Input } from "../../design-system/index.js";
 import { BoxQrCode } from "./BoxQrCode.jsx";
-import { useToast } from "../../context/ToastContext.jsx";
 import { useTranslation } from "../../context/LanguageContext.jsx";
-import { api } from "../../lib/api.js";
-import { apiErrorMessage } from "../../lib/apiError.js";
 import { formatBoxNumber, boxDeepLinkUrl } from "../../lib/storageBoxes.js";
-
-// Mirrors the server's own cap on POST /storage/boxes/reserve.
-const RESERVE_MAX = 60;
 
 // Printable A4 sheet of stickers (docs/storage-module-plan.md) — QR code and
 // box number only, nothing else, since a box's *name* and contents change
 // over time while the number never does. Two independent print paths share
 // one grid (see index.css's `.storage-print-labels`, print-only content —
-// this component's own visible UI is the checklist/reserve form below, not
+// this component's own visible UI is the checklist/form below, not
 // a second on-screen copy of the sheet):
 //  - "Existing boxes": reprint a selected subset of already-created boxes,
 //    so replacing one lost sticker doesn't cost a full sheet.
-//  - "New codes": reserve a batch of not-yet-assigned numbers
-//    (POST /storage/boxes/reserve hands out the smallest currently-free
-//    numbers without creating any box rows) so a stack of empty boxes can be
-//    labeled in one pass and filled in later by scanning.
+//  - "New sequence": generate and print a custom range of numbers (e.g.,
+//    1–10, 50–75) with configurable columns/rows per sheet and orientation.
 export function BoxLabelsModal({ boxes, onClose }) {
   const t = useTranslation();
-  const toast = useToast();
   const sorted = [...boxes].sort((a, b) => a.number - b.number);
 
   const [mode, setMode] = useState("existing"); // "existing" | "new"
   const [selected, setSelected] = useState(() => new Set(sorted.map((b) => b.id)));
-  const [reserveCount, setReserveCount] = useState(12);
-  const [reserving, setReserving] = useState(false);
-  const [reservedNumbers, setReservedNumbers] = useState(null);
-  // Numbers reserved on some earlier visit that never got a box — without
-  // these surfaced, a lost print-out meant they were burned invisibly and
-  // reserving more was the only way forward.
-  const [outstanding, setOutstanding] = useState([]);
-  const [outstandingSelected, setOutstandingSelected] = useState(() => new Set());
 
-  async function loadOutstanding() {
-    try {
-      const res = await api("/storage/boxes/reserved");
-      if (Array.isArray(res)) setOutstanding(res.map((r) => r.number));
-    } catch {
-      /* non-critical: the reserve-more path below still works */
+  // New sequence settings
+  const [startNumber, setStartNumber] = useState(1);
+  const [sequenceMode, setSequenceMode] = useState("end"); // "end" or "count"
+  const [endNumber, setEndNumber] = useState(10);
+  const [count, setCount] = useState(10);
+  const [columnsPerSheet, setColumnsPerSheet] = useState(3);
+  const [rowsPerSheet, setRowsPerSheet] = useState(4);
+  const [orientation, setOrientation] = useState("portrait"); // "portrait" or "landscape"
+
+  // window.print() has to wait until the sheet is in the DOM
+  const [shouldPrint, setShouldPrint] = useState(false);
+  useEffect(() => {
+    if (shouldPrint) {
+      window.print();
+      setShouldPrint(false);
     }
-  }
-
-  useEffect(() => {
-    loadOutstanding();
-  }, []);
-
-  // window.print() has to wait until the just-reserved sheet is actually in
-  // the DOM — an effect keyed on the state that only changes right after a
-  // successful reserve guarantees the render/commit has happened first,
-  // unlike calling it inline in the async handler right after setState.
-  useEffect(() => {
-    if (reservedNumbers) window.print();
-  }, [reservedNumbers]);
+  }, [shouldPrint]);
 
   function toggleSelected(id) {
     setSelected((prev) => {
@@ -68,58 +48,30 @@ export function BoxLabelsModal({ boxes, onClose }) {
     });
   }
 
-  function toggleOutstanding(number) {
-    setOutstandingSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(number)) next.delete(number); else next.add(number);
-      return next;
-    });
-  }
+  // Calculate the actual end number and statistics for new sequence
+  const actualEnd = sequenceMode === "end" ? endNumber : startNumber + count - 1;
+  const totalStickers = Math.max(0, actualEnd - startNumber + 1);
+  const stickersPerSheet = columnsPerSheet * rowsPerSheet;
+  const sheetsNeeded = stickersPerSheet > 0 ? Math.ceil(totalStickers / stickersPerSheet) : 0;
 
-  async function reserveAndPrint() {
-    setReserving(true);
-    let res;
-    try {
-      res = await api("/storage/boxes/reserve", { method: "POST", body: JSON.stringify({ count: reserveCount }) });
-    } catch {
-      setReserving(false);
-      toast(t("storage.labels.reserveFailed"), { error: true });
-      return;
-    }
-    setReserving(false);
-    if (res.error) {
-      toast(apiErrorMessage(res, t), { error: true });
-      return;
-    }
-    loadOutstanding();
-    setReservedNumbers(res.numbers);
-  }
+  // Calculate label dimensions in mm
+  const pageWidth = orientation === "portrait" ? 190 : 277;
+  const pageHeight = orientation === "portrait" ? 277 : 190;
+  const labelWidth = (pageWidth / columnsPerSheet).toFixed(1);
+  const labelHeight = (pageHeight / rowsPerSheet).toFixed(1);
 
-  async function discardOutstanding(number) {
-    try {
-      await api(`/storage/boxes/reserved/${number}`, { method: "DELETE" });
-    } catch {
-      toast(t("storage.labels.discardFailed"), { error: true });
-      return;
-    }
-    setOutstanding((prev) => prev.filter((n) => n !== number));
-    setOutstandingSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(number);
-      return next;
-    });
-  }
+  // Generate print sheet for existing boxes
+  const existingPrintSheet = sorted.filter((b) => selected.has(b.id));
 
-  // Reprinting a selection of outstanding codes goes through the same
-  // reservedNumbers state (and so the same print effect) as a fresh reserve —
-  // from the sheet's point of view they're identical, just already allocated.
-  function reprintOutstanding() {
-    setReservedNumbers([...outstandingSelected].sort((a, b) => a - b));
-  }
+  // Generate print sheet for new sequence
+  const newPrintSheet = totalStickers > 0
+    ? Array.from({ length: totalStickers }, (_, i) => ({
+        id: `new-${startNumber + i}`,
+        number: startNumber + i,
+      }))
+    : [];
 
-  const printSheet = mode === "existing"
-    ? sorted.filter((b) => selected.has(b.id))
-    : (reservedNumbers || []).map((number) => ({ id: `reserved-${number}`, number }));
+  const printSheet = mode === "existing" ? existingPrintSheet : newPrintSheet;
 
   return (
     <Modal onClose={onClose} title={t("storage.labels.title")}>
@@ -180,74 +132,149 @@ export function BoxLabelsModal({ boxes, onClose }) {
             )
           ) : (
             <>
-              {outstanding.length > 0 && !reservedNumbers && (
-                <div style={{ margin: "12px 0 18px" }}>
-                  <h4 style={{ margin: "0 0 4px", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", fontWeight: 700 }}>
-                    {t("storage.labels.outstandingTitle")}
-                  </h4>
-                  <p style={{ margin: "0 0 10px", color: "var(--text-tertiary)", fontSize: "var(--text-xs)" }}>
-                    {t("storage.labels.outstandingDescription")}
-                  </p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                    {outstanding.map((number) => (
-                      <OutstandingChip
-                        key={number}
-                        number={number}
-                        selected={outstandingSelected.has(number)}
-                        onToggle={() => toggleOutstanding(number)}
-                        onDiscard={() => discardOutstanding(number)}
-                        t={t}
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    icon="printer"
-                    disabled={outstandingSelected.size === 0}
-                    onClick={reprintOutstanding}
-                    style={{ width: "100%" }}
-                  >
-                    {t("storage.labels.reprintSelected")}
-                  </Button>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="storage-start-number" style={{ display: "block", margin: "0 0 6px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                    {t("storage.labels.startNumber")}
+                  </label>
+                  <Input
+                    id="storage-start-number"
+                    type="number"
+                    min={1}
+                    value={startNumber}
+                    onChange={(e) => setStartNumber(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  />
                 </div>
-              )}
+                <div style={{ flex: 1 }}>
+                  <fieldset style={{ border: "none", padding: 0, margin: 0, display: "flex", gap: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        checked={sequenceMode === "end"}
+                        onChange={() => setSequenceMode("end")}
+                        style={{ margin: 0 }}
+                      />
+                      <span style={{ fontSize: "var(--text-sm)" }}>{t("storage.labels.endNumber")}</span>
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        checked={sequenceMode === "count"}
+                        onChange={() => setSequenceMode("count")}
+                        style={{ margin: 0 }}
+                      />
+                      <span style={{ fontSize: "var(--text-sm)" }}>{t("storage.labels.count")}</span>
+                    </label>
+                  </fieldset>
+                </div>
+              </div>
 
-              <label htmlFor="storage-reserve-count" style={{ display: "block", margin: "12px 0 6px" }}>
-                {t("storage.labels.reserveCountLabel")}
-              </label>
-              <Input
-                id="storage-reserve-count"
-                type="number"
-                min={1}
-                max={RESERVE_MAX}
-                value={reserveCount}
-                onChange={(e) => setReserveCount(Math.min(RESERVE_MAX, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-              />
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="storage-seq-value" style={{ display: "block", margin: "0 0 6px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                    {sequenceMode === "end" ? t("storage.labels.endNumber") : t("storage.labels.count")}
+                  </label>
+                  <Input
+                    id="storage-seq-value"
+                    type="number"
+                    min={1}
+                    max={sequenceMode === "count" ? 500 : 999}
+                    value={sequenceMode === "end" ? endNumber : count}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                      if (sequenceMode === "end") {
+                        setEndNumber(val);
+                      } else {
+                        setCount(val);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
 
-              {reservedNumbers ? (
-                <>
-                  <p style={{ color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>
-                    {t("storage.labels.reservedSummary", {
-                      from: formatBoxNumber(reservedNumbers[0]),
-                      to: formatBoxNumber(reservedNumbers[reservedNumbers.length - 1]),
-                    })}
-                  </p>
-                  <Button variant="primary" icon="printer" onClick={() => window.print()} style={{ width: "100%", marginTop: 8 }}>
-                    {t("storage.labels.printButton")}
-                  </Button>
-                  <Button variant="outline" onClick={() => setReservedNumbers(null)} style={{ width: "100%", marginTop: 8 }}>
-                    {t("storage.labels.reserveNewBatch")}
-                  </Button>
-                </>
-              ) : (
-                <Button variant="primary" icon="printer" disabled={reserving} onClick={reserveAndPrint} style={{ width: "100%", marginTop: 16 }}>
-                  {reserving ? t("common.loading") : t("storage.labels.reserveButton")}
-                </Button>
-              )}
+              <div style={{ padding: "10px", backgroundColor: "var(--surface-sunken)", borderRadius: "var(--radius-md)", marginBottom: 12, fontSize: "var(--text-sm)" }}>
+                <div>{t("storage.labels.totalStickers", { count: totalStickers })}</div>
+                <div>{t("storage.labels.sheetsNeeded", { count: sheetsNeeded })}</div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginTop: 4 }}>
+                  {t("storage.labels.labelSize", { width: labelWidth, height: labelHeight })}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="storage-columns" style={{ display: "block", margin: "0 0 6px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                    {t("storage.labels.columnsPerSheet")}
+                  </label>
+                  <Input
+                    id="storage-columns"
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={columnsPerSheet}
+                    onChange={(e) => setColumnsPerSheet(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 3)))}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="storage-rows" style={{ display: "block", margin: "0 0 6px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                    {t("storage.labels.rowsPerSheet")}
+                  </label>
+                  <Input
+                    id="storage-rows"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={rowsPerSheet}
+                    onChange={(e) => setRowsPerSheet(Math.max(1, Math.min(10, parseInt(e.target.value, 10) || 4)))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", margin: "0 0 6px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                  {t("storage.labels.orientation")}
+                </label>
+                <fieldset style={{ border: "none", padding: 0, margin: 0, display: "flex", gap: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      checked={orientation === "portrait"}
+                      onChange={() => setOrientation("portrait")}
+                      style={{ margin: 0 }}
+                    />
+                    <span style={{ fontSize: "var(--text-sm)" }}>{t("storage.labels.portrait")}</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      checked={orientation === "landscape"}
+                      onChange={() => setOrientation("landscape")}
+                      style={{ margin: 0 }}
+                    />
+                    <span style={{ fontSize: "var(--text-sm)" }}>{t("storage.labels.landscape")}</span>
+                  </label>
+                </fieldset>
+              </div>
+
+              <Button
+                variant="primary"
+                icon="printer"
+                disabled={totalStickers === 0}
+                onClick={() => setShouldPrint(true)}
+                style={{ width: "100%" }}
+              >
+                {t("storage.labels.printButton")}
+              </Button>
             </>
           )}
 
-          <div className="storage-print-labels">
+          <div
+            className="storage-print-labels"
+            data-orientation={orientation}
+            style={{
+              '--cols': columnsPerSheet,
+              '--rows': rowsPerSheet,
+            }}
+          >
             {printSheet.map((box) => (
               <div key={box.id} className="storage-sticker">
                 <BoxQrCode value={boxDeepLinkUrl(box.number)} label={formatBoxNumber(box.number)} size={80} />
@@ -258,48 +285,5 @@ export function BoxLabelsModal({ boxes, onClose }) {
         </>
       )}
     </Modal>
-  );
-}
-
-// An outstanding reserved number, toggle-able for reprint + individually
-// discardable. Its own component (not inlined in the .map() above) so the
-// toggle's hover state can be a plain useState — hooks can't be called from
-// inside a callback passed to .map(). The discard action goes through the
-// design system's IconButton (danger/sm) instead of a hand-rolled `<button>`
-// so it gets the same hover/press state layer and a real ~32px touch target,
-// rather than the ~16px hit area a bare icon-with-2px-padding gave it.
-function OutstandingChip({ number, selected, onToggle, onDiscard, t }) {
-  const [hover, setHover] = useState(false);
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-      <button
-        type="button"
-        onClick={onToggle}
-        onPointerEnter={(e) => { if (e.pointerType === "mouse") setHover(true); }}
-        onPointerLeave={() => setHover(false)}
-        aria-pressed={selected}
-        style={{
-          fontFamily: "var(--font-mono, monospace)",
-          fontWeight: 700,
-          fontSize: "var(--text-xs)",
-          padding: "5px 10px",
-          borderRadius: "var(--radius-pill)",
-          cursor: "pointer",
-          border: `1.5px solid ${selected ? "var(--accent-primary)" : "var(--border-default)"}`,
-          background: selected ? "var(--accent-primary)" : hover ? "var(--surface-sunken)" : "transparent",
-          color: selected ? "var(--text-on-accent)" : "var(--text-secondary)",
-          transition: "background-color var(--duration-fast) var(--ease-out)",
-        }}
-      >
-        {formatBoxNumber(number)}
-      </button>
-      <IconButton
-        icon="x"
-        size="sm"
-        variant="danger"
-        onClick={onDiscard}
-        label={`${t("storage.labels.discard")} ${formatBoxNumber(number)}`}
-      />
-    </span>
   );
 }
