@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.2] — 2026-08-07
+
+### Fixed
+- **Printing storage box labels no longer wastes a blank second page.** Printing used to always produce at least two pages, even for a single label, because the invisible rest of the app was still counted toward the printed page count behind the scenes. Now exactly as many pages print as the labels actually need. (`BoxLabelsModal.jsx`'s print grid now renders via a `createPortal` directly to `document.body` instead of nested inside the modal's own DOM tree, so `index.css`'s print rules can hide the rest of the app (`#root`) outright under `@media print` rather than only making it invisible while it still occupied layout space.)
+
 ## [1.62.1] — 2026-08-07
 
 ### Changed

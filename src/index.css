@@ -66,44 +66,31 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
    UI is a compact checkbox list / reserve form, not a second visual copy of
    the sheet, so `.storage-print-labels` stays display:none until printing.
 
-   Everything below was arrived at empirically, by actually rendering test
-   pages through Chromium's headless PDF output (page.pdf(), not just
-   emulateMedia — see the PR): three separate, independent bugs, each with a
-   plausible-looking fix that turned out to be wrong on its own.
+   `.storage-print-labels` is portaled straight to <body> from
+   BoxLabelsModal.jsx (createPortal) — a sibling of #root, not nested inside
+   Sheet's own `position: fixed` backdrop. That used to not be the case, and
+   cost three separate, independently-discovered bugs (found by actually
+   rendering test pages through Chromium's headless PDF output — page.pdf(),
+   not just emulateMedia) to work around the nesting: hiding the rest of the
+   page had to use `visibility` instead of `display` (a `display: none`
+   ancestor removes the whole subtree, no descendant selector can undo that),
+   and the grid itself needed `position: absolute` plus every *other*
+   element forced to `position: static !important` to escape Sheet's fixed
+   backdrop as a containing block (which otherwise corrupted both the
+   resolved width and the page count). Portaling out removes the nesting
+   these existed to work around, so print now just hides #root outright
+   (see the `@media print` block below) — no visibility/position gymnastics
+   needed.
 
-   1. Hiding the rest of the page has to use `visibility`, not `display`.
-      `.storage-print-labels` sits nested many levels deep inside
-      Modal/Sheet's own tree (Sheet has no portal — see Sheet.jsx). A
-      `visibility: hidden` ancestor still lets a `visibility: visible`
-      descendant repaint — that override is exactly why the original code
-      used it — but a `display: none` ancestor removes the whole subtree
-      from the render tree with no way for any descendant, however specific
-      its own selector, to undo that. A first attempt here switched to
-      `display` to chase bug 2 below and it silently broke rendering
-      entirely (every sticker collapsed to a zero-size box at the top-left
-      corner).
-   2. The sticker grid itself must not be CSS Grid. Verified: a grid
-      container simply doesn't fragment across printed pages in Chromium —
-      14 stickers all got force-fit onto a single page instead of the
-      expected 12 + 2 overflowing onto a second, silently clipping past the
-      first sheet. Plain inline-block, the oldest and most
-      print-fragmentation-safe CSS layout mode, wraps the extra onto
-      additional sheets correctly.
-   3. `.storage-print-labels` itself needs `position: static !important` on
-      every OTHER element on the page (see the `body *` rule below), not
-      just `visibility: hidden` — Sheet's backdrop is `position: fixed`
-      (Sheet.jsx), an inline style with no class name to target directly.
-      Left alone, that fixed ancestor becomes `.storage-print-labels`'s
-      containing block for its own `position: absolute`, and under
-      Chromium's print layout specifically that silently corrupts both the
-      container's resolved width (a plain 190mm literal instead fixed this,
-      `width: 100%` measured narrower than the real page) and pagination
-      itself (page count stayed frozen at a fixed number regardless of how
-      many stickers were added). Forcing every ancestor to `position: static`
-      under print — a stylesheet `!important` is one of the few things that
-      *can* override an inline `style` attribute — removes the fixed
-      backdrop as a positioning context entirely, so `.storage-print-labels`'s
-      own `position: absolute` resolves against the true page box instead. */
+   One of the three original bugs wasn't a nesting problem and still
+   applies here unchanged: the sticker grid itself must not be CSS Grid.
+   Verified: a grid container simply doesn't fragment across printed pages
+   in Chromium — 14 stickers all got force-fit onto a single page instead of
+   the expected 12 + 2 overflowing onto a second, silently clipping past the
+   first sheet. Plain inline-block, the oldest and most
+   print-fragmentation-safe CSS layout mode, wraps the extra onto
+   additional sheets correctly — this has nothing to do with where the grid
+   sits in the DOM, so portaling doesn't change it. */
 .storage-print-labels {
   display: none;
 }
@@ -121,18 +108,24 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
     size: A4;
     margin: 10mm;
   }
-  body * { visibility: hidden; position: static !important; }
-  .storage-print-labels, .storage-print-labels * { visibility: visible; }
+  /* #root holds the entire app (header, tab bar, every tab's full content,
+     every open modal) — hiding it outright, rather than the old
+     visibility:hidden-on-everything approach, is what actually fixes
+     pagination: visibility:hidden still reserves layout height, so the
+     whole (invisible) app used to count toward the printed document's
+     height and silently forced at least one extra blank page regardless of
+     how many stickers were being printed. display:none is safe here
+     specifically because .storage-print-labels is no longer nested inside
+     #root (see the portal note above) — #root is no longer an ancestor of
+     the content we need to keep. */
+  #root { display: none !important; }
   .storage-print-labels {
     --cols: 3;
     --rows: 8;
     --page-width: 190mm;
     --page-height: 277mm;
     display: block !important;
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: var(--page-width); /* not 100% — see bug 3 above */
+    width: var(--page-width);
     font-size: 0; /* collapses the whitespace gap inline-block would otherwise leave between stickers */
   }
   .storage-sticker {
