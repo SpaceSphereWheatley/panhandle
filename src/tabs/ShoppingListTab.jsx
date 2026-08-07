@@ -566,6 +566,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     }
     try {
       await api(`/list/${id}/toggle`, { method: "POST" });
+      loadList();
     } catch (e) {
       if (e.message === "network") {
         // Keep the optimistic flip (and its "Recently bought" re-sort); queue the
@@ -590,6 +591,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     );
     try {
       await api(`/list/${id}`, { method: "PATCH", body: JSON.stringify({ important: !wasImportant }) });
+      loadList();
     } catch (e) {
       if (e.message === "network") {
         enqueue({ kind: "important", targetId: id, important: !wasImportant });
