@@ -25,3 +25,12 @@ if ('serviceWorker' in navigator) {
     })
   })
 }
+
+// Best-effort runtime lock backing manifest.json's "orientation": "portrait-primary"
+// (which Chrome only honors once the PWA is installed/standalone). The Screen
+// Orientation API additionally requires a fullscreen or standalone context in
+// most browsers and throws otherwise (e.g. an ordinary browser tab, iOS
+// Safari, which doesn't implement it at all) — never fatal to the app either way.
+if (screen.orientation?.lock) {
+  screen.orientation.lock('portrait').catch(() => {})
+}

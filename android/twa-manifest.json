@@ -31,6 +31,6 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "orientation": "default",
+  "orientation": "portrait",
   "fingerprints": []
 }
