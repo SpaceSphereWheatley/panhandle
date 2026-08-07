@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.1] — 2026-08-07
+
+### Changed
+- **Printing storage box labels now asks which sheet of stickers you're using, instead of asking you to work out columns and rows yourself.** Pick from the sizes label sheets are actually sold in — 10, 12, 16, 18, 21, 24, or 27 stickers per A4 sheet — and the QR code and box number resize to fit that sheet properly (the QR code used to be a fixed size that could run larger than the sticker itself on a denser sheet). The portrait/landscape choice is gone along with the manual column/row fields, since every sheet type here is a standard portrait A4 layout. (`BoxLabelsModal.jsx` replaces the free-typed `columnsPerSheet`/`rowsPerSheet`/`orientation` state with a single sheet-type picker over a fixed `SHEET_LAYOUTS` table; `index.css`'s print rules size each sticker's QR code and number off `--sticker-w`/`--sticker-h` custom properties derived from the chosen `--cols`/`--rows`, rather than a flat 45mm/14pt.)
+
 ## [1.62.0] — 2026-08-07
 
 ### Changed

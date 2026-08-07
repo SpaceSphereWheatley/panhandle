@@ -306,7 +306,7 @@ export const nb = {
   "storage.scan.unsupportedDescription": "Denne nettleseren har ikke tilgang til kameraet. Prøv igjen på mobilen, eller søk opp boksnummeret i stedet.",
 
   "storage.labels.title": "Boksetiketter",
-  "storage.labels.description": "Én etikett per boks — kun QR-koden og boksnummeret. Tilpass oppsettet: velg startnummer, hvor mange du vil skrive ut, og hvor mange kolonner og rader per A4-ark.",
+  "storage.labels.description": "Én etikett per boks — kun QR-koden og boksnummeret. Velg startnummer, hvor mange du vil skrive ut, og en arktype som matcher etikettpapiret ditt.",
   "storage.labels.printButton": "Skriv ut",
   "storage.labels.emptyTitle": "Ingen bokser ennå",
   "storage.labels.emptyDescription": "Legg til en boks først, så vises etiketten her.",
@@ -321,11 +321,8 @@ export const nb = {
   "storage.labels.totalStickers": { one: "Totalt: {count} etikett", other: "Totalt: {count} etiketter" },
   "storage.labels.sheetsNeeded": { one: "{count} ark nødvendig", other: "{count} ark nødvendig" },
   "storage.labels.labelSize": "~{width}mm × {height}mm per etikett",
-  "storage.labels.columnsPerSheet": "Kolonner per ark",
-  "storage.labels.rowsPerSheet": "Rader per ark",
-  "storage.labels.orientation": "Sideretning",
-  "storage.labels.portrait": "Stående",
-  "storage.labels.landscape": "Liggende",
+  "storage.labels.sheetType": "Arktype",
+  "storage.labels.sheetTypeOption": "{count} per ark ({cols} × {rows})",
 
   "settings.nav.appearance": "Utseende",
   "settings.nav.account": "Konto",
