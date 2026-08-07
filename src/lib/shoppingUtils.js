@@ -98,17 +98,37 @@ export function extractGF(name) {
 // `lang` is "nb", also match against its Norwegian display translation (see
 // itemNames.js) so typing "melk" surfaces "Milk", displayed as "Melk",
 // without ever renaming the stored row.
+//
+// A plain substring test isn't enough to rank results: "mango" is a literal
+// substring of "mangold" (the nb translation of "Chard"), so a naive
+// includes()-everywhere match ranks that coincidental hit exactly like a
+// real one. Every candidate is ranked into a tier before sorting — an exact
+// match on the whole name beats a whole-word match, which beats a bare
+// substring hit (still needed so mid-word typing like "choc" finds
+// "Chocolate milk") — so a real "Mango" entry always outranks "Chard"
+// however the query happens to overlap its translation. Ties within a tier
+// sort alphabetically, matching the dropdown's alphabetical presentation.
+const WORD_SPLIT_RE = /[^\p{L}\p{N}]+/u;
+
 export function matchCatalogue(query, catalogue, lang = "nb") {
-  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const normalizedQuery = query.toLowerCase().trim();
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
   if (!tokens.length) return [];
   return catalogue
-    .filter((c) => {
-      const searchable = lang === "nb"
-        ? `${c.name} ${translateItemName(c.name, "nb")}`.toLowerCase()
-        : c.name.toLowerCase();
-      return tokens.every((t) => searchable.includes(t));
+    .map((c) => {
+      const canonical = c.name.toLowerCase();
+      const translated = lang === "nb" ? translateItemName(c.name, "nb").toLowerCase() : canonical;
+      const searchable = `${canonical} ${translated}`;
+      if (!tokens.every((t) => searchable.includes(t))) return null;
+      const isExact = normalizedQuery === canonical || normalizedQuery === translated;
+      const words = searchable.split(WORD_SPLIT_RE).filter(Boolean);
+      const isWholeWord = tokens.every((t) => words.includes(t));
+      const rank = isExact ? 0 : isWholeWord ? 1 : 2;
+      return { item: c, rank };
     })
-    .sort((a, b) => a.name.length - b.name.length);
+    .filter(Boolean)
+    .sort((a, b) => a.rank - b.rank || a.item.name.localeCompare(b.item.name))
+    .map((x) => x.item);
 }
 
 // Fallback-only descriptor split: tried *after* a whole-phrase matchCatalogue

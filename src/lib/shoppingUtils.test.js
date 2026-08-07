@@ -158,9 +158,9 @@ describe("matchCatalogue", () => {
     expect(results.map((r) => r.name)).toEqual(["Chocolate milk"]);
   });
 
-  it("sorts matches shortest-name-first", () => {
+  it("ranks an exact match first, then sorts the rest alphabetically", () => {
     const results = matchCatalogue("milk", catalogue, "en");
-    expect(results.map((r) => r.name)).toEqual(["Milk", "Low-fat milk", "Chocolate milk"]);
+    expect(results.map((r) => r.name)).toEqual(["Milk", "Chocolate milk", "Low-fat milk"]);
   });
 
   it("returns [] for empty/whitespace-only query", () => {
@@ -179,13 +179,33 @@ describe("matchCatalogue", () => {
 
   it("still matches the stored (English) name directly when lang is 'nb'", () => {
     const results = matchCatalogue("milk", catalogue, "nb");
-    expect(results.map((r) => r.name)).toEqual(["Milk", "Low-fat milk", "Chocolate milk"]);
+    expect(results.map((r) => r.name)).toEqual(["Milk", "Chocolate milk", "Low-fat milk"]);
   });
 
   // nb is the default because it's the app's default UI language — so the
   // default path is the *translating* one, the reverse of before this flip.
   it("defaults to nb matching when lang is omitted", () => {
     expect(matchCatalogue("melk", catalogue).map((r) => r.name)).toEqual(["Milk", "Low-fat milk"]);
+  });
+
+  // Regression for a real bug: "Chard"'s nb translation is "Mangold", which
+  // contains "mango" as a plain substring — so a naive includes()-anywhere
+  // match ranked it alongside a real "Mango" entry, and on a household whose
+  // catalogue happened to list "Chard" first, typing "Mango" surfaced
+  // "Mangold" instead. An exact match must always win regardless of
+  // catalogue order.
+  it("prioritizes an exact match over a coincidental substring hit inside another item's translation", () => {
+    const fruitCatalogue = [{ name: "Chard", category: "Fruit and vegetables" }, { name: "Mango", category: "Fruit and vegetables" }];
+    const results = matchCatalogue("Mango", fruitCatalogue, "nb");
+    expect(results.map((r) => r.name)).toEqual(["Mango", "Chard"]);
+  });
+
+  it("sorts same-tier matches alphabetically, not by name length", () => {
+    const results = matchCatalogue("plant", [
+      { name: "Plant food", category: "Household" },
+      { name: "Aloe plant", category: "Household" },
+    ]);
+    expect(results.map((r) => r.name)).toEqual(["Aloe plant", "Plant food"]);
   });
 });
 

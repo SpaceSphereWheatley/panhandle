@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.3] — 2026-08-07
+
+### Fixed
+- **Typing an item's exact name now always finds it, even when another item's translation happens to contain the same letters.** For example, typing "Mango" could suggest "Mangold" (Norwegian for chard) instead of "Mango" itself, because "mango" is a literal substring of "mangold" and the old matching logic didn't distinguish a real match from a coincidental one. An exact match now always ranks first. Add-item and meal suggestion dropdowns are also sorted alphabetically within each relevance tier instead of by name length. (`matchCatalogue` in `shoppingUtils.js` now ranks each candidate — exact match, then whole-word match, then substring match — before sorting ties alphabetically by name, rather than a flat includes()-anywhere filter sorted by name length.)
+
 ## [1.62.2] — 2026-08-07
 
 ### Fixed
