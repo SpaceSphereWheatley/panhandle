@@ -1,9 +1,14 @@
 # Changelog
 
-## [1.63.2] — 2026-08-10
+## [1.63.3] — 2026-08-10
 
 ### Changed
 - **Reorganized the shopping list's data-loading and offline-queue code into reusable, independently-tested pieces, with no change to how the list behaves or looks.** (`ShoppingListTab.jsx`'s catalogue/list-polling/caching logic and offline-write-queue plumbing moved into new `useShoppingList`/`useOfflineQueue` hooks in `src/hooks/`, each with new unit tests covering the load/flush ordering that was previously only reachable — and only testable — via the full mounted component.)
+
+## [1.63.2] — 2026-08-10
+
+### Changed
+- **Reorganized how the server routes incoming requests, with no change to how the app behaves.** Purely internal restructuring — every endpoint answers exactly as before. (`worker/index.js`'s `route()` moved from a single ~2,080-line method with one sequential `if (path === ...)` check per endpoint into a dispatch table — `PUBLIC_ROUTES`/`AUTHENTICATED_ROUTES` arrays of `{ method, path/pattern, handler }` matched by a small `matchRoute()` helper — with each endpoint's logic extracted into its own named function. `tests/worker-unit.test.mjs`'s auth-boundary test, which pins the exact whitelist of routes reachable without logging in, was updated to check the new table instead of the old if-chain text, preserving the same guardrail.)
 
 ## [1.63.1] — 2026-08-10
 
