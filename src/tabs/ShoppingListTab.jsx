@@ -9,24 +9,18 @@ import { useCategoryOrder } from "../context/CategoryOrderContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
 import { useIsDesktop } from "../hooks/useIsDesktop.js";
 import { useMotionConfig } from "../hooks/useMotionConfig.js";
+import { useShoppingList } from "../hooks/useShoppingList.js";
+import { useOfflineQueue } from "../hooks/useOfflineQueue.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, Avatar, FabMenu, Skeleton, EmptyState, BaseButton } from "../design-system/index.js";
-import { readCache, writeCache } from "../lib/localCache.js";
-import { enqueue, flushQueue, queueLength, newTempId } from "../lib/writeQueue.js";
-import { useAuth } from "../context/AuthContext.jsx";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 
-const POLL_MS = 7000;
-// Last-fetched list, hydrated on mount so a returning user sees real items
-// instantly instead of a skeleton/spinner on every cold open — see
-// loadList()/CLAUDE.md's loading-UI notes.
-const ITEMS_CACHE_KEY = "ph_cache_items_v1";
 // Fallback hold before a checked-off item re-sorts into "Recently bought" when
 // Framer's animation is off (reduced motion, or "classic" intensity) — there's
 // no pop animation to key off in that case, so this is a deliberately fixed,
@@ -174,26 +168,26 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const { nameFor, colorFor } = useListUsers();
   const { order: categoryOrder } = useCategoryOrder();
   const confirm = useConfirm();
-  const { user: currentUser } = useAuth();
   const t = useTranslation();
   const { lang } = useLanguage();
-  const [catalogue, setCatalogue] = useState([]);
-  const [items, setItems] = useState(() => readCache(ITEMS_CACHE_KEY, []));
-  // Other members who've polled the list in the last ~20s (see POST
-  // /presence) — usernames, resolved to display names/colors for the avatar
-  // row below the summary line.
-  const [presentUsers, setPresentUsers] = useState([]);
-  // Only true for a genuine cold load with nothing cached yet — once
-  // hydrated from ITEMS_CACHE_KEY, subsequent fetches are silent background
-  // refreshes rather than a loading state.
-  const [loading, setLoading] = useState(() => readCache(ITEMS_CACHE_KEY, null) === null);
+  const {
+    catalogue,
+    items, setItems,
+    suggestedItems, setSuggestedItems,
+    presentUsers,
+    staleItemDays,
+    loading,
+    pendingWrites, refreshPendingWrites,
+    loadCatalogue,
+    loadList,
+  } = useShoppingList({ active, onSyncTick, onOffline });
+  const { queueOfflineAdd, enqueueToggle, enqueueImportant } = useOfflineQueue(setItems, refreshPendingWrites);
   const [viewMode, setViewMode] = useState(() => (localStorage.getItem("ph_view") === "grid" ? "grid" : "list"));
   const [addValue, setAddValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   // -1 = nothing arrow-key-highlighted in the suggestions dropdown (Enter
   // falls back to submitting addValue as typed, same as before this existed).
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [suggestedItems, setSuggestedItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
   // "Recently bought" starts collapsed — it's a re-add palette, not something to
   // scroll past every time.
@@ -208,20 +202,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // are mid synced-fade-out rather than having simply vanished — see the
   // cappedIdsKey effect and ItemCard's `evicting` prop.
   const [evictingIds, setEvictingIds] = useState(() => new Set());
-  // Stale-item marker threshold (days), a per-list preference — see
-  // /notification-settings and NotificationsSubpage.jsx. Falls back to the app
-  // default until the first fetch resolves.
-  const [staleItemDays, setStaleItemDays] = useState(7);
   // Pulls important, unbought items into their own "Important" section above the
   // normal aisle list instead of hiding the rest — useful for a trip where
   // you're not buying everything on the list. Not persisted: it's a
   // per-visit lens on the list, not a standing preference like ph_view.
   const [pinImportant, setPinImportant] = useState(false);
-  // Count of offline writes waiting to be replayed (see src/lib/writeQueue.js
-  // and TODO #113). Drives the "usendte" pill so a mid-shop add/toggle made
-  // with no signal reads as saved-and-pending, not lost. Seeded from any
-  // queue that survived an app close.
-  const [pendingWrites, setPendingWrites] = useState(() => queueLength());
   // True only for the render right after the last unbought item's card has
   // actually finished leaving the screen — gates the "all bought" pop/tick
   // animation (see AllBoughtMark/CELEBRATE_MS above) so it plays once per
@@ -264,54 +249,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
-  async function loadCatalogue() {
-    try {
-      setCatalogue(await api("/catalogue"));
-    } catch {
-      // Non-fatal: matching/autocomplete degrades to whatever catalogue is
-      // already in state (empty on a first-load failure) rather than
-      // crashing — but still worth telling the user, unlike loadList's
-      // /catalogue/suggestions catch below, since this is the catalogue the
-      // whole add/autocomplete flow depends on, not a nice-to-have.
-      toast(t("shoppingList.toast.genericError"), { error: true });
-    }
-  }
-
-  async function loadList() {
-    // Replay any queued offline writes first, so the fetch below already
-    // reflects them (the queued add is replayed → its real row comes back in
-    // the snapshot, replacing our temp-id optimistic item). If the flush
-    // can't drain the queue we're still offline: keep the optimistic state
-    // and skip the fetch rather than overwriting it with stale server data.
-    if (queueLength() > 0) {
-      const { drained } = await flushQueue(api);
-      setPendingWrites(queueLength());
-      if (!drained) {
-        onOffline();
-        return;
-      }
-    }
-    let fetched;
-    try {
-      fetched = await api("/list");
-      onSyncTick();
-    } catch {
-      onOffline();
-      return;
-    }
-    setItems(fetched);
-    try {
-      setSuggestedItems(await api("/catalogue/suggestions"));
-    } catch {
-      setSuggestedItems([]);
-    }
-    try {
-      setPresentUsers(await api("/presence", { method: "POST" }));
-    } catch {
-      /* non-critical, keep whatever we had */
-    }
-  }
-
   // Only fires on true unmount (logout), not on pane switches — the tab stays
   // mounted (hidden via CSS) once visited, see AppShell.jsx.
   useEffect(() => {
@@ -345,79 +282,9 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     wasActive.current = active;
   }, [active]);
 
-  useEffect(() => {
-    if (!active) return;
-    // Independent, not chained: loadCatalogue() now catches its own errors
-    // (see above) rather than rejecting, but even before that fix, chaining
-    // via .then(loadList) meant a failed catalogue load silently skipped
-    // loadList too — the shopping list itself never appearing over one
-    // unrelated catalogue hiccup. The loading spinner only waits on loadList,
-    // the one that actually gates what's on screen.
-    loadCatalogue();
-    loadList().finally(() => setLoading(false));
-    const timer = setInterval(() => {
-      if (!document.hidden) loadList();
-    }, POLL_MS);
-    // Replay queued offline writes the moment connectivity returns, rather
-    // than waiting up to POLL_MS for the next tick (loadList flushes first).
-    const onOnline = () => loadList();
-    window.addEventListener("online", onOnline);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("online", onOnline);
-    };
-  }, [active]);
-
-  // Persist the current (possibly optimistic) list on every change, not just
-  // after a server fetch, so an offline-added/toggled item survives a reload
-  // while still offline — its replay op lives in the write queue, and this
-  // keeps the matching optimistic row on screen until that op syncs. Skips the
-  // initial run so a cold open with nothing cached doesn't write an empty
-  // array over the "no cache yet" signal `loading` reads on the next open.
-  const didHydrate = useRef(false);
-  useEffect(() => {
-    if (!didHydrate.current) {
-      didHydrate.current = true;
-      return;
-    }
-    writeCache(ITEMS_CACHE_KEY, items);
-  }, [items]);
-
-  useEffect(() => {
-    if (!active) return;
-    api("/notification-settings").then((res) => {
-      if (!res.error) setStaleItemDays(res.stale_item_days);
-    });
-  }, [active]);
-
   function setView(mode) {
     setViewMode(mode);
     localStorage.setItem("ph_view", mode);
-  }
-
-  // Shared by addItem/addSuggestedItem's offline paths: persist the add to the
-  // write queue for replay, and drop a matching optimistic row on the list
-  // (with a temp id — see writeQueue.newTempId) so it shows immediately and
-  // survives a reload while still offline.
-  function queueOfflineAdd({ name, category, notes, qty, exact }) {
-    const tempId = newTempId();
-    enqueue({ kind: "add", tempId, body: { name, qty: qty || 1, category, notes, exact } });
-    const optimistic = {
-      id: tempId,
-      bought: 0,
-      important: 0,
-      added_by: currentUser,
-      added_at: new Date().toISOString(),
-      bought_at: null,
-      qty: qty || 1,
-      notes: notes ?? null,
-      // The server capitalizes non-exact names; mirror that so the optimistic
-      // row reads the same before and after it syncs.
-      name: exact ? name : cap(name),
-      category,
-    };
-    setItems((prev) => [...prev, optimistic]);
-    setPendingWrites(queueLength());
   }
 
   async function addItem(rawText, { exact = false } = {}) {
@@ -571,8 +438,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       if (e.message === "network") {
         // Keep the optimistic flip (and its "Recently bought" re-sort); queue the
         // toggle to replay on reconnect instead of reverting it.
-        enqueue({ kind: "toggle", targetId: id });
-        setPendingWrites(queueLength());
+        enqueueToggle(id);
         return;
       }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, bought: wasBought, important: wasImportant } : x)));
@@ -594,8 +460,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
       loadList();
     } catch (e) {
       if (e.message === "network") {
-        enqueue({ kind: "important", targetId: id, important: !wasImportant });
-        setPendingWrites(queueLength());
+        enqueueImportant(id, !wasImportant);
         return;
       }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, important: wasImportant } : x)));
