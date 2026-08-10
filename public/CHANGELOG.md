@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.63.2] — 2026-08-10
+
+### Changed
+- **Reorganized the shopping list's data-loading and offline-queue code into reusable, independently-tested pieces, with no change to how the list behaves or looks.** (`ShoppingListTab.jsx`'s catalogue/list-polling/caching logic and offline-write-queue plumbing moved into new `useShoppingList`/`useOfflineQueue` hooks in `src/hooks/`, each with new unit tests covering the load/flush ordering that was previously only reachable — and only testable — via the full mounted component.)
+
 ## [1.63.1] — 2026-08-10
 
 ### Changed
