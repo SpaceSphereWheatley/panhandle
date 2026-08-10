@@ -20,14 +20,13 @@ const FAB_RIGHT = 'var(--fab-right)';
  *   <FabMenu
  *     label="Legg til vare"
  *     icon="plus"
- *     badge={<Count/>}
  *     actions={[{ icon, label, onClick, badge? }]}
  *   />
  *
  * Source: Panhandle Design System (README "Platform: Android web app" —
  * Material-influenced interaction patterns restyled with the brand tokens).
  */
-export function FabMenu({ icon = 'plus', label, badge = null, actions = [], haptic }) {
+export function FabMenu({ icon = 'plus', label, actions = [], haptic }) {
   const [open, setOpen] = React.useState(false);
   const wrapperRef = React.useRef(null);
 
@@ -124,7 +123,6 @@ export function FabMenu({ icon = 'plus', label, badge = null, actions = [], hapt
             icon={icon}
             active={open}
             label={open ? 'Lukk meny' : label}
-            badge={open ? null : badge}
             onClick={toggle}
           />
         </div>

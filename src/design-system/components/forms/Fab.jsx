@@ -8,11 +8,10 @@ import { Ripples } from '../../lib/useRipple.jsx';
  * ripple, and an M3-Expressive press: a spring "give" plus a corner-radius
  * morph. When `active` (e.g. its FAB menu is open) the circle morphs to a
  * squircle and a `plus` icon rotates 45° into a close "×" — a shape/icon
- * morph rather than a hard glyph swap. Pass an optional `badge` node
- * (rendered top-right, allowed to overflow) and the Phosphor `icon` name.
+ * morph rather than a hard glyph swap. Takes the Phosphor `icon` name.
  * Source: Panhandle Design System (README "Platform: Android web app").
  */
-export function Fab({ icon = 'plus', label, onClick, badge = null, active = false }) {
+export function Fab({ icon = 'plus', label, onClick, active = false }) {
   const { hover, press, ripples, handlers } = usePressInteractions();
 
   return (
@@ -57,7 +56,7 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
       }}
     >
       {/* Ripple clip layer — masks ripples + state layer to the FAB's current
-          shape (follows the radius morph), while the badge can overflow. */}
+          shape (follows the radius morph). */}
       <span
         aria-hidden="true"
         style={{
@@ -80,7 +79,6 @@ export function Fab({ icon = 'plus', label, onClick, badge = null, active = fals
         ) : null}
         <Ripples ripples={ripples} tint="rgba(255,255,255,0.35)" />
       </span>
-      {badge}
       {/* A `plus` rotates 45° into an "×"; any other icon just gets a subtle
           turn as an "activated" cue. Springs so it settles with a little life. */}
       <i
