@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.5] — 2026-08-07
+
+### Fixed
+- **The previous portrait-lock fix didn't actually stop the app from rotating for most people — this one does.** The manifest/API-based lock shipped last only works once the app is installed as a standalone PWA on Chrome/Android; an ordinary browser tab, and iOS Safari altogether, ignored it completely and kept rotating freely. The app now visually locks to portrait everywhere, including a plain browser tab and iPhones. (`src/index.css` adds a CSS-only fallback: on a phone-sized screen reporting landscape, `html` is counter-rotated -90° with its width/height swapped to 100vh/100vw, so it still exactly fills the physical screen and fixed elements like the FAB/toasts/modals stay correctly pinned instead of drifting.)
+
 ## [1.62.4] — 2026-08-07
 
 ### Fixed
