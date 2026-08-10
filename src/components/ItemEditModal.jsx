@@ -37,15 +37,18 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   const [removing, setRemoving] = useState(false);
   const [deletingCatalogue, setDeletingCatalogue] = useState(false);
   const busy = saving || removing || deletingCatalogue;
-  // The edit input always operates on the canonical (Norwegian) stored name
-  // — translation is a display concern (see itemNames.js), not something a
-  // rename should rewrite. The modal title/confirm dialog below are
-  // read-only, so those DO show the translated name for recognition.
-  const [name, setName] = useState(cap(item.name));
+  const displayName = cap(translateItemName(item.name, lang));
+  // The edit input starts out showing the translated name (so a Norwegian
+  // user long-pressing "Melk" doesn't land on "Milk"), but translation is
+  // still a display concern, not something a rename should rewrite: if the
+  // field is saved unchanged, `save()` below sends the original canonical
+  // `item.name` rather than the translated text, so the catalogue row's
+  // stored (English) name and its icon/duplicate-detection matching are
+  // untouched. Only an actual edit is sent as typed, same as before.
+  const [name, setName] = useState(displayName);
   const [category, setCategory] = useState(item.category);
   const [qty, setQty] = useState(item.qty || 1);
   const [notes, setNotes] = useState(item.notes || "");
-  const displayName = cap(translateItemName(item.name, lang));
   // Just the latest of the two actions is shown — an edit (via this modal's
   // save) is more recent than the original add whenever edited_at is set and
   // sorts >= added_at (both SQLite "YYYY-MM-DD HH:MM:SS" UTC strings, so a
@@ -64,12 +67,16 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
             toast(t("itemEdit.emptyName"), { error: true });
             return;
           }
+          // Unedited (still showing the translated name from initial state)
+          // resolves back to the canonical stored name rather than sending
+          // the translated text as a literal rename.
+          const finalName = trimmed.toLowerCase() === displayName.toLowerCase() ? item.name : trimmed;
           setSaving(true);
           let res;
           try {
             res = await api(`/list/${item.id}`, {
               method: "PATCH",
-              body: JSON.stringify({ name: trimmed, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
+              body: JSON.stringify({ name: finalName, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
             });
           } catch {
             setSaving(false);
