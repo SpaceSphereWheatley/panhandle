@@ -896,6 +896,71 @@ export function sanitizeDisplayName(name) {
   return (name || "").trim().replace(/\s+/g, " ").slice(0, 60);
 }
 
+// ---------- free-text input limits ----------
+// Every free-typed field that reaches the DB gets a length cap from here.
+// Before this existed, caps were applied wherever someone happened to think
+// of one — display names (60), feedback (4000) and recipe import (60x200)
+// had them, while item names, notes, meal names, ingredient/label arrays and
+// every storage-box field had none at all, so a single request could store an
+// arbitrarily large string (or, for the JSON-encoded arrays, arbitrarily many
+// of them). Keeping the numbers in one table is the point: a new free-text
+// field should pick its cap from here rather than inventing one inline.
+//
+// The values are deliberately generous — far above any legitimate entry — so
+// they act as an abuse ceiling, not a UX constraint. Nothing the app's own UI
+// can produce comes close to them.
+export const TEXT_LIMITS = {
+  itemName: 100,
+  itemNotes: 500,
+  mealName: 120,
+  mealIngredient: 200,
+  mealIngredients: 60, // array length; matches MAX_RECIPE_INGREDIENTS
+  mealLabel: 40,
+  mealLabels: 20, // array length
+  responsible: 60, // free text, but a person's name — same cap as display names
+  listName: 60,
+  boxName: 120,
+  boxLocation: 120,
+  boxNotes: 2000,
+  boxItem: 200,
+  boxItems: 200, // array length
+};
+
+// True when a free-typed string exceeds its cap. Callers reject with
+// TEXT_TOO_LONG rather than truncating: silently storing a cut-off item name
+// is worse than refusing it, since the user has no way to tell what was
+// actually saved. (sanitizeDisplayName predates this and still truncates —
+// left as-is, since a 60-char cap on a display name is a UI-shaped limit
+// rather than an abuse ceiling, and rejecting there would be a behaviour
+// change on an endpoint nothing complained about.)
+export function textTooLong(value, max) {
+  return typeof value === "string" && value.trim().length > max;
+}
+
+// Normalises a free-typed string array (meal ingredients, storage-box
+// contents) for JSON-encoded storage: coerces each entry to a trimmed string
+// and drops blanks. Returns null — a rejection, surfaced as TOO_MANY_ENTRIES
+// or TEXT_TOO_LONG by the caller — when the array is longer than `maxLen` or
+// any entry exceeds `maxItemLen`. The coercion matters as much as the caps:
+// these arrays were previously JSON.stringify'd straight from the request
+// body, so a client could store arbitrary nested objects in a column the rest
+// of the app reads back as an array of strings.
+//
+// The array cap counts the *kept* entries, after blanks are dropped — not the
+// raw array — so a client sending a few trailing empty rows (which the
+// editors do) isn't rejected over entries that were never going to be stored.
+export function sanitizeStringArray(value, { maxLen, maxItemLen }) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const raw of value) {
+    const s = typeof raw === "string" ? raw.trim() : String(raw ?? "").trim();
+    if (!s) continue;
+    if (s.length > maxItemLen) return null;
+    out.push(s);
+  }
+  return out.length > maxLen ? null : out;
+}
+
 // Recognises a gluten-free marker (GF / gf / glutenfri / glutenfritt) typed as
 // part of an item name and reports it so the caller can lift it into the notes:
 // "Pasta GF" becomes name "Pasta" + note "GF". The cleaned name still resolves
@@ -925,13 +990,20 @@ export function capitalizeName(name) {
 // Cleans a free-form labels array for storage on meal_catalogue: trims each,
 // drops blanks, capitalises like capitalizeName, and dedupes case-insensitively
 // (keeping the first-seen casing) so "vegetar" and "Vegetar" don't both stick.
+// Returns null when the array is longer than TEXT_LIMITS.mealLabels or any
+// label exceeds TEXT_LIMITS.mealLabel, so the caller can reject rather than
+// store an unbounded list (see TEXT_LIMITS above). Non-string entries are
+// still dropped rather than rejected — that predates the caps and callers
+// rely on it.
 export function sanitizeLabels(labels) {
   if (!Array.isArray(labels)) return [];
+  if (labels.length > TEXT_LIMITS.mealLabels) return null;
   const seen = new Set();
   const out = [];
   for (const raw of labels) {
     const clean = capitalizeName(typeof raw === "string" ? raw : "");
     if (!clean) continue;
+    if (clean.length > TEXT_LIMITS.mealLabel) return null;
     const key = clean.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -1077,6 +1149,63 @@ const err = (code, status = 400, { detail = null, extra = {} } = {}) => {
   const message = ERROR_MESSAGES_EN[code];
   return json({ error: detail ? `${message}: ${detail}` : message, code }, status, extra);
 };
+
+// ---------- security headers on the proxied app shell ----------
+// Everything that isn't /api/* is proxied straight from the Pages project,
+// and used to be returned byte-for-byte with whatever headers Pages set —
+// meaning no clickjacking, MIME-sniffing or referrer protection anywhere on
+// the app. The Worker already sits in front of every request, so this is the
+// one place to add them.
+//
+// The Content-Security-Policy is deliberately **Report-Only** for now. A
+// wrong policy fails client-side and silently (nothing reaches the Worker
+// log), on an app where a merge to main is live within a minute — so it ships
+// observing first, and flips to the enforcing `Content-Security-Policy`
+// header in a later release once a deploy-preview click-through shows a clean
+// console. The allowances below are what the app actually loads today:
+//   - 'unsafe-inline' script: app.html's theme/intensity bootstrap and
+//     public/index.html + changelog.html's inline blocks (public/ has no build
+//     step, so those can't be hashed at build time).
+//   - accounts.google.com: Sign in with Google (script + its iframe).
+//   - challenges.cloudflare.com: Turnstile (script + its iframe).
+//   - fonts.googleapis.com/fonts.gstatic.com: the webfonts app.html links.
+//   - unpkg.com: public/index.html's Phosphor icon stylesheets (the marketing
+//     page only — the app itself bundles them).
+//   - blob:/data: images: QR rendering and the in-app camera scanner.
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://accounts.google.com https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://unpkg.com",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "connect-src 'self' https://accounts.google.com",
+  "frame-src https://accounts.google.com https://challenges.cloudflare.com",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+export function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  // Enforced: all three are inert for an app that never intends to be framed,
+  // never relies on MIME sniffing, and has no cross-origin referrer need.
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Camera is the one powerful feature the app uses (QrScanModal); everything
+  // else is denied outright.
+  headers.set("Permissions-Policy", "camera=(self), geolocation=(), microphone=(), payment=()");
+  headers.set("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 // Parses a JSON request body, returning null on empty/malformed input so
 // callers can answer 400 instead of throwing an opaque 500.
@@ -1581,8 +1710,28 @@ export async function checkCatalogueSync(env, items = COMMON_ITEMS) {
   return { synced: true, listCount: lists.length };
 }
 
-export default {
+const worker = {
+  // Thin outer wrapper around `route` below, which holds the actual routing.
+  // Nothing previously caught a throw from a handler: an unexpected error
+  // (a D1 failure, a malformed row, a typo on a rare branch) surfaced as the
+  // runtime's own opaque 500 and was never recorded anywhere, so a broken
+  // endpoint could stay broken silently. Everything now funnels through here,
+  // which logs the method + path + error (readable via `wrangler tail`, or a
+  // Logpush job) and answers with a plain SERVER_ERROR — never the underlying
+  // message, which can carry schema internals (see the DB_ERROR handler in
+  // /recurring for the same reasoning).
   async fetch(request, env) {
+    try {
+      return await worker.route(request, env);
+    } catch (e) {
+      let pathname = "?";
+      try { pathname = new URL(request.url).pathname; } catch { /* unparseable URL */ }
+      console.error("Unhandled error", request.method, pathname, e?.stack || e);
+      return err("SERVER_ERROR", 500);
+    }
+  },
+
+  async route(request, env) {
     const url = new URL(request.url);
     const method = request.method;
 
@@ -1667,7 +1816,8 @@ export default {
       // Worker's own hostname, landing users on an unwanted .../app.
       // Following it here keeps that Pages implementation detail invisible:
       // the client only ever sees the URL it actually requested.
-      return fetch(new Request(pagesUrl.toString(), request), { redirect: "follow" });
+      const upstream = await fetch(new Request(pagesUrl.toString(), request), { redirect: "follow" });
+      return withSecurityHeaders(upstream);
     }
 
     const path = url.pathname.replace(/^\/api/, "");
@@ -1739,6 +1889,9 @@ export default {
       if (!isValidEmail(cleanEmail)) {
         return err("INVALID_EMAIL", 400);
       }
+      if (textTooLong(body.list_name, TEXT_LIMITS.listName)) {
+        return err("TEXT_TOO_LONG", 400);
+      }
       if (!(await verifyTurnstile(body.turnstile_token, ip, env))) {
         return err("TURNSTILE_FAILED", 403);
       }
@@ -1802,6 +1955,11 @@ export default {
           return err("TOO_MANY_SIGNUP_ATTEMPTS", 429);
         }
         await recordAttempt(env, ip, "register");
+        // Cheap local validation before the PBKDF2 hash below, matching
+        // /register's "validate before spending the expensive step" ordering.
+        if (textTooLong(body.list_name, TEXT_LIMITS.listName)) {
+          return err("TEXT_TOO_LONG", 400);
+        }
         // Username is always the e-mail (see TODO #17) — email is already
         // guaranteed fresh here (no row matched google_sub or email above),
         // so there's no clash to resolve like the old local-part-derived
@@ -2250,7 +2408,6 @@ export default {
             // storage_box_items cascades automatically from this (its FK is
             // to storage_boxes(id), not lists(id) directly).
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(user.list_id),
-            env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1").bind(user.list_id),
             // list_presence references lists(id) without ON DELETE CASCADE, so
             // it must be cleared before the DELETE FROM lists below or that
             // final statement hits a FK violation and aborts the whole batch
@@ -2491,7 +2648,6 @@ export default {
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(row.list_id),
-            env.DB.prepare("DELETE FROM storage_reserved_numbers WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
             // aborts on a FK violation.
@@ -2759,6 +2915,9 @@ export default {
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
       const { name, category, notes, qty, exact } = body;
+      if (textTooLong(name, TEXT_LIMITS.itemName) || textTooLong(notes, TEXT_LIMITS.itemNotes)) {
+        return authedErr("TEXT_TOO_LONG", 400);
+      }
       // "Legg til nøyaktig som skrevet" means verbatim — skip the gluten-free
       // extraction and auto-capitalization normally applied to typed names.
       let clean, gf;
@@ -2860,6 +3019,9 @@ export default {
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
       const { qty, notes, category, name, important } = body;
+      if (textTooLong(name, TEXT_LIMITS.itemName) || textTooLong(notes, TEXT_LIMITS.itemNotes)) {
+        return authedErr("TEXT_TOO_LONG", 400);
+      }
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(patchMatch[1], user.list_id).first();
@@ -3083,10 +3245,17 @@ export default {
     if (path === "/meals" && method === "POST") {
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
+      if (textTooLong(body.name, TEXT_LIMITS.mealName)) return authedErr("TEXT_TOO_LONG", 400);
       const clean = capitalizeName(body.name);
       if (!clean) return authedErr("EMPTY_NAME", 400);
-      const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
-      const labelsJson = JSON.stringify(sanitizeLabels(body.labels));
+      const ingredients = sanitizeStringArray(body.ingredients, {
+        maxLen: TEXT_LIMITS.mealIngredients, maxItemLen: TEXT_LIMITS.mealIngredient,
+      });
+      if (ingredients === null) return authedErr("TOO_MANY_ENTRIES", 400);
+      const labels = sanitizeLabels(body.labels);
+      if (labels === null) return authedErr("TOO_MANY_ENTRIES", 400);
+      const ingredientsJson = JSON.stringify(ingredients);
+      const labelsJson = JSON.stringify(labels);
       const clash = await env.DB.prepare(
         "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
       ).bind(clean, user.list_id).first();
@@ -3106,6 +3275,7 @@ export default {
       ).bind(mealPatchMatch[1], user.list_id).first();
       if (!meal) return authedErr("MEAL_NOT_FOUND", 404);
       if (body.name !== undefined) {
+        if (textTooLong(body.name, TEXT_LIMITS.mealName)) return authedErr("TEXT_TOO_LONG", 400);
         const clean = capitalizeName(body.name);
         if (!clean) return authedErr("EMPTY_NAME", 400);
         const clash = await env.DB.prepare(
@@ -3116,14 +3286,18 @@ export default {
           .bind(clean, meal.id, user.list_id).run();
       }
       if (body.ingredients !== undefined) {
-        const ingredientsJson = JSON.stringify(Array.isArray(body.ingredients) ? body.ingredients : []);
+        const ingredients = sanitizeStringArray(body.ingredients, {
+          maxLen: TEXT_LIMITS.mealIngredients, maxItemLen: TEXT_LIMITS.mealIngredient,
+        });
+        if (ingredients === null) return authedErr("TOO_MANY_ENTRIES", 400);
         await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2 AND list_id = ?3")
-          .bind(ingredientsJson, meal.id, user.list_id).run();
+          .bind(JSON.stringify(ingredients), meal.id, user.list_id).run();
       }
       if (body.labels !== undefined) {
-        const labelsJson = JSON.stringify(sanitizeLabels(body.labels));
+        const labels = sanitizeLabels(body.labels);
+        if (labels === null) return authedErr("TOO_MANY_ENTRIES", 400);
         await env.DB.prepare("UPDATE meal_catalogue SET labels = ?1 WHERE id = ?2 AND list_id = ?3")
-          .bind(labelsJson, meal.id, user.list_id).run();
+          .bind(JSON.stringify(labels), meal.id, user.list_id).run();
       }
       return authedJson({ ok: true });
     }
@@ -3171,6 +3345,17 @@ export default {
       }
       // Require at least one of meal_name or responsible to be set.
       if (!meal_name && !responsible) return authedErr("MISSING_MEAL_OR_RESPONSIBLE", 400);
+      if (textTooLong(meal_name, TEXT_LIMITS.mealName) || textTooLong(responsible, TEXT_LIMITS.responsible)) {
+        return authedErr("TEXT_TOO_LONG", 400);
+      }
+      // Sanitized once here and reused below, so the stored value is the
+      // coerced/capped array rather than whatever the request body held.
+      const cleanIngredients = Array.isArray(ingredients)
+        ? sanitizeStringArray(ingredients, {
+            maxLen: TEXT_LIMITS.mealIngredients, maxItemLen: TEXT_LIMITS.mealIngredient,
+          })
+        : undefined;
+      if (cleanIngredients === null) return authedErr("TOO_MANY_ENTRIES", 400);
       if (!(await validateResponsible(env, user.list_id, responsible))) {
         return authedErr("RESPONSIBLE_ACCOUNT_MISMATCH", 400);
       }
@@ -3195,7 +3380,7 @@ export default {
           // ingredients is a JSON-encoded array, stored once per meal name in
           // meal_catalogue and shared across every occurrence of that meal —
           // undefined means "leave whatever's stored alone".
-          const ingredientsJson = Array.isArray(ingredients) ? JSON.stringify(ingredients) : undefined;
+          const ingredientsJson = cleanIngredients !== undefined ? JSON.stringify(cleanIngredients) : undefined;
           let meal = await env.DB.prepare(
             "SELECT id FROM meal_catalogue WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
           ).bind(clean, user.list_id).first();
@@ -3258,6 +3443,7 @@ export default {
       const { day_of_week, responsible } = body;
       if (typeof day_of_week !== "number" || day_of_week < 0 || day_of_week > 6)
         return authedErr("INVALID_DAY", 400);
+      if (textTooLong(responsible, TEXT_LIMITS.responsible)) return authedErr("TEXT_TOO_LONG", 400);
       if (!(await validateResponsible(env, user.list_id, responsible))) {
         return authedErr("RESPONSIBLE_ACCOUNT_MISMATCH", 400);
       }
@@ -3274,7 +3460,12 @@ export default {
           `).bind(user.list_id, day_of_week, responsible).run();
         }
       } catch (e) {
-        return authedErr("DB_ERROR", 500, { detail: e?.message ?? String(e) });
+        // The raw SQLite message used to be echoed to the client via
+        // `detail`, exposing schema internals to an untrusted caller. It now
+        // goes to the Worker log only (visible via `wrangler tail`/Logpush),
+        // and the response carries the plain code.
+        console.error("recurring_schedule write failed", e);
+        return authedErr("DB_ERROR", 500);
       }
       return authedJson({ ok: true });
     }
@@ -3306,11 +3497,19 @@ export default {
     if (path === "/storage/boxes" && method === "POST") {
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
+      if (textTooLong(body.name, TEXT_LIMITS.boxName)
+        || textTooLong(body.location, TEXT_LIMITS.boxLocation)
+        || textTooLong(body.notes, TEXT_LIMITS.boxNotes)) {
+        return authedErr("TEXT_TOO_LONG", 400);
+      }
       const name = (body.name || "").trim();
       if (!name) return authedErr("STORAGE_BOX_NAME_REQUIRED", 400);
       const location = (body.location || "").trim();
       const notes = (body.notes || "").trim();
-      const items = Array.isArray(body.items) ? body.items.map((s) => String(s).trim()).filter(Boolean) : [];
+      const items = sanitizeStringArray(body.items, {
+        maxLen: TEXT_LIMITS.boxItems, maxItemLen: TEXT_LIMITS.boxItem,
+      });
+      if (items === null) return authedErr("TOO_MANY_ENTRIES", 400);
 
       const { count: liveCount } = await env.DB.prepare(
         "SELECT COUNT(*) AS count FROM storage_boxes WHERE list_id = ?1"
@@ -3402,13 +3601,21 @@ export default {
 
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
+      if (textTooLong(body.name, TEXT_LIMITS.boxName)
+        || textTooLong(body.location, TEXT_LIMITS.boxLocation)
+        || textTooLong(body.notes, TEXT_LIMITS.boxNotes)) {
+        return authedErr("TEXT_TOO_LONG", 400);
+      }
       const name = (body.name || "").trim();
       if (!name) return authedErr("STORAGE_BOX_NAME_REQUIRED", 400);
       const location = (body.location || "").trim();
       const notes = (body.notes || "").trim();
       // Items replace wholesale — the list is small enough that diffing
       // isn't worth it (same reasoning as the doc's endpoint table).
-      const items = Array.isArray(body.items) ? body.items.map((s) => String(s).trim()).filter(Boolean) : [];
+      const items = sanitizeStringArray(body.items, {
+        maxLen: TEXT_LIMITS.boxItems, maxItemLen: TEXT_LIMITS.boxItem,
+      });
+      if (items === null) return authedErr("TOO_MANY_ENTRIES", 400);
 
       await env.DB.batch([
         env.DB.prepare(
@@ -3609,3 +3816,5 @@ export default {
     ctx.waitUntil(checkCatalogueSync(env));
   },
 };
+
+export default worker;

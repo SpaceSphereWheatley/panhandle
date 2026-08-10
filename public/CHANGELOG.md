@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.63.0] — 2026-08-10
+
+### Changed
+- **The app now notices and records its own errors instead of failing silently.** Previously an unexpected server-side problem produced a blank, unexplained failure that was never logged anywhere, so a broken feature could stay broken without anyone finding out. Failures are now caught, recorded, and answered with a clear message. (`worker/index.js`'s routing moved from `export default { fetch }` into a `route()` method wrapped by a thin `fetch` handler that try/catches everything, logs `method + path + stack` via `console.error` — readable through `wrangler tail`/Logpush — and returns the new `SERVER_ERROR` code rather than the runtime's opaque 500.)
+- **Very long text pasted into an item, meal or storage box is now refused with a clear message instead of being stored.** Only a handful of fields had any length limit before; most free-typed fields had none at all, so a single request could store an unbounded amount of text. Every free-text field now has a generous ceiling — far above anything you'd type normally. (New `TEXT_LIMITS` table plus `textTooLong`/`sanitizeStringArray` helpers in `worker/index.js`, applied across `POST`/`PATCH /list`, `POST`/`PATCH /meals`, `POST /plan`, `POST /recurring`, `POST`/`PATCH /storage/boxes` and the `list_name` on `/register`//`auth/google`; meal ingredients/labels and box contents additionally get array-length caps and per-entry string coercion, replacing a raw `JSON.stringify` of the request body. New `TEXT_TOO_LONG`/`TOO_MANY_ENTRIES` error codes.)
+- **The app is now served with standard browser security protections.** Pages are told they may not be embedded in another site, that file types must not be second-guessed, and which outside services are legitimately allowed to load. (`withSecurityHeaders` in `worker/index.js` decorates every non-`/api` proxied response with `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`. The Content-Security-Policy ships as `Content-Security-Policy-Report-Only` first — an enforcing policy that's wrong fails client-side and silently, so it observes for one release before being switched on.)
+
+### Fixed
+- **A failed save no longer echoes internal database wording back to the screen.** (`POST /recurring`'s `DB_ERROR` response no longer carries the raw SQLite message as `detail`; it's logged server-side instead.)
+
+### Removed
+- **Cleared out two leftover pieces of the storage module's original design that nothing had used since it was reworked.** (`migrations/0029_drop_dead_storage_columns.sql` drops the vestigial `storage_reserved_numbers` table and `lists.next_box_number` column, and the two dead `DELETE FROM storage_reserved_numbers` statements are removed from the list-deletion cascades. Unlike every other migration here this one is subtractive, so it must be applied **after** the code deploy, not ahead of it — see the file's own header.)
+
 ## [1.62.6] — 2026-08-10
 
 ### Fixed

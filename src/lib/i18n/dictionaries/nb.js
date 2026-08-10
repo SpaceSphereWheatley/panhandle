@@ -17,6 +17,9 @@ export const nb = {
   "error.NOT_FOUND": "Ikke funnet",
   "error.UNAUTHORIZED": "Ikke autorisert",
   "error.DB_ERROR": "DB-feil",
+  "error.SERVER_ERROR": "Noe gikk galt. Prøv igjen.",
+  "error.TEXT_TOO_LONG": "Teksten er for lang",
+  "error.TOO_MANY_ENTRIES": "For mange oppføringer",
 
   "error.BAD_CREDENTIALS": "Feil e-post eller passord",
   "error.WRONG_PASSWORD": "Feil passord",
