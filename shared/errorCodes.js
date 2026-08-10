@@ -27,6 +27,9 @@ export const ERROR_MESSAGES_EN = {
   NOT_FOUND: "Not found",
   UNAUTHORIZED: "Not authorised",
   DB_ERROR: "Database error",
+  SERVER_ERROR: "Something went wrong. Try again.",
+  TEXT_TOO_LONG: "That text is too long",
+  TOO_MANY_ENTRIES: "Too many entries",
 
   // Auth + registration
   BAD_CREDENTIALS: "Wrong email or password",

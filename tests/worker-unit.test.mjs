@@ -10,6 +10,7 @@ import {
   b64url, b64urlStr, b64urlDecode, timingSafeEqual, hmac,
   signJwt, verifyJwt, hashPassword, verifyPassword, genPassword,
   sanitizeDisplayName, extractGlutenFree, capitalizeName, sanitizeLabels,
+  TEXT_LIMITS, textTooLong, sanitizeStringArray, withSecurityHeaders,
   isSuperAdmin, escapeHtml, COMMON_ITEMS, parseRecipeFromHtml,
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed,
@@ -256,6 +257,117 @@ describe("sanitizeLabels", () => {
 
   test("capitalizes each label like capitalizeName", () => {
     assert.deepEqual(sanitizeLabels(["quick", "budget-friendly"]), ["Quick", "Budget-friendly"]);
+  });
+
+  test("returns null when the array is longer than the cap", () => {
+    const tooMany = Array.from({ length: TEXT_LIMITS.mealLabels + 1 }, (_, i) => `Label${i}`);
+    assert.equal(sanitizeLabels(tooMany), null);
+  });
+
+  test("accepts an array exactly at the cap", () => {
+    const atCap = Array.from({ length: TEXT_LIMITS.mealLabels }, (_, i) => `Label${i}`);
+    assert.equal(sanitizeLabels(atCap).length, TEXT_LIMITS.mealLabels);
+  });
+
+  test("returns null when a single label is over the per-label cap", () => {
+    assert.equal(sanitizeLabels(["x".repeat(TEXT_LIMITS.mealLabel + 1)]), null);
+  });
+});
+
+describe("textTooLong", () => {
+  test("false for short strings, true past the cap", () => {
+    assert.equal(textTooLong("abc", 5), false);
+    assert.equal(textTooLong("abcde", 5), false);
+    assert.equal(textTooLong("abcdef", 5), true);
+  });
+
+  test("measures the trimmed length, so padding alone never trips it", () => {
+    assert.equal(textTooLong("   abc   ", 3), false);
+  });
+
+  test("non-strings are never too long (they're rejected/coerced elsewhere)", () => {
+    assert.equal(textTooLong(undefined, 5), false);
+    assert.equal(textTooLong(null, 5), false);
+    assert.equal(textTooLong(12345678, 5), false);
+  });
+});
+
+describe("sanitizeStringArray", () => {
+  const opts = { maxLen: 3, maxItemLen: 10 };
+
+  test("non-array input returns []", () => {
+    assert.deepEqual(sanitizeStringArray(null, opts), []);
+    assert.deepEqual(sanitizeStringArray("nope", opts), []);
+  });
+
+  test("trims entries and drops blanks", () => {
+    assert.deepEqual(sanitizeStringArray(["  a ", "", "   ", "b"], opts), ["a", "b"]);
+  });
+
+  test("blank entries don't count toward maxLen", () => {
+    // The editors send trailing empty rows; rejecting on those would be a
+    // spurious failure for a list that's within the cap once cleaned.
+    assert.deepEqual(sanitizeStringArray(["a", "", "b", "  ", "c", ""], opts), ["a", "b", "c"]);
+  });
+
+  test("coerces non-string entries rather than storing them raw", () => {
+    // The pre-cap code JSON.stringify'd the request array as-is, so an object
+    // could land in a column the app reads back as an array of strings.
+    assert.deepEqual(sanitizeStringArray([42, "b"], opts), ["42", "b"]);
+    assert.deepEqual(sanitizeStringArray([null, undefined, "b"], opts), ["b"]);
+  });
+
+  test("returns null when the array is longer than maxLen", () => {
+    assert.equal(sanitizeStringArray(["a", "b", "c", "d"], opts), null);
+  });
+
+  test("returns null when an entry is longer than maxItemLen", () => {
+    assert.equal(sanitizeStringArray(["x".repeat(11)], opts), null);
+  });
+
+  test("accepts an array exactly at both caps", () => {
+    assert.deepEqual(
+      sanitizeStringArray(["x".repeat(10), "b", "c"], opts),
+      ["x".repeat(10), "b", "c"]
+    );
+  });
+});
+
+describe("withSecurityHeaders", () => {
+  test("sets the enforced headers and preserves status/body", async () => {
+    const res = withSecurityHeaders(new Response("hello", { status: 201, headers: { "Content-Type": "text/plain" } }));
+    assert.equal(res.status, 201);
+    assert.equal(await res.text(), "hello");
+    assert.equal(res.headers.get("Content-Type"), "text/plain"); // upstream header survives
+    assert.equal(res.headers.get("X-Content-Type-Options"), "nosniff");
+    assert.equal(res.headers.get("X-Frame-Options"), "DENY");
+    assert.equal(res.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin");
+  });
+
+  test("ships the CSP report-only, not enforcing", () => {
+    // Deliberate: an enforcing policy that's wrong breaks the app client-side
+    // and silently. Flipping this is a later, separately-verified release —
+    // if this assertion is what's failing, that flip is what's happening.
+    const res = withSecurityHeaders(new Response("x"));
+    assert.equal(res.headers.get("Content-Security-Policy"), null);
+    const csp = res.headers.get("Content-Security-Policy-Report-Only");
+    assert.ok(csp.includes("default-src 'self'"));
+    assert.ok(csp.includes("frame-ancestors 'none'"));
+  });
+
+  test("allows the third-party origins the app actually loads", () => {
+    const csp = withSecurityHeaders(new Response("x")).headers.get("Content-Security-Policy-Report-Only");
+    // Each of these breaks a real flow if dropped: Google sign-in, Turnstile,
+    // the webfonts app.html links, and the marketing page's icon stylesheets.
+    for (const origin of [
+      "https://accounts.google.com",
+      "https://challenges.cloudflare.com",
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com",
+      "https://unpkg.com",
+    ]) {
+      assert.ok(csp.includes(origin), `CSP is missing ${origin}`);
+    }
   });
 });
 
