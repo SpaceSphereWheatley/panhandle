@@ -1,9 +1,14 @@
 # Changelog
 
-## [1.62.5] — 2026-08-10
+## [1.62.6] — 2026-08-10
 
 ### Fixed
 - **Long-pressing an item to edit it now shows its name in the app's current language, not always in English.** In the Norwegian view, opening an item's editor used to show its English catalogue name (e.g. "Milk") in the name field even though the rest of the app showed "Melk" — confusing to edit. The name field now starts out showing the translated name, and saving without touching it keeps the item's underlying English catalogue name unchanged. (`ItemEditModal.jsx`'s name input now initializes from `translateItemName(item.name, lang)` instead of the raw canonical `item.name`; `save()` resolves an unedited field back to the canonical name so the catalogue linkage/icon matching isn't rewritten to the translated text.)
+
+## [1.62.5] — 2026-08-07
+
+### Fixed
+- **The previous portrait-lock fix didn't actually stop the app from rotating for most people — this one does.** The manifest/API-based lock shipped last only works once the app is installed as a standalone PWA on Chrome/Android; an ordinary browser tab, and iOS Safari altogether, ignored it completely and kept rotating freely. The app now visually locks to portrait everywhere, including a plain browser tab and iPhones. (`src/index.css` adds a CSS-only fallback: on a phone-sized screen reporting landscape, `html` is counter-rotated -90° with its width/height swapped to 100vh/100vw, so it still exactly fills the physical screen and fixed elements like the FAB/toasts/modals stay correctly pinned instead of drifting.)
 
 ## [1.62.4] — 2026-08-07
 

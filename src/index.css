@@ -14,6 +14,38 @@ body {
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
   overscroll-behavior-y: contain;
 }
+
+/* Force-portrait fallback for phones. manifest.json's `orientation:
+   "portrait-primary"` and the best-effort screen.orientation.lock() call in
+   main.jsx only take effect once the PWA is installed standalone on Chrome/
+   Android — an ordinary browser tab, and iOS Safari altogether (which
+   implements neither API), ignore both and rotate freely. This is the one
+   lock that reaches every context: visually counter-rotate the whole page
+   back to portrait whenever a phone-sized screen reports landscape. Scoped
+   to `max-height: 500px` (a rotated phone's short axis — even the largest
+   phones land under it) plus `pointer: coarse` so a rotated tablet (600px+)
+   or a touch laptop with a short window, both real landscape layouts, are
+   left alone. Transforms `html` itself rather than an inner wrapper:
+   `transform` creates a new containing block for `position: fixed`
+   descendants (the same hazard the ph-pane-enter comment below avoids by
+   animating `left` instead) — rotating the outermost element and swapping
+   its width/height to 100vh/100vw means that new containing block still
+   exactly fills the physical screen, so FabMenu/toasts/modals keep behaving
+   as if pinned to the viewport instead of jumping to wherever `html`'s
+   untransformed box would have been. */
+@media screen and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  html {
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    overflow-x: hidden;
+  }
+}
+
 .hidden { display: none !important; }
 .sr-only {
   position: absolute;
