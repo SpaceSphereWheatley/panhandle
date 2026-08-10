@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.62.5] — 2026-08-10
+
+### Fixed
+- **Long-pressing an item to edit it now shows its name in the app's current language, not always in English.** In the Norwegian view, opening an item's editor used to show its English catalogue name (e.g. "Milk") in the name field even though the rest of the app showed "Melk" — confusing to edit. The name field now starts out showing the translated name, and saving without touching it keeps the item's underlying English catalogue name unchanged. (`ItemEditModal.jsx`'s name input now initializes from `translateItemName(item.name, lang)` instead of the raw canonical `item.name`; `save()` resolves an unedited field back to the canonical name so the catalogue linkage/icon matching isn't rewritten to the translated text.)
+
 ## [1.62.4] — 2026-08-07
 
 ### Fixed
