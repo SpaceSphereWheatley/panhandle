@@ -1259,32 +1259,6 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
               ]
             : []),
         ]}
-        badge={
-          suggestedItems.length > 0 ? (
-            <span
-              style={{
-                position: "absolute",
-                top: -4,
-                right: -4,
-                minWidth: 20,
-                height: 20,
-                padding: "0 5px",
-                borderRadius: "var(--radius-pill)",
-                background: "var(--warm-900)",
-                color: "var(--text-on-accent)",
-                fontSize: 11,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: 1,
-                boxShadow: "var(--shadow-sm)",
-              }}
-            >
-              {suggestedItems.length}
-            </span>
-          ) : null
-        }
       />
 
       {editingItem && (

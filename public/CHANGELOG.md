@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.63.1] — 2026-08-10
+
+### Changed
+- **The shopping list's + button no longer shows a small number badge for waiting suggestions.** The suggestion count is still shown next to "Suggestions" once you open the menu. (Removed the overlay `badge` prop from `ShoppingListTab.jsx`'s `FabMenu` usage, and the now-unused `badge` plumbing from the shared `Fab`/`FabMenu` design-system components.)
+
 ## [1.63.0] — 2026-08-10
 
 ### Changed
