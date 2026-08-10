@@ -13,6 +13,11 @@
 ### Removed
 - **Cleared out two leftover pieces of the storage module's original design that nothing had used since it was reworked.** (`migrations/0029_drop_dead_storage_columns.sql` drops the vestigial `storage_reserved_numbers` table and `lists.next_box_number` column, and the two dead `DELETE FROM storage_reserved_numbers` statements are removed from the list-deletion cascades. Unlike every other migration here this one is subtractive, so it must be applied **after** the code deploy, not ahead of it — see the file's own header.)
 
+## [1.62.7] — 2026-08-10
+
+### Fixed
+- **Reverted the last portrait-lock attempt** — visually spinning the page's own content back to portrait did nothing to stop the installed app's screen from actually rotating, and instead threw off the position of on-screen elements like the "unsent changes" toast while the rotation happened underneath. On Android, the installed app's orientation is controlled by its `manifest.json` setting from a couple of versions ago, which is what actually stops the rotation — but that only takes effect once your already-installed home-screen icon has picked up the update, which can take a little while in the background, or immediately if you remove and re-add the app to your home screen. (`src/index.css` drops the `transform: rotate(-90deg)` fallback added in 1.62.5.)
+
 ## [1.62.6] — 2026-08-10
 
 ### Fixed
