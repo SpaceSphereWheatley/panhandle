@@ -17,6 +17,7 @@ const {
   mealNameMatches,
   findSimilarMeals,
   addRowsToList,
+  isFreeTextResponsible,
 } = await import("./mealUtils.js");
 
 describe("localIso", () => {
@@ -220,6 +221,25 @@ describe("findSimilarMeals", () => {
 
   it("returns [] for an empty query", () => {
     expect(findSimilarMeals(catalogue, "")).toEqual([]);
+  });
+});
+
+describe("isFreeTextResponsible", () => {
+  const people = ["alice@example.com", "bob@example.com"];
+
+  it("returns false for a known list member, case-insensitively", () => {
+    expect(isFreeTextResponsible("alice@example.com", people)).toBe(false);
+    expect(isFreeTextResponsible("Alice@Example.com", people)).toBe(false);
+  });
+
+  it("returns true for a free-typed 'Other' value that matches no member", () => {
+    expect(isFreeTextResponsible("Eating out", people)).toBe(true);
+  });
+
+  it("returns false for empty/null/undefined", () => {
+    expect(isFreeTextResponsible("", people)).toBe(false);
+    expect(isFreeTextResponsible(null, people)).toBe(false);
+    expect(isFreeTextResponsible(undefined, people)).toBe(false);
   });
 });
 
