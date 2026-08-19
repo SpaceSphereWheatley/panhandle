@@ -92,6 +92,16 @@ export function collectLabels(meals) {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
+// A meal_plan.responsible value that doesn't match any current list member
+// is the free-typed "Other" case (MealPlanModal's describe field, e.g.
+// "Eating out") rather than an actual person — case-insensitive to match
+// nameFor's/colorFor's own lookup.
+export function isFreeTextResponsible(responsible, people) {
+  if (!responsible) return false;
+  const key = responsible.toLowerCase();
+  return !people.some((p) => (p || "").toLowerCase() === key);
+}
+
 // Case-insensitive, trimmed exact-name lookup — "does a saved meal already
 // have exactly this name" (duplicate detection, meal-name autofill on typing).
 export function findMealByName(catalogue, name) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.63.4] — 2026-08-19
+
+### Fixed
+- **Planning a day as "Other" with a description (e.g. "Eating out") now shows that description as the meal, with the responsible person left as a plain dash.** Previously it showed up backwards: the day still read as unplanned ("Add meal"), and the typed description appeared next to a person-shaped avatar as if it were someone's name. (`MealsTab.jsx`'s `WeekPane`/`DayCard`: when a day has a `meal_plan.responsible` that doesn't match any list member and no `meal_name`, that free text is now displayed in the meal slot instead, and the responsible slot renders a dash rather than routing it through `ResponsibleAvatar`/`nameFor`. New `isFreeTextResponsible` helper in `mealUtils.js`. The stored data is unchanged — this is a display-only fix.)
+
 ## [1.63.3] — 2026-08-10
 
 ### Changed

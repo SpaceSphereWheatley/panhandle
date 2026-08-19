@@ -5,7 +5,7 @@ import { apiErrorMessage } from "../lib/apiError.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
+import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, isFreeTextResponsible, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
@@ -149,7 +149,7 @@ function ResponsibleAvatar({ name, nameFor, colorFor, size, muted, t }) {
 // (currently selected) week's rows are tappable — the ones peeking in from
 // either side during a drag are a preview, not live controls, until you
 // actually swipe to them.
-function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, density, paneWidth }) {
+function WeekPane({ monday, byDate, isActive, today, schedule, people, nameFor, colorFor, shouldAnimate, transition, active, suppressClickRef, onOpenDay, density, paneWidth }) {
   const t = useTranslation();
   const { lang } = useLanguage();
   const days = weekDays(monday);
@@ -175,21 +175,32 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor
               const p = byDate[iso];
               const isToday = iso === today;
               const dow = dayOfWeekMonFirst(d);
+              // A day planned via "Other" with no meal name is really "no
+              // dinner tonight, here's why" (e.g. "Eating out") rather than
+              // an actual person's name — see MealPlanModal's describe
+              // field. Surface that free text as the meal itself and leave
+              // the responsible slot as a plain dash instead of rendering
+              // it through ResponsibleAvatar, which would otherwise show it
+              // as if it were a person.
+              const otherNote =
+                !p?.meal_name && p?.responsible && isFreeTextResponsible(p.responsible, people) ? p.responsible : null;
+              const dayP = otherNote ? { ...p, meal_name: otherNote } : p;
               // The responsible slot is filled the same way whether it's a
               // confirmed assignment or just a recurring default — see
               // ResponsibleAvatar above. Only truly nobody (neither) leaves
               // it empty.
               const recurring = !p?.responsible ? schedule[dow] : null;
-              const responsible = p?.responsible || recurring || null;
+              const responsible = otherNote ? null : p?.responsible || recurring || null;
               const muted = !p?.responsible;
               return (
                 <DayCard
                   key={iso}
                   d={d}
                   iso={iso}
-                  p={p}
+                  p={dayP}
                   isToday={isToday}
                   responsible={responsible}
+                  respDash={!!otherNote}
                   muted={muted}
                   cozy={cozy}
                   isActive={isActive}
@@ -214,7 +225,7 @@ function WeekPane({ monday, byDate, isActive, today, schedule, nameFor, colorFor
 // useLongPress (TODO #145 — the same app-wide "open this thing's editor"
 // gesture ItemCard already has) can be called at all: hooks can't be called
 // inside a `.map()` callback.
-function DayCard({ d, iso, p, isToday, responsible, muted, cozy, isActive, active, shouldAnimate, transition, suppressClickRef, onOpenDay, nameFor, colorFor, lang, t }) {
+function DayCard({ d, iso, p, isToday, responsible, respDash, muted, cozy, isActive, active, shouldAnimate, transition, suppressClickRef, onOpenDay, nameFor, colorFor, lang, t }) {
   const dayName = d.toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
   const dayAbbr = d.toLocaleDateString(dateLocale(lang), { weekday: "short" }).replace(/\./g, "").slice(0, 3).toUpperCase();
   const CardComponent = cardComponent(shouldAnimate);
@@ -347,19 +358,34 @@ function DayCard({ d, iso, p, isToday, responsible, muted, cozy, isActive, activ
               {t("meals.today")}
             </div>
           )}
-          {cozy && responsible && (
+          {cozy && (responsible || respDash) && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-              <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={32} muted={muted} t={t} />
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--text-xs)",
-                  fontWeight: 600,
-                  color: isToday ? "var(--accent-primary)" : "var(--text-secondary)",
-                }}
-              >
-                {muted ? t("meals.recurringTag", { name: nameFor(responsible) }) : nameFor(responsible)}
-              </span>
+              {respDash ? (
+                <span
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--text-xs)",
+                    fontWeight: 600,
+                    color: "var(--text-tertiary)",
+                  }}
+                >
+                  –
+                </span>
+              ) : (
+                <>
+                  <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={32} muted={muted} t={t} />
+                  <span
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: "var(--text-xs)",
+                      fontWeight: 600,
+                      color: isToday ? "var(--accent-primary)" : "var(--text-secondary)",
+                    }}
+                  >
+                    {muted ? t("meals.recurringTag", { name: nameFor(responsible) }) : nameFor(responsible)}
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -382,6 +408,21 @@ function DayCard({ d, iso, p, isToday, responsible, muted, cozy, isActive, activ
           </span>
         )}
         {!cozy && responsible && <ResponsibleAvatar name={responsible} nameFor={nameFor} colorFor={colorFor} size={40} muted={muted} t={t} />}
+        {!cozy && respDash && (
+          <span
+            style={{
+              flexShrink: 0,
+              width: 40,
+              textAlign: "center",
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--text-sm)",
+              fontWeight: 600,
+              color: "var(--text-tertiary)",
+            }}
+          >
+            –
+          </span>
+        )}
         <UiIcon name="caretRight" size={"var(--text-sm)"} style={{ color: "var(--text-tertiary)", flexShrink: 0 }} />
       </div>
     </CardComponent>
@@ -393,7 +434,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   const t = useTranslation();
   const { lang } = useLanguage();
   const { schedule, ensureLoaded } = useRecurring();
-  const { nameFor, colorFor } = useListUsers();
+  const { people, nameFor, colorFor } = useListUsers();
   const isDesktop = useIsDesktop();
   const { shouldAnimate, transition } = useMotionConfig();
   // Kompakt (one line/day) vs Behagelig (adds a second line spelling out
@@ -748,6 +789,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
                 isActive={offset === weekOffset}
                 today={today}
                 schedule={schedule}
+                people={people}
                 nameFor={nameFor}
                 colorFor={colorFor}
                 shouldAnimate={shouldAnimate}
