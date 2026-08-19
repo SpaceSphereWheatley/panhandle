@@ -24,6 +24,41 @@
   --cluster-care-bg: oklch(92% 0.035 165);   --cluster-care-on: oklch(36% 0.08 165);
   --cluster-pet-bg: oklch(90% 0.03 30);      --cluster-pet-on: oklch(38% 0.08 30);
   --cluster-other-bg: var(--n-94);     --cluster-other-on: var(--nv-40);
+
+  /* Icon-badge tokens (ItemCard.jsx's circular per-item badge only) —
+     deliberately theme-INVARIANT, unlike every other token in this file.
+     itemIcons.js's hand-drawn SVGs are hardcoded white-stroke (not
+     currentColor), so the badge they sit on must always stay this dark/
+     saturated tone, in both themes, for the white stroke to read. The
+     per-cluster "-on" tone above is the right color for that in light mode,
+     but it's also reused as the readable *text* color for the cluster's pale
+     "-bg" background elsewhere (ShoppingListTab's qty label, StoreSubpage's
+     swatch border) — a pairing that correctly inverts to a light tone in
+     dark mode. Reusing that same flipped value as the badge's background was
+     the bug: it turned the badge itself pale in dark mode, leaving the fixed
+     white icon barely legible against it and mismatched with the (correctly
+     dark) ItemIcon fallback letter, which paired it with --text-on-accent.
+     So: fixed copies of the light-mode "-on" values, never redefined below,
+     paired with the equally fixed --icon-badge-on white. */
+  --cluster-produce-badge: var(--s-30);
+  --cluster-bakery-badge: oklch(35% 0.11 55);
+  --cluster-dairy-badge: oklch(38% 0.09 95);
+  --cluster-meat-badge: oklch(38% 0.13 15);
+  --cluster-spice-badge: var(--p-30);
+  --cluster-frozen-badge: oklch(38% 0.09 220);
+  --cluster-grains-badge: var(--nv-40);
+  --cluster-snacks-badge: oklch(40% 0.13 340);
+  --cluster-drinks-badge: oklch(37% 0.09 195);
+  --cluster-household-badge: oklch(40% 0.07 265);
+  --cluster-care-badge: oklch(36% 0.08 165);
+  --cluster-pet-badge: oklch(38% 0.08 30);
+  --cluster-other-badge: var(--nv-40);
+  /* "Important" isn't a CLUSTER_KEYS entry (see categoryClusters.js) — its
+     badge fixes --accent-tertiary's own light-mode value (t-60) for the same
+     reason: --accent-tertiary itself lightens in dark mode (t-60 -> t-80). */
+  --icon-badge-tertiary: var(--t-60);
+  /* Matches itemIcons.js's hardcoded stroke/fill color exactly. */
+  --icon-badge-on: #FFFFFF;
 }
 
 :root[data-theme="dark"] {

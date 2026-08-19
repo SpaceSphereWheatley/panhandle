@@ -1178,13 +1178,14 @@ function renderItems(displayItems, viewMode, containerStyle, resolvingIds, onTog
     <div key={renderGeneration} style={containerStyle}>
       <AnimatePresence initial={false} mode="popLayout" onExitComplete={onExitComplete}>
         {displayItems.map(({ item, clusterKey, evicting }, index) => {
-          const { bg, on } = clusterFor(clusterKey);
+          const { bg, on, badge } = clusterFor(clusterKey);
           return (
             <ItemCard
               key={item.id}
               item={item}
               clusterOn={on}
               clusterBg={bg}
+              clusterBadge={badge}
               resolving={!!resolvingIds?.has(item.id)}
               evicting={!!evicting}
               onToggle={onToggle}

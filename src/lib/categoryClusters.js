@@ -41,8 +41,16 @@ export const CLUSTER_KEYS = {
 // Both are internal clusterKey props passed between components, never stored
 // and never displayed — the section headings users read come from the
 // shoppingList.section.* dictionary entries.
+//
+// `badge` is a third, deliberately theme-INVARIANT color for ItemCard's
+// circular per-item icon badge only — see clusters.css's own comment on the
+// --cluster-*-badge/--icon-badge-tertiary tokens for why it can't just reuse
+// `on` (which correctly flips per theme for its other use as text-on-`bg`,
+// but that same flip made the badge itself go pale in dark mode, leaving the
+// hardcoded-white item icon SVGs mismatched with the badge's fallback letter).
 export function clusterFor(category) {
-  if (category === "Important") return { bg: "var(--accent-tertiary-subtle)", on: "var(--accent-tertiary)" };
+  if (category === "Important")
+    return { bg: "var(--accent-tertiary-subtle)", on: "var(--accent-tertiary)", badge: "var(--icon-badge-tertiary)" };
   const key = CLUSTER_KEYS[category] || "other";
-  return { bg: `var(--cluster-${key}-bg)`, on: `var(--cluster-${key}-on)` };
+  return { bg: `var(--cluster-${key}-bg)`, on: `var(--cluster-${key}-on)`, badge: `var(--cluster-${key}-badge)` };
 }

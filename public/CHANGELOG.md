@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.63.5] — 2026-08-19
+
+### Fixed
+- **In dark mode, an item's round icon badge is now readable and consistent again.** It previously turned pale, making the white icon drawing hard to see and clashing with items that fall back to a plain letter (which correctly stayed dark-on-pale, so the two looked inconsistent side by side). The badge now keeps its darker, richer color in both light and dark mode — matching light mode exactly, unchanged — so the white icon and the letter fallback both read clearly against it. (New theme-invariant `--cluster-*-badge`/`--icon-badge-tertiary`/`--icon-badge-on` tokens in `clusters.css`, a `badge` field added to `categoryClusters.js`'s `clusterFor()`, and a new `clusterBadge` prop threaded from `ShoppingListTab.jsx` into `ItemCard.jsx`'s icon badge — separate from the existing `clusterOn`, which still correctly flips per theme for its other job as text color on the pale card backdrop.)
+
 ## [1.63.4] — 2026-08-19
 
 ### Fixed

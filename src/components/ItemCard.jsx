@@ -35,10 +35,16 @@ const STAR_PATH = "M12 2.5l2.9 6.2 6.6.8-4.9 4.5 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6
 // layout. Deliberately the SAME component (not two components swapped by the
 // caller) so Framer's `layout` FLIP-animates the shell across the grid/list
 // toggle instead of React unmounting/remounting a fresh node on every switch.
-// `clusterOn`/`clusterBg` — the aisle-cluster accent color, used as the icon
-// badge's backdrop (the hand-drawn item icons are hardcoded white-stroke SVGs,
-// not currentColor) and as the pale per-aisle card backdrop.
-export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportant, onEdit, onResolved, onEvicted, clusterOn, clusterBg, viewMode = "list", index = 0, staleItemDays }) {
+// `clusterOn`/`clusterBg`/`clusterBadge` — the aisle-cluster accent colors.
+// `clusterBg` is the pale per-aisle card backdrop; `clusterOn` is the
+// readable text color on top of it (used for the qty label below — both
+// correctly invert per theme, see categoryClusters.js). `clusterBadge` is a
+// third, deliberately theme-invariant color for the icon badge's backdrop:
+// the hand-drawn item icons are hardcoded white-stroke SVGs, not currentColor
+// (see itemIcons.js), so that backdrop must always stay dark/saturated
+// rather than following `clusterOn`'s per-theme flip — see clusters.css's
+// --cluster-*-badge tokens.
+export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportant, onEdit, onResolved, onEvicted, clusterOn, clusterBg, clusterBadge, viewMode = "list", index = 0, staleItemDays }) {
   const isGrid = viewMode === "grid";
   const { lang } = useLanguage();
   const t = useTranslation();
@@ -179,8 +185,8 @@ export function ItemCard({ item, resolving, evicting, onToggle, onToggleImportan
           width: isGrid ? 48 : 40,
           height: isGrid ? 48 : 40,
           borderRadius: "var(--radius-pill)",
-          background: clusterOn || "var(--accent-secondary)",
-          color: "var(--text-on-accent)",
+          background: clusterBadge || clusterOn || "var(--accent-secondary)",
+          color: "var(--icon-badge-on)",
           fontWeight: "var(--weight-semibold)",
           fontSize: isGrid ? 20 : 16,
           display: "flex",
