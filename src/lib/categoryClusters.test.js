@@ -3,11 +3,12 @@ import { clusterFor, CLUSTER_KEYS } from "./categoryClusters.js";
 import { CATEGORIES } from "../../shared/categories.js";
 
 describe("clusterFor", () => {
-  it("returns a bg/on token pair for every known category", () => {
+  it("returns a bg/on/badge token triple for every known category", () => {
     for (const category of CATEGORIES) {
       const result = clusterFor(category);
       expect(result.bg).toMatch(/^var\(--cluster-[a-z]+-bg\)$/);
       expect(result.on).toMatch(/^var\(--cluster-[a-z]+-on\)$/);
+      expect(result.badge).toMatch(/^var\(--cluster-[a-z]+-badge\)$/);
     }
   });
 
@@ -15,6 +16,7 @@ describe("clusterFor", () => {
     expect(clusterFor("Other")).toEqual({
       bg: "var(--cluster-other-bg)",
       on: "var(--cluster-other-on)",
+      badge: "var(--cluster-other-badge)",
     });
   });
 
@@ -22,6 +24,7 @@ describe("clusterFor", () => {
     expect(clusterFor("Recently bought")).toEqual({
       bg: "var(--cluster-other-bg)",
       on: "var(--cluster-other-on)",
+      badge: "var(--cluster-other-badge)",
     });
   });
 
@@ -33,6 +36,7 @@ describe("clusterFor", () => {
     expect(clusterFor("Important")).toEqual({
       bg: "var(--accent-tertiary-subtle)",
       on: "var(--accent-tertiary)",
+      badge: "var(--icon-badge-tertiary)",
     });
   });
 
