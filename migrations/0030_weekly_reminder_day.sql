@@ -1,0 +1,11 @@
+-- The weekly meal-plan reminder fired only on Sunday evening, hardcoded in
+-- code. Made it a per-device choice (like the reminder's enabled/time
+-- fields, see 0019_device_only_reminders.sql) so a household can pick
+-- whichever day suits how they plan meals.
+--
+-- 0 = Monday .. 6 = Sunday, matching osloLocalDateParts' `dow` field and
+-- weekdayNames()'s Monday-first ordering (src/lib/i18n/dateLocale.js) and
+-- recurring_schedule.day_of_week's existing convention. Defaults to 6
+-- (Sunday) so an already-subscribed device keeps firing on the same day it
+-- always has.
+ALTER TABLE push_subscriptions ADD COLUMN weekly_reminder_day INTEGER NOT NULL DEFAULT 6;

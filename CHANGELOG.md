@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.64.0] — 2026-08-22
+
+### Added
+- **You can now choose which day of the week the "plan your meals" reminder shows up on, instead of it always being Sunday.** A new day picker sits next to the existing time picker under Settings → Varsler → weekly reminder — like the time, it's a per-device choice, so each person in the household can pick their own day. (New `push_subscriptions.weekly_reminder_day` column, defaulting to Sunday so existing subscriptions keep firing on the same day they always have; `checkWeeklyReminders` in `worker/index.js` now matches each device's own chosen weekday instead of a hardcoded Sunday check; `GET`/`POST /push/reminder-settings` read/write the new field; `NotificationsSubpage.jsx` adds the day `Select`, reusing `weekdayNames()`.)
+
 ## [1.63.5] — 2026-08-19
 
 ### Fixed

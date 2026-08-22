@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { usePush } from "../../../context/PushContext.jsx";
 import { api } from "../../../lib/api.js";
 import { useToast } from "../../../context/ToastContext.jsx";
-import { Card, Switch, Input } from "../../../design-system/index.js";
-import { useTranslation } from "../../../context/LanguageContext.jsx";
+import { Card, Switch, Input, Select } from "../../../design-system/index.js";
+import { useLanguage, useTranslation } from "../../../context/LanguageContext.jsx";
+import { weekdayNames } from "../../../lib/i18n/dateLocale.js";
 import { SubpageSection } from "../SubpageSection.jsx";
 import { FieldLabel } from "../FieldLabel.jsx";
 import { apiErrorMessage } from "../../../lib/apiError.js";
@@ -46,10 +47,13 @@ export function NotificationsSubpage() {
   const { supported, subscribed, endpoint, subscribe, unsubscribe } = usePush();
   const toast = useToast();
   const t = useTranslation();
+  const { lang } = useLanguage();
+  const weekdays = weekdayNames(lang);
   const [mealReminderEnabled, setMealReminderEnabled] = useState(true);
   const [mealReminderTime, setMealReminderTime] = useState("18:00");
   const [weeklyReminderEnabled, setWeeklyReminderEnabled] = useState(true);
   const [weeklyReminderTime, setWeeklyReminderTime] = useState("18:00");
+  const [weeklyReminderDay, setWeeklyReminderDay] = useState(6); // 0=Mon..6=Sun, defaults to Sunday
   const iosNeedsInstall = isIOS() && !isStandalone();
 
   // Load this device's reminder settings once it's subscribed (its endpoint
@@ -62,10 +66,11 @@ export function NotificationsSubpage() {
       setMealReminderTime(res.meal_reminder_time);
       setWeeklyReminderEnabled(res.weekly_reminder_enabled);
       setWeeklyReminderTime(res.weekly_reminder_time);
+      setWeeklyReminderDay(res.weekly_reminder_day);
     });
   }, [endpoint]);
 
-  // Every save sends the full reminder state (the endpoint updates all four
+  // Every save sends the full reminder state (the endpoint updates all five
   // fields at once), not just whichever control changed.
   async function saveSettings(next) {
     if (!endpoint) return;
@@ -78,6 +83,7 @@ export function NotificationsSubpage() {
           meal_reminder_time: next.mealReminderTime,
           weekly_reminder_enabled: next.weeklyReminderEnabled,
           weekly_reminder_time: next.weeklyReminderTime,
+          weekly_reminder_day: next.weeklyReminderDay,
         }),
       });
       if (res.error) toast(apiErrorMessage(res, t), { error: true });
@@ -97,26 +103,32 @@ export function NotificationsSubpage() {
 
   function onToggleMealReminder(on) {
     setMealReminderEnabled(on);
-    saveSettings({ mealReminderEnabled: on, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled: on, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, weeklyReminderDay });
   }
 
   function onChangeMealTime(e) {
     if (!e.target.value) return;
     const time = snapToQuarterHour(e.target.value);
     setMealReminderTime(time);
-    saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled, mealReminderTime: time, weeklyReminderEnabled, weeklyReminderTime, weeklyReminderDay });
   }
 
   function onToggleWeeklyReminder(on) {
     setWeeklyReminderEnabled(on);
-    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled: on, weeklyReminderTime });
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled: on, weeklyReminderTime, weeklyReminderDay });
   }
 
   function onChangeWeeklyTime(e) {
     if (!e.target.value) return;
     const time = snapToQuarterHour(e.target.value);
     setWeeklyReminderTime(time);
-    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time });
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime: time, weeklyReminderDay });
+  }
+
+  function onChangeWeeklyDay(e) {
+    const day = Number(e.target.value);
+    setWeeklyReminderDay(day);
+    saveSettings({ mealReminderEnabled, mealReminderTime, weeklyReminderEnabled, weeklyReminderTime, weeklyReminderDay: day });
   }
 
   const pushDescription = !supported
@@ -167,16 +179,31 @@ export function NotificationsSubpage() {
               label={t("settings.notifications.weekly.toggle")}
             />
             {weeklyReminderEnabled && (
-              <div style={{ marginTop: 10 }}>
-                <FieldLabel htmlFor="weekly-reminder-time">{t("settings.notifications.weekly.time")}</FieldLabel>
-                <Input
-                  id="weekly-reminder-time"
-                  type="time"
-                  step={900}
-                  value={weeklyReminderTime}
-                  onChange={onChangeWeeklyTime}
-                  style={{ maxWidth: 160 }}
-                />
+              <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <FieldLabel htmlFor="weekly-reminder-day">{t("settings.notifications.weekly.day")}</FieldLabel>
+                  <Select
+                    id="weekly-reminder-day"
+                    value={weeklyReminderDay}
+                    onChange={onChangeWeeklyDay}
+                    style={{ maxWidth: 160 }}
+                  >
+                    {weekdays.map((day, dow) => (
+                      <option value={dow} key={dow}>{day}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <FieldLabel htmlFor="weekly-reminder-time">{t("settings.notifications.weekly.time")}</FieldLabel>
+                  <Input
+                    id="weekly-reminder-time"
+                    type="time"
+                    step={900}
+                    value={weeklyReminderTime}
+                    onChange={onChangeWeeklyTime}
+                    style={{ maxWidth: 160 }}
+                  />
+                </div>
               </div>
             )}
           </SubpageSection>

@@ -119,13 +119,13 @@ async function runHttpTests(BASE) {
   const preSubRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authA });
   assert.deepEqual(await preSubRes.json(), {
     meal_reminder_enabled: true, meal_reminder_time: "18:00",
-    weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
-  }, "an unsubscribed device sees the reminder defaults");
+    weekly_reminder_enabled: true, weekly_reminder_time: "18:00", weekly_reminder_day: 6,
+  }, "an unsubscribed device sees the reminder defaults (weekly_reminder_day defaults to Sunday)");
 
   // POST to an endpoint with no subscription row is a 404 (nothing to update).
   const noRowRes = await fetch(`${BASE}/push/reminder-settings`, {
     method: "POST", headers: authA,
-    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: true, weekly_reminder_time: "18:00" }),
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: true, weekly_reminder_time: "18:00", weekly_reminder_day: 6 }),
   });
   assert.equal(noRowRes.status, 404, "saving reminder settings for an unsubscribed device should 404");
 
@@ -134,35 +134,41 @@ async function runHttpTests(BASE) {
 
   const badTimeRes = await fetch(`${BASE}/push/reminder-settings`, {
     method: "POST", headers: authA,
-    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "18:07", weekly_reminder_enabled: true, weekly_reminder_time: "18:00" }),
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "18:07", weekly_reminder_enabled: true, weekly_reminder_time: "18:00", weekly_reminder_day: 6 }),
   });
   assert.equal(badTimeRes.status, 400, "a non-15-minute reminder time should be rejected");
 
+  const badDayRes = await fetch(`${BASE}/push/reminder-settings`, {
+    method: "POST", headers: authA,
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "18:00", weekly_reminder_enabled: true, weekly_reminder_time: "18:00", weekly_reminder_day: 7 }),
+  });
+  assert.equal(badDayRes.status, 400, "an out-of-range weekly_reminder_day should be rejected");
+
   const saveDeviceRes = await fetch(`${BASE}/push/reminder-settings`, {
     method: "POST", headers: authA,
-    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: false, weekly_reminder_time: "09:15" }),
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: false, meal_reminder_time: "07:30", weekly_reminder_enabled: false, weekly_reminder_time: "09:15", weekly_reminder_day: 2 }),
   });
   assert.equal(saveDeviceRes.status, 200);
   const readDeviceRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authA });
   assert.deepEqual(await readDeviceRes.json(), {
     meal_reminder_enabled: false, meal_reminder_time: "07:30",
-    weekly_reminder_enabled: false, weekly_reminder_time: "09:15",
-  }, "a device's saved reminder settings are readable back");
+    weekly_reminder_enabled: false, weekly_reminder_time: "09:15", weekly_reminder_day: 2,
+  }, "a device's saved reminder settings, including its chosen weekday, are readable back");
 
   // A different list can't see or touch this device's settings (scoped to the
   // caller's own list) — a stray endpoint reads back as defaults.
   const crossListRes = await fetch(`${BASE}/push/reminder-settings?endpoint=${encodeURIComponent(deviceEndpoint)}`, { headers: authB });
   assert.deepEqual(await crossListRes.json(), {
     meal_reminder_enabled: true, meal_reminder_time: "18:00",
-    weekly_reminder_enabled: true, weekly_reminder_time: "18:00",
+    weekly_reminder_enabled: true, weekly_reminder_time: "18:00", weekly_reminder_day: 6,
   }, "another list must not see this device's reminder settings");
   const crossListSaveRes = await fetch(`${BASE}/push/reminder-settings`, {
     method: "POST", headers: authB,
-    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "06:00", weekly_reminder_enabled: true, weekly_reminder_time: "06:00" }),
+    body: JSON.stringify({ endpoint: deviceEndpoint, meal_reminder_enabled: true, meal_reminder_time: "06:00", weekly_reminder_enabled: true, weekly_reminder_time: "06:00", weekly_reminder_day: 6 }),
   });
   assert.equal(crossListSaveRes.status, 404, "another list must not be able to update this device's settings");
 
-  console.log("  - per-device reminder settings default, validate, persist, and are list-scoped");
+  console.log("  - per-device reminder settings (including the chosen weekly reminder weekday) default, validate, persist, and are list-scoped");
 
   // ---- POST /push/ping ----
   const noAuthPingRes = await fetch(`${BASE}/push/ping`, { method: "POST" });
@@ -243,7 +249,8 @@ function makeFakeDB(initial) {
         return state.pushSubscriptions.filter((r) => r.meal_reminder_enabled === 1);
       }
       if (sql.includes("WHERE weekly_reminder_enabled = 1")) {
-        return state.pushSubscriptions.filter((r) => r.weekly_reminder_enabled === 1);
+        const [dow] = binds;
+        return state.pushSubscriptions.filter((r) => r.weekly_reminder_enabled === 1 && r.weekly_reminder_day === dow);
       }
       const [list_id] = binds;
       return state.pushSubscriptions.filter((r) => r.list_id === list_id);
@@ -304,8 +311,9 @@ async function runNotificationPassTests() {
   const baseEnv = { VAPID_PRIVATE_KEY, FEEDBACK_EMAIL: "test@example.com" };
 
   // ---- meal reminder scenarios (2026-07-15T16:00:00Z = 18:00 Oslo, a Wednesday) ----
-  // 2026-07-15 is a Wednesday (dow 2, not Sunday), so checkWeeklyReminders's
-  // dow-gate short-circuits before touching these fixtures at all.
+  // 2026-07-15 is a Wednesday (dow 2). checkWeeklyReminders queries for
+  // subscriptions whose own weekly_reminder_day equals today's dow, so a
+  // default (Sunday-configured, dow 6) fixture never matches on this tick.
   const NOW_MS = Date.parse("2026-07-15T16:00:00Z");
   const DUE_TIME = "18:00";
   const TOMORROW = "2026-07-16";
@@ -316,7 +324,7 @@ async function runNotificationPassTests() {
   const makeSub = async (overrides) => ({
     ...(await genSubscriberKeys()),
     meal_reminder_enabled: 1, meal_reminder_time: "23:45",
-    weekly_reminder_enabled: 1, weekly_reminder_time: "23:45",
+    weekly_reminder_enabled: 1, weekly_reminder_time: "23:45", weekly_reminder_day: 6,
     ...overrides,
   });
 
@@ -469,7 +477,7 @@ async function runNotificationPassTests() {
   }
   console.log("  - a week with at least one planned meal is skipped (weekly reminder)");
 
-  // ---- scenario G: not Sunday -> no send, regardless of configured time ----
+  // ---- scenario G: device's chosen day (default Sunday) doesn't match today -> no send ----
   {
     const sub = await makeSub({ endpoint: "https://push.test/list-7-device", list_id: 7, username: "g1", weekly_reminder_time: DUE_TIME });
     const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
@@ -477,15 +485,39 @@ async function runNotificationPassTests() {
     const origFetch = globalThis.fetch;
     globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
     try {
-      // NOW_MS (from the meal-reminder scenarios) is a Wednesday.
+      // NOW_MS (from the meal-reminder scenarios) is a Wednesday; the
+      // subscription's weekly_reminder_day defaults to Sunday (6).
       await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
-      assert.equal(fetchCalls, 0, "the weekly reminder should never fire on a non-Sunday");
+      assert.equal(fetchCalls, 0, "the weekly reminder should not fire on a day other than the device's chosen one");
       assert.deepEqual(state.notificationDeviceLog, []);
     } finally {
       globalThis.fetch = origFetch;
     }
   }
-  console.log("  - weekly reminder never fires on a non-Sunday");
+  console.log("  - weekly reminder doesn't fire on a day other than the device's chosen weekday");
+
+  // ---- scenario G2: a device configured for Wednesday fires on Wednesday, not Sunday ----
+  {
+    const sub = await makeSub({ endpoint: "https://push.test/list-7b-device", list_id: 71, username: "g2", weekly_reminder_time: DUE_TIME, weekly_reminder_day: 2 });
+    const { db, state } = makeFakeDB({ mealPlans: [], pushSubscriptions: [sub] });
+    let fetchCalls = 0;
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async () => { fetchCalls++; return new Response(null, { status: 201 }); };
+    try {
+      // NOW_MS is Wednesday 2026-07-15 (dow 2) -> matches this device's chosen day.
+      await runNotificationPass({ ...baseEnv, DB: db }, NOW_MS);
+      assert.equal(fetchCalls, 1, "a device configured for Wednesday should fire on a Wednesday tick");
+      assert.deepEqual(state.notificationDeviceLog, [{ endpoint: sub.endpoint, type: "weekly_reminder", target_date: "2026-07-20" }], "the upcoming week starts the following Monday regardless of the chosen weekday");
+
+      // The same device must stay silent on the Sunday tick used by the other scenarios.
+      fetchCalls = 0;
+      await runNotificationPass({ ...baseEnv, DB: db }, SUNDAY_NOW_MS);
+      assert.equal(fetchCalls, 0, "a Wednesday-configured device should not also fire on Sunday");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+  console.log("  - a device can choose a weekday other than Sunday for its weekly reminder");
 
   // ---- scenario H: Sunday, both reminders due on the same device, week +
   // tomorrow unplanned -> only the weekly one fires; the daily meal reminder
