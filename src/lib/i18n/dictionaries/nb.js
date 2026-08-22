@@ -403,7 +403,8 @@ export const nb = {
   "settings.notifications.meal.time": "Tidspunkt for påminnelse",
   "settings.notifications.weekly.label": "Ukentlig planleggingspåminnelse",
   "settings.notifications.weekly.toggle": "Ukentlig påminnelse om å planlegge middager",
-  "settings.notifications.weekly.time": "Tidspunkt på søndag",
+  "settings.notifications.weekly.day": "Dag",
+  "settings.notifications.weekly.time": "Tidspunkt",
 
   "settings.store.order.label": "Rekkefølge på varegrupper",
   "settings.store.order.description": "Sett varegruppene i samme rekkefølge som butikken deres, så følger handlelisten ruten dere faktisk går. Endringen gjelder for hele husstanden.",

@@ -334,7 +334,8 @@ export const en = {
   "settings.notifications.meal.time": "Reminder time",
   "settings.notifications.weekly.label": "Weekly planning reminder",
   "settings.notifications.weekly.toggle": "Weekly reminder to plan dinners",
-  "settings.notifications.weekly.time": "Time on Sunday",
+  "settings.notifications.weekly.day": "Day",
+  "settings.notifications.weekly.time": "Time",
 
   "settings.store.order.label": "Aisle order",
   "settings.store.order.description": "Put the aisles in the same order as your store, and the shopping list follows the route you actually walk. The change applies to the whole household.",

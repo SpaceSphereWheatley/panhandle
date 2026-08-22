@@ -1603,29 +1603,30 @@ async function checkMealReminders(env, nowMs, suppressedEndpoints = new Set()) {
   }
 }
 
-// The weekly meal-plan reminder (TODO #7 phase 2). Fires only on Sunday
-// evening (day hardcoded rather than a configurable column — this is a
-// low-frequency nudge, not worth another setting), and only when the
-// upcoming Mon-Sun week has zero planned meals at all — not "few," which
-// would need an arbitrary threshold and risks nagging a household that's
-// already started. `dow` is 0=Mon..6=Sun (see osloLocalDateParts).
-// Returns the Set of device endpoints it actually sent a weekly reminder to on
-// this tick, so runNotificationPass can suppress the daily meal reminder for
-// those same devices (#91). Empty on any non-Sunday tick. Like the daily
-// reminder this is per-device (see checkMealReminders).
+// The weekly meal-plan reminder (TODO #7 phase 2). Fires on a per-device
+// chosen weekday (weekly_reminder_day, defaulting to Sunday — see
+// 0030_weekly_reminder_day.sql), and only when the upcoming Mon-Sun week has
+// zero planned meals at all — not "few," which would need an arbitrary
+// threshold and risks nagging a household that's already started. `dow` is
+// 0=Mon..6=Sun (see osloLocalDateParts), matching weekly_reminder_day's
+// convention. Returns the Set of device endpoints it actually sent a weekly
+// reminder to on this tick, so runNotificationPass can suppress the daily
+// meal reminder for those same devices (#91). Like the daily reminder this
+// is per-device (see checkMealReminders).
 async function checkWeeklyReminders(env, nowMs) {
   const notified = new Set();
-  const { hhmm, tomorrow, dow } = osloLocalDateParts(nowMs);
-  if (dow !== 6) return notified; // only Sunday
+  const { hhmm, today, dow } = osloLocalDateParts(nowMs);
 
   const { results: subs } = await env.DB.prepare(
-    "SELECT endpoint, p256dh, auth, list_id, weekly_reminder_time FROM push_subscriptions WHERE weekly_reminder_enabled = 1"
-  ).all();
+    "SELECT endpoint, p256dh, auth, list_id, weekly_reminder_time FROM push_subscriptions WHERE weekly_reminder_enabled = 1 AND weekly_reminder_day = ?1"
+  ).bind(dow).all();
   const dueSubs = subs.filter((s) => isReminderDue(hhmm, s.weekly_reminder_time));
   if (dueSubs.length === 0) return notified;
 
-  // Today is Sunday, so `tomorrow` is already the upcoming week's Monday.
-  const weekStart = tomorrow;
+  // The coming Monday, whichever weekday today is (7 - dow days ahead —
+  // e.g. 1 day on a Sunday, matching the old Sunday-only behavior's
+  // `tomorrow`, or a full 7 days if today itself is a Monday).
+  const weekStart = addDaysIso(today, 7 - dow);
   const weekEnd = addDaysIso(weekStart, 6);
 
   // A list's "is next week planned?" answer is shared across its devices.
@@ -3576,7 +3577,7 @@ async function handlePushReminderSettingsGet(ctx) {
       const endpoint = url.searchParams.get("endpoint") || "";
       const row = endpoint
         ? await env.DB.prepare(
-            "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time FROM push_subscriptions WHERE endpoint = ?1 AND list_id = ?2"
+            "SELECT meal_reminder_enabled, meal_reminder_time, weekly_reminder_enabled, weekly_reminder_time, weekly_reminder_day FROM push_subscriptions WHERE endpoint = ?1 AND list_id = ?2"
           ).bind(endpoint, user.list_id).first()
         : null;
       return authedJson({
@@ -3584,6 +3585,7 @@ async function handlePushReminderSettingsGet(ctx) {
         meal_reminder_time: row?.meal_reminder_time || "18:00",
         weekly_reminder_enabled: row ? !!row.weekly_reminder_enabled : true,
         weekly_reminder_time: row?.weekly_reminder_time || "18:00",
+        weekly_reminder_day: row ? Number(row.weekly_reminder_day) : 6,
       });
     }
 
@@ -3600,6 +3602,11 @@ async function handlePushReminderSettingsPost(ctx) {
       if (!REMINDER_TIME_RE.test(body.weekly_reminder_time || "")) {
         return authedErr("INVALID_TIME", 400);
       }
+      // 0=Mon..6=Sun, matching weekly_reminder_day's/osloLocalDateParts'
+      // convention.
+      if (!Number.isInteger(body.weekly_reminder_day) || body.weekly_reminder_day < 0 || body.weekly_reminder_day > 6) {
+        return authedErr("INVALID_REQUEST", 400);
+      }
       // Updates only this device's own subscription row (scoped to the
       // caller's list). A no-op if the device isn't subscribed — the
       // frontend only surfaces these controls once push is enabled.
@@ -3607,11 +3614,13 @@ async function handlePushReminderSettingsPost(ctx) {
         UPDATE push_subscriptions SET
           meal_reminder_enabled = ?1, meal_reminder_time = ?2,
           weekly_reminder_enabled = ?3, weekly_reminder_time = ?4,
+          weekly_reminder_day = ?5,
           updated_at = datetime('now')
-        WHERE endpoint = ?5 AND list_id = ?6
+        WHERE endpoint = ?6 AND list_id = ?7
       `).bind(
         body.meal_reminder_enabled ? 1 : 0, body.meal_reminder_time,
         body.weekly_reminder_enabled ? 1 : 0, body.weekly_reminder_time,
+        body.weekly_reminder_day,
         body.endpoint, user.list_id
       ).run();
       if (res.meta.changes === 0) {
