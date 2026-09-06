@@ -6,7 +6,7 @@ import { IconButton } from "../../design-system/components/forms/IconButton.jsx"
 import { LoadingState } from "../../design-system/components/data-display/Spinner.jsx";
 import { TokenInput } from "./TokenInput.jsx";
 import { api } from "../../lib/api.js";
-import { parseIngredients, dayOfWeekMonFirst, findMealByName, mealNameMatches } from "../../lib/mealUtils.js";
+import { parseIngredients, dayOfWeekMonFirst, findMealByName, mealNameMatches, openRecipe } from "../../lib/mealUtils.js";
 import { useOutsideClick } from "../../hooks/useOutsideClick.js";
 import { useListUsers } from "../../context/ListUsersContext.jsx";
 import { useRecurring } from "../../context/RecurringContext.jsx";
@@ -29,6 +29,10 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   const [current, setCurrent] = useState({});
   const [mealName, setMealName] = useState("");
   const [ingredients, setIngredients] = useState([]);
+  // Lives on meal_catalogue like `ingredients`, so it follows the meal: picking
+  // a known meal fills it in, and editing it here re-saves it for every day
+  // that meal is planned on.
+  const [recipeUrl, setRecipeUrl] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [respSelect, setRespSelect] = useState("");
   const [respOther, setRespOther] = useState("");
@@ -74,6 +78,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       setCurrent(cur);
       setMealName(cur.meal_name || "");
       setIngredients(parseIngredients(cur.ingredients));
+      setRecipeUrl(cur.recipe_url || "");
       const dow = dayOfWeekMonFirst(iso);
       const def = !cur.responsible ? schedule[dow] || "" : "";
       const resp = cur.responsible || "";
@@ -90,13 +95,17 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
   function onMealNameChange(v) {
     setMealName(v);
     const match = findMealByName(mealCatalogue, v);
-    if (match) setIngredients(parseIngredients(match.ingredients));
+    if (match) {
+      setIngredients(parseIngredients(match.ingredients));
+      setRecipeUrl(match.recipe_url || "");
+    }
     setShowDropdown(true);
   }
 
   function pickMeal(m) {
     setMealName(m.name);
     setIngredients(parseIngredients(m.ingredients));
+    setRecipeUrl(m.recipe_url || "");
     setShowDropdown(false);
   }
 
@@ -117,7 +126,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       return;
     }
     setSaving(true);
-    await onSavePlan(iso, { meal_name: name || null, responsible, ingredients });
+    await onSavePlan(iso, { meal_name: name || null, responsible, ingredients, recipe_url: recipeUrl.trim() });
     requestCloseRef.current();
   }
 
@@ -150,7 +159,7 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
       try {
         await api("/plan", {
           method: "POST",
-          body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients }),
+          body: JSON.stringify({ plan_date: iso, meal_name: name, responsible: getResp(), ingredients, recipe_url: recipeUrl.trim() }),
         });
       } catch {
         setAddingIngredients(false);
@@ -229,6 +238,29 @@ export function MealPlanModal({ iso, onClose, onSavePlan, onDeletePlanDay, onOpe
                   </div>
                 )}
               </div>
+            </div>
+            <label htmlFor="meal-plan-recipe-url">{t("meals.recipeUrlLabel")}</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input
+                id="meal-plan-recipe-url"
+                type="url"
+                inputMode="url"
+                value={recipeUrl}
+                onChange={(e) => setRecipeUrl(e.target.value)}
+                placeholder={t("meals.recipeUrlPlaceholder")}
+                style={{ flex: 1 }}
+              />
+              {/* Opening hands the URL straight to the browser (same
+                  window.open pattern as ChangelogModal's full-changelog
+                  button) — the app never fetches or renders the recipe. */}
+              <Button
+                variant="outline"
+                icon="link"
+                disabled={!recipeUrl.trim()}
+                onClick={() => openRecipe(recipeUrl)}
+              >
+                {t("meals.openRecipe")}
+              </Button>
             </div>
             <label htmlFor="meal-plan-ingredients">{t("meals.ingredientsLabel")}</label>
             {/* `suggestions` stay canonical (untranslated) on purpose: a committed

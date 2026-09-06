@@ -153,3 +153,18 @@ export async function addRowsToList(rows) {
   }
   return { added, merged, failed };
 }
+
+// Opens a meal's recipe link in a new tab. The stored value is server-
+// validated (worker's sanitizeRecipeUrl: absolute http/https only), but a
+// row could predate that or arrive from anywhere, so the protocol is re-
+// checked here too — this string ends up in a navigation. Returns false when
+// there's nothing safe to open.
+export function openRecipe(url) {
+  const trimmed = (url || "").trim();
+  if (!trimmed) return false;
+  let parsed;
+  try { parsed = new URL(trimmed); } catch { return false; }
+  if (!["http:", "https:"].includes(parsed.protocol)) return false;
+  window.open(parsed.toString(), "_blank", "noopener,noreferrer");
+  return true;
+}

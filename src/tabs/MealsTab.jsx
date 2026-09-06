@@ -5,7 +5,7 @@ import { apiErrorMessage } from "../lib/apiError.js";
 import { useToast } from "../context/ToastContext.jsx";
 import { useRecurring } from "../context/RecurringContext.jsx";
 import { useListUsers } from "../context/ListUsersContext.jsx";
-import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, isFreeTextResponsible, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
+import { localIso, mondayOf, parseIngredients, dayOfWeekMonFirst, isFreeTextResponsible, openRecipe, WEEK_MIN, WEEK_MAX } from "../lib/mealUtils.js";
 import { haptic } from "../lib/shoppingUtils.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { dateLocale } from "../lib/i18n/dateLocale.js";
@@ -16,7 +16,7 @@ import { MealPlanModal } from "../components/meals/MealPlanModal.jsx";
 import { MealCatalogueBrowseModal } from "../components/meals/MealCatalogueBrowseModal.jsx";
 import { MealEditModal } from "../components/meals/MealEditModal.jsx";
 import { IngredientPickerModal } from "../components/meals/IngredientPickerModal.jsx";
-import { Avatar, FabMenu, Skeleton, BaseButton, cardComponent } from "../design-system/index.js";
+import { Avatar, FabMenu, IconButton, Skeleton, BaseButton, cardComponent } from "../design-system/index.js";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { readCache, writeCache } from "../lib/localCache.js";
 
@@ -389,6 +389,28 @@ function DayCard({ d, iso, p, isToday, responsible, respDash, muted, cozy, isAct
             </div>
           )}
         </div>
+        {p?.recipe_url && (
+          // The wrapper, not the button, carries the stopPropagation: the
+          // card's tap opens the day editor and its long-press (pointerdown)
+          // does too, and IconButton only forwards onClick — so both have to
+          // be stopped one level up, or opening the recipe would also open
+          // the editor behind it.
+          <span
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            style={{ flexShrink: 0, display: "inline-flex" }}
+          >
+            <IconButton
+              icon="link"
+              size="sm"
+              variant="ghost"
+              label={t("meals.day.aria.openRecipe", { meal: p.meal_name || "" })}
+              onClick={() => openRecipe(p.recipe_url)}
+              style={{ color: "var(--text-tertiary)" }}
+            />
+          </span>
+        )}
         {cozy && isToday && (
           <span
             style={{
@@ -491,18 +513,18 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
   // instead of blocking the modal open on a full round trip. Always the
   // currently-selected week, since only its cards are ever tappable (see
   // WeekPane's `isActive` gate) — a modal can only have been opened from there.
-  async function savePlanDay(planIso, { meal_name, responsible, ingredients }) {
+  async function savePlanDay(planIso, { meal_name, responsible, ingredients, recipe_url }) {
     haptic();
     const offset = weekOffset;
     const prevEntry = planCache[offset]?.[planIso];
     setPlanCache((c) => ({
       ...c,
-      [offset]: { ...(c[offset] || {}), [planIso]: { ...(prevEntry || {}), plan_date: planIso, meal_name, responsible } },
+      [offset]: { ...(c[offset] || {}), [planIso]: { ...(prevEntry || {}), plan_date: planIso, meal_name, responsible, recipe_url: recipe_url || null } },
     }));
     try {
       const res = await api("/plan", {
         method: "POST",
-        body: JSON.stringify({ plan_date: planIso, meal_name, responsible, ingredients }),
+        body: JSON.stringify({ plan_date: planIso, meal_name, responsible, ingredients, recipe_url }),
       });
       if (res.error) {
         setPlanCache((c) => ({ ...c, [offset]: { ...(c[offset] || {}), [planIso]: prevEntry } }));
@@ -690,7 +712,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     const responsible = byDate[targetIso]?.responsible || schedule[dow] || "";
     const dayLabel = new Date(targetIso).toLocaleDateString(dateLocale(lang), { weekday: "long", day: "numeric", month: "short" });
     setModal(null);
-    await savePlanDay(targetIso, { meal_name: meal.name, responsible, ingredients: parseIngredients(meal.ingredients) });
+    await savePlanDay(targetIso, { meal_name: meal.name, responsible, ingredients: parseIngredients(meal.ingredients), recipe_url: meal.recipe_url || "" });
     toast(t("meals.toast.planned", { name: meal.name, day: dayLabel }), { undoFn: () => deletePlanDay(targetIso) });
   }
 

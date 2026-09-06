@@ -18,6 +18,7 @@ const {
   findSimilarMeals,
   addRowsToList,
   isFreeTextResponsible,
+  openRecipe,
 } = await import("./mealUtils.js");
 
 describe("localIso", () => {
@@ -282,5 +283,23 @@ describe("addRowsToList", () => {
       "/list",
       expect.objectContaining({ body: JSON.stringify({ name: "Egg", qty: 1, category: "Dairy" }) })
     );
+  });
+});
+
+describe("openRecipe", () => {
+  it("opens an absolute http(s) link in a new tab and reports success", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    expect(openRecipe("  https://example.com/taco  ")).toBe(true);
+    expect(open).toHaveBeenCalledWith("https://example.com/taco", "_blank", "noopener,noreferrer");
+    open.mockRestore();
+  });
+
+  it("refuses an empty, relative, or non-http(s) value without navigating", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    for (const bad of ["", "   ", null, undefined, "example.com/taco", "javascript:alert(1)", "data:text/html,x"]) {
+      expect(openRecipe(bad)).toBe(false);
+    }
+    expect(open).not.toHaveBeenCalled();
+    open.mockRestore();
   });
 });

@@ -43,6 +43,10 @@ export function MealEditModal({ id, onClose, onSaved }) {
         setName(meal.name);
         setIngredients(parseIngredients(meal.ingredients));
         setLabels(parseIngredients(meal.labels));
+        setRecipeUrl(meal.recipe_url || "");
+        // A meal that already has a link opens with the field expanded —
+        // otherwise its own saved value would be hidden behind a toggle.
+        if (meal.recipe_url) setShowImport(true);
       }
     })();
   }, [id]);
@@ -74,6 +78,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
   // Prefills name/ingredients from a pasted recipe URL's schema.org Recipe
   // JSON-LD (see POST /recipe-import) — the user still reviews/edits both
   // fields and saves via the normal flow below, same as typing them by hand.
+  // The URL itself stays in the field and is saved as the meal's recipe_url,
+  // so an imported meal keeps a link back to where it came from.
   async function importFromUrl() {
     const url = recipeUrl.trim();
     if (!url || importing) return;
@@ -87,7 +93,6 @@ export function MealEditModal({ id, onClose, onSaved }) {
       setName(res.name);
       checkSimilar(res.name);
       setIngredients(res.ingredients);
-      setRecipeUrl("");
     } finally {
       setImporting(false);
     }
@@ -117,8 +122,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
           let res;
           try {
             res = id
-              ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels }) })
-              : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels }) });
+              ? await api(`/meals/${id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, ingredients, labels, recipe_url: recipeUrl.trim() }) })
+              : await api("/meals", { method: "POST", body: JSON.stringify({ name: trimmed, ingredients, labels, recipe_url: recipeUrl.trim() }) });
           } catch {
             setSaving(false);
             toast(t("shoppingList.toast.genericError"), { error: true });
@@ -176,6 +181,8 @@ export function MealEditModal({ id, onClose, onSaved }) {
                 <div style={{ display: "flex", gap: 8 }}>
                   <Input
                     id="meal-edit-recipe-url"
+                    type="url"
+                    inputMode="url"
                     value={recipeUrl}
                     onChange={(e) => setRecipeUrl(e.target.value)}
                     placeholder={t("meals.edit.importUrlPlaceholder")}
@@ -184,6 +191,9 @@ export function MealEditModal({ id, onClose, onSaved }) {
                   <Button variant="outline" onClick={importFromUrl} disabled={!recipeUrl.trim() || busy}>
                     {t(importing ? "meals.edit.importingButton" : "meals.edit.importButton")}
                   </Button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
+                  {t("meals.edit.recipeUrlHint")}
                 </div>
               </>
             ) : (

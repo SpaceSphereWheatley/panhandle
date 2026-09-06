@@ -917,6 +917,7 @@ export const TEXT_LIMITS = {
   mealIngredients: 60, // array length; matches MAX_RECIPE_INGREDIENTS
   mealLabel: 40,
   mealLabels: 20, // array length
+  mealRecipeUrl: 500, // a recipe link; long tracking-parameter URLs are normal
   responsible: 60, // free text, but a person's name — same cap as display names
   listName: 60,
   boxName: 120,
@@ -1010,6 +1011,25 @@ export function sanitizeLabels(labels) {
     out.push(clean);
   }
   return out;
+}
+
+// Normalises a meal's recipe link for storage on meal_catalogue.recipe_url.
+// Returns "" for an empty/absent value (meaning "no link" — stored as NULL),
+// the normalised absolute URL for a usable one, or null when it can't be one,
+// so the caller can reject with INVALID_RECIPE_URL rather than persisting a
+// string the UI would later render as a dead link. http/https only: the value
+// ends up in an href (and in the ICS feed's URL: property), so a javascript:
+// or data: URL has no business being stored.
+export function sanitizeRecipeUrl(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.length > TEXT_LIMITS.mealRecipeUrl) return null;
+  let parsed;
+  try { parsed = new URL(trimmed); } catch { return null; }
+  if (!["http:", "https:"].includes(parsed.protocol)) return null;
+  return parsed.toString();
 }
 
 // ---------- recipe import (paste a URL -> meal name + ingredients) ----------
@@ -1433,6 +1453,7 @@ export function scopeFilterRows(rows, { scope, username, nameByUsername }) {
     .map((r) => ({
       plan_date: r.plan_date,
       meal_name: r.meal_name || null,
+      recipe_url: r.recipe_url || null,
       responsible_display: nameByUsername.get((r.responsible || "").toLowerCase()) || r.responsible || null,
     }));
 }
@@ -1464,9 +1485,22 @@ export function buildIcsFeed(rows, { showResponsible = false, calendarName = "Pa
       `DTSTAMP:${dtstamp}`,
       `DTSTART;VALUE=DATE:${row.plan_date.replace(/-/g, "")}`,
       `DTEND;VALUE=DATE:${addDaysIso(row.plan_date, 1).replace(/-/g, "")}`,
-      `SUMMARY:${escapeIcsText(summary)}`,
-      "END:VEVENT"
+      `SUMMARY:${escapeIcsText(summary)}`
     );
+    // The recipe link, when the meal has one. URL: is what a calendar client
+    // is supposed to read, but Google/Apple surface DESCRIPTION far more
+    // reliably in the event view — so emit both rather than picking one.
+    if (row.recipe_url) {
+      // URL takes a URI value, not TEXT, so it is *not* backslash-escaped
+      // (a "," in a query string is legal there); DESCRIPTION is TEXT and is.
+      // Neither can carry a newline — sanitizeRecipeUrl only ever yields a
+      // parsed absolute http(s) URL.
+      lines.push(
+        `URL:${row.recipe_url}`,
+        `DESCRIPTION:${escapeIcsText(row.recipe_url)}`
+      );
+    }
+    lines.push("END:VEVENT");
   }
   lines.push("END:VCALENDAR");
   return lines.map(foldIcsLine).join("\r\n") + "\r\n";
@@ -2100,7 +2134,7 @@ async function handleCalendarFeedIcs(ctx, cap1) {
       if (!owner) return err("CALENDAR_TOKEN_NOT_FOUND", 404);
 
       const scoped = owner.ics_scope === "mine";
-      let q = `SELECT p.plan_date, p.responsible, m.name AS meal_name
+      let q = `SELECT p.plan_date, p.responsible, m.name AS meal_name, m.recipe_url AS recipe_url
         FROM meal_plan p LEFT JOIN meal_catalogue m ON m.id = p.meal_id
         WHERE p.list_id = ?1`;
       const binds = [owner.list_id];
@@ -3072,7 +3106,7 @@ async function handleMealsGet(ctx) {
   const { env, user, authedJson } = ctx;
 
       const { results } = await env.DB.prepare(
-        "SELECT id, name, ingredients, labels, times_planned, last_planned FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
+        "SELECT id, name, ingredients, labels, recipe_url, times_planned, last_planned FROM meal_catalogue WHERE list_id = ?1 ORDER BY name ASC"
       ).bind(user.list_id).all();
       return authedJson(results);
     }
@@ -3081,7 +3115,7 @@ async function handleMealsSuggestions(ctx) {
   const { env, user, authedJson } = ctx;
 
       const { results } = await env.DB.prepare(`
-        SELECT id, name, ingredients, labels, times_planned, last_planned
+        SELECT id, name, ingredients, labels, recipe_url, times_planned, last_planned
         FROM meal_catalogue
         WHERE list_id = ?1
           AND (last_planned IS NULL OR last_planned <= date('now', '-10 days'))
@@ -3105,6 +3139,8 @@ async function handleMealsPost(ctx) {
       if (ingredients === null) return authedErr("TOO_MANY_ENTRIES", 400);
       const labels = sanitizeLabels(body.labels);
       if (labels === null) return authedErr("TOO_MANY_ENTRIES", 400);
+      const recipeUrl = sanitizeRecipeUrl(body.recipe_url);
+      if (recipeUrl === null) return authedErr("INVALID_RECIPE_URL", 400);
       const ingredientsJson = JSON.stringify(ingredients);
       const labelsJson = JSON.stringify(labels);
       const clash = await env.DB.prepare(
@@ -3112,8 +3148,8 @@ async function handleMealsPost(ctx) {
       ).bind(clean, user.list_id).first();
       if (clash) return authedErr("MEAL_NAME_EXISTS", 400);
       const meal = await env.DB.prepare(
-        "INSERT INTO meal_catalogue (name, list_id, ingredients, labels) VALUES (?1, ?2, ?3, ?4) RETURNING id"
-      ).bind(clean, user.list_id, ingredientsJson, labelsJson).first();
+        "INSERT INTO meal_catalogue (name, list_id, ingredients, labels, recipe_url) VALUES (?1, ?2, ?3, ?4, ?5) RETURNING id"
+      ).bind(clean, user.list_id, ingredientsJson, labelsJson, recipeUrl || null).first();
       return authedJson({ ok: true, id: meal.id });
     }
 
@@ -3152,6 +3188,14 @@ async function handleMealPatch(ctx, cap1) {
         await env.DB.prepare("UPDATE meal_catalogue SET labels = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(JSON.stringify(labels), meal.id, user.list_id).run();
       }
+      if (body.recipe_url !== undefined) {
+        const recipeUrl = sanitizeRecipeUrl(body.recipe_url);
+        if (recipeUrl === null) return authedErr("INVALID_RECIPE_URL", 400);
+        // "" (an emptied field) clears the link back to NULL — distinct from
+        // omitting recipe_url entirely, which leaves it alone.
+        await env.DB.prepare("UPDATE meal_catalogue SET recipe_url = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(recipeUrl || null, meal.id, user.list_id).run();
+      }
       return authedJson({ ok: true });
     }
 
@@ -3178,7 +3222,7 @@ async function handlePlanGet(ctx) {
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
       let q = `SELECT p.id, p.plan_date, p.responsible, m.name AS meal_name, m.id AS meal_id,
-        m.ingredients AS ingredients, m.labels AS labels
+        m.ingredients AS ingredients, m.labels AS labels, m.recipe_url AS recipe_url
         FROM meal_plan p LEFT JOIN meal_catalogue m ON m.id = p.meal_id
         WHERE p.list_id = ?1`;
       const binds = [user.list_id];
@@ -3193,7 +3237,7 @@ async function handlePlanPost(ctx) {
 
       const body = await readJson(request);
       if (!body) return authedErr("INVALID_REQUEST", 400);
-      const { plan_date, meal_name, responsible, ingredients } = body;
+      const { plan_date, meal_name, responsible, ingredients, recipe_url } = body;
       if (!plan_date || !/^\d{4}-\d{2}-\d{2}$/.test(plan_date)) {
         return authedErr("INVALID_DATE", 400);
       }
@@ -3210,6 +3254,10 @@ async function handlePlanPost(ctx) {
           })
         : undefined;
       if (cleanIngredients === null) return authedErr("TOO_MANY_ENTRIES", 400);
+      // Same "undefined means leave it alone" contract as ingredients: both
+      // live on meal_catalogue, shared by every occurrence of the meal.
+      const cleanRecipeUrl = recipe_url !== undefined ? sanitizeRecipeUrl(recipe_url) : undefined;
+      if (cleanRecipeUrl === null) return authedErr("INVALID_RECIPE_URL", 400);
       if (!(await validateResponsible(env, user.list_id, responsible))) {
         return authedErr("RESPONSIBLE_ACCOUNT_MISMATCH", 400);
       }
@@ -3241,13 +3289,19 @@ async function handlePlanPost(ctx) {
           if (!meal) {
             // Upsert to avoid a UNIQUE(list_id, name) collision on concurrent first use.
             meal = await env.DB.prepare(`
-              INSERT INTO meal_catalogue (name, list_id, ingredients) VALUES (?1, ?2, ?3)
+              INSERT INTO meal_catalogue (name, list_id, ingredients, recipe_url) VALUES (?1, ?2, ?3, ?4)
               ON CONFLICT(list_id, name) DO UPDATE SET name = name
               RETURNING id
-            `).bind(clean, user.list_id, ingredientsJson ?? "[]").first();
-          } else if (ingredientsJson !== undefined) {
-            await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
-              .bind(ingredientsJson, meal.id).run();
+            `).bind(clean, user.list_id, ingredientsJson ?? "[]", cleanRecipeUrl || null).first();
+          } else {
+            if (ingredientsJson !== undefined) {
+              await env.DB.prepare("UPDATE meal_catalogue SET ingredients = ?1 WHERE id = ?2")
+                .bind(ingredientsJson, meal.id).run();
+            }
+            if (cleanRecipeUrl !== undefined) {
+              await env.DB.prepare("UPDATE meal_catalogue SET recipe_url = ?1 WHERE id = ?2")
+                .bind(cleanRecipeUrl || null, meal.id).run();
+            }
           }
           mealId = meal.id;
         }
