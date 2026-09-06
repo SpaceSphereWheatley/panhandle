@@ -13,7 +13,7 @@ import {
   TEXT_LIMITS, textTooLong, sanitizeStringArray, withSecurityHeaders,
   isSuperAdmin, escapeHtml, COMMON_ITEMS, parseRecipeFromHtml,
   osloLocalDateParts, isReminderDue, addDaysIso,
-  escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed,
+  escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -656,6 +656,41 @@ describe("scopeFilterRows", () => {
   });
 });
 
+describe("sanitizeRecipeUrl", () => {
+  test("absent/empty input is \"\" (no link), not a rejection", () => {
+    assert.equal(sanitizeRecipeUrl(undefined), "");
+    assert.equal(sanitizeRecipeUrl(null), "");
+    assert.equal(sanitizeRecipeUrl("   "), "");
+  });
+
+  test("trims and normalises an absolute http(s) URL", () => {
+    assert.equal(sanitizeRecipeUrl("  https://example.com/taco  "), "https://example.com/taco");
+    assert.equal(sanitizeRecipeUrl("http://example.com"), "http://example.com/");
+  });
+
+  test("keeps query strings and non-ASCII paths intact enough to fetch", () => {
+    const url = sanitizeRecipeUrl("https://example.com/r?a=1,2&b=3");
+    assert.equal(url, "https://example.com/r?a=1,2&b=3");
+  });
+
+  test("rejects a non-http(s) scheme", () => {
+    assert.equal(sanitizeRecipeUrl("javascript:alert(1)"), null);
+    assert.equal(sanitizeRecipeUrl("data:text/html,<b>x</b>"), null);
+    assert.equal(sanitizeRecipeUrl("ftp://example.com/x"), null);
+  });
+
+  test("rejects a relative/unparseable value", () => {
+    assert.equal(sanitizeRecipeUrl("example.com/taco"), null);
+    assert.equal(sanitizeRecipeUrl("not a url"), null);
+  });
+
+  test("rejects a non-string and an over-cap URL", () => {
+    assert.equal(sanitizeRecipeUrl({ url: "https://example.com" }), null);
+    assert.equal(sanitizeRecipeUrl(42), null);
+    assert.equal(sanitizeRecipeUrl("https://example.com/" + "x".repeat(TEXT_LIMITS.mealRecipeUrl)), null);
+  });
+});
+
 describe("buildIcsFeed", () => {
   test("produces a valid empty VCALENDAR for no rows", () => {
     const ics = buildIcsFeed([]);
@@ -680,6 +715,16 @@ describe("buildIcsFeed", () => {
     const rows = [{ plan_date: "2026-07-27", meal_name: "Taco", responsible_display: "Ola" }];
     assert.match(buildIcsFeed(rows, { showResponsible: true }), /SUMMARY:Taco – Ola/);
     assert.match(buildIcsFeed(rows, { showResponsible: false }), /SUMMARY:Taco\r\n/);
+  });
+
+  test("emits URL + DESCRIPTION only for a row with a recipe link", () => {
+    const withLink = buildIcsFeed([{ plan_date: "2026-07-27", meal_name: "Taco", recipe_url: "https://example.com/r?a=1,2" }]);
+    // URL is a URI value (unescaped); DESCRIPTION is TEXT (escaped).
+    assert.match(withLink, /URL:https:\/\/example\.com\/r\?a=1,2\r\n/);
+    assert.match(withLink, /DESCRIPTION:https:\/\/example\.com\/r\?a=1\\,2/);
+    const withoutLink = buildIcsFeed([{ plan_date: "2026-07-27", meal_name: "Taco" }]);
+    assert.ok(!withoutLink.includes("URL:"));
+    assert.ok(!withoutLink.includes("DESCRIPTION:"));
   });
 
   test("escapes special characters in the meal name and responsible person", () => {

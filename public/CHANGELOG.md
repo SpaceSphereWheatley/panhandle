@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.65.0] — 2026-09-06
+
+### Added
+- **A meal can now carry a link to its recipe, and the link follows the meal — plan that meal on any day and the recipe is right there, one tap away.** The link is set (or cleared) in the meal editor and in the day planner, shows as a small link button on the planned day's card in the week view, and rides along in the subscribed calendar feed, so it's tappable from Google/Apple Calendar the day before. Importing a meal from a recipe URL now keeps that URL as the meal's link instead of discarding it. (New `meal_catalogue.recipe_url` column, `migrations/0031_meal_recipe_url.sql`; `sanitizeRecipeUrl` in `worker/index.js` normalises and rejects anything that isn't an absolute http/https URL, returning `INVALID_RECIPE_URL`; the field is read/written by `GET /meals`, `GET /meals/suggestions`, `POST`/`PATCH /meals`, and `GET`/`POST /plan`, and `buildIcsFeed` emits it as `URL:` plus `DESCRIPTION:` on the day's `VEVENT`. Frontend: `MealEditModal.jsx`'s recipe-URL field is now persistent rather than import-only, `MealPlanModal.jsx` gains the same field plus an Open button, `MealsTab.jsx`'s `DayCard` gains the link button, and the shared `openRecipe` helper in `mealUtils.js` re-checks the protocol client-side.)
+
+## [1.64.0] — 2026-08-22
+
+### Added
+- **You can now choose which day of the week the "plan your meals" reminder shows up on, instead of it always being Sunday.** A new day picker sits next to the existing time picker under Settings → Varsler → weekly reminder — like the time, it's a per-device choice, so each person in the household can pick their own day. (New `push_subscriptions.weekly_reminder_day` column, defaulting to Sunday so existing subscriptions keep firing on the same day they always have; `checkWeeklyReminders` in `worker/index.js` now matches each device's own chosen weekday instead of a hardcoded Sunday check; `GET`/`POST /push/reminder-settings` read/write the new field; `NotificationsSubpage.jsx` adds the day `Select`, reusing `weekdayNames()`.)
+
 ## [1.63.5] — 2026-08-19
 
 ### Fixed
