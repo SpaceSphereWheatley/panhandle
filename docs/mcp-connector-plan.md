@@ -1,6 +1,9 @@
 # MCP connector: Panhandle in Claude (claude.ai)
 
-> **Status: plan, nothing built yet.** Written 2026-10-19. The goal is a
+> **Status: phase 1 (connector tokens in the main Worker) built; phases
+> 0 and 2–5 not started.** Written 2026-10-19. Decisions taken: v1 ships with
+> **both read and write** scopes, and **only Claude** is allowed as a client
+> (see Security → redirect-URI allowlist). The goal is a
 > remote MCP server that a household member can add to claude.ai on the web
 > (Settings → Connectors → "Add custom connector") so Claude can read and
 > write their shopping list, meal plan, and storage boxes, for example
@@ -126,10 +129,8 @@ A plain `Bearer` with `JWT_SECRET` would give full account access, including
 - `route()`: after the auth gate, if the token is a connector token, match
   against a separate `CONNECTOR_ROUTES` allowlist (method + path/pattern,
   same shape as `AUTHENTICATED_ROUTES`). `GET` requires `read`, and every
-  other method requires `write`. Anything else answers `403 FORBIDDEN`, or
-  a new code such as `CONNECTOR_NOT_ALLOWED` added to
-  `shared/errorCodes.js` with a Norwegian entry in `nb.js`, following the
-  usual recipe.
+  other method requires `write`. A route outside the list answers `403`
+  `CONNECTOR_NOT_ALLOWED`, and a missing scope `403` `INSUFFICIENT_SCOPE`.
 - **Never send `X-Refresh-Token` on a connector request.** `authedJson`
   currently always mints a fresh *90-day session token*. For a connector
   token that would hand the MCP Worker a full-access, long-lived session
@@ -297,7 +298,14 @@ visible change.
 - Attach the custom domain `mcp.panhandle.app` to the new Worker.
 - Set the secret `JWT_SECRET` (the same value) on the new Worker.
 
-### Phase 1: connector tokens in the main Worker (PATCH)
+### Phase 1: connector tokens in the main Worker (PATCH) — done, 1.65.1
+
+Built as described below. Two notes from building it: the constants live
+on one exported `CONNECTOR_TOKEN` object, because workerd refuses to start
+when the entry module exports a bare string or number (it treats every
+named export as an entrypoint); and the error codes are
+`CONNECTOR_NOT_ALLOWED` and `INSUFFICIENT_SCOPE`.
+
 - `requireAuth` → token kind and scopes; `CONNECTOR_ROUTES`; scope check;
   no `X-Refresh-Token` for connectors; max-`exp` guard.
 - A new error code if needed (`shared/errorCodes.js` + `nb.js`).
@@ -345,15 +353,19 @@ visible change.
   session token the same way as `/connect/complete`).
 - CLAUDE.md: a new "MCP connector" section; mark this document as shipped.
 
+## Decisions (2026-10-19)
+
+1. **Read and write from v1.** Both scopes ship in phase 4. The consent
+   screen still offers the write scope as a checkbox (on by default) so a
+   household member can choose read-only.
+2. **Only Claude.** The redirect-URI allowlist contains Claude's callbacks
+   (claude.ai, claude.com, and Claude Code's loopback) and nothing else.
+   Adding another client later is a deliberate edit to that list, plus its
+   own end-to-end test.
+
 ## Open questions
 
-1. **Read-only first?** v1 could launch with only the read scope and gain
-   writes in phase 4 once read access feels safe. That is cheap to do,
-   since scopes are in place from phase 1.
-2. **Other clients ("or similar").** ChatGPT and others support remote MCP
-   with OAuth too. Adding them is mainly a matter of allowlisting their
-   callback, but each one should be tested separately. Not part of v1.
-3. **Testing on branch previews:** the MCP Worker's previews get their own
+1. **Testing on branch previews:** the MCP Worker's previews get their own
    hostnames and the service binding points at the *production* Worker
    (and so the production DB, as usual). Test with throwaway accounts and
    clean them up afterwards (see CLAUDE.md, Testing conventions).

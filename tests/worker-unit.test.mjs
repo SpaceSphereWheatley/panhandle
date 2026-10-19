@@ -14,6 +14,7 @@ import {
   isSuperAdmin, escapeHtml, COMMON_ITEMS, parseRecipeFromHtml,
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
+  connectorClaims, isConnectorRoute, connectorScopeAllows, CONNECTOR_TOKEN,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -935,5 +936,90 @@ describe("auth boundary", () => {
     const gate = workerSrc.slice(markerIdx, markerIdx + 300);
     assert.ok(gate.includes("const user = await requireAuth(request, env);"));
     assert.ok(gate.includes('if (!user) return err("UNAUTHORIZED", 401);'));
+  });
+});
+
+describe("connector tokens (MCP)", () => {
+  const now = 1_800_000_000;
+  const connector = (extra = {}) => ({ sub: "alice", tv: 1, aud: "mcp", scp: ["read", "write"], exp: now + 300, ...extra });
+
+  test("a token without aud is an ordinary session token", () => {
+    assert.deepEqual(connectorClaims({ sub: "alice", tv: 1, exp: now + 86400 * 90 }, now), { kind: "session" });
+  });
+
+  test("a well-formed connector token yields its (deduped) scopes", () => {
+    assert.deepEqual(connectorClaims(connector({ scp: ["read", "read"] }), now), { kind: "connector", scopes: ["read"] });
+    assert.deepEqual(connectorClaims(connector(), now), { kind: "connector", scopes: ["read", "write"] });
+  });
+
+  test("rejects an unknown audience", () => {
+    assert.equal(connectorClaims(connector({ aud: "other" }), now), null);
+  });
+
+  test("rejects a connector token without exp, or living longer than the cap", () => {
+    assert.equal(connectorClaims(connector({ exp: undefined }), now), null);
+    assert.equal(connectorClaims(connector({ exp: now + CONNECTOR_TOKEN.maxTtlSeconds + 1 }), now), null);
+    assert.ok(connectorClaims(connector({ exp: now + CONNECTOR_TOKEN.maxTtlSeconds }), now));
+  });
+
+  test("rejects missing, empty or unknown scopes", () => {
+    assert.equal(connectorClaims(connector({ scp: undefined }), now), null);
+    assert.equal(connectorClaims(connector({ scp: [] }), now), null);
+    assert.equal(connectorClaims(connector({ scp: ["read", "admin"] }), now), null);
+    assert.equal(connectorClaims(connector({ scp: "read" }), now), null);
+  });
+
+  test("everyday routes are reachable, account/admin/destructive ones are not", () => {
+    assert.ok(isConnectorRoute("GET", "/list"));
+    assert.ok(isConnectorRoute("POST", "/list"));
+    assert.ok(isConnectorRoute("POST", "/list/12/toggle"));
+    assert.ok(isConnectorRoute("PATCH", "/list/12"));
+    assert.ok(isConnectorRoute("GET", "/storage/boxes/by-number/7"));
+    for (const [m, p] of [
+      ["DELETE", "/list/12"], ["DELETE", "/account"], ["GET", "/account"],
+      ["POST", "/change-password"], ["GET", "/admin/users"], ["POST", "/list-invites"],
+      ["POST", "/list/mark-all-bought"], ["DELETE", "/plan/2026-10-19"], ["POST", "/push/ping"],
+      ["POST", "/storage/boxes"], ["GET", "/calendar-feed"],
+    ]) assert.equal(isConnectorRoute(m, p), false, `${m} ${p} should not be a connector route`);
+  });
+
+  test("GET needs read, every other method needs write", () => {
+    assert.ok(connectorScopeAllows("GET", ["read"]));
+    assert.equal(connectorScopeAllows("POST", ["read"]), false);
+    assert.equal(connectorScopeAllows("PATCH", ["read"]), false);
+    assert.ok(connectorScopeAllows("POST", ["write"]));
+    assert.equal(connectorScopeAllows("GET", ["write"]), false);
+  });
+
+  const workerSrc = readFileSync(new URL("../worker/index.js", import.meta.url), "utf8");
+  const tableStart = workerSrc.indexOf("const CONNECTOR_ROUTES = [");
+  const region = workerSrc.slice(tableStart, workerSrc.indexOf("\n];", tableStart));
+
+  test("CONNECTOR_ROUTES is exactly the known allowlist", () => {
+    assert.ok(tableStart > -1, "could not find `const CONNECTOR_ROUTES = [`");
+    const found = [...region.matchAll(/\{ method: "([A-Z]+)", (?:path: "([^"]+)"|pattern: (\w+)) \}/g)]
+      .map((m) => `${m[1]} ${m[2] ?? m[3]}`);
+    assert.deepEqual(found.sort(), [
+      "GET /catalogue", "GET /list", "GET /list-users", "GET /meals", "GET /meals/suggestions",
+      "GET /plan", "GET /storage/boxes", "GET STORAGE_BOX_BY_NUMBER_PATTERN",
+      "PATCH LIST_ITEM_ID_PATTERN", "POST /list", "POST /plan", "POST LIST_ITEM_TOGGLE_PATTERN",
+    ].sort());
+    assert.equal([...region.matchAll(/\{ method:/g)].length, found.length, "an entry of another shape slipped in");
+  });
+
+  test("every connector route is also an authenticated route", () => {
+    const authStart = workerSrc.indexOf("const AUTHENTICATED_ROUTES = [");
+    const authRegion = workerSrc.slice(authStart, workerSrc.indexOf("\n];", authStart));
+    for (const m of region.matchAll(/\{ method: "([A-Z]+)", ((?:path: "[^"]+")|(?:pattern: \w+)) \}/g)) {
+      assert.ok(authRegion.includes(`{ method: "${m[1]}", ${m[2]}, handler:`), `${m[1]} ${m[2]} missing from AUTHENTICATED_ROUTES`);
+    }
+  });
+
+  test("the gate enforces the allowlist and never mints a refresh token for a connector", () => {
+    const markerIdx = workerSrc.indexOf("// ===== AUTH REQUIRED BELOW =====");
+    const gate = workerSrc.slice(markerIdx, markerIdx + 1200);
+    assert.ok(gate.includes('if (!isConnectorRoute(method, path)) return err("CONNECTOR_NOT_ALLOWED", 403);'));
+    assert.ok(gate.includes('if (!connectorScopeAllows(method, user.connector.scopes)) return err("INSUFFICIENT_SCOPE", 403);'));
+    assert.ok(gate.includes("const freshToken = user.connector ? null : await mintToken(user, env);"));
   });
 });

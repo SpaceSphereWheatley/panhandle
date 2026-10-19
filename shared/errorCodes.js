@@ -58,6 +58,8 @@ export const ERROR_MESSAGES_EN = {
   CANNOT_DELETE_SUPERADMIN: "An app-owner account can't be deleted",
   CANNOT_RESET_SUPERADMIN: "An app-owner account's password can't be reset",
   CANNOT_CHANGE_SUPERADMIN: "An app-owner account's access can't be changed",
+  CONNECTOR_NOT_ALLOWED: "That isn't available to connected apps",
+  INSUFFICIENT_SCOPE: "This connected app doesn't have permission to do that",
 
   // List membership
   USER_NOT_FOUND: "User not found",

@@ -45,6 +45,8 @@ export const nb = {
   "error.CANNOT_DELETE_SUPERADMIN": "Kan ikke slette en app-eier-konto",
   "error.CANNOT_RESET_SUPERADMIN": "Kan ikke nullstille passordet til en app-eier-konto",
   "error.CANNOT_CHANGE_SUPERADMIN": "Kan ikke endre tilgangen til en app-eier-konto",
+  "error.CONNECTOR_NOT_ALLOWED": "Dette er ikke tilgjengelig for tilkoblede apper",
+  "error.INSUFFICIENT_SCOPE": "Den tilkoblede appen har ikke tillatelse til dette",
 
   "error.USER_NOT_FOUND": "Fant ikke bruker",
   "error.USER_NOT_IN_LIST": "Fant ikke bruker på listen",

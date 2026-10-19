@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.65.1] — 2026-10-19
+
+### Added
+- **Groundwork for connecting Panhandle to Claude, so Claude can later help with your shopping list and meal plan — nothing changes in the app yet.** The API now accepts a second, much weaker kind of sign-in token meant only for a connected assistant: it lives at most 10 minutes, can only reach the everyday shopping-list, meal-plan and storage-lookup endpoints (never account, admin, invite or deletion ones), is split into read and write permission, never receives the usual long-lived refresh token, and stops working the moment the user changes their password. (`connectorClaims`/`isConnectorRoute`/`connectorScopeAllows` and the `CONNECTOR_ROUTES` allowlist in `worker/index.js`, enforced right after the auth gate in `route()`; `aud: "mcp"` JWTs with `scp` scopes; new `CONNECTOR_NOT_ALLOWED`/`INSUFFICIENT_SCOPE` error codes; unit tests pin the allowlist, `tests/connector-token.test.mjs` covers it end to end. Phase 1 of `docs/mcp-connector-plan.md`.)
+
 ## [1.65.0] — 2026-09-06
 
 ### Added

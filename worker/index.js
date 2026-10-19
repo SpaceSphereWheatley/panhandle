@@ -1241,18 +1241,65 @@ async function readJson(request) {
 // the live user row (flags + list_id) — the DB is the source of truth on every
 // request, so any change to a user's flags/list_id/token_version takes effect
 // on their next call (the JWT's copies are only client-display hints).
+//
+// The returned row also carries `connector`: null for an ordinary session
+// token, or `{ scopes }` for a connector token (see connectorClaims below).
 async function requireAuth(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const payload = await verifyJwt(token, env.JWT_SECRET);
   if (!payload || !payload.sub) return null;
+  const claims = connectorClaims(payload, Date.now() / 1000);
+  if (!claims) return null;
   const row = await env.DB.prepare(
     "SELECT username, token_version, is_admin, is_owner, list_id FROM users WHERE username = ?1 COLLATE NOCASE"
   ).bind(payload.sub).first();
   if (!row) return null;
   if (payload.tv !== row.token_version) return null;
+  row.connector = claims.kind === "connector" ? { scopes: claims.scopes } : null;
   return row;
+}
+
+// ---------- connector tokens (MCP, docs/mcp-connector-plan.md) ----------
+// The panhandle-mcp Worker (the claude.ai connector) calls this API on a
+// user's behalf with a short-lived JWT signed by the same JWT_SECRET, marked
+// `aud: "mcp"` and carrying `scp` scopes. Such a token is deliberately much
+// weaker than a session token, enforced here rather than trusted to the MCP
+// Worker: it may only reach CONNECTOR_ROUTES, GET needs "read" and every
+// other method "write", it can't live longer than
+// CONNECTOR_TOKEN.maxTtlSeconds, and route() never answers it with an
+// X-Refresh-Token — that header is a fresh 90-day full-access session token,
+// which would turn a 5-minute scoped credential into a permanent unscoped one.
+// `tv` is checked like any other token, so a password change cuts off a
+// connected app on its next call.
+// One exported object rather than three exported constants: workerd treats
+// every named export of the entry module as an entrypoint, and refuses to
+// start on a bare string/number export.
+export const CONNECTOR_TOKEN = Object.freeze({
+  audience: "mcp",
+  scopes: Object.freeze(["read", "write"]),
+  maxTtlSeconds: 600,
+});
+
+// { kind: "session" } for a token without `aud`, { kind: "connector", scopes }
+// for a well-formed connector token, null (reject) for anything else — an
+// unknown audience, a missing/too-distant `exp`, or empty/unknown scopes.
+export function connectorClaims(payload, nowSec) {
+  if (payload.aud === undefined) return { kind: "session" };
+  if (payload.aud !== CONNECTOR_TOKEN.audience) return null;
+  if (typeof payload.exp !== "number" || payload.exp - nowSec > CONNECTOR_TOKEN.maxTtlSeconds) return null;
+  const scp = payload.scp;
+  if (!Array.isArray(scp) || !scp.length || !scp.every((s) => CONNECTOR_TOKEN.scopes.includes(s))) return null;
+  return { kind: "connector", scopes: [...new Set(scp)] };
+}
+
+export function isConnectorRoute(method, path) {
+  return matchRoute(CONNECTOR_ROUTES, method, path) !== null;
+}
+
+export function connectorScopeAllows(method, scopes) {
+  return scopes.includes(method === "GET" ? "read" : "write");
 }
 
 // Mints a 90-day token from a user row. list_id/is_admin/is_owner are carried
@@ -3786,6 +3833,27 @@ const AUTHENTICATED_ROUTES = [
   { method: "POST", path: "/push/ping", handler: handlePushPing },
 ];
 
+// The only routes a connector token may reach (see connectorClaims above) —
+// a subset of AUTHENTICATED_ROUTES, matched the same way, with no handlers of
+// its own: route() checks membership here, then dispatches through
+// AUTHENTICATED_ROUTES as usual. Everyday shopping/meal/storage use only;
+// nothing account-, admin-, invite- or push-related. tests/worker-unit.test.mjs
+// pins this exact list, so widening it is a deliberate test edit.
+const CONNECTOR_ROUTES = [
+  { method: "GET", path: "/list" },
+  { method: "POST", path: "/list" },
+  { method: "PATCH", pattern: LIST_ITEM_ID_PATTERN },
+  { method: "POST", pattern: LIST_ITEM_TOGGLE_PATTERN },
+  { method: "GET", path: "/catalogue" },
+  { method: "GET", path: "/list-users" },
+  { method: "GET", path: "/meals" },
+  { method: "GET", path: "/meals/suggestions" },
+  { method: "GET", path: "/plan" },
+  { method: "POST", path: "/plan" },
+  { method: "GET", path: "/storage/boxes" },
+  { method: "GET", pattern: STORAGE_BOX_BY_NUMBER_PATTERN },
+];
+
 const worker = {
   // Thin outer wrapper around `route` below, which holds the actual routing.
   // Nothing previously caught a throw from a handler: an unexpected error
@@ -3906,17 +3974,24 @@ const worker = {
     // ===== AUTH REQUIRED BELOW =====
     const user = await requireAuth(request, env);
     if (!user) return err("UNAUTHORIZED", 401);
-    const freshToken = await mintToken(user, env);
+    // Connector tokens (see CONNECTOR_ROUTES) only reach their allowlist,
+    // scoped by method, and never get a refresh token back.
+    if (user.connector) {
+      if (!isConnectorRoute(method, path)) return err("CONNECTOR_NOT_ALLOWED", 403);
+      if (!connectorScopeAllows(method, user.connector.scopes)) return err("INSUFFICIENT_SCOPE", 403);
+    }
+    const freshToken = user.connector ? null : await mintToken(user, env);
     // Sliding expiry: every authenticated response carries a freshly-minted
     // token so the session is extended no matter which endpoint is used (not
     // just /list). /change-password is the exception — it returns the
     // authoritative new-version token in its body, and the frontend ignores
     // this header on that path.
+    const refreshHeader = freshToken ? { "X-Refresh-Token": freshToken } : {};
     const authedJson = (data, status = 200, extra = {}) =>
-      json(data, status, { "X-Refresh-Token": freshToken, ...extra });
+      json(data, status, { ...refreshHeader, ...extra });
     // Error counterpart — same refresh-token header, err()'s { error, code } body.
     const authedErr = (code, status = 400, opts = {}) =>
-      err(code, status, { ...opts, extra: { "X-Refresh-Token": freshToken, ...(opts.extra || {}) } });
+      err(code, status, { ...opts, extra: { ...refreshHeader, ...(opts.extra || {}) } });
 
     const authedCtx = { ...baseCtx, user, freshToken, authedJson, authedErr };
     const authed = matchRoute(AUTHENTICATED_ROUTES, method, path);
