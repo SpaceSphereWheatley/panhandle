@@ -15,6 +15,7 @@ export const SETTINGS_SUBPAGE_TITLE_KEYS = {
   admin: "settings.nav.admin",
   "admin/stats": "settings.nav.stats",
   "calendar-sync": "settings.nav.calendarSync",
+  "connected-apps": "settings.nav.connectedApps",
 };
 
 // Looks the title key up from a settingsPath *array* — the same value a row

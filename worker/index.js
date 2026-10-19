@@ -16,6 +16,7 @@ import { VERSION } from "../shared/version.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 import { ERROR_MESSAGES_EN } from "../shared/errorCodes.js";
 import { buildPushHTTPRequest } from "@pushforge/builder";
+import { createConnector } from "./mcp.js";
 
 // Deployed Worker (API) version, imported from shared/version.js so it can't
 // drift from src/lib/version.js's APP_VERSION. Surfaced at GET /api/version —
@@ -1809,6 +1810,10 @@ const LIST_ITEM_TOGGLE_PATTERN = /^\/list\/(\d+)\/toggle$/;
 const MEAL_ID_PATTERN = /^\/meals\/(\d+)$/;
 const PLAN_DATE_PATTERN = /^\/plan\/(\d{4}-\d{2}-\d{2})$/;
 const STORAGE_BOX_BY_NUMBER_PATTERN = /^\/storage\/boxes\/by-number\/(\d+)$/;
+const OAUTH_CONSENT_PATTERN = /^\/oauth-consent\/([^/]+)$/;
+const OAUTH_CONSENT_APPROVE_PATTERN = /^\/oauth-consent\/([^/]+)\/approve$/;
+const OAUTH_CONSENT_DENY_PATTERN = /^\/oauth-consent\/([^/]+)\/deny$/;
+const CONNECTED_APP_ID_PATTERN = /^\/connected-apps\/([^/]+)$/;
 const STORAGE_BOX_ID_PATTERN = /^\/storage\/boxes\/(\d+)$/;
 
 // ---------- route dispatch: matcher ----------
@@ -3831,7 +3836,66 @@ const AUTHENTICATED_ROUTES = [
   { method: "GET", path: "/push/reminder-settings", handler: handlePushReminderSettingsGet },
   { method: "POST", path: "/push/reminder-settings", handler: handlePushReminderSettingsPost },
   { method: "POST", path: "/push/ping", handler: handlePushPing },
+  { method: "GET", pattern: OAUTH_CONSENT_PATTERN, handler: handleOAuthConsentGet },
+  { method: "POST", pattern: OAUTH_CONSENT_APPROVE_PATTERN, handler: handleOAuthConsentApprove },
+  { method: "POST", pattern: OAUTH_CONSENT_DENY_PATTERN, handler: handleOAuthConsentDeny },
+  { method: "GET", path: "/connected-apps", handler: handleConnectedAppsGet },
+  { method: "DELETE", pattern: CONNECTED_APP_ID_PATTERN, handler: handleConnectedAppDelete },
 ];
+
+// ---------- route dispatch: claude.ai connector consent + connected apps ----------
+// The session-authenticated half of the connector (worker/mcp.js holds the
+// OAuth half). Deliberately absent from CONNECTOR_ROUTES: a connected app can
+// never approve its own consent or list/revoke grants.
+
+// approveConsent()/denyConsent() hand back cookie headers (clearing the
+// browser-bound consent handle) that must ride on the next response.
+function withConnectorHeaders(res, headers) {
+  for (const [k, v] of headers) {
+    if (k.toLowerCase() !== "set-cookie" && k.toLowerCase() !== "location") res.headers.set(k, v);
+  }
+  for (const c of headers.getSetCookie?.() ?? []) res.headers.append("Set-Cookie", c);
+  return res;
+}
+
+async function handleOAuthConsentGet(ctx, handle) {
+  const { env, url, user, authedJson, authedErr } = ctx;
+  if (!connector.isAvailable(env, url.origin)) return authedErr("CONNECT_UNAVAILABLE", 503);
+  const details = await connector.consentDetails(env, decodeURIComponent(handle));
+  if (!details) return authedErr("CONSENT_EXPIRED", 404);
+  const list = await env.DB.prepare("SELECT name FROM lists WHERE id = ?1").bind(user.list_id).first();
+  return authedJson({ ...details, list_name: list?.name || null });
+}
+
+async function handleOAuthConsentApprove(ctx, handle) {
+  const { request, env, url, user, authedJson, authedErr } = ctx;
+  if (!connector.isAvailable(env, url.origin)) return authedErr("CONNECT_UNAVAILABLE", 503);
+  const body = (await readJson(request)) || {};
+  const result = await connector.approve(request, env, url.origin, decodeURIComponent(handle), user, body.write === true);
+  if (!result) return authedErr("CONSENT_EXPIRED", 400);
+  return withConnectorHeaders(authedJson({ redirectTo: result.redirectTo }), result.headers);
+}
+
+async function handleOAuthConsentDeny(ctx, handle) {
+  const { request, env, url, authedJson, authedErr } = ctx;
+  if (!connector.isAvailable(env, url.origin)) return authedErr("CONNECT_UNAVAILABLE", 503);
+  const result = await connector.deny(request, env, url.origin, decodeURIComponent(handle));
+  if (!result) return authedErr("CONSENT_EXPIRED", 400);
+  return withConnectorHeaders(authedJson({ redirectTo: result.redirectTo }), result.headers);
+}
+
+async function handleConnectedAppsGet(ctx) {
+  const { env, url, user, authedJson, authedErr } = ctx;
+  if (!connector.isAvailable(env, url.origin)) return authedErr("CONNECT_UNAVAILABLE", 503);
+  return authedJson(await connector.listGrants(env, url.origin, user.username));
+}
+
+async function handleConnectedAppDelete(ctx, grantId) {
+  const { env, url, user, authedJson, authedErr } = ctx;
+  if (!connector.isAvailable(env, url.origin)) return authedErr("CONNECT_UNAVAILABLE", 503);
+  await connector.revokeGrant(env, url.origin, user.username, decodeURIComponent(grantId));
+  return authedJson({ ok: true });
+}
 
 // The only routes a connector token may reach (see connectorClaims above) —
 // a subset of AUTHENTICATED_ROUTES, matched the same way, with no handlers of
@@ -3864,8 +3928,13 @@ const worker = {
   // Logpush job) and answers with a plain SERVER_ERROR — never the underlying
   // message, which can carry schema internals (see the DB_ERROR handler in
   // /recurring for the same reasoning).
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
+      // The claude.ai connector's own paths (/mcp, /oauth/*,
+      // /.well-known/oauth-*; worker/mcp.js) are answered before route(), and
+      // only those — every other request never touches the OAuth library.
+      const connectorResponse = await connector.handle(request, env, ctx);
+      if (connectorResponse) return connectorResponse;
       return await worker.route(request, env);
     } catch (e) {
       let pathname = "?";
@@ -3949,7 +4018,10 @@ const worker = {
       // collide with, so a branch/commit preview's own generated deep links
       // (built from window.location.origin, whatever that preview's host
       // is) work for click-testing too, the same as everywhere else.
-      if (/^\/b\/\d+$/.test(url.pathname)) {
+      // /connect is the claude.ai connector's consent screen (worker/mcp.js
+      // redirects /oauth/authorize there), served as the app shell the same
+      // way and for the same reason.
+      if (/^\/b\/\d+$/.test(url.pathname) || url.pathname === "/connect") {
         pagesUrl.pathname = "/app.html";
       }
       // Cloudflare Pages auto-redirects a request for "*.html" to the
@@ -4009,5 +4081,12 @@ const worker = {
     ctx.waitUntil(checkCatalogueSync(env));
   },
 };
+
+// The claude.ai connector (worker/mcp.js). Handed only what it needs, so it
+// never imports this file back; `route` is called lazily, per request.
+const connector = createConnector({
+  route: (request, env) => worker.route(request, env),
+  signJwt, osloLocalDateParts, addDaysIso, VERSION,
+});
 
 export default worker;

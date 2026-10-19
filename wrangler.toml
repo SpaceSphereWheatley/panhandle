@@ -28,6 +28,14 @@ binding = "DB"
 database_name = "panhandle"
 database_id = "04cab403-1be9-43d7-bd07-6fc009385ab0"
 
+# The claude.ai connector's OAuth state — registered clients, grants and
+# tokens (worker/mcp.js, docs/mcp-connector-plan.md). No `id`: wrangler
+# provisions the namespace on the first deploy and reuses it afterwards.
+# Until it exists, every connector path answers 503 and nothing else in the
+# app is affected.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+
 # Drives runReminderPass (worker/index.js) — the "no meal planned for
 # tomorrow" push notification (TODO #7 phase 1). 15-minute granularity
 # matches the 15-min steps notification_settings.meal_reminder_time is

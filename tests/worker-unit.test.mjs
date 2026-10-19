@@ -1023,3 +1023,148 @@ describe("connector tokens (MCP)", () => {
     assert.ok(gate.includes("const freshToken = user.connector ? null : await mintToken(user, env);"));
   });
 });
+
+describe("claude.ai connector (worker/mcp.js)", async () => {
+  const mcp = await import("../worker/mcp.js");
+
+  test("only Claude's callbacks are allowed redirect URIs", () => {
+    assert.ok(mcp.isAllowedRedirectUri("https://claude.ai/api/mcp/auth_callback"));
+    assert.ok(mcp.isAllowedRedirectUri("https://claude.com/api/mcp/auth_callback"));
+    assert.ok(mcp.isAllowedRedirectUri("http://localhost:3118/callback"));
+    assert.ok(mcp.isAllowedRedirectUri("http://127.0.0.1/callback"));
+    for (const uri of [
+      "https://claude.ai/api/mcp/auth_callback?x=1", "https://claude.ai.evil.example/api/mcp/auth_callback",
+      "https://evil.example/callback", "http://claude.ai/api/mcp/auth_callback", "http://localhost:3118/other",
+      "http://user@localhost/callback", "https://localhost/callback", "javascript:alert(1)", "not a url",
+    ]) assert.equal(mcp.isAllowedRedirectUri(uri), false, uri);
+  });
+
+  test("connector hosts and paths", () => {
+    const origin = "https://shop.panhandle.app";
+    assert.ok(mcp.isConnectorHost("shop.panhandle.app", origin));
+    assert.ok(mcp.isConnectorHost("claude-x-panhandle.someone.workers.dev", origin));
+    assert.ok(mcp.isConnectorHost("127.0.0.1", origin));
+    assert.equal(mcp.isConnectorHost("panhandle.app", origin), false);
+    assert.equal(mcp.isConnectorHost("shopping.mohibb.com", origin), false);
+    for (const p of ["/mcp", "/oauth/token", "/oauth/authorize", "/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-authorization-server"]) {
+      assert.ok(mcp.isConnectorPath(p), p);
+    }
+    for (const p of ["/", "/api/list", "/mcpx", "/connect", "/b/007", "/app.html"]) {
+      assert.equal(mcp.isConnectorPath(p), false, p);
+    }
+  });
+
+  test("resolveCatalogueName maps Norwegian to the canonical entry, only on a whole-word hit", () => {
+    const catalogue = [{ name: "Milk", category: "Dairy" }, { name: "Chocolate milk", category: "Dairy" }];
+    assert.equal(mcp.resolveCatalogueName("melk", catalogue), "Milk");
+    assert.equal(mcp.resolveCatalogueName("Milk", catalogue), "Milk");
+    assert.equal(mcp.resolveCatalogueName("  milk ", catalogue), "Milk");
+    assert.equal(mcp.resolveCatalogueName("mi", catalogue), "mi", "a bare substring hit goes through as typed");
+    assert.equal(mcp.resolveCatalogueName("Surdeigsbrød", catalogue), "Surdeigsbrød");
+  });
+
+  test("planWindow matches the app's WEEK_MIN..WEEK_MAX", () => {
+    const { addDaysIso } = mcpDeps;
+    // 2026-10-21 is a Wednesday (dow 2); its week starts Monday 2026-10-19.
+    assert.deepEqual(mcp.planWindow("2026-10-21", 2, addDaysIso), { min: "2026-10-12", max: "2026-11-22" });
+  });
+
+  // A fake route() standing in for worker/index.js's, recording calls.
+  const mcpDeps = {
+    signJwt: async (payload) => `jwt:${JSON.stringify(payload)}`,
+    osloLocalDateParts: () => ({ today: "2026-10-21", dow: 2 }),
+    addDaysIso: (iso, days) => {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+    },
+    VERSION: "test",
+  };
+  function harness(responses, scopes = ["read", "write"]) {
+    const calls = [];
+    const deps = {
+      ...mcpDeps,
+      route: async (request) => {
+        const url = new URL(request.url);
+        const key = `${request.method} ${url.pathname.replace(/^\/api/, "")}`;
+        calls.push({ key, auth: request.headers.get("Authorization"), body: request.body ? await request.json() : undefined });
+        const r = responses[key] ?? { status: 200, body: {} };
+        return Response.json(r.body ?? {}, { status: r.status ?? 200 });
+      },
+    };
+    const send = (method, params = {}, headers = {}) => mcp.handleMcpRequest(
+      new Request("https://shop.panhandle.app/mcp", {
+        method: "POST", headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      }),
+      { deps, env: { JWT_SECRET: "x" }, origin: "https://shop.panhandle.app", props: { username: "a@b.c", tv: 3 }, scopes },
+    );
+    return { calls, send };
+  }
+
+  test("initialize negotiates a known version and falls back to the newest", async () => {
+    const { send } = harness({});
+    assert.equal((await (await send("initialize", { protocolVersion: "2025-03-26" })).json()).result.protocolVersion, "2025-03-26");
+    assert.equal((await (await send("initialize", { protocolVersion: "1999-01-01" })).json()).result.protocolVersion, mcp.PROTOCOL_VERSIONS[0]);
+  });
+
+  test("unsupported MCP-Protocol-Version header is a 400; GET is a 405; notifications get 202", async () => {
+    const { send } = harness({});
+    assert.equal((await send("ping", {}, { "MCP-Protocol-Version": "2026-07-28" })).status, 400);
+    assert.equal((await send("ping", {}, { "MCP-Protocol-Version": "2025-06-18" })).status, 200);
+    const get = await mcp.handleMcpRequest(new Request("https://shop.panhandle.app/mcp"), {});
+    assert.equal(get.status, 405);
+    const note = await mcp.handleMcpRequest(new Request("https://shop.panhandle.app/mcp", {
+      method: "POST", body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+    }), { deps: mcpDeps, env: {}, origin: "x", props: {}, scopes: ["read"] });
+    assert.equal(note.status, 202);
+  });
+
+  test("tools/list hides write tools from a read-only grant, and tools/call refuses them", async () => {
+    const ro = harness({}, ["read"]);
+    const names = (await (await ro.send("tools/list")).json()).result.tools.map((t) => t.name);
+    assert.ok(names.includes("get_shopping_list"));
+    assert.ok(!names.includes("add_items"));
+    const call = (await (await ro.send("tools/call", { name: "add_items", arguments: { items: [{ name: "x" }] } })).json()).result;
+    assert.equal(call.isError, true);
+    assert.equal(ro.calls.length, 0, "no API call was made");
+    const rw = harness({});
+    const all = (await (await rw.send("tools/list")).json()).result.tools.map((t) => t.name);
+    assert.deepEqual(all.sort(), [...mcp.TOOL_NAMES].sort());
+  });
+
+  test("tool calls carry a short-lived connector token with the grant's scopes", async () => {
+    const { send, calls } = harness({ "GET /list": { body: [] }, "GET /list-users": { body: [] } }, ["read", "offline_access"]);
+    await send("tools/call", { name: "get_shopping_list", arguments: {} });
+    const payload = JSON.parse(calls[0].auth.replace(/^Bearer jwt:/, ""));
+    assert.equal(payload.aud, "mcp");
+    assert.equal(payload.sub, "a@b.c");
+    assert.equal(payload.tv, 3);
+    assert.deepEqual(payload.scp, ["read"], "offline_access is not a connector scope");
+    assert.ok(payload.exp - Date.now() / 1000 <= 300);
+  });
+
+  test("an API error becomes an isError tool result, a 401 says to reconnect", async () => {
+    const bad = harness({ "GET /storage/boxes/by-number/9": { status: 404, body: { error: "Box not found", code: "STORAGE_BOX_NOT_FOUND" } } });
+    const r = (await (await bad.send("tools/call", { name: "get_box", arguments: { number: 9 } })).json()).result;
+    assert.equal(r.isError, true);
+    assert.equal(r.content[0].text, "Box not found");
+    const gone = harness({ "GET /list": { status: 401, body: {} }, "GET /list-users": { status: 401, body: {} } });
+    const g = (await (await gone.send("tools/call", { name: "get_shopping_list", arguments: {} })).json()).result;
+    assert.equal(g.isError, true);
+    assert.match(g.content[0].text, /Reconnect/);
+  });
+
+  test("plan_meal refuses dates outside the planner window without calling the API", async () => {
+    const { send, calls } = harness({});
+    const r = (await (await send("tools/call", { name: "plan_meal", arguments: { date: "2026-12-24", meal_name: "Ribbe" } })).json()).result;
+    assert.equal(r.isError, true);
+    assert.equal(calls.length, 0);
+  });
+
+  test("check_off_items never toggles a bought item back", async () => {
+    const { send, calls } = harness({ "GET /list": { body: [{ id: 1, name: "Milk", bought: 1 }, { id: 2, name: "Eggs", bought: 0 }] } });
+    const r = (await (await send("tools/call", { name: "check_off_items", arguments: { ids: [1, 2, 3] } })).json()).result;
+    assert.deepEqual(r.structuredContent.results.map((x) => x.status ?? x.error), ["already bought", "bought", "Item not found"]);
+    assert.deepEqual(calls.map((c) => c.key), ["GET /list", "POST /list/2/toggle"]);
+  });
+});

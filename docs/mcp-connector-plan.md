@@ -1,14 +1,17 @@
 # MCP connector: Panhandle in Claude (claude.ai)
 
-> **Status: phase 1 (connector tokens in the main Worker) built; phases
-> 0 and 2–5 not started.** Written 2026-10-19. Decisions taken: v1 ships with
-> **both read and write** scopes, and **only Claude** is allowed as a client
-> (see Security → redirect-URI allowlist). The goal is a
-> remote MCP server that a household member can add to claude.ai on the web
-> (Settings → Connectors → "Add custom connector") so Claude can read and
-> write their shopping list, meal plan, and storage boxes, for example
-> "add milk and eggs", "what's for dinner on Thursday?" or "which box are
-> the Christmas lights in?".
+> **Status:** built in 1.66.0, in the existing Worker: connector tokens,
+> OAuth, the MCP endpoint, the consent screen and "Connected apps".
+> Rewritten 2026-10-19, after the first draft's separate-Worker design was
+> dropped (see "Why one Worker").
+> Decisions: v1 has **both read and write** scopes, and **only Claude** may
+> connect.
+
+The goal is a remote MCP server that a household member adds to claude.ai
+(Settings → Connectors → "Add custom connector", URL
+`https://shop.panhandle.app/mcp`) so Claude can read and write their
+shopping list, meal plan and storage boxes: "add milk and eggs", "what's
+for dinner on Thursday?", "which box are the Christmas lights in?".
 
 ## Why it has to be a remote server with OAuth
 
@@ -54,318 +57,243 @@ claude.com/docs/connectors/building/authentication, checked 2026-10-19.
 - **Network.** Anthropic's traffic comes from `160.79.104.0/21`. That
   matters only if a WAF rule ever sits in front.
 
-Writing all of that by hand would be a large new security surface. This app
-deliberately hand-rolls PBKDF2 and JWT, but OAuth 2.1 with DCR, CIMD, PKCE,
-refresh rotation and RFC 9728 is far more state machine than those. This
-falls under the same reasoning as `@pushforge/builder` (see CLAUDE.md, Push
-notifications): **use Cloudflare's `@cloudflare/workers-oauth-provider`**,
-which implements all of the above on Workers (DCR, CIMD, RFC 8414/9728,
-PKCE, refresh, revocation, encrypted grant props in KV).
 
-## Architecture decision: a separate `panhandle-mcp` Worker
+Writing the OAuth half by hand would be a large new security surface. This
+app deliberately hand-rolls PBKDF2 and JWT, but OAuth 2.1 with DCR, PKCE,
+refresh rotation and RFC 9728 is far more state machine than those. It falls
+under the same reasoning as `@pushforge/builder` (see CLAUDE.md, Push
+notifications): **use Cloudflare's `@cloudflare/workers-oauth-provider`**
+(pinned exactly, no runtime dependencies of its own). The MCP half is the
+opposite case: for nine stateless tools it is a small JSON-RPC dispatcher,
+so it is hand-rolled rather than pulling in the MCP SDK and `zod`.
+
+## Why one Worker
+
+The first draft put the connector in a separate `panhandle-mcp` Worker on
+`mcp.panhandle.app`, reaching the API over a service binding. Inside the
+existing Worker it is simpler on every axis that matters here:
+
+- **No new deploy target.** No second Workers Builds project, custom
+  domain or set of secrets to keep in step. The one dashboard step is
+  creating a KV namespace.
+- **No shared secret.** A second Worker would need `JWT_SECRET` (which the
+  dashboard can't reveal once set) or a new key of its own.
+- **Same origin.** The consent screen, its API calls and the OAuth endpoints
+  all live on `shop.panhandle.app`: no CORS, no CSP change, and the
+  library's browser-bound consent cookie just works.
+
+The two costs, and how they're contained:
+
+- **A dependency in the Worker.** The OAuth library is only ever reached
+  through `worker/mcp.js`, and only for the connector's own paths (below).
+  Every other request goes straight to `route()` exactly as before, so a
+  bug in the library can't touch the app. The cron handler is untouched.
+- **A second worker file.** CLAUDE.md keeps `worker/index.js` as one file on
+  purpose; `worker/mcp.js` is a separate concern (a protocol adapter with
+  no SQL and no business logic) with a one-way dependency: `index.js`
+  imports it and hands it what it needs (`route`, `signJwt`, the Oslo date
+  helpers), so it never imports `index.js` back.
+
+## Architecture
 
 ```
-claude.ai ──OAuth + MCP──▶ mcp.panhandle.app  (new Worker, mcp/)
-                              │  OAUTH_KV (grants, clients, tokens)
-                              │  service binding PANHANDLE
-                              ▼
-                           panhandle Worker (worker/index.js, unchanged API)
-                              │
-                              ▼
-                             D1
+claude.ai ──▶ shop.panhandle.app ── fetch() ─┬─ /mcp, /oauth/*, /.well-known/oauth-* ─▶ worker/mcp.js
+                                             │        (OAuth library + JSON-RPC tools; OAUTH_KV)
+                                             │               │ connector JWT, in-process
+                                             │               ▼
+                                             └─ everything else ─────────────────────▶ route()  ──▶ D1
 ```
 
-**Recommended: a new Worker in `mcp/`** with its own `wrangler.toml` and
-`package.json`, on the custom domain `mcp.panhandle.app`. It talks to the
-existing Worker **only** through a service binding, calling the same
-`/api/*` routes the app uses. Reasons:
+- **Connector paths**, handled by `worker/mcp.js` before `route()`:
+  - `/mcp`: the MCP endpoint (the protected resource).
+  - `/.well-known/oauth-protected-resource/mcp` and
+    `/.well-known/oauth-authorization-server`: discovery (RFC 9728/8414).
+  - `/oauth/token`, `/oauth/register`: token, refresh and revocation, and
+    DCR. Served by the library.
+  - `/oauth/authorize`: ours. It validates the request and hands the user
+    to the app's consent screen (below).
+  None of these collide with anything today: they fall through to the
+  Pages proxy and 404.
+- **Hosts.** The connector answers only on `APP_ORIGIN`'s host
+  (`shop.panhandle.app`), on the Worker's own `*.workers.dev` preview
+  hostnames, and on loopback for `wrangler dev`. Each origin gets its own
+  issuer/resource pair (`<origin>` and `<origin>/mcp`), so a branch preview
+  is a fully working connector for testing. `panhandle.app` and the legacy
+  `shopping.mohibb.com` keep their redirects.
+- **KV.** The library stores clients, grants and tokens in a KV namespace
+  bound as `OAUTH_KV`. The binding in `wrangler.toml` has no `id`, so
+  wrangler provisions the namespace on the first deploy. Until it exists,
+  every connector path answers `503` and nothing else in the app is
+  affected.
+- **Client registration.** DCR only, which Claude supports. CIMD is left
+  off: it needs the `global_fetch_strictly_public` compatibility flag, which
+  changes how *every* outbound `fetch` from this Worker resolves (the Pages
+  proxy, recipe import, Resend, Google), a risk not worth taking for a
+  client that registers fine without it.
 
-- `worker/index.js` stays one file without dependencies. Wrapping it in
-  `OAuthProvider` would make OAuth, KV and the MCP SDK part of every
-  request the app makes, and `OAuthProvider` only wraps `fetch`, not
-  `scheduled()` (the cron).
-- **All existing validation applies automatically**: `list_id` scoping,
-  `TEXT_LIMITS`, the identical-item merge in `POST /list`, error codes. The
-  MCP layer contains no business logic and no SQL. It never gets a D1
-  binding.
-- A bug in the MCP Worker can't break the app, and the reverse holds too.
-  The two deploy separately, and the MCP Worker can be switched off in the
-  dashboard without touching the app.
-- The cost is a second Workers Builds project (root directory `mcp/`) and
-  one extra hop per tool call. The service binding keeps that hop
-  in-process with no public network round trip.
+### How a tool call reaches the data
 
-The rejected alternative was a `/mcp` route inside the existing Worker. It
-saves one deploy target, but costs everything listed above.
+The grant created at consent stores the props `{ username, tv }` (`tv` =
+`users.token_version` at consent time), encrypted in KV by the library. For
+each tool call `worker/mcp.js`:
 
-### How the MCP Worker acts as a user
+1. mints a **connector JWT**: `sub=username`, `tv`,
+   `aud: "mcp"`, `scp` = the grant's scopes, `exp = now + 5 min`, signed
+   with `JWT_SECRET` in-process.
+2. calls `route()` with an ordinary `Request` for the matching `/api/*`
+   route, exactly as the app would.
 
-The grant created at consent stores the props
-`{ username, tv }` (`tv` = `users.token_version` at consent time),
-encrypted in KV by the library. For each tool call the MCP Worker:
-
-1. mints a **short-lived connector JWT**: `sub=username`, `tv`,
-   `aud: "mcp"`, `scp: ["read"] | ["read","write"]`, `exp = now + 5 min`.
-   It is signed with the shared `JWT_SECRET`, set as a secret on the MCP
-   Worker too.
-2. calls `env.PANHANDLE.fetch("https://internal/api/list", { headers: { Authorization: "Bearer …" } })`.
-
-The main Worker's `requireAuth` already checks `tv` against the DB. That
-gives the connector **automatic revocation on password change or flag
-change**, the same as every other device. A rename via `/change-email`
-changes `sub`, so the grant stops working and the user reconnects. That is
-acceptable and documented on the settings page.
-
-### Main-Worker changes: what a connector token is allowed to do
-
-A plain `Bearer` with `JWT_SECRET` would give full account access, including
-`DELETE /account`, admin routes and invites. Defence in depth means the
-**main Worker** itself, not just the MCP Worker, limits what an
-`aud: "mcp"` token can do:
-
-- `requireAuth` returns the token kind (`"session"` | `"connector"`) and
-  scopes as well as the user row. A connector token with `exp` more than
-  10 minutes ahead is rejected outright, so a leaked one dies quickly.
-- `route()`: after the auth gate, if the token is a connector token, match
-  against a separate `CONNECTOR_ROUTES` allowlist (method + path/pattern,
-  same shape as `AUTHENTICATED_ROUTES`). `GET` requires `read`, and every
-  other method requires `write`. A route outside the list answers `403`
-  `CONNECTOR_NOT_ALLOWED`, and a missing scope `403` `INSUFFICIENT_SCOPE`.
-- **Never send `X-Refresh-Token` on a connector request.** `authedJson`
-  currently always mints a fresh *90-day session token*. For a connector
-  token that would hand the MCP Worker a full-access, long-lived session
-  token in every response. This is the single most important detail on the
-  main-Worker side.
-- `tests/worker-unit.test.mjs`: pin `CONNECTOR_ROUTES` the way the
-  `auth boundary` block already pins `PUBLIC_ROUTES`, so adding a route is
-  a deliberate test edit. Add an integration test,
-  `tests/connector-token.test.mjs`: a connector token can `GET /list`,
-  can't call `DELETE /account` or `GET /admin/users`, a read-scoped token
-  can't `POST /list`, no `X-Refresh-Token` comes back, and a `tv` mismatch
-  gives `401`.
-
-**No D1 migration is needed.** Grants, clients and tokens live in
-`OAUTH_KV`, and the main Worker stores nothing new.
+So every existing check applies unchanged (`list_id` scoping,
+`TEXT_LIMITS`, the identical-item merge, error codes), and phase 1's
+enforcement sits underneath as a second layer: even a bug in a tool can only
+reach `CONNECTOR_ROUTES`, writes need the `write` scope, and no response
+carries a refresh token. `requireAuth` checks `tv`, so **a password change
+cuts the connector off** on its next call. A rename via `/change-email`
+changes `sub`, so the grant stops working too and the user reconnects.
 
 ## Consent flow (reuses the app's existing login)
 
-The consent page lives **in the app**, not in the MCP Worker. The user is
-usually already signed in on shop.panhandle.app. That means no new login
-UI, Google sign-in works with no new OAuth origin, and Turnstile and the
-rate limits stay where they are.
-
-1. Claude sends the user to `https://mcp.panhandle.app/authorize?...`.
-2. The MCP Worker runs `env.OAUTH_PROVIDER.parseAuthRequest(request)` and
-   looks up the client (name and redirect URI). It **rejects** a redirect
-   URI outside the allowlist (see Security below). It stores the parsed
-   request in KV under a random `req_id` (TTL 10 min, single-use) and
-   redirects to `https://shop.panhandle.app/connect?req=<req_id>`.
-3. The app (a new route `/connect`) shows `ConnectScreen`. If the user is
-   signed out, it shows login first and resumes afterwards, the same
-   pattern as `pendingBoxNumber` for `/b/{n}`. The main Worker's ROUTING
-   section must serve `/connect` as the app shell, like `/b/{number}`.
-   The screen shows:
-   - "**Claude** wants access to the household *<list name>*" plus the
-     redirect hostname (`claude.ai`), as the spec requires.
-   - The scopes: "Read the list, meal plan and storage" (always) and
-     "Add, check off and plan" (a checkbox, on by default).
+1. Claude opens `/oauth/authorize?...`. `worker/mcp.js` runs
+   `parseAuthRequest()`, then **refuses any redirect URI outside the
+   allowlist** (Security, below). It calls `describeConsent()` and
+   `beginConsent()`, stores the description in `OAUTH_KV` under the consent
+   handle (10 minutes, the same lifetime as the handle), and redirects to
+   `/connect?handle=…`, carrying `beginConsent()`'s headers. Those set the
+   `__Host-` cookie that binds the handle to this browser.
+2. `/connect` is served as the app shell (like `/b/{number}`). If the user
+   is signed out, the app shows login first and resumes afterwards (the
+   handle is kept in `sessionStorage`). `ConnectScreen` loads
+   `GET /api/oauth-consent/{handle}` and shows:
+   - the client's name, marked as unverified (a DCR name is
+     self-asserted);
+   - the household, and the redirect hostname (`claude.ai`), which the
+     spec requires, with a warning for a loopback redirect (Claude Code);
+   - the scopes: reading is always included, and "add, check off and plan"
+     is a checkbox, on by default;
    - Allow and Deny buttons.
-4. Allow → `POST https://mcp.panhandle.app/connect/complete` with
-   `Authorization: Bearer <the app's normal session token>` and
-   `{ req_id, scopes }`. The MCP Worker validates the session token by
-   calling `GET /api/account` through the service binding. That avoids a
-   second JWT verification implementation and also checks `tv`. It then
-   runs `completeAuthorization({ request, userId: username, scope, props: { username, tv } })`
-   and returns `{ redirectTo }`. The app sets `location = redirectTo`, and
-   Claude completes the token exchange on its own.
-   Deny → the MCP Worker redirects back with `error=access_denied`.
-5. CORS on `/connect/complete` and `/connections`: only
-   `Origin: https://shop.panhandle.app`, plus branch-preview hostnames
-   while testing. Add `https://mcp.panhandle.app` to `connect-src` in
-   `withSecurityHeaders`' CSP. It is report-only today, but it must be
-   correct before it is enforced, and the CSP test should include the
-   origin.
+3. **Allow** → `POST /api/oauth-consent/{handle}/approve { write }` with the
+   normal session token. The Worker runs `approveConsent()`, which checks
+   the browser cookie and works once, then `completeAuthorization()` with
+   `userId = username`, and returns `{ redirectTo }`. The app sets
+   `location` to it and Claude finishes the token exchange itself.
+   **Deny** → `POST …/deny` → `denyConsent()` → `{ redirectTo }`, which
+   carries `access_denied`.
 
-The approval POST carries the Bearer token from `localStorage`, not a
-cookie, so it has no CSRF exposure. Clickjacking is already covered by
-`X-Frame-Options: DENY`.
+These consent routes are ordinary authenticated routes, deliberately
+**not** in `CONNECTOR_ROUTES`: a connector can never approve its own
+consent. React escapes every client-supplied string it renders.
 
 ## Tools (v1)
 
-The tools form a deliberately narrow surface: everyday use, nothing
-administrative. Each one maps onto existing endpoints. The tool
-descriptions are in English, since the model reads them. The output
-returns **both** the canonical name and the Norwegian display name
-(`translateItemName`) so Claude can answer in the user's language.
+The tools are a narrow surface: everyday use, nothing administrative. Write
+tools are hidden from `tools/list` and refused by `tools/call` without the
+`write` scope, and phase 1's gate enforces the same thing again underneath.
+Descriptions are in English, since the model reads them; results include
+the Norwegian display name of each item next to its canonical one.
 
-| Tool | Scope | Endpoint(s) | Annotations |
-|---|---|---|---|
-| `get_shopping_list` | read | `GET /list` (unbought by default; `include_bought` optional, last 20) | readOnly |
-| `add_items(items: [{name, qty?, notes?}])` | write | `GET /catalogue` once, then `POST /list` per item | — |
-| `check_off_items(ids[])` | write | `POST /list/{id}/toggle` (only if currently unbought, so it never toggles back) | idempotent |
-| `mark_important(id, important)` | write | `PATCH /list/{id}` | idempotent |
-| `get_meal_plan(from?, to?)` | read | `GET /plan` + `GET /list-users` (names) | readOnly |
-| `plan_meal(date, meal_name?, responsible?)` | write | `POST /plan` | destructive (overwrites the day) |
-| `search_meals(query?)` | read | `GET /meals` / `GET /meals/suggestions` | readOnly |
-| `find_storage(query)` | read | `GET /storage/boxes`, search done in the MCP layer | readOnly |
-| `get_box(number)` | read | `GET /storage/boxes/by-number/{n}` | readOnly |
+| Tool | Scope | Endpoint(s) |
+|---|---|---|
+| `get_shopping_list(include_bought?)` | read | `GET /list` |
+| `add_items(items: [{name, qty?, notes?}])` | write | `GET /catalogue` once, `POST /list` per item |
+| `check_off_items(ids[])` | write | `GET /list`, then `POST /list/{id}/toggle` for each id still unbought (never toggles back) |
+| `set_item_important(id, important)` | write | `PATCH /list/{id}` |
+| `get_meal_plan(from?, to?)` | read | `GET /plan` + `GET /list-users` |
+| `plan_meal(date, meal_name?, responsible?)` | write | `GET /plan`, `POST /plan` |
+| `search_meals(query?)` | read | `GET /meals` |
+| `find_storage(query)` | read | `GET /storage/boxes`, searched in the MCP layer |
+| `get_box(number)` | read | `GET /storage/boxes/by-number/{n}` |
 
-Deliberately left **out of v1**: deleting items or meals, `mark-all-bought`,
-editing the catalogue, creating or editing storage boxes, `push/ping`,
-everything under account/admin/invite/calendar feed. Add them later if
-there's a real need. `mark-all-bought` and deletions are exactly the sort
-of thing an LLM gets wrong at the worst moment.
+Deliberately left **out**: deleting anything, `mark-all-bought`, catalogue
+edits, creating or editing boxes, `push/ping`, and everything
+account-, admin-, invite- or calendar-feed-related.
 
 ### Details that need care
 
 - **Item names are canonical and in English.** "Add milk" said in
   Norwegian (*melk*) must resolve to the catalogue's `Milk`, or the
-  catalogue fills with Norwegian duplicates. `add_items` fetches
-  `GET /catalogue` and runs **the same** `matchCatalogue(name, catalogue, "nb")`
-  as the app, imported directly from `src/lib/shoppingUtils.js`. That file
-  is pure and imports only `shared/categories.js` and `i18n/itemNames.js`,
-  so the MCP Worker's bundler can take it as is and no copy can drift. Use
-  the hit at rank 0/1 (exact or whole word). Otherwise send the name as
-  typed and let `POST /list` create a custom entry under `Other`, exactly
-  as the app does. Return what it was matched to, for example
-  "melk → Milk (Dairy)", so Claude can tell the user.
-- **Dates.** The model doesn't know what "today" is in Oslo. Every
-  meal-plan response includes `today` (Europe/Oslo, computed the same way
-  as `osloLocalDateParts`) and the weekday. `plan_meal` rejects a date
-  outside the window the app shows (`WEEK_MIN..WEEK_MAX`, -1..+4 weeks).
-  Older rows are deleted by `GET /plan` anyway.
+  catalogue fills with Norwegian duplicates. `add_items` runs **the same**
+  `matchCatalogue(name, catalogue, "nb")` as the app, imported from
+  `src/lib/shoppingUtils.js` (pure; it imports only `shared/` and
+  `i18n/itemNames.js`), and uses its best hit when it is an exact or
+  whole-word match. Otherwise the name goes through as typed, exactly as
+  in the app. The result says what each name was matched to.
+- **Dates.** The model doesn't know what "today" is in Oslo. Meal-plan
+  results carry `today` (Europe/Oslo, via `osloLocalDateParts`) and
+  weekday names. `plan_meal` refuses dates outside the window the app
+  shows (from the start of last week through the end of the week four
+  weeks ahead, `WEEK_MIN..WEEK_MAX`).
 - **Overwrites.** `POST /plan` replaces the day. `plan_meal` returns what
-  was there before (`replaced: "Taco"`), and the tool description tells
-  Claude to ask first if the day is already planned.
-- **`responsible`.** Accept a display name or username and resolve it
-  through `GET /list-users`. Pass unknown text through as free text, as the
-  app does.
-- **Errors.** Map the main Worker's `{ error, code }` to a tool result with
-  `isError: true` and the English message (from `shared/errorCodes.js`), so
-  Claude can explain what went wrong. Don't throw a protocol error.
-- **Response size.** Keep it short: id, name, Norwegian name, qty, notes,
-  important, added_by display name. Don't send all 700+ catalogue entries
-  back to the model.
+  was there before, and its description tells Claude to ask before
+  overwriting a planned day.
+- **`responsible`.** Accepts a display name or a username, resolved through
+  `GET /list-users`. Unknown text goes through as free text, as in the app.
+- **Errors.** An API error becomes a tool result with `isError: true` and
+  the error's English message (from `shared/errorCodes.js`), not a protocol
+  error, so Claude can explain it. A `401` from the inner call (password
+  changed) says to reconnect the connector.
 
-### Transport
+### Protocol
 
-Stateless Streamable HTTP is enough, since no tool needs session state. Use
-`createMcpHandler` from the `agents` package (or the MCP SDK directly)
-**without** a Durable Object. Choose `McpAgent` (a Durable Object) only if
-something stateful is ever needed. Verify the exact API against the
-current `agents` and `workers-oauth-provider` READMEs at implementation
-time, since they move fast.
+The endpoint behaves as a **stateless MCP 2025-11-25 server** over
+Streamable HTTP:
+- `POST` only, with JSON responses (no SSE, no `Mcp-Session-Id`). `GET`
+  answers `405`.
+- `initialize` echoes a known `protocolVersion` (2025-11-25, 2025-06-18,
+  2025-03-26) or offers 2025-11-25. `ping`, `tools/list`, `tools/call`;
+  notifications get `202`.
+- A request whose `MCP-Protocol-Version` header names a version we don't
+  serve gets `400`, the 2025 behaviour that MCP 2026-07-28 clients fall
+  back from. Moving to the session-less 2026-07-28 revision
+  (`server/discover`, per-request `_meta`) is a later, separate change.
 
 ## Security (summary)
 
-- **Redirect-URI allowlist** during DCR and CIMD registration and in
-  `/authorize`: `https://claude.ai/api/mcp/auth_callback`,
+- **Redirect-URI allowlist, so only Claude can connect:**
+  `https://claude.ai/api/mcp/auth_callback`,
   `https://claude.com/api/mcp/auth_callback`, and loopback
-  `http://localhost|127.0.0.1:<any>/callback` for Claude Code. That means
-  no random third-party app can phish household members through an honest
-  Panhandle consent screen. Opening it up to "similar" clients (ChatGPT
-  and others) later means adding their callback to the list, a deliberate
-  edit.
-- **Token lifetimes:** access token 1 hour, refresh token 30 days with
-  rotation (required for public clients). The connector JWT to the main
-  Worker lives 5 min.
-- **Revocation:**
-  - Settings → "Connected apps" (`/connections`) lists and revokes grants.
-  - A password change bumps `tv`, so every grant dies on the next call.
-  - `DELETE /account` means the user no longer exists, so the grant dies.
-  - KV is eventually consistent, so a revoke can take up to about 60 s to
-    take effect. That is acceptable for this kind of data.
-- **Scopes in two layers:** the MCP Worker hides write tools for read-only
-  grants, *and* the main Worker refuses write methods for a read-only
-  connector token.
-- `JWT_SECRET` now lives on two Workers. The secret's trust level is
-  unchanged (the same operator), but rotating it means updating both, and
-  the runbook must say so.
-- Rate limiting: not needed in v1. Every call is already authenticated and
-  scoped to the user's own list. Consider a per-grant cap if abuse ever
-  shows up.
+  `http://localhost|127.0.0.1:<any>/callback` (Claude Code). It is applied in
+  `/oauth/authorize` (a refused request renders an error and never
+  redirects) and at registration (`clientRegistrationCallback`, so foreign
+  clients don't pile up in KV). Adding another client later is a deliberate
+  edit to this list.
+- **Lifetimes:** OAuth access tokens last 1 hour; refresh tokens last 30
+  days and rotate on use (library defaults). The connector JWT that a tool
+  call carries internally lasts 5 minutes.
+- **Revocation:** Settings → "Connected apps" lists and revokes grants
+  (`listUserGrants`/`revokeGrant`). A password change kills every grant in
+  practice through `tv`. After `DELETE /account` the user no longer exists,
+  so the grant is dead too; its KV leftovers expire with their TTLs.
+- **Scopes in three layers:** the consent screen grants them, the MCP layer
+  hides and refuses write tools, and the phase-1 gate refuses write methods.
+- **Rate limiting:** none in v1. Every call is authenticated and scoped to
+  the caller's own list.
 
-## Implementation phases
+## Implementation status
 
-Each phase is its own PR. Phase 1 can be merged and deployed alone with no
-visible change.
-
-### Phase 0: preparation (dashboard, no code)
-- Confirm that the claude.ai plan in use allows custom connectors.
-- Create the KV namespace `panhandle-mcp-oauth`.
-- Create a Workers Builds project for `panhandle-mcp` (root directory
-  `mcp/`, deploy command `npx wrangler deploy`, tracks `main`).
-- Attach the custom domain `mcp.panhandle.app` to the new Worker.
-- Set the secret `JWT_SECRET` (the same value) on the new Worker.
-
-### Phase 1: connector tokens in the main Worker (PATCH) — done, 1.65.1
-
-Built as described below. Two notes from building it: the constants live
-on one exported `CONNECTOR_TOKEN` object, because workerd refuses to start
-when the entry module exports a bare string or number (it treats every
-named export as an entrypoint); and the error codes are
-`CONNECTOR_NOT_ALLOWED` and `INSUFFICIENT_SCOPE`.
-
-- `requireAuth` → token kind and scopes; `CONNECTOR_ROUTES`; scope check;
-  no `X-Refresh-Token` for connectors; max-`exp` guard.
-- A new error code if needed (`shared/errorCodes.js` + `nb.js`).
-- Unit tests (allowlist pinning) and `tests/connector-token.test.mjs`.
-- CLAUDE.md, Auth model: describe connector tokens.
-- Version bump PATCH and a changelog line ("Groundwork for connecting
-  Panhandle to AI assistants.").
-
-### Phase 2: the MCP Worker skeleton plus OAuth (no consent UI yet)
-- `mcp/wrangler.toml`: `OAUTH_KV`, `[[services]] binding = "PANHANDLE", service = "panhandle"`,
-  `compatibility_flags = ["global_fetch_strictly_public"]` (required for
-  CIMD).
-- `mcp/package.json`: `@cloudflare/workers-oauth-provider`, `agents`
-  and/or `@modelcontextprotocol/sdk`, `zod`. Pin exact versions.
-- `mcp/src/index.js`: `OAuthProvider` with `apiRoute: "/mcp"`,
-  `scopesSupported: ["read", "write", "offline_access"]`, the
-  `resourceMetadata` `resource` set to `https://mcp.panhandle.app/mcp`,
-  `clientIdMetadataDocumentEnabled: true`, the redirect allowlist, and the
-  `/authorize` → `/connect` redirect.
-- One tool (`get_shopping_list`) to prove the whole chain end to end.
-- Verify with MCP Inspector against the Worker's workers.dev or preview
-  URL. Note that `resource` must match the URL being tested, so make it
-  env-driven (`MCP_ORIGIN` in `[vars]`).
-- CI: a new job in `ci.yml` that runs `npm ci && npm test` in `mcp/`.
-
-### Phase 3: consent in the app (MINOR, the feature becomes visible)
-- `/connect` served as the app shell (main-Worker ROUTING); `ConnectScreen`
-  with resume after login; `nb`/`en` dictionary keys (the dictionary test
-  fails on drift); haptics are irrelevant here.
-- CSP `connect-src` += `https://mcp.panhandle.app`, plus the CSP test.
-- Test the real flow in claude.ai: Settings → Connectors → Add custom
-  connector → `https://mcp.panhandle.app/mcp`.
-
-### Phase 4: the full v1 tool set
-- The rest of the tool table, with `matchCatalogue` reuse, `today`, and
-  overwrite warnings.
-- Unit tests for the tool logic against a fake `PANHANDLE` binding (same
-  pattern as the fake `env.DB` stub in `tests/push-notifications.test.mjs`):
-  name resolution, rank selection, error mapping, scope hiding.
-
-### Phase 5: "Connected apps" in Settings (PATCH)
-- A new subpage (`settingsNav.js` + `SettingsRoot`/`SettingsTab`, following
-  the existing pattern), `GET`/`DELETE https://mcp.panhandle.app/connections`
-  (lists and revokes the caller's own grants, authenticated with the
-  session token the same way as `/connect/complete`).
-- CLAUDE.md: a new "MCP connector" section; mark this document as shipped.
-
-## Decisions (2026-10-19)
-
-1. **Read and write from v1.** Both scopes ship in phase 4. The consent
-   screen still offers the write scope as a checkbox (on by default) so a
-   household member can choose read-only.
-2. **Only Claude.** The redirect-URI allowlist contains Claude's callbacks
-   (claude.ai, claude.com, and Claude Code's loopback) and nothing else.
-   Adding another client later is a deliberate edit to that list, plus its
-   own end-to-end test.
+- **Done (1.66.0):** connector tokens (`connectorClaims`,
+  `CONNECTOR_ROUTES`, the scope gate, no `X-Refresh-Token` for connectors;
+  the constants live on one exported `CONNECTOR_TOKEN` object because
+  workerd refuses to start when the entry module exports a bare string or
+  number); `worker/mcp.js` with the OAuth wiring, `/oauth/authorize`, the
+  JSON-RPC handler and the tools (the OAuth library is loaded lazily, since
+  it imports `cloudflare:workers`, which plain Node can't resolve and Node is
+  where `tests/worker-unit.test.mjs` imports the Worker); the consent and
+  connected-apps routes; `/connect` served as the app shell;
+  `ConnectScreen` and the "Connected apps" subpage. Tests:
+  `tests/worker-unit.test.mjs` (allowlist, hosts/paths, name resolution,
+  plan window, JSON-RPC and tools against a fake `route()`),
+  `tests/connector-token.test.mjs` and `tests/mcp-connector.test.mjs`. The
+  latter runs the whole flow under wrangler dev: registration, authorize,
+  consent, token, tools, refresh, read-only, revoke, password change.
+- **Before relying on it:** confirm that "Add custom connector" exists on the
+  claude.ai plan in use, then connect from claude.ai once against the branch
+  preview's `*.workers.dev` URL plus `/mcp`, and once against production
+  after merge.
+- **Later, if needed:** MCP 2026-07-28 (session-less, `server/discover`);
+  more tools; CIMD.
 
 ## Open questions
 
-1. **Testing on branch previews:** the MCP Worker's previews get their own
-   hostnames and the service binding points at the *production* Worker
-   (and so the production DB, as usual). Test with throwaway accounts and
-   clean them up afterwards (see CLAUDE.md, Testing conventions).
+1. **Branch previews share the production DB and KV.** Test with throwaway
+   accounts and clean them up afterwards (see CLAUDE.md, Testing
+   conventions). Revoke test grants under "Connected apps".
