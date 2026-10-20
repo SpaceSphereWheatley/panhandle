@@ -30,6 +30,7 @@ const PATHS = {
   storage: ["storage"],
   admin: ["admin"],
   calendarSync: ["calendar-sync"],
+  connectedApps: ["connected-apps"],
 };
 
 export function SettingsRoot({ onNavigate }) {
@@ -69,6 +70,12 @@ export function SettingsRoot({ onNavigate }) {
           label={t(settingsTitleKey(PATHS.calendarSync))}
           supportingText={t("settings.root.calendarSync.supporting")}
           onClick={() => onNavigate(PATHS.calendarSync)}
+        />
+        <SettingsRow
+          icon="plugs-connected"
+          label={t(settingsTitleKey(PATHS.connectedApps))}
+          supportingText={t("settings.root.connectedApps.supporting")}
+          onClick={() => onNavigate(PATHS.connectedApps)}
         />
       </SettingsGroup>
 

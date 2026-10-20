@@ -12,6 +12,7 @@ import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { AuthScreens } from "./components/AuthScreens.jsx";
 import { AppShell } from "./components/AppShell.jsx";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow.jsx";
+import { ConnectScreen } from "./components/ConnectScreen.jsx";
 import { applyTheme, currentTheme } from "./lib/theme.js";
 import { applyIntensity, currentIntensity } from "./lib/designIntensity.js";
 import { hasSeenOnboarding, markOnboardingSeen } from "./lib/onboarding.js";
@@ -44,12 +45,44 @@ function pendingBoxNumberFromUrl() {
   return m ? m[1] : null;
 }
 
+// The claude.ai connector's consent screen (docs/mcp-connector-plan.md):
+// the Worker's /oauth/authorize redirects to /connect?handle=…. Kept in
+// sessionStorage, unlike the box number above, so a sign-in that reloads the
+// page (or a slow one) still comes back to the consent screen afterwards.
+const CONNECT_HANDLE_KEY = "ph_pending_connect";
+
+function pendingConnectHandleFromUrl() {
+  try {
+    if (window.location.pathname === "/connect") {
+      const handle = new URLSearchParams(window.location.search).get("handle");
+      if (handle) sessionStorage.setItem(CONNECT_HANDLE_KEY, handle);
+      return handle;
+    }
+    return sessionStorage.getItem(CONNECT_HANDLE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function Root() {
   const { token } = useAuth();
   const [onboardingSeen, setOnboardingSeen] = useState(hasSeenOnboarding);
   const [pendingBoxNumber, setPendingBoxNumber] = useState(pendingBoxNumberFromUrl);
+  const [connectHandle, setConnectHandle] = useState(pendingConnectHandleFromUrl);
 
   if (!token) return <AuthScreens />;
+  if (connectHandle) {
+    return (
+      <ConnectScreen
+        handle={connectHandle}
+        onExit={() => {
+          try { sessionStorage.removeItem(CONNECT_HANDLE_KEY); } catch { /* storage unavailable */ }
+          window.history.replaceState({}, "", "/");
+          setConnectHandle(null);
+        }}
+      />
+    );
+  }
   if (!onboardingSeen) {
     return (
       <OnboardingFlow

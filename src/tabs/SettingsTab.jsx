@@ -10,6 +10,7 @@ import { StorageSubpage } from "../components/settings/subpages/StorageSubpage.j
 import { AdminSubpage } from "../components/settings/subpages/AdminSubpage.jsx";
 import { StatsSubpage } from "../components/settings/subpages/StatsSubpage.jsx";
 import { CalendarSyncSubpage } from "../components/settings/subpages/CalendarSyncSubpage.jsx";
+import { ConnectedAppsSubpage } from "../components/settings/subpages/ConnectedAppsSubpage.jsx";
 
 // Router over the Settings nav stack owned by AppShell (settingsPath / the
 // shared Header's title+back button live there — see AppShell.jsx). This
@@ -26,6 +27,7 @@ export function SettingsTab({ settingsPath = [], onNavigate }) {
   if (root === "store") return <StoreSubpage />;
   if (root === "storage") return <StorageSubpage />;
   if (root === "calendar-sync") return <CalendarSyncSubpage />;
+  if (root === "connected-apps") return <ConnectedAppsSubpage />;
   if (root === "admin" && sub === "stats") return <StatsSubpage />;
   if (root === "admin") return <AdminSubpage onNavigate={onNavigate} />;
   return <SettingsRoot onNavigate={onNavigate} />;

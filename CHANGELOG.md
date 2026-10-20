@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.66.0] — 2026-10-19
+
+### Added
+- **You can now connect Panhandle to Claude, and ask it to add things to the shopping list, check what's for dinner, plan a meal or find which storage box something is in.** In Claude, add a custom connector with the address `https://shop.panhandle.app/mcp`; Panhandle then asks you to approve it (and whether Claude may make changes or only read), and Settings → Connected apps lists every connection with a button to disconnect it. Changing your password disconnects every app. (A remote MCP server inside the existing Worker: `worker/mcp.js` wires `@cloudflare/workers-oauth-provider` — OAuth 2.1 with dynamic client registration, PKCE, rotating refresh tokens and RFC 9728/8414 discovery, grants in the new `OAUTH_KV` KV binding — and a hand-rolled stateless MCP 2025-11-25 JSON-RPC endpoint at `/mcp` with nine tools. Only Claude's callback URLs may register or authorize. `/oauth/authorize` hands off to the new `/connect` consent screen (`ConnectScreen.jsx`), approved through `POST /api/oauth-consent/{handle}/approve`; `GET`/`DELETE /api/connected-apps` back the new `ConnectedAppsSubpage.jsx`. Tool calls go through the ordinary `/api/*` routes with a short-lived, scoped connector JWT — `aud: "mcp"`, `scp`, at most 10 minutes — which the Worker confines to the `CONNECTOR_ROUTES` allowlist and never answers with `X-Refresh-Token`. New error codes `CONNECTOR_NOT_ALLOWED`, `INSUFFICIENT_SCOPE`, `CONNECT_UNAVAILABLE`, `CONSENT_EXPIRED`. Covered by unit tests plus `tests/connector-token.test.mjs` and `tests/mcp-connector.test.mjs`. See `docs/mcp-connector-plan.md`.)
+
 ## [1.65.0] — 2026-09-06
 
 ### Added
