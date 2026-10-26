@@ -64,7 +64,7 @@ refresh rotation and RFC 9728 is far more state machine than those. It falls
 under the same reasoning as `@pushforge/builder` (see CLAUDE.md, Push
 notifications): **use Cloudflare's `@cloudflare/workers-oauth-provider`**
 (pinned exactly, no runtime dependencies of its own). The MCP half is the
-opposite case: for nine stateless tools it is a small JSON-RPC dispatcher,
+opposite case: for ten stateless tools it is a small JSON-RPC dispatcher,
 so it is hand-rolled rather than pulling in the MCP SDK and `zod`.
 
 ## Why one Worker
@@ -200,11 +200,12 @@ the Norwegian display name of each item next to its canonical one.
 | `get_meal_plan(from?, to?)` | read | `GET /plan` + `GET /list-users` |
 | `plan_meal(date, meal_name?, responsible?)` | write | `GET /plan`, `POST /plan` |
 | `search_meals(query?)` | read | `GET /meals` |
+| `update_meal(id \| name, new_name?, ingredients?, labels? \| add_labels?/remove_labels?, recipe_url?)` | write | `GET /meals`, `PATCH /meals/{id}`, `GET /meals` (added in 1.67.0) |
 | `find_storage(query)` | read | `GET /storage/boxes`, searched in the MCP layer |
 | `get_box(number)` | read | `GET /storage/boxes/by-number/{n}` |
 
-Deliberately left **out**: deleting anything, `mark-all-bought`, catalogue
-edits, creating or editing boxes, `push/ping`, and everything
+Deliberately left **out**: deleting anything, `mark-all-bought`, item
+catalogue edits, creating meals outside `plan_meal`, creating or editing boxes, `push/ping`, and everything
 account-, admin-, invite- or calendar-feed-related.
 
 ### Details that need care

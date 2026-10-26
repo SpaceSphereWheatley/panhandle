@@ -3912,6 +3912,7 @@ const CONNECTOR_ROUTES = [
   { method: "GET", path: "/list-users" },
   { method: "GET", path: "/meals" },
   { method: "GET", path: "/meals/suggestions" },
+  { method: "PATCH", pattern: MEAL_ID_PATTERN },
   { method: "GET", path: "/plan" },
   { method: "POST", path: "/plan" },
   { method: "GET", path: "/storage/boxes" },

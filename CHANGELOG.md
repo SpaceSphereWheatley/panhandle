@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.67.0] — 2026-10-26
+
+### Added
+- **Claude can now edit your saved meals for you — add or remove tags, rename a meal, update its ingredients or set its recipe link.** Just ask, e.g. "tag Taco as Friday food" or "add cheese to the lasagne ingredients"; it only works on a connection where you allowed Claude to make changes, and edits apply to the meal everywhere it's planned. (New `update_meal` write tool in `worker/mcp.js`, finding a meal by name or id and sending `PATCH /meals/{id}`, which joins `CONNECTOR_ROUTES`; `labels` replaces all tags while `add_labels`/`remove_labels` adjust them case-insensitively via the exported `nextLabels`, and the server's `sanitizeLabels`/`TEXT_LIMITS`/`sanitizeRecipeUrl` still validate everything. `search_meals` results now include each meal's `id`. Covered in `tests/worker-unit.test.mjs` and `tests/mcp-connector.test.mjs`.)
+
 ## [1.66.0] — 2026-10-19
 
 ### Added
