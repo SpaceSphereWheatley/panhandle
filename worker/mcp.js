@@ -76,7 +76,7 @@ function textResponse(status, message) {
 // ---------- MCP JSON-RPC ----------
 // A stateless MCP 2025-11-25 server over Streamable HTTP: POST only, plain
 // JSON responses, no SSE and no Mcp-Session-Id. Hand-rolled rather than the
-// MCP SDK — for ten stateless tools it's a small dispatcher, and it keeps
+// MCP SDK — for eleven stateless tools it's a small dispatcher, and it keeps
 // zod and the SDK's transports out of the Worker.
 export const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
 
@@ -411,9 +411,43 @@ const TOOLS = [
     },
   },
   {
+    name: "create_meal",
+    scope: "write",
+    description: "Add a new dinner to the household's known meals, optionally with ingredients, labels (the tags shown on the meal in the app) and a recipe link. It is not planned for any day; use plan_meal for that. Check search_meals first: if a meal with the same name exists, use update_meal instead.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The dinner, e.g. 'Fish soup'." },
+        ingredients: { type: "array", items: { type: "string" } },
+        labels: { type: "array", items: { type: "string" }, description: "Tags, e.g. ['Fish', 'Quick']." },
+        recipe_url: { type: "string", description: "http(s) link to the recipe." },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+    annotations: { title: "Add a meal", readOnlyHint: false, destructiveHint: false },
+    async run({ name, ingredients, labels, recipe_url }, { api }) {
+      if (typeof name !== "string" || !name.trim()) throw new ToolError("name is required.");
+      for (const [key, v] of Object.entries({ ingredients, labels })) {
+        if (v !== undefined && !stringList(v)) throw new ToolError(`${key} must be a list of strings.`);
+      }
+      if (recipe_url !== undefined && typeof recipe_url !== "string") throw new ToolError("recipe_url must be a string.");
+      const meals = await api("GET", "/meals");
+      const existing = meals.find((m) => m.name.toLowerCase() === name.trim().toLowerCase());
+      if (existing) throw new ToolError(`A meal named '${existing.name}' already exists (id ${existing.id}). Use update_meal to change it.`);
+      const body = { name };
+      if (ingredients !== undefined) body.ingredients = ingredients;
+      if (labels !== undefined) body.labels = labels;
+      if (recipe_url !== undefined) body.recipe_url = recipe_url;
+      const { id } = await api("POST", "/meals", body);
+      const created = (await api("GET", "/meals")).find((m) => m.id === id);
+      return { meal: created ? shapeMeal(created) : { id, name } };
+    },
+  },
+  {
     name: "update_meal",
     scope: "write",
-    description: "Edit one of the household's known dinners, found by its current name or by id (from search_meals): rename it, replace its ingredients, change its labels (the tags shown on the meal in the app) or set its recipe link. Use add_labels/remove_labels to change some tags while keeping the rest, or labels to replace them all. Omit a field to leave it unchanged. Changes apply to the meal everywhere it is planned.",
+    description: "Edit one of the household's known dinners, found by its current name or by id (from search_meals): rename it, replace its ingredients, change its labels (the tags shown on the meal in the app) or set its recipe link. Use add_labels/remove_labels to change some tags while keeping the rest, or labels to replace them all. Omit a field to leave it unchanged. Changes apply to the meal everywhere it is planned. To add a meal that doesn't exist yet, use create_meal.",
     inputSchema: {
       type: "object",
       properties: {
@@ -453,7 +487,7 @@ const TOOLS = [
       const meal = id !== undefined
         ? meals.find((m) => m.id === id)
         : meals.find((m) => m.name.toLowerCase() === name.trim().toLowerCase());
-      if (!meal) throw new ToolError(`No meal ${id !== undefined ? `with id ${id}` : `named '${name.trim()}'`}. Use search_meals to find it.`);
+      if (!meal) throw new ToolError(`No meal ${id !== undefined ? `with id ${id}` : `named '${name.trim()}'`}. Use search_meals to find it, or create_meal to add it.`);
       const before = shapeMeal(meal);
       if (touchesLabels) body.labels = nextLabels(before.labels, { labels, add_labels, remove_labels });
 

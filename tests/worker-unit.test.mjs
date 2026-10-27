@@ -1002,7 +1002,7 @@ describe("connector tokens (MCP)", () => {
     assert.deepEqual(found.sort(), [
       "GET /catalogue", "GET /list", "GET /list-users", "GET /meals", "GET /meals/suggestions",
       "GET /plan", "GET /storage/boxes", "GET STORAGE_BOX_BY_NUMBER_PATTERN",
-      "PATCH LIST_ITEM_ID_PATTERN", "PATCH MEAL_ID_PATTERN", "POST /list", "POST /plan", "POST LIST_ITEM_TOGGLE_PATTERN",
+      "PATCH LIST_ITEM_ID_PATTERN", "PATCH MEAL_ID_PATTERN", "POST /list", "POST /meals", "POST /plan", "POST LIST_ITEM_TOGGLE_PATTERN",
     ].sort());
     assert.equal([...region.matchAll(/\{ method:/g)].length, found.length, "an entry of another shape slipped in");
   });
@@ -1189,6 +1189,22 @@ describe("claude.ai connector (worker/mcp.js)", async () => {
     const missing = await call({ name: "Taco", labels: ["A"] });
     assert.equal(missing.isError, true);
     assert.match(missing.content[0].text, /search_meals/);
+  });
+
+  test("create_meal posts a new meal with its labels, and refuses an existing name", async () => {
+    const { send, calls } = harness({
+      "GET /meals": { body: [{ id: 7, name: "Taco", ingredients: "[]", labels: "[]" }] },
+      "POST /meals": { body: { ok: true, id: 8 } },
+    });
+    const call = async (args) => (await (await send("tools/call", { name: "create_meal", arguments: args })).json()).result;
+    const dup = await call({ name: "taco", labels: ["Fredag"] });
+    assert.equal(dup.isError, true);
+    assert.match(dup.content[0].text, /update_meal/);
+    assert.ok(!calls.some((c) => c.key === "POST /meals"));
+    const ok = await call({ name: "Fiskesuppe", labels: ["Fish", "Quick"], ingredients: ["Cod"] });
+    assert.equal(ok.isError, undefined, ok.content[0].text);
+    assert.deepEqual(calls.find((c) => c.key === "POST /meals").body, { name: "Fiskesuppe", ingredients: ["Cod"], labels: ["Fish", "Quick"] });
+    assert.equal((await call({ name: "Pasta", labels: "Quick" })).isError, true);
   });
 
   test("check_off_items never toggles a bought item back", async () => {
