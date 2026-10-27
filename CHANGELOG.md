@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.68.0] — 2026-10-27
+
+### Added
+- **Claude can now add brand-new meals for you, with tags, ingredients and a recipe link, without having to plan them for a day first.** Ask something like "add fish soup as a quick fish dinner"; if the meal already exists, Claude edits it instead of making a duplicate. (New `create_meal` write tool in `worker/mcp.js`, sending `POST /meals`, which joins `CONNECTOR_ROUTES`; it checks `GET /meals` for a case-insensitive name clash first and points at `update_meal`, with the server's `MEAL_NAME_EXISTS`, `sanitizeLabels`, `TEXT_LIMITS` and `sanitizeRecipeUrl` still underneath. Covered in `tests/worker-unit.test.mjs` and `tests/mcp-connector.test.mjs`.)
+
 ## [1.67.0] — 2026-10-26
 
 ### Added

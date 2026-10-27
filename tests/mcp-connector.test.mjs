@@ -189,6 +189,12 @@ async function runTests(BASE) {
   assert.equal(foundMeal.data.meals[0].name, "Pizza");
   const badUrl = await callTool(tokens.access_token, "update_meal", { name: "Pizza", recipe_url: "javascript:alert(1)" });
   assert.equal(badUrl.isError, true);
+  const created = await callTool(tokens.access_token, "create_meal", { name: "fiskesuppe", labels: ["fisk", "Quick"], ingredients: ["Cod"] });
+  assert.equal(created.isError, false, created.text);
+  assert.equal(created.data.meal.name, "Fiskesuppe");
+  assert.deepEqual(created.data.meal.labels, ["Fisk", "Quick"]);
+  const dupMeal = await callTool(tokens.access_token, "create_meal", { name: "Fiskesuppe" });
+  assert.equal(dupMeal.isError, true);
   console.log("  ✓ meal tools");
 
   const box = await fetch(`${BASE}/storage/boxes`, {
