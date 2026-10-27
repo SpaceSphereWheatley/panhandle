@@ -1002,7 +1002,7 @@ describe("connector tokens (MCP)", () => {
     assert.deepEqual(found.sort(), [
       "GET /catalogue", "GET /list", "GET /list-users", "GET /meals", "GET /meals/suggestions",
       "GET /plan", "GET /storage/boxes", "GET STORAGE_BOX_BY_NUMBER_PATTERN",
-      "PATCH LIST_ITEM_ID_PATTERN", "POST /list", "POST /plan", "POST LIST_ITEM_TOGGLE_PATTERN",
+      "PATCH LIST_ITEM_ID_PATTERN", "PATCH MEAL_ID_PATTERN", "POST /list", "POST /plan", "POST LIST_ITEM_TOGGLE_PATTERN",
     ].sort());
     assert.equal([...region.matchAll(/\{ method:/g)].length, found.length, "an entry of another shape slipped in");
   });
@@ -1159,6 +1159,36 @@ describe("claude.ai connector (worker/mcp.js)", async () => {
     const r = (await (await send("tools/call", { name: "plan_meal", arguments: { date: "2026-12-24", meal_name: "Ribbe" } })).json()).result;
     assert.equal(r.isError, true);
     assert.equal(calls.length, 0);
+  });
+
+  test("nextLabels replaces, or adds/removes case-insensitively", () => {
+    assert.deepEqual(mcp.nextLabels(["Fish", "Quick"], { labels: [] }), []);
+    assert.deepEqual(mcp.nextLabels(["Fish", "Quick"], { add_labels: ["Kids"], remove_labels: ["quick"] }), ["Fish", "Kids"]);
+    assert.deepEqual(mcp.nextLabels(["Fish"], {}), ["Fish"]);
+  });
+
+  test("update_meal finds the meal by name and patches only what was given", async () => {
+    const meal = { id: 7, name: "Taco", ingredients: '["Tortilla"]', labels: '["Mexican","Quick"]', recipe_url: null };
+    const { send, calls } = harness({ "GET /meals": { body: [meal] }, "PATCH /meals/7": { body: { ok: true } } });
+    const r = (await (await send("tools/call", {
+      name: "update_meal", arguments: { name: "taco", add_labels: ["Fredag"], remove_labels: ["quick"] },
+    })).json()).result;
+    assert.equal(r.isError, undefined, r.content[0].text);
+    const patch = calls.find((c) => c.key === "PATCH /meals/7");
+    assert.deepEqual(patch.body, { labels: ["Mexican", "Fredag"] });
+    assert.deepEqual(r.structuredContent.before.labels, ["Mexican", "Quick"]);
+  });
+
+  test("update_meal refuses ambiguous or empty edits and unknown meals", async () => {
+    const { send, calls } = harness({ "GET /meals": { body: [] } });
+    const call = async (args) => (await (await send("tools/call", { name: "update_meal", arguments: args })).json()).result;
+    assert.equal((await call({ name: "Taco", labels: ["A"], add_labels: ["B"] })).isError, true);
+    assert.equal((await call({ name: "Taco" })).isError, true);
+    assert.equal((await call({ labels: ["A"] })).isError, true);
+    assert.equal(calls.length, 0, "validation happens before any API call");
+    const missing = await call({ name: "Taco", labels: ["A"] });
+    assert.equal(missing.isError, true);
+    assert.match(missing.content[0].text, /search_meals/);
   });
 
   test("check_off_items never toggles a bought item back", async () => {

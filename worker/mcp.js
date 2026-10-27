@@ -76,7 +76,7 @@ function textResponse(status, message) {
 // ---------- MCP JSON-RPC ----------
 // A stateless MCP 2025-11-25 server over Streamable HTTP: POST only, plain
 // JSON responses, no SSE and no Mcp-Session-Id. Hand-rolled rather than the
-// MCP SDK — for nine stateless tools it's a small dispatcher, and it keeps
+// MCP SDK — for ten stateless tools it's a small dispatcher, and it keeps
 // zod and the SDK's transports out of the Worker.
 export const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
 
@@ -177,6 +177,27 @@ function shapeItem(it, nameFor) {
     ...(it.important ? { important: true } : {}),
     added_by: nameFor(it.added_by),
   };
+}
+
+const parseJsonArray = (v) => { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } };
+
+function shapeMeal(m) {
+  return {
+    id: m.id, name: m.name, ingredients: parseJsonArray(m.ingredients), labels: parseJsonArray(m.labels),
+    ...(m.recipe_url ? { recipe_url: m.recipe_url } : {}),
+  };
+}
+
+const stringList = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
+
+// The labels update_meal should store: a full replacement, or the meal's
+// current labels plus/minus some. Matching is case-insensitive, like the
+// server's own dedup in sanitizeLabels, which still has the final say on
+// capitalisation, duplicates and caps.
+export function nextLabels(current, { labels, add_labels, remove_labels }) {
+  if (labels !== undefined) return labels;
+  const drop = new Set((remove_labels || []).map((l) => l.trim().toLowerCase()));
+  return [...current.filter((l) => !drop.has(String(l).toLowerCase())), ...(add_labels || [])];
 }
 
 const TOOLS = [
@@ -372,7 +393,7 @@ const TOOLS = [
   {
     name: "search_meals",
     scope: "read",
-    description: "Search the household's known dinners by name, ingredient or label. Without a query, returns the most frequently planned ones.",
+    description: "Search the household's known dinners by name, ingredient or label (tag). Without a query, returns the most frequently planned ones.",
     inputSchema: {
       type: "object",
       properties: { query: { type: "string" } },
@@ -382,16 +403,63 @@ const TOOLS = [
     async run({ query }, { api }) {
       const meals = await api("GET", "/meals");
       const q = (query || "").trim().toLowerCase();
-      const parse = (v) => { try { return JSON.parse(v || "[]"); } catch { return []; } };
-      const shaped = meals.map((m) => ({
-        name: m.name, ingredients: parse(m.ingredients), labels: parse(m.labels),
-        ...(m.recipe_url ? { recipe_url: m.recipe_url } : {}),
-        times_planned: m.times_planned || 0, last_planned: m.last_planned || null,
-      }));
+      const shaped = meals.map((m) => ({ ...shapeMeal(m), times_planned: m.times_planned || 0, last_planned: m.last_planned || null }));
       const hits = q
         ? shaped.filter((m) => [m.name, ...m.ingredients, ...m.labels].some((s) => String(s).toLowerCase().includes(q)))
         : [...shaped].sort((a, b) => b.times_planned - a.times_planned);
       return { meals: hits.slice(0, 25), total_matches: hits.length };
+    },
+  },
+  {
+    name: "update_meal",
+    scope: "write",
+    description: "Edit one of the household's known dinners, found by its current name or by id (from search_meals): rename it, replace its ingredients, change its labels (the tags shown on the meal in the app) or set its recipe link. Use add_labels/remove_labels to change some tags while keeping the rest, or labels to replace them all. Omit a field to leave it unchanged. Changes apply to the meal everywhere it is planned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "integer", description: "The meal's id, from search_meals." },
+        name: { type: "string", description: "The meal's current name, if id isn't given." },
+        new_name: { type: "string", description: "Rename the meal." },
+        ingredients: { type: "array", items: { type: "string" }, description: "Replaces the whole ingredient list." },
+        labels: { type: "array", items: { type: "string" }, description: "Replaces all labels. An empty list removes them all." },
+        add_labels: { type: "array", items: { type: "string" }, description: "Labels to add, keeping the existing ones." },
+        remove_labels: { type: "array", items: { type: "string" }, description: "Labels to remove (case-insensitive)." },
+        recipe_url: { type: "string", description: "http(s) link to the recipe; an empty string removes it." },
+      },
+      additionalProperties: false,
+    },
+    annotations: { title: "Edit a meal", readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+    async run(args, { api }) {
+      const { id, name, new_name, ingredients, labels, add_labels, remove_labels, recipe_url } = args;
+      if (id === undefined && !(typeof name === "string" && name.trim())) throw new ToolError("Give the meal's id or name.");
+      if (id !== undefined && !Number.isInteger(id)) throw new ToolError("id must be an integer.");
+      for (const [key, v] of Object.entries({ ingredients, labels, add_labels, remove_labels })) {
+        if (v !== undefined && !stringList(v)) throw new ToolError(`${key} must be a list of strings.`);
+      }
+      for (const [key, v] of Object.entries({ new_name, recipe_url })) {
+        if (v !== undefined && typeof v !== "string") throw new ToolError(`${key} must be a string.`);
+      }
+      if (labels !== undefined && (add_labels !== undefined || remove_labels !== undefined)) {
+        throw new ToolError("Use labels to replace all labels, or add_labels/remove_labels to change some, not both.");
+      }
+      const body = {};
+      if (new_name !== undefined) body.name = new_name;
+      if (ingredients !== undefined) body.ingredients = ingredients;
+      if (recipe_url !== undefined) body.recipe_url = recipe_url;
+      const touchesLabels = labels !== undefined || add_labels !== undefined || remove_labels !== undefined;
+      if (!Object.keys(body).length && !touchesLabels) throw new ToolError("Nothing to change.");
+
+      const meals = await api("GET", "/meals");
+      const meal = id !== undefined
+        ? meals.find((m) => m.id === id)
+        : meals.find((m) => m.name.toLowerCase() === name.trim().toLowerCase());
+      if (!meal) throw new ToolError(`No meal ${id !== undefined ? `with id ${id}` : `named '${name.trim()}'`}. Use search_meals to find it.`);
+      const before = shapeMeal(meal);
+      if (touchesLabels) body.labels = nextLabels(before.labels, { labels, add_labels, remove_labels });
+
+      await api("PATCH", `/meals/${meal.id}`, body);
+      const after = (await api("GET", "/meals")).find((m) => m.id === meal.id);
+      return { meal: after ? shapeMeal(after) : null, before };
     },
   },
   {

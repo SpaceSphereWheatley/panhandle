@@ -176,6 +176,19 @@ async function runTests(BASE) {
   assert.equal(replanned.data.replaced, "Taco");
   const tooFar = await callTool(tokens.access_token, "plan_meal", { date: "2099-01-01", meal_name: "Taco" });
   assert.equal(tooFar.isError, true);
+  const tagged = await callTool(tokens.access_token, "update_meal", { name: "pizza", add_labels: ["fredag", "Kids"] });
+  assert.equal(tagged.isError, false, tagged.text);
+  assert.deepEqual(tagged.data.meal.labels, ["Fredag", "Kids"]);
+  const retagged = await callTool(tokens.access_token, "update_meal", {
+    id: tagged.data.meal.id, remove_labels: ["kids"], ingredients: ["Dough", "Cheese"], recipe_url: "https://example.com/pizza",
+  });
+  assert.equal(retagged.isError, false, retagged.text);
+  assert.deepEqual(retagged.data.meal.labels, ["Fredag"]);
+  assert.deepEqual(retagged.data.meal.ingredients, ["Dough", "Cheese"]);
+  const foundMeal = await callTool(tokens.access_token, "search_meals", { query: "fredag" });
+  assert.equal(foundMeal.data.meals[0].name, "Pizza");
+  const badUrl = await callTool(tokens.access_token, "update_meal", { name: "Pizza", recipe_url: "javascript:alert(1)" });
+  assert.equal(badUrl.isError, true);
   console.log("  ✓ meal tools");
 
   const box = await fetch(`${BASE}/storage/boxes`, {
