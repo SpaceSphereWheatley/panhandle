@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.68.1] — 2026-10-28
+
+### Changed
+- **In the meal planner you can now swipe between weeks anywhere below the meals too, not just on the meals themselves.** (`MealsTab.jsx` adds an invisible filler under the week row, sized to reach the bottom of the visible content area without making the page scroll, whose `onPointerDown` starts the row's own Framer drag via `useDragControls` — same thresholds and settle logic as swiping on the cards. Phone/tablet layout only; desktop keeps drag off.)
+
 ## [1.68.0] — 2026-10-27
 
 ### Added
