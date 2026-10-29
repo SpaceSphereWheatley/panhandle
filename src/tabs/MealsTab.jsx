@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { api } from "../lib/api.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 import { useToast } from "../context/ToastContext.jsx";
@@ -631,6 +631,38 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekOffset, paneWidth]);
 
+  // Lets a swipe that starts *below* the week's day cards page weeks too —
+  // the empty space down to the tab bar otherwise sits outside the draggable
+  // row, so a swipe there did nothing. The filler under the row starts the
+  // row's own drag gesture (same handlers, same settle logic) on pointerdown,
+  // and is sized to reach the bottom of the visible content area without
+  // ever making the page scroll: 0 once the week is taller than the screen.
+  const dragControls = useDragControls();
+  const swipeFillerRef = useRef(null);
+  const [swipeFillerHeight, setSwipeFillerHeight] = useState(0);
+  useEffect(() => {
+    if (!active || isDesktop) return;
+    const el = swipeFillerRef.current;
+    const container = containerRef.current;
+    if (!el || !container) return;
+    const measure = () => {
+      const main = el.closest("main");
+      const reserved =
+        parseFloat(getComputedStyle(document.body).paddingBottom || "0") +
+        (main ? parseFloat(getComputedStyle(main).paddingBottom || "0") : 0);
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setSwipeFillerHeight(Math.max(0, Math.floor(window.innerHeight - top - reserved)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [active, isDesktop]);
+
   // Distinguishes a genuine swipe from a tap-with-negligible-movement on the
   // draggable week row: without this, releasing a drag on top of a day card
   // fires that card's native onClick (Framer's gesture handling doesn't
@@ -795,6 +827,7 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
             style={{ display: "flex", width: paneWidth * WEEK_OFFSETS.length, x, touchAction: "pan-y" }}
             drag={isDesktop ? false : "x"}
             {...(isDesktop ? {} : {
+              dragControls,
               dragConstraints: { left: -((WEEK_OFFSETS.length - 1) * paneWidth), right: 0 },
               dragElastic: 0.3,
               dragMomentum: false,
@@ -826,6 +859,14 @@ export function MealsTab({ onSyncTick, onOffline, active }) {
           </motion.div>
         )}
       </div>
+      {!isDesktop && (
+        <div
+          ref={swipeFillerRef}
+          aria-hidden="true"
+          onPointerDown={(e) => { if (paneWidth && !loading) dragControls.start(e); }}
+          style={{ height: swipeFillerHeight, touchAction: "pan-y" }}
+        />
+      )}
 
       <FabMenu
         label={t("meals.fab.label")}

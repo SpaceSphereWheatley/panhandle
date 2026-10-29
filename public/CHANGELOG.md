@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.68.0] — 2026-10-27
+
+### Added
+- **Claude can now add brand-new meals for you, with tags, ingredients and a recipe link, without having to plan them for a day first.** Ask something like "add fish soup as a quick fish dinner"; if the meal already exists, Claude edits it instead of making a duplicate. (New `create_meal` write tool in `worker/mcp.js`, sending `POST /meals`, which joins `CONNECTOR_ROUTES`; it checks `GET /meals` for a case-insensitive name clash first and points at `update_meal`, with the server's `MEAL_NAME_EXISTS`, `sanitizeLabels`, `TEXT_LIMITS` and `sanitizeRecipeUrl` still underneath. Covered in `tests/worker-unit.test.mjs` and `tests/mcp-connector.test.mjs`.)
+
+## [1.67.0] — 2026-10-26
+
+### Added
+- **Claude can now edit your saved meals for you — add or remove tags, rename a meal, update its ingredients or set its recipe link.** Just ask, e.g. "tag Taco as Friday food" or "add cheese to the lasagne ingredients"; it only works on a connection where you allowed Claude to make changes, and edits apply to the meal everywhere it's planned. (New `update_meal` write tool in `worker/mcp.js`, finding a meal by name or id and sending `PATCH /meals/{id}`, which joins `CONNECTOR_ROUTES`; `labels` replaces all tags while `add_labels`/`remove_labels` adjust them case-insensitively via the exported `nextLabels`, and the server's `sanitizeLabels`/`TEXT_LIMITS`/`sanitizeRecipeUrl` still validate everything. `search_meals` results now include each meal's `id`. Covered in `tests/worker-unit.test.mjs` and `tests/mcp-connector.test.mjs`.)
+
+## [1.66.0] — 2026-10-19
+
+### Added
+- **You can now connect Panhandle to Claude, and ask it to add things to the shopping list, check what's for dinner, plan a meal or find which storage box something is in.** In Claude, add a custom connector with the address `https://shop.panhandle.app/mcp`; Panhandle then asks you to approve it (and whether Claude may make changes or only read), and Settings → Connected apps lists every connection with a button to disconnect it. Changing your password disconnects every app. (A remote MCP server inside the existing Worker: `worker/mcp.js` wires `@cloudflare/workers-oauth-provider` — OAuth 2.1 with dynamic client registration, PKCE, rotating refresh tokens and RFC 9728/8414 discovery, grants in the new `OAUTH_KV` KV binding — and a hand-rolled stateless MCP 2025-11-25 JSON-RPC endpoint at `/mcp` with nine tools. Only Claude's callback URLs may register or authorize. `/oauth/authorize` hands off to the new `/connect` consent screen (`ConnectScreen.jsx`), approved through `POST /api/oauth-consent/{handle}/approve`; `GET`/`DELETE /api/connected-apps` back the new `ConnectedAppsSubpage.jsx`. Tool calls go through the ordinary `/api/*` routes with a short-lived, scoped connector JWT — `aud: "mcp"`, `scp`, at most 10 minutes — which the Worker confines to the `CONNECTOR_ROUTES` allowlist and never answers with `X-Refresh-Token`. New error codes `CONNECTOR_NOT_ALLOWED`, `INSUFFICIENT_SCOPE`, `CONNECT_UNAVAILABLE`, `CONSENT_EXPIRED`. Covered by unit tests plus `tests/connector-token.test.mjs` and `tests/mcp-connector.test.mjs`. See `docs/mcp-connector-plan.md`.)
+
 ## [1.65.0] — 2026-09-06
 
 ### Added
