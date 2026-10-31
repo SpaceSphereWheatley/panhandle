@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.69.0] — 2026-10-31
+
+### Added
+- **Items you're probably running out of now show up right at the top of the shopping list, ready to add with one tap — and you can snooze or hide any suggestion you don't want.** The "Due soon" row lists what you usually buy around now; "See all" opens the full list, where the clock button pushes an item away for a week, the eye button stops suggesting it entirely, and "Show items you hid" lets you bring one back. Every snooze and hide can be undone from the confirmation message. (New `DueSoonStrip.jsx` above the list, fed by the existing `GET /catalogue/suggestions`, which now skips items whose new `item_catalogue.suggest_snoozed_until` is in the future or whose `suggest_muted` is set — `migrations/0032_suggestion_snooze.sql`. New list-scoped routes `PATCH /catalogue/{id}/suggestion` (`{ snooze_days: 0..90 }` or `{ muted }`, validated by `parseSuggestionUpdate`) and `GET /catalogue/suggestions/hidden`; purchase stats are never touched. `SuggestionsModal.jsx` gains the snooze/hide/restore controls and a plain Close button. Covered in `tests/worker-unit.test.mjs` and the new `tests/item-suggestions.test.mjs`.)
+
 ## [1.68.1] — 2026-10-28
 
 ### Changed

@@ -7,6 +7,10 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+125. (122) `SuggestionsModal` now has a plain Close button next to "add
+     something else", matching its sibling browse/info modals — added
+     alongside the suggestion snooze/hide controls. (1.69.0)
+
 124. (124) Folded the icon-convention nit into the #118 pass: the raw
      `<i className="ph ph-x">` icons in the touched files (`MealsTab.jsx`)
      now go through the shared `UiIcon` component. (The other half of

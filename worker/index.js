@@ -1807,6 +1807,7 @@ const LIST_USER_ID_PATTERN = /^\/list-users\/([^/]+)$/;
 const LIST_ITEM_ID_PATTERN = /^\/list\/(\d+)$/;
 const LIST_ITEM_CATALOGUE_PATTERN = /^\/list\/(\d+)\/catalogue$/;
 const LIST_ITEM_TOGGLE_PATTERN = /^\/list\/(\d+)\/toggle$/;
+const CATALOGUE_SUGGESTION_PATTERN = /^\/catalogue\/(\d+)\/suggestion$/;
 const MEAL_ID_PATTERN = /^\/meals\/(\d+)$/;
 const PLAN_DATE_PATTERN = /^\/plan\/(\d{4}-\d{2}-\d{2})$/;
 const STORAGE_BOX_BY_NUMBER_PATTERN = /^\/storage\/boxes\/by-number\/(\d+)$/;
@@ -3083,6 +3084,8 @@ async function handleCatalogueSuggestions(ctx) {
         WHERE c.list_id = ?1
           AND c.times_bought >= 2
           AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
+          AND c.suggest_muted = 0
+          AND (c.suggest_snoozed_until IS NULL OR c.suggest_snoozed_until <= datetime('now'))
           AND (julianday('now') - julianday(c.last_bought)) >=
               (julianday(c.last_bought) - julianday(c.first_bought)) / (c.times_bought - 1)
         ORDER BY (days_since - avg_interval_days) DESC
@@ -3090,6 +3093,58 @@ async function handleCatalogueSuggestions(ctx) {
       `).bind(user.list_id).all();
       return authedJson(results);
     }
+
+// Items the household told the suggestions to stop offering ("Don't
+// suggest"), so they can be restored. Name/category only — the stats are
+// irrelevant once muted.
+async function handleCatalogueSuggestionsHidden(ctx) {
+  const { env, user, authedJson } = ctx;
+  const { results } = await env.DB.prepare(
+    "SELECT id, name, category FROM item_catalogue WHERE list_id = ?1 AND suggest_muted = 1 ORDER BY name ASC"
+  ).bind(user.list_id).all();
+  return authedJson(results);
+}
+
+// Snooze / mute / restore one catalogue item's suggestion. Body is exactly one
+// of: { snooze_days: 1..SUGGESTION_SNOOZE_MAX_DAYS } (push it away for a
+// while), { snooze_days: 0 } (clear a snooze), or { muted: true|false }
+// (stop / resume suggesting it). Purchase stats are never touched, so a
+// restored item picks up its learned interval where it left off.
+const SUGGESTION_SNOOZE_MAX_DAYS = 90;
+
+export function parseSuggestionUpdate(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const hasSnooze = Object.prototype.hasOwnProperty.call(body, "snooze_days");
+  const hasMuted = Object.prototype.hasOwnProperty.call(body, "muted");
+  if (hasSnooze === hasMuted) return null;
+  if (hasMuted) return typeof body.muted === "boolean" ? { muted: body.muted } : null;
+  const days = body.snooze_days;
+  if (!Number.isInteger(days) || days < 0 || days > SUGGESTION_SNOOZE_MAX_DAYS) return null;
+  return { snoozeDays: days };
+}
+
+async function handleCatalogueSuggestionPatch(ctx, catalogueId) {
+  const { request, env, user, authedJson, authedErr } = ctx;
+  const update = parseSuggestionUpdate(await readJson(request));
+  if (!update) return authedErr("INVALID_REQUEST", 400);
+  let stmt;
+  if (update.muted !== undefined) {
+    stmt = env.DB.prepare(
+      "UPDATE item_catalogue SET suggest_muted = ?1, suggest_snoozed_until = NULL WHERE id = ?2 AND list_id = ?3"
+    ).bind(update.muted ? 1 : 0, catalogueId, user.list_id);
+  } else if (update.snoozeDays === 0) {
+    stmt = env.DB.prepare(
+      "UPDATE item_catalogue SET suggest_snoozed_until = NULL WHERE id = ?1 AND list_id = ?2"
+    ).bind(catalogueId, user.list_id);
+  } else {
+    stmt = env.DB.prepare(
+      "UPDATE item_catalogue SET suggest_snoozed_until = datetime('now', ?1) WHERE id = ?2 AND list_id = ?3"
+    ).bind(`+${update.snoozeDays} days`, catalogueId, user.list_id);
+  }
+  const { meta } = await stmt.run();
+  if (meta.changes === 0) return authedErr("ITEM_NOT_FOUND", 404);
+  return authedJson({ ok: true });
+}
 
 async function handleCategoryOrderGet(ctx) {
   const { env, user, authedJson } = ctx;
@@ -3810,6 +3865,8 @@ const AUTHENTICATED_ROUTES = [
   { method: "DELETE", pattern: LIST_ITEM_ID_PATTERN, handler: handleListItemDelete },
   { method: "GET", path: "/catalogue", handler: handleCatalogueGet },
   { method: "GET", path: "/catalogue/suggestions", handler: handleCatalogueSuggestions },
+  { method: "GET", path: "/catalogue/suggestions/hidden", handler: handleCatalogueSuggestionsHidden },
+  { method: "PATCH", pattern: CATALOGUE_SUGGESTION_PATTERN, handler: handleCatalogueSuggestionPatch },
   { method: "GET", path: "/category-order", handler: handleCategoryOrderGet },
   { method: "POST", path: "/category-order", handler: handleCategoryOrderPost },
   { method: "POST", path: "/recipe-import", handler: handleRecipeImport },
