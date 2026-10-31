@@ -15,6 +15,7 @@ import {
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
   connectorClaims, isConnectorRoute, connectorScopeAllows, CONNECTOR_TOKEN,
+  parseSuggestionUpdate,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -1212,5 +1213,28 @@ describe("claude.ai connector (worker/mcp.js)", async () => {
     const r = (await (await send("tools/call", { name: "check_off_items", arguments: { ids: [1, 2, 3] } })).json()).result;
     assert.deepEqual(r.structuredContent.results.map((x) => x.status ?? x.error), ["already bought", "bought", "Item not found"]);
     assert.deepEqual(calls.map((c) => c.key), ["GET /list", "POST /list/2/toggle"]);
+  });
+});
+
+describe("parseSuggestionUpdate", () => {
+  test("accepts a snooze within 0..90 days", () => {
+    assert.deepEqual(parseSuggestionUpdate({ snooze_days: 7 }), { snoozeDays: 7 });
+    assert.deepEqual(parseSuggestionUpdate({ snooze_days: 0 }), { snoozeDays: 0 });
+    assert.deepEqual(parseSuggestionUpdate({ snooze_days: 90 }), { snoozeDays: 90 });
+  });
+  test("accepts mute and unmute", () => {
+    assert.deepEqual(parseSuggestionUpdate({ muted: true }), { muted: true });
+    assert.deepEqual(parseSuggestionUpdate({ muted: false }), { muted: false });
+  });
+  test("rejects out-of-range, non-integer or mistyped values", () => {
+    for (const body of [
+      { snooze_days: -1 }, { snooze_days: 91 }, { snooze_days: 1.5 }, { snooze_days: "7" },
+      { muted: 1 }, { muted: "true" },
+    ]) assert.equal(parseSuggestionUpdate(body), null, JSON.stringify(body));
+  });
+  test("rejects both, neither, or a non-object body", () => {
+    for (const body of [{ snooze_days: 7, muted: true }, {}, null, [], "x", 7]) {
+      assert.equal(parseSuggestionUpdate(body), null, JSON.stringify(body));
+    }
   });
 });

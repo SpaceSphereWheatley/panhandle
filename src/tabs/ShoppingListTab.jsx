@@ -14,6 +14,7 @@ import { useOfflineQueue } from "../hooks/useOfflineQueue.js";
 import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
+import { DueSoonStrip } from "../components/DueSoonStrip.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, Avatar, FabMenu, Skeleton, EmptyState, BaseButton } from "../design-system/index.js";
@@ -134,6 +135,10 @@ function EmptyListIllustration() {
 // which `celebrate` resets so a later trip's last item gets its own fresh
 // play instead of this one lingering "on".
 const CELEBRATE_MS = 500;
+
+// How long "Not now" pushes a suggestion away. Fixed rather than per-item:
+// one predictable answer to "when will it come back?".
+const SUGGESTION_SNOOZE_DAYS = 7;
 
 // Small checkmark-in-circle mark, reused by both the summary pill and the
 // compact "nothing left to buy" block below. `animate` gates the checkmark's
@@ -360,6 +365,43 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     await loadCatalogue();
     loadList();
   }
+
+  // Snooze ("not now — a week") or hide ("don't suggest") one suggestion.
+  // Optimistic like the add above: the row disappears immediately, and the
+  // toast's Undo sends the inverse update. A failure puts it back via a
+  // fresh fetch rather than trying to reinsert it in place.
+  async function updateSuggestion(it, body, inverse, toastKey) {
+    setSuggestedItems((prev) => prev.filter((s) => s.id !== it.id));
+    haptic();
+    const name = cap(translateItemName(it.name, lang));
+    try {
+      const res = await api(`/catalogue/${it.id}/suggestion`, { method: "PATCH", body: JSON.stringify(body) });
+      if (res?.error) {
+        toast(apiErrorMessage(res, t), { error: true });
+        loadList();
+        return;
+      }
+    } catch {
+      toast(t("shoppingList.toast.genericError"), { error: true });
+      loadList();
+      return;
+    }
+    toast(t(toastKey, { name }), {
+      undoFn: async () => {
+        try {
+          await api(`/catalogue/${it.id}/suggestion`, { method: "PATCH", body: JSON.stringify(inverse) });
+        } catch {
+          toast(t("shoppingList.toast.genericError"), { error: true });
+        }
+        loadList();
+      },
+    });
+  }
+
+  const snoozeSuggestion = (it) =>
+    updateSuggestion(it, { snooze_days: SUGGESTION_SNOOZE_DAYS }, { snooze_days: 0 }, "suggestions.toast.snoozed");
+  const hideSuggestion = (it) =>
+    updateSuggestion(it, { muted: true }, { muted: false }, "suggestions.toast.hidden");
 
   // Starts the fallback timer that moves a checked-off item out of the array
   // when there's no Framer animation to key off (see FALLBACK_RESOLVE_MS).
@@ -992,6 +1034,17 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         </BaseButton>
       </div>
 
+      {!loading && (
+        <DueSoonStrip
+          suggestions={suggestedItems}
+          onAdd={(it) => {
+            haptic();
+            addSuggestedItem(it);
+          }}
+          onSeeAll={() => setModal({ type: "suggestions" })}
+        />
+      )}
+
       {loading ? (
         <ShoppingListSkeleton viewMode={effectiveViewMode} containerStyle={containerStyle} />
       ) : items.length === 0 ? (
@@ -1155,6 +1208,9 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
         <SuggestionsModal
           suggestions={suggestedItems}
           onAdd={(it) => addSuggestedItem(it)}
+          onSnooze={snoozeSuggestion}
+          onHide={hideSuggestion}
+          onRestored={loadList}
           onClose={() => setModal(null)}
           onFocusAdd={focusAddInput}
         />

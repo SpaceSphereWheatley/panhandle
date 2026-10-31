@@ -87,8 +87,9 @@ below):
    Kept contiguous with step 2 because it lands in the same files that pass
    leaves hot (`MealsTab.jsx` especially). #151 is the write-up of what
    #145 settles, so it goes last in the batch, not first.
-4. **#119 + #122 + #123** — unrelated one-file fixes, batch to amortize
-   version-bump/changelog overhead.
+4. **#119 + #123** — unrelated one-file fixes, batch to amortize
+   version-bump/changelog overhead. (#122 shipped early, with the suggestion
+   snooze/hide work in 1.69.0.)
 5. **#131 + #132** — backend data-integrity batch. Both Low/Low — nothing
    else depends on these landing earlier.
 6. **#136 phase 1**, then — only after a full deploy cycle confirms all
@@ -187,13 +188,6 @@ were triaged).
      teaching, which tilts the decision toward the onboarding slide (one
      lesson, one mechanism) over a per-tab coach-mark.
      _Value: Medium · Importance: Low · Type: UX / Discoverability_
-
-122. **`SuggestionsModal` has no neutral close button.** Its only footer
-     action is "add something else," which closes the modal *and* focuses
-     the add-item input — there's no plain "Close," unlike every sibling
-     browse/info modal (`ChangelogModal`, `ImportantInfoModal`,
-     `MealCatalogueBrowseModal`).
-     _Value: Low · Importance: Low · Type: UI consistency_
 
 123. **No confirm-password field on change-password.** `AccountSubpage.jsx`
      still takes only a single ≥8-char new-password field — a typo locks the

@@ -298,6 +298,29 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
   padding: 10px 12px; font-size: var(--text-sm); font-weight: 600; font-family: var(--font-sans); cursor: pointer; margin-bottom: 10px;
 }
 .suggest-row { display: flex; align-items: center; gap: 8px; }
+.suggest-row { gap: 2px; }
+.suggest-row .name, .suggest-row .stats { display: block; }
+.suggest-hint { font-size: var(--text-2xs); color: var(--text-tertiary); margin: 4px 2px 0; }
+.suggest-hidden-toggle {
+  display: block; margin-top: 14px; padding: 6px 2px; border: none; background: none; cursor: pointer;
+  font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 600; color: var(--accent-primary);
+}
+.suggest-hidden-toggle:disabled { opacity: 0.6; cursor: default; }
+/* "Due soon" strip above the shopping list — one horizontal, swipeable row. */
+.due-strip { margin-bottom: 12px; }
+.due-strip-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
+  font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary);
+}
+.due-strip-all {
+  border: none; background: none; padding: 2px 0; cursor: pointer;
+  font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 600; color: var(--accent-primary);
+}
+.due-strip-row {
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.due-strip-row::-webkit-scrollbar { display: none; }
 /* Settings */
 .setrow {
   background: var(--surface-card); border-radius: var(--radius-lg);
