@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.70.0] — 2026-11-02
+
+### Added
+- **You can now tell the app how often you buy something — "remind me every 14 days" — and it'll show up under "Due soon" on schedule.** Long-press an item on the list and fill in "Remind me every … days"; leave it empty and the app keeps learning the rhythm from when you buy it, like before. A set reminder starts working after a single purchase and keeps coming back even if you skip it for a while (snooze or hide still work). (New nullable `item_catalogue.repeat_every_days`, `migrations/0034_item_repeat_interval.sql`, written through `PATCH /list/{id}` — validated by `parseRepeatEveryDays`, 1–365 or null to clear — and returned by `GET /list`. `GET /catalogue/suggestions` uses it in place of the learned interval, accepts one purchase when it's set and skips the abandoned cut-off for it; `SuggestionsModal.jsx` labels it "(your setting)". Covered in `tests/worker-unit.test.mjs` and `tests/item-suggestions.test.mjs`.)
+
 ## [1.69.1] — 2026-11-02
 
 ### Fixed

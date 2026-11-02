@@ -2864,7 +2864,7 @@ async function handleListGet(ctx) {
   const { env, user, authedJson } = ctx;
 
       const { results } = await env.DB.prepare(`
-        SELECT li.id, li.bought, li.important, li.added_by, li.added_at, li.edited_by, li.edited_at, li.bought_at, li.qty, li.notes, c.name, c.category
+        SELECT li.id, li.bought, li.important, li.added_by, li.added_at, li.edited_by, li.edited_at, li.bought_at, li.qty, li.notes, c.name, c.category, c.repeat_every_days
         FROM list_items li
         JOIN item_catalogue c ON c.id = li.catalogue_id
         WHERE li.list_id = ?1
@@ -2982,6 +2982,22 @@ async function handleListMarkAllBought(ctx) {
       return authedJson({ ok: true, marked: res.meta?.changes ?? 0 });
     }
 
+// The optional "remind me every N days" item setting (item_catalogue.
+// repeat_every_days), sent on PATCH /list/{id}. Absent = leave it alone;
+// null or "" = clear it (learn the interval from purchases again); otherwise
+// a whole number of days, 1..REPEAT_EVERY_DAYS_MAX.
+const REPEAT_EVERY_DAYS_MAX = 365;
+
+export function parseRepeatEveryDays(body) {
+  if (!body || !Object.prototype.hasOwnProperty.call(body, "repeat_every_days")) {
+    return { ok: true, present: false };
+  }
+  const v = body.repeat_every_days;
+  if (v === null || v === "") return { ok: true, present: true, value: null };
+  if (!Number.isInteger(v) || v < 1 || v > REPEAT_EVERY_DAYS_MAX) return { ok: false };
+  return { ok: true, present: true, value: v };
+}
+
 async function handleListItemPatch(ctx, cap1) {
   const { request, env, user, authedJson, authedErr } = ctx;
   const patchMatch = [null, cap1];
@@ -2992,10 +3008,16 @@ async function handleListItemPatch(ctx, cap1) {
       if (textTooLong(name, TEXT_LIMITS.itemName) || textTooLong(notes, TEXT_LIMITS.itemNotes)) {
         return authedErr("TEXT_TOO_LONG", 400);
       }
+      const repeat = parseRepeatEveryDays(body);
+      if (!repeat.ok) return authedErr("INVALID_REQUEST", 400);
       const row = await env.DB.prepare(
         "SELECT catalogue_id FROM list_items WHERE id = ?1 AND list_id = ?2"
       ).bind(patchMatch[1], user.list_id).first();
       if (!row) return authedErr("ITEM_NOT_FOUND", 404);
+      if (repeat.present) {
+        await env.DB.prepare("UPDATE item_catalogue SET repeat_every_days = ?1 WHERE id = ?2 AND list_id = ?3")
+          .bind(repeat.value, row.catalogue_id, user.list_id).run();
+      }
       if (important !== undefined) {
         await env.DB.prepare("UPDATE list_items SET important = ?1 WHERE id = ?2 AND list_id = ?3")
           .bind(important ? 1 : 0, patchMatch[1], user.list_id).run();
@@ -3103,27 +3125,33 @@ async function handleCatalogueGet(ctx) {
 // max(3 x interval, SUGGESTION_GRACE_DAYS) days overdue is treated as no
 // longer bought and dropped, and the rest are ordered by how recently they
 // became due (overdue / interval, smallest first), so what's due now leads
-// rather than what was abandoned months ago.
+// rather than what was abandoned months ago. An item with a household-set
+// repeat_every_days uses that instead of the learned interval, needs only one
+// purchase, and is never dropped as abandoned (the household asked for it).
 const SUGGESTION_GRACE_DAYS = 14;
 
 async function handleCatalogueSuggestions(ctx) {
   const { env, user, authedJson } = ctx;
   const mod = osloDateModifier(Date.now());
   const { results } = await env.DB.prepare(`
-    SELECT id, name, category, last_bought, avg_interval_days, days_since FROM (
-      SELECT c.id, c.name, c.category, c.last_bought,
-        (julianday(date(c.last_bought, ?2)) - julianday(date(c.first_bought, ?2))) / (c.times_bought - 1) AS avg_interval_days,
+    SELECT id, name, category, last_bought, avg_interval_days, days_since, repeat_every_days FROM (
+      SELECT c.id, c.name, c.category, c.last_bought, c.repeat_every_days,
+        COALESCE(
+          c.repeat_every_days,
+          (julianday(date(c.last_bought, ?2)) - julianday(date(c.first_bought, ?2))) / (c.times_bought - 1)
+        ) AS avg_interval_days,
         julianday(date('now', ?2)) - julianday(date(c.last_bought, ?2)) AS days_since
       FROM item_catalogue c
       WHERE c.list_id = ?1
-        AND c.times_bought >= 2
+        AND c.last_bought IS NOT NULL
+        AND (c.repeat_every_days IS NOT NULL OR c.times_bought >= 2)
         AND c.suggest_muted = 0
         AND (c.suggest_snoozed_until IS NULL OR c.suggest_snoozed_until <= datetime('now'))
         AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
     )
     WHERE avg_interval_days >= 1
       AND days_since >= avg_interval_days
-      AND days_since - avg_interval_days <= MAX(3 * avg_interval_days, ?3)
+      AND (repeat_every_days IS NOT NULL OR days_since - avg_interval_days <= MAX(3 * avg_interval_days, ?3))
     ORDER BY (days_since - avg_interval_days) / avg_interval_days ASC, days_since ASC
     LIMIT 8
   `).bind(user.list_id, mod, SUGGESTION_GRACE_DAYS).all();

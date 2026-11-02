@@ -128,6 +128,42 @@ async function runTests(BASE) {
   await runSql(`UPDATE item_catalogue SET last_bought = datetime('now', '-10 days') WHERE name = 'Eggs' AND list_id = ${listA};`);
   assert.ok((await suggestedNames()).includes("Eggs"), "a purchase on a new day should count (times_bought 2)");
   console.log("  - a purchase on a new day counts");
+
+  // ---- household-set interval ("remind me every N days") ----
+  const tp = await (await fetch(`${BASE}/list`, {
+    method: "POST", headers: authA, body: JSON.stringify({ name: "Toilet paper", qty: 1, category: "Household" }),
+  })).json();
+  const patchItem = (body, auth = authA) =>
+    fetch(`${BASE}/list/${tp.id}`, { method: "PATCH", headers: auth, body: JSON.stringify(body) });
+
+  for (const bad of [0, 366, 2.5, "14"]) {
+    assert.equal((await patchItem({ repeat_every_days: bad })).status, 400, `repeat_every_days ${JSON.stringify(bad)}`);
+  }
+  assert.equal((await patchItem({ repeat_every_days: 7 }, authB)).status, 404, "another household can't set it");
+  assert.equal((await patchItem({ repeat_every_days: 7 })).status, 200);
+  const listed = (await (await get("/list", authA)).json()).find((i) => i.id === tp.id);
+  assert.equal(listed.repeat_every_days, 7, "GET /list exposes the setting");
+
+  // Bought once, 8 days ago: a learned interval would need two purchase days,
+  // but the set interval makes it due now.
+  assert.equal((await fetch(`${BASE}/list/${tp.id}/toggle`, { method: "POST", headers: authA })).status, 200);
+  await runSql(`UPDATE item_catalogue SET first_bought = datetime('now', '-8 days'), last_bought = datetime('now', '-8 days') WHERE name = 'Toilet paper' AND list_id = ${listA};`);
+  suggestions = await (await get("/catalogue/suggestions", authA)).json();
+  const tpRow = suggestions.find((s) => s.name === "Toilet paper");
+  assert.ok(tpRow, "one purchase is enough when the interval is set");
+  assert.equal(tpRow.avg_interval_days, 7);
+  assert.equal(tpRow.repeat_every_days, 7);
+  console.log("  - a set interval needs only one purchase");
+
+  // Never dropped as abandoned: 90 days on a 7-day interval is still suggested.
+  await runSql(`UPDATE item_catalogue SET first_bought = datetime('now', '-90 days'), last_bought = datetime('now', '-90 days') WHERE name = 'Toilet paper' AND list_id = ${listA};`);
+  assert.ok((await suggestedNames()).includes("Toilet paper"), "a set interval is exempt from the abandoned cut-off");
+  console.log("  - a set interval is never dropped as abandoned");
+
+  // Clearing it goes back to learning (one purchase: not suggestible).
+  assert.equal((await patchItem({ repeat_every_days: null })).status, 200);
+  assert.ok(!(await suggestedNames()).includes("Toilet paper"), "cleared: back to needing two purchase days");
+  console.log("  - clearing the interval goes back to learning it");
 }
 
 main().catch((e) => {
