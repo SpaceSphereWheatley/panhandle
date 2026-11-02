@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.71.1] — 2026-11-02
+
+### Fixed
+- **The suggestion list under ingredient, label, saved-list and box-content fields no longer covers the Save button.** It now only appears while you're typing and closes as soon as you add the item, so tapping Save saves instead of accidentally adding whatever suggestion was lying on top of it. (`TokenInput.jsx`, shared by `MealEditModal`, `MealPlanModal`, `SavedListsModal` and `BoxEditModal`, used to open its absolutely-positioned dropdown on focus with every suggestion and keep it open after a commit; it now only lists matches for a non-empty draft, and Escape closes it without dismissing the surrounding sheet. Covered by the new `TokenInput.test.jsx`.)
+
 ## [1.71.0] — 2026-11-02
 
 ### Added
