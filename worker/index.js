@@ -1154,6 +1154,23 @@ export function addDaysIso(iso, days) {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+// SQLite date modifier ("+60 minutes" / "+120 minutes") that shifts a stored
+// UTC datetime onto Europe/Oslo wall-clock time, so `date(col, modifier)` is
+// the Oslo calendar date — what "bought on the same day" means for purchase
+// stats. Uses the offset in force *now* for both sides of a comparison; a
+// purchase straddling a DST switch could land an hour off, which only
+// matters within an hour of midnight and is accepted.
+export function osloDateModifier(nowMs) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Oslo", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  const p = Object.fromEntries(fmt.formatToParts(nowMs).map((x) => [x.type, x.value]));
+  const localAsUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute));
+  const minutes = Math.round((localAsUtc - Math.floor(nowMs / 60000) * 60000) / 60000);
+  return `${minutes >= 0 ? "+" : ""}${minutes} minutes`;
+}
+
 // ---------- response helpers ----------
 const json = (data, status = 200, extra = {}) =>
   new Response(JSON.stringify(data), {
@@ -2939,16 +2956,25 @@ async function handleListPost(ctx) {
       return authedJson({ ok: true, qty: addQty, id: inserted.meta.last_row_id });
     }
 
+// The purchase-stats bump shared by toggle and mark-all-bought. A purchase
+// counts at most once per Oslo calendar day: re-ticking an item (tick, untick,
+// tick), buying it again the same evening, or two housemates tapping it at
+// once (TODO-131's race) only moves last_bought, never times_bought. The
+// CASE reads the row as it is when the UPDATE runs, so a concurrent second
+// bump already sees today's last_bought. ?2 is osloDateModifier(now).
+const PURCHASE_BUMP_SET = `
+  times_bought = times_bought + CASE
+    WHEN last_bought IS NULL OR date(last_bought, ?2) < date('now', ?2) THEN 1 ELSE 0 END,
+  first_bought = COALESCE(first_bought, datetime('now')),
+  last_bought = datetime('now')`;
+
 async function handleListMarkAllBought(ctx) {
   const { env, user, authedJson } = ctx;
 
       await env.DB.prepare(`
-        UPDATE item_catalogue SET
-          times_bought = times_bought + 1,
-          first_bought = COALESCE(first_bought, datetime('now')),
-          last_bought = datetime('now')
+        UPDATE item_catalogue SET ${PURCHASE_BUMP_SET}
         WHERE id IN (SELECT catalogue_id FROM list_items WHERE list_id = ?1 AND bought = 0)
-      `).bind(user.list_id).run();
+      `).bind(user.list_id, osloDateModifier(Date.now())).run();
       const res = await env.DB.prepare(`
         UPDATE list_items SET bought = 1, bought_at = datetime('now'), important = 0
         WHERE list_id = ?1 AND bought = 0
@@ -3044,12 +3070,9 @@ async function handleListItemToggle(ctx, cap1) {
       // these lifetime stats power GET /catalogue/suggestions below.
       if (item.bought === 0) {
         await env.DB.prepare(`
-          UPDATE item_catalogue SET
-            times_bought = times_bought + 1,
-            first_bought = COALESCE(first_bought, datetime('now')),
-            last_bought = datetime('now')
+          UPDATE item_catalogue SET ${PURCHASE_BUMP_SET}
           WHERE id = ?1
-        `).bind(item.catalogue_id).run();
+        `).bind(item.catalogue_id, osloDateModifier(Date.now())).run();
       }
       return authedJson({ ok: true });
     }
@@ -3073,26 +3096,39 @@ async function handleCatalogueGet(ctx) {
       return authedJson(results);
     }
 
+// "Probably out of": items whose time since the last purchase has reached
+// their usual interval. Everything is in whole Oslo calendar days, so an item
+// bought on two consecutive days has a 1-day interval, never a fraction (purchases
+// count once per day — see PURCHASE_BUMP_SET). An item more than
+// max(3 x interval, SUGGESTION_GRACE_DAYS) days overdue is treated as no
+// longer bought and dropped, and the rest are ordered by how recently they
+// became due (overdue / interval, smallest first), so what's due now leads
+// rather than what was abandoned months ago.
+const SUGGESTION_GRACE_DAYS = 14;
+
 async function handleCatalogueSuggestions(ctx) {
   const { env, user, authedJson } = ctx;
-
-      const { results } = await env.DB.prepare(`
-        SELECT c.id, c.name, c.category, c.last_bought,
-          (julianday(c.last_bought) - julianday(c.first_bought)) / (c.times_bought - 1) AS avg_interval_days,
-          julianday('now') - julianday(c.last_bought) AS days_since
-        FROM item_catalogue c
-        WHERE c.list_id = ?1
-          AND c.times_bought >= 2
-          AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
-          AND c.suggest_muted = 0
-          AND (c.suggest_snoozed_until IS NULL OR c.suggest_snoozed_until <= datetime('now'))
-          AND (julianday('now') - julianday(c.last_bought)) >=
-              (julianday(c.last_bought) - julianday(c.first_bought)) / (c.times_bought - 1)
-        ORDER BY (days_since - avg_interval_days) DESC
-        LIMIT 8
-      `).bind(user.list_id).all();
-      return authedJson(results);
-    }
+  const mod = osloDateModifier(Date.now());
+  const { results } = await env.DB.prepare(`
+    SELECT id, name, category, last_bought, avg_interval_days, days_since FROM (
+      SELECT c.id, c.name, c.category, c.last_bought,
+        (julianday(date(c.last_bought, ?2)) - julianday(date(c.first_bought, ?2))) / (c.times_bought - 1) AS avg_interval_days,
+        julianday(date('now', ?2)) - julianday(date(c.last_bought, ?2)) AS days_since
+      FROM item_catalogue c
+      WHERE c.list_id = ?1
+        AND c.times_bought >= 2
+        AND c.suggest_muted = 0
+        AND (c.suggest_snoozed_until IS NULL OR c.suggest_snoozed_until <= datetime('now'))
+        AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
+    )
+    WHERE avg_interval_days >= 1
+      AND days_since >= avg_interval_days
+      AND days_since - avg_interval_days <= MAX(3 * avg_interval_days, ?3)
+    ORDER BY (days_since - avg_interval_days) / avg_interval_days ASC, days_since ASC
+    LIMIT 8
+  `).bind(user.list_id, mod, SUGGESTION_GRACE_DAYS).all();
+  return authedJson(results);
+}
 
 // Items the household told the suggestions to stop offering ("Don't
 // suggest"), so they can be restored. Name/category only — the stats are

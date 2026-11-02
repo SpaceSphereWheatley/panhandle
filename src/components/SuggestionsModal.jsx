@@ -72,10 +72,9 @@ export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onResto
                     <span className="info">
                       <span className="name">{name}</span>
                       <span className="stats">
-                        {t("suggestions.daysSinceAvg", {
-                          days: Math.round(it.days_since),
-                          avgDays: Math.round(it.avg_interval_days),
-                        })}
+                        {t("suggestions.daysSince", { count: Math.round(it.days_since) })}
+                        {" · "}
+                        {t("suggestions.interval", { count: Math.max(1, Math.round(it.avg_interval_days)) })}
                       </span>
                     </span>
                     <IconButton

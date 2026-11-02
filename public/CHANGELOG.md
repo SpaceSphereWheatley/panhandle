@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.69.1] — 2026-11-02
+
+### Fixed
+- **"Probably out of" suggestions are now sensible: buying the same thing several times in one day counts as one purchase, and things you've stopped buying stop being suggested.** Before, ticking an item off, unticking it and ticking it again (or two people tapping it at once) counted as separate purchases, which produced nonsense like "about every 0 days"; the list was also sorted most-overdue first, so items last bought months ago filled it. Now it shows what's due right now, and reads "usually every day" / "usually every 5 days". (`PURCHASE_BUMP_SET` in `worker/index.js` only bumps `item_catalogue.times_bought` when `last_bought` falls on an earlier Oslo calendar day — computed via the new `osloDateModifier` — for both the toggle and mark-all-bought paths, which also closes the concurrent-toggle race. `GET /catalogue/suggestions` measures interval and days-since in whole Oslo days, requires an interval of at least a day, drops items overdue by more than max(3 × interval, 14 days), and orders by overdue ÷ interval ascending. `migrations/0033_cap_same_day_purchases.sql` caps existing counts at the number of calendar days each item's first-to-last span covers. `SuggestionsModal.jsx`'s text uses plural-aware `suggestions.daysSince`/`suggestions.interval`. Covered in `tests/worker-unit.test.mjs` and `tests/item-suggestions.test.mjs`.)
+
 ## [1.69.0] — 2026-10-31
 
 ### Added

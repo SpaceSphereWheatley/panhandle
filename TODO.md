@@ -16,7 +16,7 @@ Completed items live in `Todo_done.md`, not below.
    pass over `worker/index.js`'s REST conventions, schema/query integrity,
    security/validation, reliability, and documentation (see `## Backend /
    API` below). Tenant isolation, auth, and error-code discipline all held
-   up well; the concrete gaps are #131, #132, #134, #135, all low-urgency
+   up well; the concrete gaps are #131 (since fixed), #132, #134, #135, all low-urgency
    (a check-then-act race on a purchase counter, a non-atomic multi-field
    PATCH, an unbounded admin query, and no machine-readable API contract).
    #130 (the auth-boundary drift guard) is fixed, and #133 (a suspected
@@ -90,8 +90,9 @@ below):
 4. **#119 + #123** — unrelated one-file fixes, batch to amortize
    version-bump/changelog overhead. (#122 shipped early, with the suggestion
    snooze/hide work in 1.69.0.)
-5. **#131 + #132** — backend data-integrity batch. Both Low/Low — nothing
-   else depends on these landing earlier.
+5. **#132** — backend data-integrity item, Low/Low — nothing else depends
+   on it landing earlier. (#131 shipped with the once-per-day purchase
+   counting in 1.69.1.)
 6. **#136 phase 1**, then — only after a full deploy cycle confirms all
    four endpoints are writing `rate_limit_attempts` correctly — **#136
    phase 2** (the `login_attempts` drop). Don't compress the two phases
@@ -115,20 +116,6 @@ revocation model, and the code-driven error-code contract all held up well —
 these are the concrete gaps found.
 
 ### P2 — Reliability / data integrity
-
-131. **`POST /list/:id/toggle` has a check-then-act race on
-     `item_catalogue.times_bought`.** It reads `bought` in a `SELECT`, then
-     bumps the purchase counter in a separate statement based on that stale
-     read (~L2848-2874). Two concurrent toggles of the same item (two
-     housemates tapping "bought" within the same poll window) can both
-     observe `bought = 0` and both increment the counter for one real
-     transition, corrupting the average-purchase-interval stat
-     `GET /catalogue/suggestions` depends on. Fix: drive the counter bump off
-     the flip `UPDATE`'s own `RETURNING` result instead of the pre-read.
-     Needs a test alongside the fix — nothing currently guards this: a unit
-     test asserting two concurrent toggles of the same item only bump the
-     counter once.
-     _Value: Low · Importance: Low · Type: Bug / Data consistency_
 
 132. **`PATCH /list/:id` isn't atomic.** Up to 5 sequential `UPDATE`
      statements for one logical edit (~L2795-2831), no `env.DB.batch()`. A

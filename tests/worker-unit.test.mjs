@@ -15,7 +15,7 @@ import {
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
   connectorClaims, isConnectorRoute, connectorScopeAllows, CONNECTOR_TOKEN,
-  parseSuggestionUpdate,
+  parseSuggestionUpdate, osloDateModifier,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -1236,5 +1236,20 @@ describe("parseSuggestionUpdate", () => {
     for (const body of [{ snooze_days: 7, muted: true }, {}, null, [], "x", 7]) {
       assert.equal(parseSuggestionUpdate(body), null, JSON.stringify(body));
     }
+  });
+});
+
+describe("osloDateModifier", () => {
+  test("is +60 minutes in winter (CET) and +120 in summer (CEST)", () => {
+    assert.equal(osloDateModifier(Date.UTC(2026, 0, 15, 12, 0)), "+60 minutes");
+    assert.equal(osloDateModifier(Date.UTC(2026, 6, 15, 12, 0)), "+120 minutes");
+  });
+  test("holds across UTC midnight (local date already the next day)", () => {
+    assert.equal(osloDateModifier(Date.UTC(2026, 6, 15, 23, 30)), "+120 minutes");
+    assert.equal(osloDateModifier(Date.UTC(2026, 11, 31, 23, 59, 59)), "+60 minutes");
+  });
+  test("follows the DST switch (last Sunday of March, 01:00 UTC)", () => {
+    assert.equal(osloDateModifier(Date.UTC(2026, 2, 29, 0, 59)), "+60 minutes");
+    assert.equal(osloDateModifier(Date.UTC(2026, 2, 29, 1, 0)), "+120 minutes");
   });
 });

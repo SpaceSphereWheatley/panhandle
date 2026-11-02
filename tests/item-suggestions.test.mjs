@@ -40,7 +40,7 @@ async function runTests(BASE) {
   assert.equal((await fetch(`${BASE}/list/${add.id}/toggle`, { method: "POST", headers: authA })).status, 200);
   await runSql(
     "UPDATE item_catalogue SET times_bought = 3, first_bought = datetime('now', '-30 days'), " +
-    `last_bought = datetime('now', '-20 days') WHERE name = 'Milk' AND list_id = (SELECT list_id FROM users WHERE username = '${USER_A}');`
+    `last_bought = datetime('now', '-15 days') WHERE name = 'Milk' AND list_id = (SELECT list_id FROM users WHERE username = '${USER_A}');`
   );
 
   let suggestions = await (await get("/catalogue/suggestions", authA)).json();
@@ -85,6 +85,49 @@ async function runTests(BASE) {
   hidden = await (await get("/catalogue/suggestions/hidden", authA)).json();
   assert.deepEqual(hidden, []);
   console.log("  - mute hides, appears in hidden list (own list only), unmute restores");
+
+  const listA = `(SELECT list_id FROM users WHERE username = '${USER_A}')`;
+
+  // ---- reported interval is whole days, at least 1 ----
+  suggestions = await (await get("/catalogue/suggestions", authA)).json();
+  const milkRow = suggestions.find((s) => s.name === "Milk");
+  assert.equal(milkRow.avg_interval_days, 7.5, "15 calendar days over 2 gaps");
+  assert.equal(milkRow.days_since, 15);
+  console.log("  - interval and days-since are whole Oslo calendar days");
+
+  // ---- abandoned items drop out: overdue by more than max(3x interval, 14 days) ----
+  await runSql(
+    "UPDATE item_catalogue SET times_bought = 3, first_bought = datetime('now', '-70 days'), " +
+    `last_bought = datetime('now', '-60 days') WHERE name = 'Milk' AND list_id = ${listA};`
+  );
+  assert.ok(!(await suggestedNames()).includes("Milk"), "55 days overdue on a 5-day interval is abandoned");
+  console.log("  - long-abandoned item is no longer suggested");
+
+  // ---- a purchase counts at most once per day ----
+  // Tick, untick, tick again, then re-add and buy again: all one day, so
+  // times_bought must stay 1. Backdating first/last afterwards would make a
+  // (wrongly) double-counted item suggestible — it must not be.
+  const eggs = await (await fetch(`${BASE}/list`, {
+    method: "POST", headers: authA, body: JSON.stringify({ name: "Eggs", qty: 1, category: "Dairy" }),
+  })).json();
+  const toggleEggs = () => fetch(`${BASE}/list/${eggs.id}/toggle`, { method: "POST", headers: authA });
+  for (let i = 0; i < 3; i++) assert.equal((await toggleEggs()).status, 200); // bought, unbought, bought
+  await fetch(`${BASE}/list`, { method: "POST", headers: authA, body: JSON.stringify({ name: "Eggs", qty: 1, category: "Dairy" }) });
+  assert.equal((await fetch(`${BASE}/list/mark-all-bought`, { method: "POST", headers: authA })).status, 200);
+  await runSql(
+    "UPDATE item_catalogue SET first_bought = datetime('now', '-20 days'), last_bought = datetime('now', '-10 days') " +
+    `WHERE name = 'Eggs' AND list_id = ${listA};`
+  );
+  assert.ok(!(await suggestedNames()).includes("Eggs"), "same-day re-purchases must count once (times_bought stays 1)");
+  console.log("  - repeated same-day purchases count once");
+
+  // ...but a purchase on a later day does count.
+  await runSql(`UPDATE item_catalogue SET last_bought = datetime('now', '-2 days') WHERE name = 'Eggs' AND list_id = ${listA};`);
+  await fetch(`${BASE}/list`, { method: "POST", headers: authA, body: JSON.stringify({ name: "Eggs", qty: 1, category: "Dairy" }) });
+  assert.equal((await fetch(`${BASE}/list/mark-all-bought`, { method: "POST", headers: authA })).status, 200);
+  await runSql(`UPDATE item_catalogue SET last_bought = datetime('now', '-10 days') WHERE name = 'Eggs' AND list_id = ${listA};`);
+  assert.ok((await suggestedNames()).includes("Eggs"), "a purchase on a new day should count (times_bought 2)");
+  console.log("  - a purchase on a new day counts");
 }
 
 main().catch((e) => {

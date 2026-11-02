@@ -65,7 +65,8 @@ export const en = {
 
   "suggestions.title": "Probably out of",
   "suggestions.empty": "No suggestions right now.",
-  "suggestions.daysSinceAvg": "{days} days ago · roughly every {avgDays} days",
+  "suggestions.daysSince": { one: "Bought yesterday", other: "Bought {count} days ago" },
+  "suggestions.interval": { one: "usually every day", other: "usually every {count} days" },
   "suggestions.addLabel": "Add {name}",
   "suggestions.addOther": "Add another item",
   "suggestions.snoozeLabel": "Not now — remind me about {name} in a week",
