@@ -7,6 +7,12 @@ having resolved open item #9, back when it was still open). Newest first,
 matching `CHANGELOG.md`'s ordering; full "fixed in" version/date detail
 lives there, not here. See `TODO.md` for open items.
 
+126. (131) The purchase-counter race is gone: purchases now count at most
+     once per Oslo calendar day, decided inside the single `UPDATE`
+     (`PURCHASE_BUMP_SET`), so two concurrent toggles — or any repeat tick
+     the same day — only move `last_bought`. Covered by
+     `tests/item-suggestions.test.mjs`. (1.69.1)
+
 125. (122) `SuggestionsModal` now has a plain Close button next to "add
      something else", matching its sibling browse/info modals — added
      alongside the suggestion snooze/hide controls. (1.69.0)

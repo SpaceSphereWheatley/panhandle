@@ -136,7 +136,8 @@ export const nb = {
 
   "suggestions.title": "Sannsynligvis tom for",
   "suggestions.empty": "Ingen forslag akkurat nå.",
-  "suggestions.daysSinceAvg": "{days} dager siden · Ca hver {avgDays}. dag",
+  "suggestions.daysSince": { one: "Kjøpt i går", other: "Kjøpt for {count} dager siden" },
+  "suggestions.interval": { one: "vanligvis hver dag", other: "vanligvis hver {count}. dag" },
   "suggestions.addLabel": "Legg til {name}",
   "suggestions.addOther": "Legg til annen vare",
   "suggestions.snoozeLabel": "Ikke nå – minn meg på {name} om en uke",
