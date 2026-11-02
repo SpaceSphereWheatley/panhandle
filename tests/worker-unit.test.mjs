@@ -15,7 +15,7 @@ import {
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
   connectorClaims, isConnectorRoute, connectorScopeAllows, CONNECTOR_TOKEN,
-  parseSuggestionUpdate, osloDateModifier,
+  parseSuggestionUpdate, osloDateModifier, parseRepeatEveryDays,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -1251,5 +1251,25 @@ describe("osloDateModifier", () => {
   test("follows the DST switch (last Sunday of March, 01:00 UTC)", () => {
     assert.equal(osloDateModifier(Date.UTC(2026, 2, 29, 0, 59)), "+60 minutes");
     assert.equal(osloDateModifier(Date.UTC(2026, 2, 29, 1, 0)), "+120 minutes");
+  });
+});
+
+describe("parseRepeatEveryDays", () => {
+  test("absent means leave it alone", () => {
+    assert.deepEqual(parseRepeatEveryDays({ qty: 2 }), { ok: true, present: false });
+    assert.deepEqual(parseRepeatEveryDays(null), { ok: true, present: false });
+  });
+  test("null or empty string clears it", () => {
+    assert.deepEqual(parseRepeatEveryDays({ repeat_every_days: null }), { ok: true, present: true, value: null });
+    assert.deepEqual(parseRepeatEveryDays({ repeat_every_days: "" }), { ok: true, present: true, value: null });
+  });
+  test("accepts whole days 1..365", () => {
+    assert.deepEqual(parseRepeatEveryDays({ repeat_every_days: 1 }), { ok: true, present: true, value: 1 });
+    assert.deepEqual(parseRepeatEveryDays({ repeat_every_days: 365 }), { ok: true, present: true, value: 365 });
+  });
+  test("rejects anything else", () => {
+    for (const v of [0, -3, 366, 2.5, "14", true, [], {}]) {
+      assert.deepEqual(parseRepeatEveryDays({ repeat_every_days: v }), { ok: false }, JSON.stringify(v));
+    }
   });
 });

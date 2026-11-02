@@ -49,6 +49,11 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
   const [category, setCategory] = useState(item.category);
   const [qty, setQty] = useState(item.qty || 1);
   const [notes, setNotes] = useState(item.notes || "");
+  // "Remind me every N days" (item_catalogue.repeat_every_days). Empty means
+  // "learn it from purchases", which is the default for every item. Kept as
+  // the raw input string; only sent when it differs from what was loaded.
+  const initialRepeat = item.repeat_every_days ? String(item.repeat_every_days) : "";
+  const [repeatDays, setRepeatDays] = useState(initialRepeat);
   // Just the latest of the two actions is shown — an edit (via this modal's
   // save) is more recent than the original add whenever edited_at is set and
   // sorts >= added_at (both SQLite "YYYY-MM-DD HH:MM:SS" UTC strings, so a
@@ -71,12 +76,19 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
           // resolves back to the canonical stored name rather than sending
           // the translated text as a literal rename.
           const finalName = trimmed.toLowerCase() === displayName.toLowerCase() ? item.name : trimmed;
+          const repeatTrimmed = repeatDays.trim();
+          const repeatValue = repeatTrimmed === "" ? null : Number(repeatTrimmed);
+          if (repeatValue !== null && (!Number.isInteger(repeatValue) || repeatValue < 1 || repeatValue > 365)) {
+            toast(t("itemEdit.repeatInvalid"), { error: true });
+            return;
+          }
+          const repeatPatch = repeatTrimmed === initialRepeat ? {} : { repeat_every_days: repeatValue };
           setSaving(true);
           let res;
           try {
             res = await api(`/list/${item.id}`, {
               method: "PATCH",
-              body: JSON.stringify({ name: finalName, category, qty: parseInt(qty, 10) || 1, notes: notes.trim() }),
+              body: JSON.stringify({ name: finalName, category, qty: parseInt(qty, 10) || 1, notes: notes.trim(), ...repeatPatch }),
             });
           } catch {
             setSaving(false);
@@ -175,6 +187,18 @@ export function ItemEditModal({ item, onClose, onSaved, onDeletedFromCatalogue }
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("itemEdit.notesPlaceholder")}
             />
+            <label htmlFor="item-edit-repeat">{t("itemEdit.repeatLabel")}</label>
+            <Input
+              id="item-edit-repeat"
+              type="number"
+              min="1"
+              max="365"
+              inputMode="numeric"
+              value={repeatDays}
+              onChange={(e) => setRepeatDays(e.target.value)}
+              placeholder={t("itemEdit.repeatPlaceholder")}
+            />
+            <div className="meta" style={{ marginTop: 4 }}>{t("itemEdit.repeatHint")}</div>
             <div className="actions">
               <Button variant="outline" disabled={busy} onClick={() => requestClose()}>{t("itemEdit.cancel")}</Button>
               <Button variant="primary" disabled={busy} onClick={save}>{t(saving ? "common.loading" : "itemEdit.save")}</Button>
