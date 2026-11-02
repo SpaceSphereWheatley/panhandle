@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.71.0] — 2026-11-02
+
+### Added
+- **Saved lists: keep a list of things you buy together — "Cabin trip", "Taco night", "Weekly basics" — and put it all on the shopping list in one go.** Open the + menu on the shopping list and choose "From a saved list" to create, edit or use one; when you use it, you pick what to add, and anything already on the list is left unticked so nothing gets doubled. Everyone in the household shares the same saved lists. (New `item_templates` table, `migrations/0035_item_templates.sql` — a name plus a JSON array of free-typed item names, sanitized like meal ingredients — with `GET`/`POST /templates` and `PATCH`/`DELETE /templates/{id}`, any list member, 50 per household, new error codes `TEMPLATE_NOT_FOUND`/`TEMPLATE_NAME_EXISTS`/`TEMPLATE_LIMIT`, cleared in both list-deletion cascades. `SavedListsModal.jsx` reuses the meal ingredient picker — `buildIngredientRows`, `IngredientChecklist`, `addRowsToList` — and `TokenInput`. Covered by the new `tests/templates.test.mjs`.)
+
 ## [1.70.0] — 2026-11-02
 
 ### Added

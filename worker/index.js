@@ -926,6 +926,8 @@ export const TEXT_LIMITS = {
   boxNotes: 2000,
   boxItem: 200,
   boxItems: 200, // array length
+  templateName: 60,
+  templateItems: 100, // array length
 };
 
 // True when a free-typed string exceeds its cap. Callers reject with
@@ -1825,6 +1827,7 @@ const LIST_ITEM_ID_PATTERN = /^\/list\/(\d+)$/;
 const LIST_ITEM_CATALOGUE_PATTERN = /^\/list\/(\d+)\/catalogue$/;
 const LIST_ITEM_TOGGLE_PATTERN = /^\/list\/(\d+)\/toggle$/;
 const CATALOGUE_SUGGESTION_PATTERN = /^\/catalogue\/(\d+)\/suggestion$/;
+const TEMPLATE_ID_PATTERN = /^\/templates\/(\d+)$/;
 const MEAL_ID_PATTERN = /^\/meals\/(\d+)$/;
 const PLAN_DATE_PATTERN = /^\/plan\/(\d{4}-\d{2}-\d{2})$/;
 const STORAGE_BOX_BY_NUMBER_PATTERN = /^\/storage\/boxes\/by-number\/(\d+)$/;
@@ -2395,6 +2398,7 @@ async function handleAccountDelete(ctx) {
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(user.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(user.list_id),
+            env.DB.prepare("DELETE FROM item_templates WHERE list_id = ?1").bind(user.list_id),
             // storage_box_items cascades automatically from this (its FK is
             // to storage_boxes(id), not lists(id) directly).
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(user.list_id),
@@ -2611,6 +2615,7 @@ async function handleAdminUserDelete(ctx, cap1) {
             env.DB.prepare("DELETE FROM notification_state WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM category_order WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM list_invites WHERE list_id = ?1").bind(row.list_id),
+            env.DB.prepare("DELETE FROM item_templates WHERE list_id = ?1").bind(row.list_id),
             env.DB.prepare("DELETE FROM storage_boxes WHERE list_id = ?1").bind(row.list_id),
             // See DELETE /account's cascade: list_presence has no ON DELETE
             // CASCADE, so it must go before DELETE FROM lists or the batch
@@ -3296,6 +3301,98 @@ async function handleMealsSuggestions(ctx) {
       return authedJson(results);
     }
 
+// ---------- saved lists (item_templates) ----------
+// A named set of items to add to the shopping list in one go. Any list
+// member can create, edit, delete and use them, same level as /recurring.
+// Items are free-typed names, sanitized exactly like meal ingredients and
+// resolved against the catalogue client-side when added.
+const TEMPLATE_LIMIT = 50;
+
+function templateRow(r) {
+  let items = [];
+  try { items = JSON.parse(r.items); } catch { /* malformed: treat as empty */ }
+  return { id: r.id, name: r.name, items: Array.isArray(items) ? items : [], updated_at: r.updated_at };
+}
+
+function sanitizeTemplateItems(value) {
+  return sanitizeStringArray(value, { maxLen: TEXT_LIMITS.templateItems, maxItemLen: TEXT_LIMITS.itemName });
+}
+
+async function handleTemplatesGet(ctx) {
+  const { env, user, authedJson } = ctx;
+  const { results } = await env.DB.prepare(
+    "SELECT id, name, items, updated_at FROM item_templates WHERE list_id = ?1 ORDER BY name COLLATE NOCASE ASC"
+  ).bind(user.list_id).all();
+  return authedJson(results.map(templateRow));
+}
+
+async function handleTemplatesPost(ctx) {
+  const { request, env, user, authedJson, authedErr } = ctx;
+  const body = await readJson(request);
+  if (!body) return authedErr("INVALID_REQUEST", 400);
+  if (textTooLong(body.name, TEXT_LIMITS.templateName)) return authedErr("TEXT_TOO_LONG", 400);
+  const name = capitalizeName(body.name);
+  if (!name) return authedErr("EMPTY_NAME", 400);
+  const items = sanitizeTemplateItems(body.items);
+  if (items === null) return authedErr("TOO_MANY_ENTRIES", 400);
+  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM item_templates WHERE list_id = ?1")
+    .bind(user.list_id).first();
+  if (count.n >= TEMPLATE_LIMIT) return authedErr("TEMPLATE_LIMIT", 400);
+  const clash = await env.DB.prepare(
+    "SELECT id FROM item_templates WHERE name = ?1 COLLATE NOCASE AND list_id = ?2"
+  ).bind(name, user.list_id).first();
+  if (clash) return authedErr("TEMPLATE_NAME_EXISTS", 400);
+  const row = await env.DB.prepare(
+    "INSERT INTO item_templates (list_id, name, items) VALUES (?1, ?2, ?3) RETURNING id, name, items, updated_at"
+  ).bind(user.list_id, name, JSON.stringify(items)).first();
+  return authedJson(templateRow(row));
+}
+
+async function handleTemplatePatch(ctx, templateId) {
+  const { request, env, user, authedJson, authedErr } = ctx;
+  const body = await readJson(request);
+  if (!body) return authedErr("INVALID_REQUEST", 400);
+  const existing = await env.DB.prepare("SELECT id FROM item_templates WHERE id = ?1 AND list_id = ?2")
+    .bind(templateId, user.list_id).first();
+  if (!existing) return authedErr("TEMPLATE_NOT_FOUND", 404);
+  const sets = [];
+  const binds = [];
+  if (body.name !== undefined) {
+    if (textTooLong(body.name, TEXT_LIMITS.templateName)) return authedErr("TEXT_TOO_LONG", 400);
+    const name = capitalizeName(body.name);
+    if (!name) return authedErr("EMPTY_NAME", 400);
+    const clash = await env.DB.prepare(
+      "SELECT id FROM item_templates WHERE name = ?1 COLLATE NOCASE AND list_id = ?2 AND id != ?3"
+    ).bind(name, user.list_id, existing.id).first();
+    if (clash) return authedErr("TEMPLATE_NAME_EXISTS", 400);
+    sets.push(`name = ?${binds.length + 1}`);
+    binds.push(name);
+  }
+  if (body.items !== undefined) {
+    const items = sanitizeTemplateItems(body.items);
+    if (items === null) return authedErr("TOO_MANY_ENTRIES", 400);
+    sets.push(`items = ?${binds.length + 1}`);
+    binds.push(JSON.stringify(items));
+  }
+  if (sets.length) {
+    binds.push(existing.id, user.list_id);
+    await env.DB.prepare(
+      `UPDATE item_templates SET ${sets.join(", ")}, updated_at = datetime('now') WHERE id = ?${binds.length - 1} AND list_id = ?${binds.length}`
+    ).bind(...binds).run();
+  }
+  const row = await env.DB.prepare("SELECT id, name, items, updated_at FROM item_templates WHERE id = ?1")
+    .bind(existing.id).first();
+  return authedJson(templateRow(row));
+}
+
+async function handleTemplateDelete(ctx, templateId) {
+  const { env, user, authedJson, authedErr } = ctx;
+  const { meta } = await env.DB.prepare("DELETE FROM item_templates WHERE id = ?1 AND list_id = ?2")
+    .bind(templateId, user.list_id).run();
+  if (meta.changes === 0) return authedErr("TEMPLATE_NOT_FOUND", 404);
+  return authedJson({ ok: true });
+}
+
 async function handleMealsPost(ctx) {
   const { request, env, user, authedJson, authedErr } = ctx;
 
@@ -3934,6 +4031,10 @@ const AUTHENTICATED_ROUTES = [
   { method: "GET", path: "/category-order", handler: handleCategoryOrderGet },
   { method: "POST", path: "/category-order", handler: handleCategoryOrderPost },
   { method: "POST", path: "/recipe-import", handler: handleRecipeImport },
+  { method: "GET", path: "/templates", handler: handleTemplatesGet },
+  { method: "POST", path: "/templates", handler: handleTemplatesPost },
+  { method: "PATCH", pattern: TEMPLATE_ID_PATTERN, handler: handleTemplatePatch },
+  { method: "DELETE", pattern: TEMPLATE_ID_PATTERN, handler: handleTemplateDelete },
   { method: "GET", path: "/meals", handler: handleMealsGet },
   { method: "GET", path: "/meals/suggestions", handler: handleMealsSuggestions },
   { method: "POST", path: "/meals", handler: handleMealsPost },
