@@ -15,6 +15,7 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { DueSoonStrip } from "../components/DueSoonStrip.jsx";
+import { SavedListsModal } from "../components/SavedListsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
 import { Input, Avatar, FabMenu, Skeleton, EmptyState, BaseButton } from "../design-system/index.js";
@@ -1155,6 +1156,11 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             onClick: () => setModal({ type: "weekIngredients" }),
           },
           {
+            icon: "list-checks",
+            label: t("shoppingList.fab.savedLists"),
+            onClick: () => setModal({ type: "savedLists" }),
+          },
+          {
             icon: "sparkle",
             label: t("shoppingList.fab.suggestions"),
             badge: suggestedItems.length || null,
@@ -1213,6 +1219,16 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           onRestored={loadList}
           onClose={() => setModal(null)}
           onFocusAdd={focusAddInput}
+        />
+      )}
+
+      {modal?.type === "savedLists" && (
+        <SavedListsModal
+          onClose={() => setModal(null)}
+          onAdded={async () => {
+            await loadCatalogue();
+            loadList();
+          }}
         />
       )}
 
