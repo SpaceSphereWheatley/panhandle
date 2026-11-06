@@ -97,7 +97,7 @@ export function useShoppingList({ active, onSyncTick, onOffline }) {
     }
     setItems(fetched);
     try {
-      setSuggestedItems(await api("/catalogue/suggestions"));
+      setSuggestedItems(await api("/catalogue/suggestions?include=upcoming"));
     } catch {
       setSuggestedItems([]);
     }

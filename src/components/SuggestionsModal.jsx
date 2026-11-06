@@ -7,13 +7,51 @@ import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 import { apiErrorMessage } from "../lib/apiError.js";
+import { useLongPress } from "../hooks/useLongPress.js";
+import { ItemIcon } from "./ItemIcon.jsx";
+import { StockMark } from "./StockMark.jsx";
+import { STOCK_ORDER, isLearning, stockStatusOf } from "../lib/stock.js";
 
-// The full "probably out of" list. Each row can be added, snoozed for a week,
-// or hidden for good ("Don't suggest"); hidden items are listed in a
+// The full "probably out of" view: a grid of tiles tinted by stock level (red
+// out, yellow running low, green fine for now), each with a shape mark so the
+// colour is never the only cue. Tap a tile to add it; hold it (or right-click)
+// for its details, where it can also be snoozed for a week or hidden for good
+// ("Don't suggest"). Hidden items are listed in a
 // collapsed section at the bottom so they can be restored. Snooze/hide go
 // through the parent (shared with the shopping list's "Due soon" strip) so
 // both surfaces stay in sync; restore lives here since nothing else shows
 // hidden items.
+function SuggestionTile({ item, onAdd, onDetails }) {
+  const { lang } = useLanguage();
+  const t = useTranslation();
+  const longPress = useLongPress(() => onDetails(item));
+  const status = stockStatusOf(item);
+  const name = cap(translateItemName(item.name, lang));
+  return (
+    <button
+      type="button"
+      className={`stock-tile stock-${status}${isLearning(item) ? " learning" : ""}`}
+      aria-label={t("suggestions.tileLabel", { name, status: t(`suggestions.status.${status}`) })}
+      onClick={() => onAdd(item)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onDetails(item);
+      }}
+      {...longPress}
+    >
+      <span className="stock-tile-mark">
+        <StockMark status={status} />
+      </span>
+      <span className="stock-badge" aria-hidden="true">
+        <span className="item-icon-wrap">
+          <ItemIcon name={item.name} />
+        </span>
+      </span>
+      <span className="stock-tile-name">{name}</span>
+    </button>
+  );
+}
+
 export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onRestored, onClose, onFocusAdd }) {
   const { lang } = useLanguage();
   const t = useTranslation();
@@ -21,6 +59,8 @@ export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onResto
   // null = not loaded (section collapsed); [] once loaded.
   const [hidden, setHidden] = useState(null);
   const [hiddenLoading, setHiddenLoading] = useState(false);
+  // The tile whose details view is open, or null for the grid.
+  const [detail, setDetail] = useState(null);
 
   async function toggleHidden() {
     if (hidden !== null) {
@@ -59,50 +99,47 @@ export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onResto
 
   return (
     <Modal onClose={onClose} title={t("suggestions.title")}>
-      {(requestClose) => (
+      {(requestClose) =>
+        detail ? (
+          <SuggestionDetail
+            item={suggestions.find((s) => s.id === detail.id) || detail}
+            onBack={() => setDetail(null)}
+            onAdd={(it) => {
+              setDetail(null);
+              onAdd(it);
+            }}
+            onSnooze={(it) => {
+              setDetail(null);
+              onSnooze(it);
+            }}
+            onHide={(it) => {
+              setDetail(null);
+              onHide(it);
+            }}
+          />
+        ) : (
         <>
           <div>
             {suggestions.length === 0 ? (
               <EmptyState description={t("suggestions.empty")} />
             ) : (
-              suggestions.map((it) => {
-                const name = cap(translateItemName(it.name, lang));
-                return (
-                  <div className="meal-browse-row suggest-row" key={it.id}>
-                    <span className="info">
-                      <span className="name">{name}</span>
-                      <span className="stats">
-                        {t("suggestions.daysSince", { count: Math.round(it.days_since) })}
-                        {" · "}
-                        {t(it.repeat_every_days ? "suggestions.intervalSet" : "suggestions.interval", {
-                          count: Math.max(1, Math.round(it.avg_interval_days)),
-                        })}
-                      </span>
+              <>
+                <div className="stock-legend" aria-hidden="true">
+                  {STOCK_ORDER.map((st) => (
+                    <span key={st} className={`stock-${st}`}>
+                      <StockMark status={st} />
+                      {t(`suggestions.status.${st}`)}
                     </span>
-                    <IconButton
-                      icon="clock"
-                      size="md"
-                      label={t("suggestions.snoozeLabel", { name })}
-                      onClick={() => onSnooze(it)}
-                    />
-                    <IconButton
-                      icon="eye-slash"
-                      size="md"
-                      label={t("suggestions.hideLabel", { name })}
-                      onClick={() => onHide(it)}
-                    />
-                    <IconButton
-                      icon="plus"
-                      size="lg"
-                      variant="filled"
-                      label={t("suggestions.addLabel", { name })}
-                      onClick={() => onAdd(it)}
-                    />
-                  </div>
-                );
-              })
+                  ))}
+                </div>
+                <div className="stock-grid">
+                  {suggestions.map((it) => (
+                    <SuggestionTile key={it.id} item={it} onAdd={onAdd} onDetails={setDetail} />
+                  ))}
+                </div>
+                <p className="suggest-hint">{t("suggestions.tilesHint")}</p>
+              </>
             )}
-            {suggestions.length > 0 && <p className="suggest-hint">{t("suggestions.actionsHint")}</p>}
 
             <button
               type="button"
@@ -147,7 +184,48 @@ export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onResto
             </Button>
           </div>
         </>
-      )}
+        )
+      }
     </Modal>
+  );
+}
+
+// The details view behind a long-press: the numbers the tile deliberately
+// leaves out, plus the actions that used to be three icon buttons per row.
+function SuggestionDetail({ item, onBack, onAdd, onSnooze, onHide }) {
+  const { lang } = useLanguage();
+  const t = useTranslation();
+  const status = stockStatusOf(item);
+  const name = cap(translateItemName(item.name, lang));
+  return (
+    <>
+      <div className={`stock-detail stock-${status}`}>
+        <div className="stock-detail-head">
+          <StockMark status={status} size={16} />
+          <strong>{name}</strong>
+          <span>{t(`suggestions.status.${status}`)}</span>
+        </div>
+        <p className="stats">
+          {t("suggestions.daysSince", { count: Math.round(item.days_since) })}
+          {" · "}
+          {t(item.repeat_every_days ? "suggestions.intervalSet" : "suggestions.interval", {
+            count: Math.max(1, Math.round(item.avg_interval_days)),
+          })}
+        </p>
+        {isLearning(item) && <p className="stats">{t("suggestions.learning")}</p>}
+      </div>
+      <div className="actions" style={{ flexDirection: "column", alignItems: "stretch" }}>
+        <Button onClick={() => onAdd(item)}>{t("suggestions.detail.add")}</Button>
+        <Button variant="outline" onClick={() => onSnooze(item)}>
+          {t("suggestions.detail.snooze")}
+        </Button>
+        <Button variant="outline" onClick={() => onHide(item)}>
+          {t("suggestions.detail.hide")}
+        </Button>
+        <Button variant="outline" onClick={onBack}>
+          {t("suggestions.detail.back")}
+        </Button>
+      </div>
+    </>
   );
 }

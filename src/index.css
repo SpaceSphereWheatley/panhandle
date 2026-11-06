@@ -321,6 +321,45 @@ main { padding: var(--content-gutter); max-width: var(--content-max-width); marg
   -webkit-overflow-scrolling: touch;
 }
 .due-strip-row::-webkit-scrollbar { display: none; }
+/* Stock-level tint, shared by the strip chips, grid tiles, legend and details.
+   Always paired with a StockMark shape so colour is never the only cue. */
+.stock-out { background: var(--stock-out-bg); color: var(--stock-out-fg); --stock-badge: var(--stock-out-badge); --stock-mark-ink: var(--stock-out-bg); }
+.stock-low { background: var(--stock-low-bg); color: var(--stock-low-fg); --stock-badge: var(--stock-low-badge); }
+.stock-ok  { background: var(--stock-ok-bg);  color: var(--stock-ok-fg);  --stock-badge: var(--stock-ok-badge); }
+.stock-mark { flex: none; }
+.due-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; border: none; white-space: nowrap;
+  border-radius: var(--radius-pill); padding: 6px 12px 6px 9px; cursor: pointer;
+  font-family: var(--font-sans); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+}
+/* Out is also set apart by a heavier leading edge, not just its hue. */
+.due-chip.stock-out { box-shadow: inset 3px 0 0 var(--stock-out-fg); }
+.stock-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.stock-legend > span {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: var(--radius-pill);
+  padding: 3px 10px 3px 8px; font-size: var(--text-2xs); font-weight: 600;
+}
+.stock-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stock-tile {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+  gap: 8px; min-height: 92px; padding: 10px 8px 9px; border: none; cursor: pointer; text-align: left;
+  border-radius: var(--radius-tile); font-family: var(--font-sans);
+  -webkit-touch-callout: none; user-select: none; touch-action: manipulation;
+}
+.stock-tile.stock-out { box-shadow: inset 4px 0 0 var(--stock-out-fg); }
+.stock-tile.learning { outline: 1.5px dashed currentColor; outline-offset: -4px; }
+.stock-tile-mark { position: absolute; top: 8px; right: 8px; display: inline-flex; }
+.stock-badge {
+  width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--stock-badge); line-height: 1;
+}
+.stock-badge .item-icon { width: 22px; height: 22px; display: block; }
+.stock-tile-name { font-size: var(--text-xs); font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
+@media (max-width: 340px) { .stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stock-detail { border-radius: var(--radius-card); padding: 14px; margin-bottom: 12px; }
+.stock-detail-head { display: flex; align-items: center; gap: 8px; font-size: var(--text-md); }
+.stock-detail-head span { margin-left: auto; font-size: var(--text-xs); font-weight: 600; }
+.stock-detail .stats { margin: 6px 0 0; font-size: var(--text-xs); }
 /* Settings */
 .setrow {
   background: var(--surface-card); border-radius: var(--radius-lg);

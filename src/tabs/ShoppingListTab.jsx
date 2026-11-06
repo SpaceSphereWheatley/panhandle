@@ -15,6 +15,7 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { DueSoonStrip } from "../components/DueSoonStrip.jsx";
+import { needsAttention } from "../lib/stock.js";
 import { SavedListsModal } from "../components/SavedListsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
 import { WeekIngredientsModal } from "../components/meals/WeekIngredientsModal.jsx";
@@ -1163,7 +1164,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
           {
             icon: "sparkle",
             label: t("shoppingList.fab.suggestions"),
-            badge: suggestedItems.length || null,
+            badge: needsAttention(suggestedItems).length || null,
             onClick: () => setModal({ type: "suggestions" }),
           },
           {

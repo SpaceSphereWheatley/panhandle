@@ -3135,12 +3135,31 @@ async function handleCatalogueGet(ctx) {
 // purchase, and is never dropped as abandoned (the household asked for it).
 const SUGGESTION_GRACE_DAYS = 14;
 
+// Stock level of a suggestion, from how far through its usual interval it is
+// (days_since / interval): "out" once the interval has passed, "low" over the
+// last STOCK_LOW_FROM of it, "ok" before that. ?include=upcoming also returns
+// the not-yet-due items from STOCK_SHOW_FROM on (earlier than that an item was
+// just bought, which is noise) so the grid can show how things are trending.
+const STOCK_LOW_FROM = 0.7;
+const STOCK_SHOW_FROM = 0.4;
+const SUGGESTION_LIMIT_DUE = 8;
+const SUGGESTION_LIMIT_UPCOMING = 40;
+
+export function stockStatus(daysSince, intervalDays) {
+  if (!(intervalDays > 0)) return "ok";
+  const ratio = daysSince / intervalDays;
+  if (ratio >= 1) return "out";
+  if (ratio >= STOCK_LOW_FROM) return "low";
+  return "ok";
+}
+
 async function handleCatalogueSuggestions(ctx) {
-  const { env, user, authedJson } = ctx;
+  const { env, user, url, authedJson } = ctx;
+  const upcoming = url.searchParams.get("include") === "upcoming";
   const mod = osloDateModifier(Date.now());
   const { results } = await env.DB.prepare(`
-    SELECT id, name, category, last_bought, avg_interval_days, days_since, repeat_every_days FROM (
-      SELECT c.id, c.name, c.category, c.last_bought, c.repeat_every_days,
+    SELECT id, name, category, last_bought, avg_interval_days, days_since, repeat_every_days, times_bought FROM (
+      SELECT c.id, c.name, c.category, c.last_bought, c.repeat_every_days, c.times_bought,
         COALESCE(
           c.repeat_every_days,
           (julianday(date(c.last_bought, ?2)) - julianday(date(c.first_bought, ?2))) / (c.times_bought - 1)
@@ -3155,12 +3174,25 @@ async function handleCatalogueSuggestions(ctx) {
         AND NOT EXISTS (SELECT 1 FROM list_items li WHERE li.catalogue_id = c.id AND li.bought = 0)
     )
     WHERE avg_interval_days >= 1
-      AND days_since >= avg_interval_days
+      AND days_since >= avg_interval_days * (CASE WHEN ?4 = 1 THEN ?5 ELSE 1 END)
       AND (repeat_every_days IS NOT NULL OR days_since - avg_interval_days <= MAX(3 * avg_interval_days, ?3))
-    ORDER BY (days_since - avg_interval_days) / avg_interval_days ASC, days_since ASC
-    LIMIT 8
-  `).bind(user.list_id, mod, SUGGESTION_GRACE_DAYS).all();
-  return authedJson(results);
+    ORDER BY
+      CASE WHEN days_since >= avg_interval_days THEN 0 ELSE 1 END ASC,
+      CASE WHEN days_since >= avg_interval_days
+        THEN (days_since - avg_interval_days) / avg_interval_days
+        ELSE -days_since / avg_interval_days END ASC,
+      days_since ASC
+    LIMIT ?6
+  `).bind(
+    user.list_id, mod, SUGGESTION_GRACE_DAYS,
+    upcoming ? 1 : 0, STOCK_SHOW_FROM,
+    upcoming ? SUGGESTION_LIMIT_UPCOMING : SUGGESTION_LIMIT_DUE,
+  ).all();
+  return authedJson(results.map((r) => ({
+    ...r,
+    ratio: r.days_since / r.avg_interval_days,
+    status: stockStatus(r.days_since, r.avg_interval_days),
+  })));
 }
 
 // Items the household told the suggestions to stop offering ("Don't

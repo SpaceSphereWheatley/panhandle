@@ -15,7 +15,7 @@ import {
   osloLocalDateParts, isReminderDue, addDaysIso,
   escapeIcsText, foldIcsLine, scopeFilterRows, buildIcsFeed, sanitizeRecipeUrl,
   connectorClaims, isConnectorRoute, connectorScopeAllows, CONNECTOR_TOKEN,
-  parseSuggestionUpdate, osloDateModifier, parseRepeatEveryDays,
+  parseSuggestionUpdate, osloDateModifier, parseRepeatEveryDays, stockStatus,
 } from "../worker/index.js";
 import { CATEGORIES, normalizeCategoryOrder } from "../shared/categories.js";
 
@@ -1213,6 +1213,21 @@ describe("claude.ai connector (worker/mcp.js)", async () => {
     const r = (await (await send("tools/call", { name: "check_off_items", arguments: { ids: [1, 2, 3] } })).json()).result;
     assert.deepEqual(r.structuredContent.results.map((x) => x.status ?? x.error), ["already bought", "bought", "Item not found"]);
     assert.deepEqual(calls.map((c) => c.key), ["GET /list", "POST /list/2/toggle"]);
+  });
+});
+
+describe("stockStatus", () => {
+  test("is out once the interval has passed, low over its last 30%, ok before that", () => {
+    assert.equal(stockStatus(10, 10), "out");
+    assert.equal(stockStatus(25, 10), "out");
+    assert.equal(stockStatus(9, 10), "low");
+    assert.equal(stockStatus(7, 10), "low");
+    assert.equal(stockStatus(6, 10), "ok");
+    assert.equal(stockStatus(0, 10), "ok");
+  });
+  test("treats a missing or zero interval as ok rather than dividing by it", () => {
+    assert.equal(stockStatus(5, 0), "ok");
+    assert.equal(stockStatus(5, null), "ok");
   });
 });
 
