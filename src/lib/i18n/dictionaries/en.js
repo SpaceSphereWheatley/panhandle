@@ -94,7 +94,7 @@ export const en = {
   "suggestions.addOther": "Add another item",
   "suggestions.snoozeLabel": "Not now — remind me about {name} in a week",
   "suggestions.hideLabel": "Don't suggest {name}",
-  "suggestions.tilesHint": "Tap to add · hold for details. A dashed outline means it's still learning your rhythm.",
+  "suggestions.tilesHint": "Tap to add · hold for details",
   "suggestions.tileLabel": "Add {name} ({status})",
   "suggestions.status.out": "Out",
   "suggestions.status.low": "Running low",

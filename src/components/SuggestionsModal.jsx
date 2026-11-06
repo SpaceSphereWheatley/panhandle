@@ -8,13 +8,11 @@ import { useToast } from "../context/ToastContext.jsx";
 import { translateItemName } from "../lib/i18n/itemNames.js";
 import { apiErrorMessage } from "../lib/apiError.js";
 import { useLongPress } from "../hooks/useLongPress.js";
-import { ItemIcon } from "./ItemIcon.jsx";
-import { StockMark } from "./StockMark.jsx";
-import { STOCK_ORDER, isLearning, stockStatusOf } from "../lib/stock.js";
+import { isLearning, stockStatusOf } from "../lib/stock.js";
 
-// The full "probably out of" view: a grid of tiles tinted by stock level (red
-// out, yellow running low, green fine for now), each with a shape mark so the
-// colour is never the only cue. Tap a tile to add it; hold it (or right-click)
+// The full "probably out of" view: a grid of plain name tiles tinted by stock
+// level (red out, yellow running low, green fine for now), sorted in that
+// order, with nothing else on a tile. Tap a tile to add it; hold it (or right-click)
 // for its details, where it can also be snoozed for a week or hidden for good
 // ("Don't suggest"). Hidden items are listed in a
 // collapsed section at the bottom so they can be restored. Snooze/hide go
@@ -30,7 +28,7 @@ function SuggestionTile({ item, onAdd, onDetails }) {
   return (
     <button
       type="button"
-      className={`stock-tile stock-${status}${isLearning(item) ? " learning" : ""}`}
+      className={`stock-tile stock-${status}`}
       aria-label={t("suggestions.tileLabel", { name, status: t(`suggestions.status.${status}`) })}
       onClick={() => onAdd(item)}
       onContextMenu={(e) => {
@@ -39,14 +37,6 @@ function SuggestionTile({ item, onAdd, onDetails }) {
       }}
       {...longPress}
     >
-      <span className="stock-tile-mark">
-        <StockMark status={status} />
-      </span>
-      <span className="stock-badge" aria-hidden="true">
-        <span className="item-icon-wrap">
-          <ItemIcon name={item.name} />
-        </span>
-      </span>
       <span className="stock-tile-name">{name}</span>
     </button>
   );
@@ -124,14 +114,6 @@ export function SuggestionsModal({ suggestions, onAdd, onSnooze, onHide, onResto
               <EmptyState description={t("suggestions.empty")} />
             ) : (
               <>
-                <div className="stock-legend" aria-hidden="true">
-                  {STOCK_ORDER.map((st) => (
-                    <span key={st} className={`stock-${st}`}>
-                      <StockMark status={st} />
-                      {t(`suggestions.status.${st}`)}
-                    </span>
-                  ))}
-                </div>
                 <div className="stock-grid">
                   {suggestions.map((it) => (
                     <SuggestionTile key={it.id} item={it} onAdd={onAdd} onDetails={setDetail} />
@@ -201,7 +183,6 @@ function SuggestionDetail({ item, onBack, onAdd, onSnooze, onHide }) {
     <>
       <div className={`stock-detail stock-${status}`}>
         <div className="stock-detail-head">
-          <StockMark status={status} size={16} />
           <strong>{name}</strong>
           <span>{t(`suggestions.status.${status}`)}</span>
         </div>

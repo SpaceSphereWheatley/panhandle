@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.72.1] — 2026-11-06
+
+### Changed
+- **The colour-coded suggestions are calmer: each tile is now just the item's name on a red, yellow or green background, with nothing else on it.** The small icons, corner shapes, heavier red edge, dashed outlines and the legend are gone, and so are the shapes on the "Due soon" chips. Items are still sorted red first, then yellow, then green, and holding a tile still opens its details, where it says if the app is still learning how often you buy it. (`SuggestionsModal.jsx`, `DueSoonStrip.jsx` and `index.css` drop the `StockMark` component and its badge/edge/outline styling, and the `--stock-*-badge` tokens; screen readers still hear each tile's stock level through its `aria-label`.)
+
+## [1.72.0] — 2026-11-06
+
+### Changed
+- **The "Probably out of" suggestions are now a colour-coded grid: red for what you're out of, yellow for what's running low, green for what's still fine.** Tap a tile to add it to the list; hold it to see when you last bought it and how often you usually do, or to snooze or hide it. Each tile also carries a small shape (a "!" circle, a half circle, an empty ring) so it works without telling red from green, and a dashed outline means the app is still learning how often you buy that item. The "Due soon" row above the list now shows the red and yellow items in the same colours. (`GET /catalogue/suggestions` takes a new `?include=upcoming` that also returns items 40–100% of the way through their usual interval, up to 40, each row gaining `status` (`out`/`low`/`ok`, from the new exported `stockStatus`), `ratio` and `times_bought`; without the parameter it returns the same due-only, 8-row response as before. `SuggestionsModal.jsx` becomes a tile grid with a details view per tile, `DueSoonStrip.jsx` and the FAB badge count only `out`/`low` via `src/lib/stock.js`, `StockMark.jsx` draws the shape cue, and new `--stock-*` colour tokens (light and dark) back the tints. Covered in `tests/worker-unit.test.mjs`, `tests/item-suggestions.test.mjs` and `src/lib/stock.test.js`.)
+
 ## [1.71.1] — 2026-11-02
 
 ### Fixed

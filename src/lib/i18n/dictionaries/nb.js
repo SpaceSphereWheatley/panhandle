@@ -168,7 +168,7 @@ export const nb = {
   "suggestions.addOther": "Legg til annen vare",
   "suggestions.snoozeLabel": "Ikke nå – minn meg på {name} om en uke",
   "suggestions.hideLabel": "Ikke foreslå {name}",
-  "suggestions.tilesHint": "Trykk for å legge til · hold inne for detaljer. Stiplet kant betyr at appen fortsatt lærer rytmen din.",
+  "suggestions.tilesHint": "Trykk for å legge til · hold inne for detaljer",
   "suggestions.tileLabel": "Legg til {name} ({status})",
   "suggestions.status.out": "Tom",
   "suggestions.status.low": "Går tom",
