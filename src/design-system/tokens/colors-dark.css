@@ -99,6 +99,9 @@
   --status-success: var(--s-80);
   --status-danger:  var(--md-error);
   --status-danger-subtle: var(--md-error-container);
+  --stock-out-bg: oklch(32% 0.08 25);  --stock-out-fg: oklch(86% 0.08 25);
+  --stock-low-bg: oklch(34% 0.06 90);  --stock-low-fg: oklch(88% 0.1 90);
+  --stock-ok-bg:  oklch(32% 0.05 150); --stock-ok-fg:  oklch(86% 0.07 150);
 
   --focus-ring: var(--md-primary);
 }
@@ -185,6 +188,9 @@
     --status-success: var(--s-80);
     --status-danger:  var(--md-error);
     --status-danger-subtle: var(--md-error-container);
+    --stock-out-bg: oklch(32% 0.08 25);  --stock-out-fg: oklch(86% 0.08 25);
+    --stock-low-bg: oklch(34% 0.06 90);  --stock-low-fg: oklch(88% 0.1 90);
+    --stock-ok-bg:  oklch(32% 0.05 150); --stock-ok-fg:  oklch(86% 0.07 150);
 
     --focus-ring: var(--md-primary);
   }

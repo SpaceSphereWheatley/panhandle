@@ -145,6 +145,12 @@
   --status-success: var(--s-30);
   --status-danger:  var(--md-error);
   --status-danger-subtle: var(--md-error-container);
+  /* Stock-level tints for the suggestions grid: out / running low / fine. */
+  --stock-out-bg: oklch(92% 0.05 25);  --stock-out-fg: oklch(38% 0.15 25);
+  --stock-low-bg: oklch(94% 0.07 90);  --stock-low-fg: oklch(40% 0.09 80);
+  --stock-ok-bg:  oklch(93% 0.05 150); --stock-ok-fg:  oklch(36% 0.08 150);
+  /* Theme-invariant icon-badge backdrops (the item icons are white-stroke SVGs). */
+  --stock-out-badge: oklch(50% 0.17 25); --stock-low-badge: oklch(55% 0.13 75); --stock-ok-badge: oklch(48% 0.1 150);
 
   --focus-ring: var(--md-primary);
 }

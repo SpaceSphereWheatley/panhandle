@@ -46,7 +46,35 @@ async function runTests(BASE) {
   let suggestions = await (await get("/catalogue/suggestions", authA)).json();
   const milk = suggestions.find((s) => s.name === "Milk");
   assert.ok(milk, `Milk should be suggested, got: ${suggestions.map((s) => s.name).join(", ")}`);
+  assert.equal(milk.status, "out", "an overdue item is 'out'");
+  assert.ok(milk.ratio >= 1);
   console.log("  - overdue item is suggested");
+
+  // ---- ?include=upcoming also returns not-yet-due items, with a status ----
+  // Bread: bought 3x over ~20 days (interval ~10), last bought 8 days ago
+  // => 80% through its interval => "low". Rice: last bought 2 days ago
+  // (20%) => too fresh to show at all. Pasta: 5 days ago (50%) => "ok".
+  for (const [name, cat, last] of [["Bread", "Bakery", 8], ["Rice", "Pantry", 2], ["Pasta", "Pantry", 5]]) {
+    const r = await (await fetch(`${BASE}/list`, {
+      method: "POST", headers: authA, body: JSON.stringify({ name, qty: 1, category: cat }),
+    })).json();
+    assert.equal((await fetch(`${BASE}/list/${r.id}/toggle`, { method: "POST", headers: authA })).status, 200);
+    await runSql(
+      "UPDATE item_catalogue SET times_bought = 3, first_bought = datetime('now', '-" + (last + 20) + " days'), " +
+      `last_bought = datetime('now', '-${last} days') WHERE name = '${name}' AND list_id = (SELECT list_id FROM users WHERE username = '${USER_A}');`
+    );
+  }
+  const dueOnly = (await (await get("/catalogue/suggestions", authA)).json()).map((s) => s.name);
+  assert.ok(!dueOnly.includes("Bread") && !dueOnly.includes("Pasta"), "default response stays due-only");
+  const upcoming = await (await get("/catalogue/suggestions?include=upcoming", authA)).json();
+  const byName = Object.fromEntries(upcoming.map((s) => [s.name, s]));
+  assert.equal(byName.Milk?.status, "out");
+  assert.equal(byName.Bread?.status, "low");
+  assert.equal(byName.Pasta?.status, "ok");
+  assert.ok(!byName.Rice, "a just-bought item is not shown");
+  const order = upcoming.map((s) => s.status);
+  assert.deepEqual(order, [...order].sort((a, b) => ["out", "low", "ok"].indexOf(a) - ["out", "low", "ok"].indexOf(b)), "ordered out, low, ok");
+  console.log("  - include=upcoming adds low/ok items, ordered by status");
 
   // ---- validation ----
   for (const body of [{}, { snooze_days: 91 }, { snooze_days: -1 }, { muted: "yes" }, { snooze_days: 7, muted: true }]) {

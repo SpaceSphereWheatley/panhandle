@@ -55,7 +55,7 @@ describe("useShoppingList", () => {
       calls.push(path);
       if (path === "/list/5/toggle") return { ok: true };
       if (path === "/list") return [];
-      if (path === "/catalogue" || path === "/catalogue/suggestions") return [];
+      if (path === "/catalogue" || path === "/catalogue/suggestions?include=upcoming") return [];
       if (path === "/presence") return [];
       return {};
     });
@@ -103,7 +103,7 @@ describe("useShoppingList", () => {
     api.mockImplementation(async (path) => {
       if (path === "/catalogue") return [];
       if (path === "/list") return fixture;
-      if (path === "/catalogue/suggestions") throw new Error("boom");
+      if (path === "/catalogue/suggestions?include=upcoming") throw new Error("boom");
       if (path === "/presence") return ["alice"];
       return {};
     });
