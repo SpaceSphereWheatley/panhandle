@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.72.1] — 2026-11-06
+
+### Changed
+- **The colour-coded suggestions are calmer: each tile is now just the item's name on a red, yellow or green background, with nothing else on it.** The small icons, corner shapes, heavier red edge, dashed outlines and the legend are gone, and so are the shapes on the "Due soon" chips. Items are still sorted red first, then yellow, then green, and holding a tile still opens its details, where it says if the app is still learning how often you buy it. (`SuggestionsModal.jsx`, `DueSoonStrip.jsx` and `index.css` drop the `StockMark` component and its badge/edge/outline styling, and the `--stock-*-badge` tokens; screen readers still hear each tile's stock level through its `aria-label`.)
+
 ## [1.72.0] — 2026-11-06
 
 ### Changed

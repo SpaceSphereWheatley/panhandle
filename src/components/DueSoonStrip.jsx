@@ -1,5 +1,4 @@
 import { BaseButton } from "../design-system/index.js";
-import { StockMark } from "./StockMark.jsx";
 import { needsAttention, stockStatusOf } from "../lib/stock.js";
 import { cap } from "../lib/shoppingUtils.js";
 import { useLanguage, useTranslation } from "../context/LanguageContext.jsx";
@@ -38,7 +37,6 @@ export function DueSoonStrip({ suggestions, onAdd, onSeeAll }) {
               aria-label={t("suggestions.addLabel", { name })}
               className={`due-chip stock-${status}`}
             >
-              <StockMark status={status} />
               {name}
             </BaseButton>
           );
