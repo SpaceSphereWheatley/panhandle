@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.72.2] — 2026-11-16
+
+### Fixed
+- **In the Android app, the bar along the bottom of the screen is no longer bright orange in dark mode.** The bottom navigation bar, the thin line above it and the status bar now match the app's dark background, while light mode looks the same as before. (`android/twa-manifest.json`'s dark navigation, divider and theme colours, and `AndroidManifest.xml`'s matching `*_DARK` meta-data with a new `colorSurfaceDark` in `colors.xml`, now use `#1B1A17`, the same colour `src/lib/theme.js` gives the web app's dark theme-color; the native shell needs a rebuild to pick this up.)
+
 ## [1.72.1] — 2026-11-06
 
 ### Changed
