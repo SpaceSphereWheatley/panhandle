@@ -3,4 +3,7 @@
     <!-- Matches public/manifest.json's theme_color / background_color. -->
     <color name="colorPrimary">#C1592A</color>
     <color name="backgroundColor">#FAF6EF</color>
+    <!-- Dark-theme chrome: matches src/lib/theme.js's dark theme-color, so the
+         system bars blend into the app instead of showing an orange strip. -->
+    <color name="colorSurfaceDark">#1B1A17</color>
 </resources>
