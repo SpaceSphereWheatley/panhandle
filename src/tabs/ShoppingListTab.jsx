@@ -994,16 +994,21 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
             </BaseButton>
           )}
           {presentUsers.length > 0 && (
-            <div
-              style={{ display: "flex", alignItems: "center" }}
+            // A real button, not just a hover `title`: tooltips never show on
+            // touch screens, so tapping is the only way a phone can see who it is.
+            <button
+              type="button"
+              onClick={() => toast(t("shoppingList.presence.alsoHere", { names: presentUsers.map(nameFor).join(", ") }))}
+              style={{ display: "flex", alignItems: "center", background: "none", border: "none", padding: 0, cursor: "pointer" }}
               title={t("shoppingList.presence.alsoHere", { names: presentUsers.map(nameFor).join(", ") })}
+              aria-label={t("shoppingList.presence.alsoHere", { names: presentUsers.map(nameFor).join(", ") })}
             >
               {presentUsers.map((u, i) => (
                 <div key={u} style={{ marginLeft: i === 0 ? 0 : -8, border: "2px solid var(--surface-page)", borderRadius: "50%" }}>
                   <Avatar name={nameFor(u)} color={colorFor(u)} size={20} />
                 </div>
               ))}
-            </div>
+            </button>
           )}
         </div>
         <BaseButton

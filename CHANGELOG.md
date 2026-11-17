@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.72.2] — 2026-11-16
+
+### Fixed
+- **Tapping the small circle that shows who else has the shopping list open now tells you who it is.** Before, the names only appeared when hovering with a mouse, so on a phone nothing happened; now a tap shows "<name> also here right now". (The presence indicator in `ShoppingListTab.jsx` was a `div` with only a `title` tooltip; it is now a `button` that raises a toast with the existing `shoppingList.presence.alsoHere` text and carries it as its `aria-label`.)
+- **In the Android app, the bar along the bottom of the screen is no longer bright orange in dark mode.** The bottom navigation bar, the thin line above it and the status bar now match the app's dark background, while light mode looks the same as before. (`android/twa-manifest.json`'s dark navigation, divider and theme colours, and `AndroidManifest.xml`'s matching `*_DARK` meta-data with a new `colorSurfaceDark` in `colors.xml`, now use `#1B1A17`, the same colour `src/lib/theme.js` gives the web app's dark theme-color; the native shell needs a rebuild to pick this up.)
+
 ## [1.72.1] — 2026-11-06
 
 ### Changed
