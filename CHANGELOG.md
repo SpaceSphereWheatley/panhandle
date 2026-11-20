@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.72.3] — 2026-11-20
+
+### Fixed
+- **When Panhandle is installed on an Android phone through Chrome, the bar along the bottom of the screen is no longer orange.** The bottom gesture bar and the top status bar now match the app's cream background in light mode (dark mode already matched), so the app looks like one continuous screen. (The web app's theme colour was the terracotta `#C1592A`, which Chrome applies to the system bars of an installed app; `public/manifest.json`'s `theme_color`, `app.html`'s `theme-color` meta tag and the light branch of `src/lib/theme.js` are now `#FAF6EF`, the same cream as `background_color`. Chrome refreshes an installed app's manifest on its own after a day or so; reinstalling from the home screen applies it immediately. The marketing pages keep the orange.)
+
 ## [1.72.2] — 2026-11-16
 
 ### Fixed
