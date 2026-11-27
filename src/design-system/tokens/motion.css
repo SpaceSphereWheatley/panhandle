@@ -100,6 +100,82 @@
   to   { stroke-dashoffset: 0; }
 }
 
+/* ---- "All done" celebration (AllBoughtCelebration.jsx) ----------------
+   One-shot overlay with three interchangeable scenes (bag / cart / fridge),
+   each a ~2s sequence, wrapped in a 3s fade-in/hold/fade-out. Mounted only
+   for a genuine finish-shopping transition and never under reduced motion /
+   classic intensity, so nothing here needs a reduced-motion variant of its
+   own. */
+.ph-cel {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--surface-page) 88%, transparent), transparent 100%);
+  animation: ph-cel-wrap 3s ease-in-out forwards;
+}
+@keyframes ph-cel-wrap {
+  0% { opacity: 0; } 8% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; }
+}
+.ph-cel-art { position: relative; width: 200px; height: 170px; transform: scale(1.5); }
+.ph-cel-spark { position: absolute; color: #E0A537; opacity: 0; animation: ph-cel-twinkle 1.2s ease-out var(--d) forwards; }
+@keyframes ph-cel-twinkle {
+  0% { opacity: 0; transform: scale(0) rotate(0); }
+  40% { opacity: 1; transform: scale(1.2) rotate(40deg); }
+  100% { opacity: 0; transform: scale(.6) rotate(90deg); }
+}
+@keyframes ph-cel-fadein { to { opacity: 1; } }
+
+/* Bag */
+.ph-cel-bag { transform-origin: 100px 162px; animation: ph-cel-bagsquash 2s linear forwards; }
+@keyframes ph-cel-bagsquash {
+  0%, 22% { transform: none; }
+  26% { transform: scale(1.06, .93); } 30% { transform: none; }
+  41% { transform: scale(1.06, .93); } 45% { transform: none; }
+  56% { transform: scale(1.06, .93); } 60% { transform: none; }
+  71% { transform: scale(1.1, .9); } 77% { transform: scale(.94, 1.12) translateY(-12px); }
+  88% { transform: scale(1.04, .96); } 100% { transform: none; }
+}
+.ph-cel-item { opacity: 0; animation: ph-cel-drop .4s var(--ease-spring) var(--d) forwards; }
+@keyframes ph-cel-drop {
+  0% { opacity: 0; transform: translateY(-110px) rotate(-20deg); }
+  20% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.ph-cel-face, .ph-cel-cface, .ph-cel-fface { opacity: 0; }
+.ph-cel-face { animation: ph-cel-fadein .25s ease-out var(--d) forwards; }
+
+/* Cart */
+.ph-cel-cartwrap {
+  position: absolute; left: 50%; top: 50%; margin: -48px 0 0 -62px; width: 124px;
+  transform: translateX(-260px);
+  animation: ph-cel-drive 1.5s cubic-bezier(.2,.8,.25,1) forwards, ph-cel-hop .7s var(--ease-spring) 1.55s forwards;
+}
+@keyframes ph-cel-drive { 0% { transform: translateX(-260px); } 85% { transform: translateX(8px); } 100% { transform: translateX(0); } }
+@keyframes ph-cel-hop { 0% { transform: translateY(0); } 35% { transform: translateY(-22px) rotate(-3deg); } 100% { transform: translateY(0); } }
+.ph-cel-wheel { transform-box: fill-box; transform-origin: center; animation: ph-cel-spin 1.5s cubic-bezier(.2,.8,.25,1) forwards; }
+@keyframes ph-cel-spin { to { transform: rotate(900deg); } }
+.ph-cel-bob { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-cel-bobkf .35s ease-in-out var(--d) 4 alternate; }
+@keyframes ph-cel-bobkf { to { transform: translateY(-4px); } }
+.ph-cel-lines { opacity: 0; animation: ph-cel-linekf 1.5s ease-out forwards; }
+@keyframes ph-cel-linekf { 0% { opacity: 0; transform: translateX(-40px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(30px); } }
+.ph-cel-cface { animation: ph-cel-fadein .25s ease-out 1.5s forwards; }
+
+/* Fridge */
+.ph-cel-fridge { transform-origin: 100px 162px; animation: ph-cel-fridgebump 1.9s linear forwards; }
+@keyframes ph-cel-fridgebump {
+  0%, 52% { transform: none; }
+  56% { transform: scale(1.07, .92); } 62% { transform: scale(.95, 1.1) translateY(-14px); }
+  72% { transform: scale(1.04, .96); } 82% { transform: translateY(-8px); } 100% { transform: none; }
+}
+.ph-cel-door { transform-box: fill-box; transform-origin: 0% 50%; animation: ph-cel-door 1.9s cubic-bezier(.3,1.3,.5,1) forwards; }
+@keyframes ph-cel-door {
+  0% { transform: perspective(500px) rotateY(0); }
+  12%, 48% { transform: perspective(500px) rotateY(-78deg); }
+  56%, 100% { transform: perspective(500px) rotateY(0); }
+}
+.ph-cel-fitem { opacity: 0; animation: ph-cel-fhop .4s var(--ease-spring) var(--d) forwards; }
+@keyframes ph-cel-fhop { 0% { opacity: 0; transform: translateY(-60px) scale(.6); } 30% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.ph-cel-fface { animation: ph-cel-fadein .25s ease-out 1.45s forwards; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

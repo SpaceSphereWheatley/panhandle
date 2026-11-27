@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { api } from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
@@ -15,6 +15,8 @@ import { ItemCard } from "../components/ItemCard.jsx";
 import { ItemEditModal } from "../components/ItemEditModal.jsx";
 import { SuggestionsModal } from "../components/SuggestionsModal.jsx";
 import { DueSoonStrip } from "../components/DueSoonStrip.jsx";
+import { AllBoughtCelebration } from "../components/AllBoughtCelebration.jsx";
+import { pickCelebration } from "../lib/celebration.js";
 import { needsAttention } from "../lib/stock.js";
 import { SavedListsModal } from "../components/SavedListsModal.jsx";
 import { UiIcon } from "../components/UiIcon.jsx";
@@ -221,6 +223,14 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
   // simply finds the list already fully bought (mount, the 7s poll, another
   // device's write, reopening the tab).
   const [celebrate, setCelebrate] = useState(false);
+  // Which full-screen celebration scene is playing (null = none). Separate
+  // from `celebrate` above because that flag resets after CELEBRATE_MS to
+  // gate the small mark's pop, while the overlay runs ~3s. `lastCelebration`
+  // remembers the previous pick so the random choice never repeats back to
+  // back.
+  const [celebrationVariant, setCelebrationVariant] = useState(null);
+  const lastCelebration = useRef(null);
+  const endCelebration = useCallback(() => setCelebrationVariant(null), []);
 
   const resolveTimers = useRef(new Map());
   const evictTimers = useRef(new Map());
@@ -673,6 +683,10 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
     awaitingExitRef.current = false;
     if (itemsRef.current.length > 0 && itemsRef.current.every((it) => it.bought)) {
       setCelebrate(true);
+      if (shouldAnimate) {
+        lastCelebration.current = pickCelebration(lastCelebration.current);
+        setCelebrationVariant(lastCelebration.current);
+      }
       clearTimeout(celebrateTimer.current);
       celebrateTimer.current = setTimeout(() => setCelebrate(false), CELEBRATE_MS);
     }
@@ -789,6 +803,7 @@ export function ShoppingListTab({ onSyncTick, onOffline, active }) {
 
   return (
     <section>
+      {celebrationVariant && <AllBoughtCelebration key={celebrationVariant} variant={celebrationVariant} onDone={endCelebration} />}
       <div style={{ marginBottom: 16, position: "relative" }}>
         <Input
           ref={addInputRef}

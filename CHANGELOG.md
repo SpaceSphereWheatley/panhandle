@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.73.0] — 2026-11-27
+
+### Added
+- **When you check off the last item on your shopping list, a short, happy animation now plays.** Each time it is a different one of three little characters: a paper bag that fills up and jumps for joy, a shopping cart that zooms in and hops, or a fridge that opens, takes your groceries and shuts with a smile. It plays once, never blocks taps, and the small "Nothing left to buy" message stays on the list afterwards. It is skipped when the phone's reduce-motion setting is on or the app is set to the calm "classic" look. (`AllBoughtCelebration.jsx` is a portaled, `pointer-events: none` overlay whose `ph-cel-*` keyframes live in `motion.css`; `ShoppingListTab.jsx` mounts it from `handleListExitComplete`, the same genuine-finish trigger as the small mark, and `pickCelebration` in `src/lib/celebration.js` picks a variant at random but never the same one twice in a row.)
+
 ## [1.72.3] — 2026-11-20
 
 ### Fixed
